@@ -1,8 +1,8 @@
 /* ==========================================================================
-   app.js – das "Gehirn" des Hubs
+   app.js – das "Gehirn" von NTB
    Kümmert sich um:
-     1. Navigation zwischen den Ansichten (über den URL-Hash, z. B. #sudoku)
-     2. Die mobile Sidebar (Hamburger-Menü)
+     1. Navigation zwischen den Ansichten (über den URL-Hash, z. B. #games)
+     2. Das mobile Menü (Hamburger + ausklappendes Panel)
      3. Den Dark-Mode-Schalter
    ========================================================================== */
 
@@ -14,16 +14,18 @@
 // Alle Ansichten. Bei Tools steht dabei:
 //   init – die Startfunktion aus der Tool-Datei (z. B. calendar.js)
 //   root – die ID des Containers in index.html, in den das Tool zeichnet
-// Neues Tool? Hier eine Zeile ergänzen (plus Link in der Sidebar und
+// Neues Tool? Hier eine Zeile ergänzen (plus Reiter in der Leiste und
 // eine <section> in index.html).
 const ANSICHTEN = {
   home: null,
   kalender: { init: initCalendar, root: "calendar-root" },
-  sudoku: { init: initSudoku, root: "sudoku-root" },
+  games: { init: initGames, root: "games-root" },
   einstellungen: null,
+  customising: { init: initCustomising, root: "customising-root" },
 };
 
 const START_ANSICHT = "home";
+const SEITENNAME = "NTB";
 const THEME_SCHLUESSEL = "hub-theme"; // Name des Eintrags im localStorage
 
 // Merkt sich, welche Tools schon gestartet wurden (damit init nur 1x läuft)
@@ -34,12 +36,14 @@ const gestarteteTools = {};
    Elemente aus dem HTML holen
    -------------------------------------------------------------------------- */
 
-const sidebar = document.getElementById("sidebar");
-const overlay = document.getElementById("overlay");
+const navPanel = document.getElementById("nav-panel");
 const menuButton = document.getElementById("menu-button");
 const themeButton = document.getElementById("theme-button");
 const themeSymbol = document.getElementById("theme-symbol");
-const sidebarLinks = document.querySelectorAll(".sidebar__link");
+// Alle Reiter, die zu einer Ansicht führen – auch beide NTB-Links
+const reiterLinks = document.querySelectorAll(".reiter[data-view]");
+// Nur die Reiter im ausklappbaren Panel (für den Fokus auf dem Handy)
+const panelLinks = navPanel.querySelectorAll(".reiter-gruppe .reiter");
 
 // Dieselbe Grenze wie in style.css (@media max-width: 767px)
 const mobilAbfrage = window.matchMedia("(max-width: 767px)");
@@ -51,7 +55,7 @@ const mobilAbfrage = window.matchMedia("(max-width: 767px)");
 
 /**
  * Liest den Namen der Ansicht aus dem URL-Hash.
- * Beispiel: "…/index.html#sudoku" → "sudoku"
+ * Beispiel: "…/index.html#games" → "games"
  * Unbekannte oder leere Hashes führen zur Startansicht.
  */
 function ansichtAusHash() {
@@ -76,9 +80,9 @@ function zeigeAnsicht(name, fokusSetzen) {
     section.hidden = ansichtName !== name;
   }
 
-  // Aktiven Menüpunkt markieren. aria-current="page" sagt Screenreadern
-  // "hier bist du gerade" – und das CSS nutzt es für die Hervorhebung.
-  sidebarLinks.forEach(function (link) {
+  // Aktiven Reiter markieren. aria-current="page" sagt Screenreadern
+  // "hier bist du gerade" – und das CSS zeigt dafür das abgeschwächte Glas.
+  reiterLinks.forEach(function (link) {
     if (link.dataset.view === name) {
       link.setAttribute("aria-current", "page");
     } else {
@@ -93,16 +97,20 @@ function zeigeAnsicht(name, fokusSetzen) {
     gestarteteTools[name] = true;
   }
 
-  // Titel im Browser-Tab anpassen
+  // Titel im Browser-Tab anpassen: "NTB" auf Home, sonst z. B. "Games – NTB"
   const ueberschrift = document.getElementById("titel-" + name);
-  document.title = ueberschrift.textContent + " – Mein Hub";
+  if (name === START_ANSICHT) {
+    document.title = SEITENNAME;
+  } else {
+    document.title = ueberschrift.textContent + " – " + SEITENNAME;
+  }
 
   if (fokusSetzen) {
     ueberschrift.focus();
   }
 }
 
-// Wenn sich der Hash ändert (Klick auf einen Link, Zurück-Button im Browser),
+// Wenn sich der Hash ändert (Klick auf einen Reiter, Zurück-Button im Browser),
 // die passende Ansicht zeigen.
 window.addEventListener("hashchange", function () {
   zeigeAnsicht(ansichtAusHash(), true);
@@ -110,24 +118,24 @@ window.addEventListener("hashchange", function () {
 
 
 /* ==========================================================================
-   2. MOBILE SIDEBAR
+   2. MOBILES MENÜ
+   Auf dem Handy klappt das Panel mit den Reitern unter der Leiste aus.
+   Auf dem Computer hat die Klasse "offen" keine Wirkung.
    ========================================================================== */
 
-function sidebarOeffnen() {
-  sidebar.classList.add("offen");
-  overlay.hidden = false;
+function menueOeffnen() {
+  navPanel.classList.add("offen");
   menuButton.setAttribute("aria-expanded", "true");
   menuButton.setAttribute("aria-label", "Menü schließen");
-  // Fokus auf den ersten Menüpunkt, damit man direkt mit der Tastatur weitermachen kann
-  sidebarLinks[0].focus();
+  // Fokus auf den ersten Reiter, damit man direkt mit der Tastatur weitermachen kann
+  panelLinks[0].focus();
 }
 
 /**
  * @param {boolean} fokusZurueck – true: Fokus wieder auf den Hamburger-Button
  */
-function sidebarSchliessen(fokusZurueck) {
-  sidebar.classList.remove("offen");
-  overlay.hidden = true;
+function menueSchliessen(fokusZurueck) {
+  navPanel.classList.remove("offen");
   menuButton.setAttribute("aria-expanded", "false");
   menuButton.setAttribute("aria-label", "Menü öffnen");
   if (fokusZurueck) {
@@ -135,44 +143,49 @@ function sidebarSchliessen(fokusZurueck) {
   }
 }
 
-function sidebarIstOffen() {
-  return sidebar.classList.contains("offen");
+function menueIstOffen() {
+  return navPanel.classList.contains("offen");
 }
 
 // Hamburger-Button: öffnen bzw. schließen
 menuButton.addEventListener("click", function () {
-  if (sidebarIstOffen()) {
-    sidebarSchliessen(false);
+  if (menueIstOffen()) {
+    menueSchliessen(false);
   } else {
-    sidebarOeffnen();
+    menueOeffnen();
   }
 });
 
-// Klick neben die Sidebar (aufs Overlay) schließt sie
-overlay.addEventListener("click", function () {
-  sidebarSchliessen(false);
+// Klick irgendwo daneben schließt das Menü.
+// "daneben" = weder ins Panel noch auf den Hamburger-Button.
+document.addEventListener("click", function (event) {
+  const imPanel = navPanel.contains(event.target);
+  const aufButton = menuButton.contains(event.target);
+  if (menueIstOffen() && !imPanel && !aufButton) {
+    menueSchliessen(false);
+  }
 });
 
-// Nach Auswahl eines Menüpunkts schließen (nur auf dem Handy relevant)
-sidebarLinks.forEach(function (link) {
+// Nach Auswahl eines Reiters schließen
+reiterLinks.forEach(function (link) {
   link.addEventListener("click", function () {
-    if (sidebarIstOffen()) {
-      sidebarSchliessen(false);
+    if (menueIstOffen()) {
+      menueSchliessen(false);
     }
   });
 });
 
-// Escape-Taste schließt die Sidebar
+// Escape-Taste schließt das Menü
 document.addEventListener("keydown", function (event) {
-  if (event.key === "Escape" && sidebarIstOffen()) {
-    sidebarSchliessen(true);
+  if (event.key === "Escape" && menueIstOffen()) {
+    menueSchliessen(true);
   }
 });
 
-// Wird das Fenster breiter als 768 px, offene mobile Sidebar zurücksetzen
+// Wird das Fenster breiter als 768 px, offenes Menü zurücksetzen
 mobilAbfrage.addEventListener("change", function () {
-  if (!mobilAbfrage.matches && sidebarIstOffen()) {
-    sidebarSchliessen(false);
+  if (!mobilAbfrage.matches && menueIstOffen()) {
+    menueSchliessen(false);
   }
 });
 

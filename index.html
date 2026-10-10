@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <!-- Sorgt dafür, dass die Seite auf Handys richtig skaliert wird -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mein Hub</title>
+  <title>NTB</title>
   <link rel="stylesheet" href="css/style.css">
 
   <!--
@@ -29,74 +29,96 @@
 </head>
 <body>
 
-  <!-- Sidebar: die Navigation links -->
-  <nav class="sidebar" id="sidebar" aria-label="Hauptnavigation">
-    <div class="sidebar__logo">Mein Hub</div>
-    <ul class="sidebar__liste">
-      <!-- data-view verbindet den Link mit der passenden Ansicht im <main> -->
-      <li><a class="sidebar__link" href="#home" data-view="home">Home</a></li>
-      <li><a class="sidebar__link" href="#kalender" data-view="kalender">Kalender</a></li>
-      <li><a class="sidebar__link" href="#sudoku" data-view="sudoku">Sudoku</a></li>
-      <li><a class="sidebar__link" href="#einstellungen" data-view="einstellungen">Einstellungen</a></li>
-    </ul>
-  </nav>
+  <!-- Navigationsleiste oben. Sie bleibt beim Scrollen stehen (sticky). -->
+  <header class="leiste">
+    <nav class="leiste__nav" aria-label="Hauptnavigation">
 
-  <!-- Halbdurchsichtiger Hintergrund hinter der mobilen Sidebar.
-       Ein Klick darauf schließt die Sidebar. -->
-  <div class="overlay" id="overlay" hidden></div>
-
-  <!-- Rechte Seite: Kopfzeile + Hauptbereich -->
-  <div class="inhalt">
-
-    <header class="kopfzeile">
       <!-- Hamburger-Button: nur auf kleinen Bildschirmen sichtbar -->
       <button class="icon-button hamburger" id="menu-button" type="button"
-              aria-label="Menü öffnen" aria-controls="sidebar" aria-expanded="false">
+              aria-label="Menü öffnen" aria-controls="nav-panel" aria-expanded="false">
         <span class="hamburger__strich"></span>
         <span class="hamburger__strich"></span>
         <span class="hamburger__strich"></span>
       </button>
 
-      <!-- Dark-Mode-Schalter oben rechts -->
+      <!--
+        NTB gibt es zweimal im HTML, weil es auf Handy und Computer an
+        unterschiedlichen Stellen steht:
+          - marke--mobil:   in der Leiste, nur auf dem Handy sichtbar
+          - marke--desktop: zwischen den Reitern, nur auf dem Computer sichtbar
+        Per CSS ist immer genau eins davon mit display: none ausgeblendet.
+        So stimmt die Tab-Reihenfolge immer mit der sichtbaren Reihenfolge überein.
+      -->
+      <a class="reiter marke marke--mobil" href="#home" data-view="home">NTB</a>
+
+      <!--
+        Das Panel enthält alle Reiter.
+        Computer: Das Panel ist "unsichtbar" (display: contents), die Reiter
+                  sitzen links und rechts von NTB direkt in der Leiste.
+        Handy:    Das Panel klappt als Glas-Kasten unter der Leiste aus.
+      -->
+      <div class="nav-panel" id="nav-panel">
+        <!-- data-view verbindet den Link mit der passenden Ansicht im <main> -->
+        <ul class="reiter-gruppe reiter-gruppe--links">
+          <li><a class="reiter" href="#kalender" data-view="kalender">Kalender</a></li>
+          <li><a class="reiter" href="#games" data-view="games">Games</a></li>
+        </ul>
+
+        <a class="reiter marke marke--desktop" href="#home" data-view="home">NTB</a>
+
+        <ul class="reiter-gruppe reiter-gruppe--rechts">
+          <li><a class="reiter" href="#einstellungen" data-view="einstellungen">Einstellungen</a></li>
+          <li><a class="reiter" href="#customising" data-view="customising">Customising</a></li>
+        </ul>
+      </div>
+
+      <!-- Dark-Mode-Schalter ganz rechts -->
       <button class="icon-button theme-schalter" id="theme-button" type="button"
               aria-label="Dunkles Design" aria-pressed="false">
         <!-- Das Symbol wird von app.js gesetzt (☾ oder ☀) -->
         <span id="theme-symbol" aria-hidden="true">☾</span>
       </button>
-    </header>
 
-    <!-- Hauptbereich: hier liegen alle Ansichten. Nur eine ist sichtbar,
-         die anderen haben das Attribut "hidden". -->
-    <main class="hauptbereich" id="main">
+    </nav>
+  </header>
 
-      <section class="ansicht" id="view-home" aria-labelledby="titel-home">
-        <h1 id="titel-home" tabindex="-1">Willkommen in deinem Hub</h1>
-        <div class="karte">
-          <p>Wähle links ein Tool aus, um loszulegen.</p>
-        </div>
-      </section>
+  <!-- Hauptbereich: hier liegen alle Ansichten. Nur eine ist sichtbar,
+       die anderen haben das Attribut "hidden". -->
+  <main class="hauptbereich" id="main">
 
-      <section class="ansicht" id="view-kalender" aria-labelledby="titel-kalender" hidden>
-        <h1 id="titel-kalender" tabindex="-1">Kalender</h1>
-        <!-- calendar.js füllt diesen Container später -->
-        <div class="karte" id="calendar-root"></div>
-      </section>
+    <section class="ansicht" id="view-home" aria-labelledby="titel-home">
+      <h1 id="titel-home" tabindex="-1">Willkommen bei NTB</h1>
+      <div class="karte">
+        <p>Wähle oben ein Tool aus, um loszulegen.</p>
+      </div>
+    </section>
 
-      <section class="ansicht" id="view-sudoku" aria-labelledby="titel-sudoku" hidden>
-        <h1 id="titel-sudoku" tabindex="-1">Sudoku</h1>
-        <!-- sudoku.js füllt diesen Container später -->
-        <div class="karte" id="sudoku-root"></div>
-      </section>
+    <section class="ansicht" id="view-kalender" aria-labelledby="titel-kalender" hidden>
+      <h1 id="titel-kalender" tabindex="-1">Kalender</h1>
+      <!-- calendar.js füllt diesen Container später -->
+      <div class="karte" id="calendar-root"></div>
+    </section>
 
-      <section class="ansicht" id="view-einstellungen" aria-labelledby="titel-einstellungen" hidden>
-        <h1 id="titel-einstellungen" tabindex="-1">Einstellungen</h1>
-        <div class="karte">
-          <p>Hier kommen später deine Einstellungen hin.</p>
-        </div>
-      </section>
+    <section class="ansicht" id="view-games" aria-labelledby="titel-games" hidden>
+      <h1 id="titel-games" tabindex="-1">Games</h1>
+      <!-- games.js füllt diesen Container mit der Spiele-Übersicht -->
+      <div id="games-root"></div>
+    </section>
 
-    </main>
-  </div>
+    <section class="ansicht" id="view-einstellungen" aria-labelledby="titel-einstellungen" hidden>
+      <h1 id="titel-einstellungen" tabindex="-1">Einstellungen</h1>
+      <div class="karte">
+        <p>Hier kommen später deine Einstellungen hin.</p>
+      </div>
+    </section>
+
+    <section class="ansicht" id="view-customising" aria-labelledby="titel-customising" hidden>
+      <h1 id="titel-customising" tabindex="-1">Customising</h1>
+      <!-- customising.js füllt diesen Container später -->
+      <div class="karte" id="customising-root"></div>
+    </section>
+
+  </main>
 
   <!--
     Die Skripte stehen am Ende des <body>, damit das HTML schon geladen ist,
@@ -106,7 +128,8 @@
     index.html per Doppelklick (file://) öffnet.
   -->
   <script src="js/calendar.js"></script>
-  <script src="js/sudoku.js"></script>
+  <script src="js/games.js"></script>
+  <script src="js/customising.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

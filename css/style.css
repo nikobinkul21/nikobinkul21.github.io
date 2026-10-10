@@ -1,21 +1,39 @@
 /* ==========================================================================
    1. CSS-VARIABLEN
-   Hier änderst du Farben, Abstände und Radien an EINER Stelle.
+   Hier änderst du Farben, Abstände, Radien und den Glas-Effekt an EINER Stelle.
    ========================================================================== */
 
 :root {
   /* Farben – helles Design */
   --farbe-hintergrund: #f4f5f7;
-  --farbe-flaeche: #ffffff;          /* Karten, Sidebar, Kopfzeile */
+  --farbe-flaeche: #ffffff;          /* Karten */
   --farbe-text: #1f2328;
-  --farbe-text-leise: #656d76;       /* weniger wichtiger Text */
+  --farbe-text-leise: #5b636d;       /* weniger wichtiger Text */
   --farbe-rand: #e3e5e8;
-  --farbe-akzent: #4f6ef7;           /* Hervorhebungen, aktiver Menüpunkt */
-  --farbe-akzent-hell: #eaeefe;      /* Hintergrund des aktiven Menüpunkts */
-  --farbe-hover: #eef0f3;
-  --farbe-overlay: rgba(0, 0, 0, 0.4);
+  --farbe-akzent: #4f6ef7;           /* Fokusrahmen */
 
-  /* Schatten */
+  /* Sehr dezenter Farbverlauf im Seitenhintergrund.
+     Ohne ihn hätte der Blur nichts zum Verwischen und wäre kaum sichtbar. */
+  --verlauf-1: rgba(110, 140, 255, 0.20);   /* oben links */
+  --verlauf-2: rgba(255, 140, 190, 0.14);   /* unten rechts */
+
+  /* Glas-Effekt (im Stil von Apples "Liquid Glass") */
+  --glas-hintergrund: rgba(255, 255, 255, 0.45);  /* halbtransparente Fläche */
+  --glas-blur: 16px;                              /* Stärke der Unschärfe */
+  --glas-saettigung: 180%;                        /* Farben dahinter etwas kräftiger */
+  --glas-rand: rgba(255, 255, 255, 0.75);         /* feiner heller Rand */
+  --glas-reflex: rgba(255, 255, 255, 0.9);        /* Lichtkante oben */
+  --glas-glanz: rgba(255, 255, 255, 0.35);        /* sanfter Glanz in der oberen Hälfte */
+  --glas-schatten: 0 4px 16px rgba(30, 40, 80, 0.10);
+  --glas-fallback: rgba(255, 255, 255, 0.85);     /* für Browser ohne backdrop-filter */
+  --glas-aktiv-deckkraft: 0.55;                   /* abgeschwächtes Glas beim aktiven Reiter */
+
+  /* Glas der Leiste selbst: noch zurückhaltender */
+  --leiste-hintergrund: rgba(255, 255, 255, 0.35);
+  --leiste-rand: rgba(255, 255, 255, 0.6);
+  --leiste-fallback: rgba(244, 245, 247, 0.92);
+
+  /* Schatten der Karten */
   --schatten: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.05);
 
   /* Abstände */
@@ -28,10 +46,15 @@
   /* Rundungen */
   --radius-s: 8px;
   --radius-m: 12px;
+  --radius-pille: 999px;             /* so groß, dass jede Ecke ganz rund wird */
 
   /* Größen */
-  --sidebar-breite: 240px;
-  --kopfzeile-hoehe: 64px;
+  --leiste-hoehe: 64px;
+  --inhalt-max-breite: 1100px;
+
+  /* Bewegung */
+  --dauer: 200ms;
+  --anheben: -1px;                   /* so weit hebt sich ein Reiter beim Hover */
 
   /* System-Schriftarten: nutzt die Schrift des Betriebssystems, kein Download nötig */
   --schrift: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -43,15 +66,27 @@
 /* Dunkles Design: überschreibt nur die Farben.
    Aktiv, wenn <html data-theme="dark"> gesetzt ist (macht app.js). */
 :root[data-theme="dark"] {
-  --farbe-hintergrund: #16181d;
+  --farbe-hintergrund: #14161b;
   --farbe-flaeche: #1f2228;
   --farbe-text: #e6e8eb;
-  --farbe-text-leise: #9aa1ab;
+  --farbe-text-leise: #a0a7b1;
   --farbe-rand: #2e323a;
   --farbe-akzent: #7b93ff;
-  --farbe-akzent-hell: #262d45;
-  --farbe-hover: #2a2e36;
-  --farbe-overlay: rgba(0, 0, 0, 0.6);
+
+  --verlauf-1: rgba(90, 110, 255, 0.16);
+  --verlauf-2: rgba(40, 180, 170, 0.10);
+
+  --glas-hintergrund: rgba(255, 255, 255, 0.08);
+  --glas-rand: rgba(255, 255, 255, 0.18);
+  --glas-reflex: rgba(255, 255, 255, 0.28);
+  --glas-glanz: rgba(255, 255, 255, 0.06);
+  --glas-schatten: 0 4px 16px rgba(0, 0, 0, 0.40);
+  --glas-fallback: rgba(48, 52, 60, 0.92);
+
+  --leiste-hintergrund: rgba(20, 22, 27, 0.55);
+  --leiste-rand: rgba(255, 255, 255, 0.08);
+  --leiste-fallback: rgba(20, 22, 27, 0.94);
+
   --schatten: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
 
   color-scheme: dark;
@@ -72,18 +107,28 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
   font-family: var(--schrift);
   line-height: 1.5;
   color: var(--farbe-text);
-  background: var(--farbe-hintergrund);
-  /* Sidebar links, Inhalt rechts nebeneinander */
-  display: flex;
-  min-height: 100vh;
+  /* Zwei weiche Farbflecken über der Grundfarbe.
+     "fixed" = der Verlauf bleibt beim Scrollen stehen. */
+  background:
+    radial-gradient(ellipse at 0% 0%, var(--verlauf-1), transparent 60%),
+    radial-gradient(ellipse at 100% 100%, var(--verlauf-2), transparent 60%),
+    var(--farbe-hintergrund);
+  background-attachment: fixed;
 }
 
 h1 {
   margin: 0 0 var(--abstand-l);
   font-size: 1.75rem;
+  font-weight: 600;
+}
+
+h2 {
+  margin: 0 0 var(--abstand-s);
+  font-size: 1.15rem;
   font-weight: 600;
 }
 
@@ -108,102 +153,193 @@ button:focus-visible {
 
 
 /* ==========================================================================
-   3. SIDEBAR
+   3. NAVIGATIONSLEISTE
    ========================================================================== */
 
-.sidebar {
-  width: var(--sidebar-breite);
-  flex-shrink: 0;                   /* nicht schmaler werden */
-  background: var(--farbe-flaeche);
-  border-right: 1px solid var(--farbe-rand);
-  padding: var(--abstand-l) var(--abstand-m);
-  /* bleibt beim Scrollen stehen */
-  position: sticky;
+.leiste {
+  position: sticky;                 /* bleibt beim Scrollen oben stehen */
   top: 0;
-  height: 100vh;
-  overflow-y: auto;
+  z-index: 10;                      /* liegt über dem Inhalt */
 }
 
-.sidebar__logo {
-  font-size: 1.25rem;
-  font-weight: 700;
-  padding: 0 var(--abstand-s);
-  margin-bottom: var(--abstand-l);
+/* Das Glas der Leiste liegt auf einem Pseudo-Element (::before) statt auf
+   der Leiste selbst. Grund: Hätte die Leiste selbst einen backdrop-filter,
+   könnten die Glasflächen der Reiter darin nichts mehr dahinter verwischen. */
+.leiste::before {
+  content: "";
+  position: absolute;
+  inset: 0;                         /* füllt die ganze Leiste */
+  z-index: -1;                      /* hinter den Reitern */
+  background: var(--leiste-hintergrund);
+  -webkit-backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung)); /* Safari */
+  backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
+  border-bottom: 1px solid var(--leiste-rand);
 }
 
-.sidebar__liste {
+/*
+  Das Raster der Leiste: drei Spalten "1fr auto 1fr".
+    - Die mittlere Spalte (auto) ist genau so breit wie NTB.
+    - Die beiden äußeren Spalten (1fr) teilen sich den Rest GLEICHMÄSSIG.
+  Dadurch sitzt NTB immer exakt in der Mitte – egal wie breit die Reiter sind.
+*/
+.leiste__nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: var(--abstand-s);
+  height: var(--leiste-hoehe);
+  padding: 0 var(--abstand-l);
+}
+
+/* Auf dem Computer ist das Panel "unsichtbar": Seine Kinder (die zwei Listen
+   und NTB) werden direkt zu Zellen im Raster der Leiste. */
+.nav-panel {
+  display: contents;
+}
+
+/* Wer in welcher Spalte steht. grid-row: 1 hält alle in derselben Zeile. */
+.reiter-gruppe--links {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: end;                /* rechtsbündig – also direkt neben NTB */
+}
+
+.marke--desktop {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.reiter-gruppe--rechts {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: start;              /* linksbündig – also direkt neben NTB */
+}
+
+/* Der Dark-Mode-Schalter teilt sich die rechte Spalte mit den rechten
+   Reitern, sitzt aber ganz am rechten Rand. */
+.theme-schalter {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.reiter-gruppe {
+  display: flex;
+  gap: var(--abstand-xs);
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--abstand-xs);
-}
-
-.sidebar__link {
-  display: block;
-  padding: 10px var(--abstand-m);
-  border-radius: var(--radius-s);
-  color: var(--farbe-text-leise);
-  text-decoration: none;
-  font-weight: 500;
-  transition: background 0.15s, color 0.15s;
-}
-
-.sidebar__link:hover {
-  background: var(--farbe-hover);
-  color: var(--farbe-text);
-}
-
-/* Aktiver Menüpunkt: app.js setzt aria-current="page" */
-.sidebar__link[aria-current="page"] {
-  background: var(--farbe-akzent-hell);
-  color: var(--farbe-akzent);
 }
 
 
 /* ==========================================================================
-   4. KOPFZEILE & BUTTONS
+   4. REITER MIT GLAS-EFFEKT
    ========================================================================== */
 
-.inhalt {
-  flex: 1;
-  min-width: 0;                     /* verhindert, dass breiter Inhalt das Layout sprengt */
-  display: flex;
-  flex-direction: column;
+.reiter {
+  position: relative;               /* Bezugspunkt für die Glasfläche (::before) */
+  z-index: 0;                       /* damit die Glasfläche (z-index: -1) hinter dem Text bleibt */
+  display: block;
+  padding: 8px 18px;
+  border-radius: var(--radius-pille);
+  color: var(--farbe-text-leise);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;              /* Reiter nie umbrechen */
+  transition:
+    color var(--dauer) ease,
+    transform var(--dauer) ease;
 }
 
-.kopfzeile {
-  height: var(--kopfzeile-hoehe);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--abstand-l);
+/* NTB (Seitenname) ist größer und kräftiger als die anderen Reiter */
+.reiter.marke {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--farbe-text);
 }
 
-/* Runder Button nur mit Symbol (Hamburger, Dark-Mode) */
+/* Die Handy-Variante von NTB ist auf dem Computer versteckt.
+   (Steht bewusst NACH .reiter, sonst würde dessen display: block gewinnen.) */
+.marke--mobil {
+  display: none;
+}
+
+/*
+  Die Glasfläche hinter dem Reiter. Sie ist immer da, aber unsichtbar
+  (opacity: 0). Beim Hover/Fokus wird sie eingeblendet.
+  Bestandteile:
+    background   – Glanz oben (Verlauf) + halbtransparente Grundfläche
+    backdrop-filter – verwischt und sättigt, was dahinter liegt
+    border       – feiner heller Rand
+    box-shadow   – Lichtreflex an der Oberkante (inset) + weicher Schatten
+*/
+.reiter::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;           /* gleiche Pillenform wie der Reiter */
+  background:
+    linear-gradient(to bottom, var(--glas-glanz), transparent 55%),
+    var(--glas-hintergrund);
+  -webkit-backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
+  backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
+  border: 1px solid var(--glas-rand);
+  box-shadow:
+    inset 0 1px 0 var(--glas-reflex),
+    var(--glas-schatten);
+  opacity: 0;
+  transition: opacity var(--dauer) ease;
+}
+
+/* Hover und Tastaturfokus: Glas einblenden, Reiter minimal anheben */
+.reiter:hover,
+.reiter:focus-visible {
+  color: var(--farbe-text);
+  transform: translateY(var(--anheben));
+}
+
+.reiter:hover::before,
+.reiter:focus-visible::before {
+  opacity: 1;
+}
+
+/* Aktiver Reiter (app.js setzt aria-current="page"):
+   Glas dauerhaft sichtbar, aber abgeschwächt */
+.reiter[aria-current="page"] {
+  color: var(--farbe-text);
+  font-weight: 600;
+}
+
+.reiter[aria-current="page"]::before {
+  opacity: var(--glas-aktiv-deckkraft);
+}
+
+/* Aktiver Reiter UND Hover: volle Stärke */
+.reiter[aria-current="page"]:hover::before,
+.reiter[aria-current="page"]:focus-visible::before {
+  opacity: 1;
+}
+
+
+/* ==========================================================================
+   5. RUNDE SYMBOL-BUTTONS (Hamburger, Dark-Mode)
+   ========================================================================== */
+
 .icon-button {
   width: 40px;
   height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--farbe-rand);
-  border-radius: var(--radius-s);
-  background: var(--farbe-flaeche);
+  border: 1px solid var(--glas-rand);
+  border-radius: var(--radius-pille);
+  background: var(--glas-hintergrund);
+  box-shadow: inset 0 1px 0 var(--glas-reflex), var(--glas-schatten);
   color: var(--farbe-text);
   font-size: 1.1rem;
   cursor: pointer;
-  box-shadow: var(--schatten);
-  transition: background 0.15s;
-}
-
-.icon-button:hover {
-  background: var(--farbe-hover);
-}
-
-/* margin-left: auto schiebt den Schalter ganz nach rechts */
-.theme-schalter {
-  margin-left: auto;
 }
 
 /* Hamburger: drei Striche, auf großen Bildschirmen versteckt */
@@ -223,17 +359,18 @@ button:focus-visible {
 
 
 /* ==========================================================================
-   5. HAUPTBEREICH & KARTEN
+   6. HAUPTBEREICH & KARTEN
    ========================================================================== */
 
+/* Volle Breite, aber der Inhalt wird nicht breiter als --inhalt-max-breite
+   und steht mittig (margin: 0 auto). */
 .hauptbereich {
-  flex: 1;
-  padding: 0 var(--abstand-l) var(--abstand-xl);
-  max-width: 1100px;
-  width: 100%;
+  max-width: var(--inhalt-max-breite);
+  margin: 0 auto;
+  padding: var(--abstand-xl) var(--abstand-l);
 }
 
-/* "Karte": weiße Box mit Rundung und Schatten – Baustein für alle Tools */
+/* "Karte": Box mit Rundung und Schatten – Baustein für alle Tools */
 .karte {
   background: var(--farbe-flaeche);
   border: 1px solid var(--farbe-rand);
@@ -251,55 +388,121 @@ button:focus-visible {
   color: var(--farbe-text-leise);
 }
 
-/* Overlay hinter der mobilen Sidebar */
-.overlay {
-  position: fixed;
-  inset: 0;                         /* füllt den ganzen Bildschirm */
-  background: var(--farbe-overlay);
-  z-index: 10;
-}
-
 
 /* ==========================================================================
-   6. MOBIL (unter 768 px)
+   7. MOBIL (unter 768 px)
    ========================================================================== */
 
 @media (max-width: 767px) {
 
-  /* Sidebar liegt jetzt über dem Inhalt und ist nach links herausgeschoben */
-  .sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    z-index: 20;                    /* über dem Overlay */
-    transform: translateX(-100%);
-    /* visibility: hidden macht die Links auch für die Tastatur unerreichbar,
-       solange die Sidebar zu ist */
+  .leiste__nav {
+    padding: 0 var(--abstand-m);
+  }
+
+  /* In der Leiste: Hamburger links, NTB mittig, Schalter rechts */
+  .hamburger {
+    display: inline-flex;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  .marke--mobil {
+    display: block;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .marke--desktop {
+    display: none;
+  }
+
+  /* Das Panel wird zum echten Kasten, der unter der Leiste schwebt */
+  .nav-panel {
+    display: block;
+    position: absolute;
+    top: calc(100% + var(--abstand-s));   /* knapp unter der Leiste */
+    left: var(--abstand-m);
+    right: var(--abstand-m);
+    padding: var(--abstand-s);
+    border-radius: var(--radius-m);
+    background:
+      linear-gradient(to bottom, var(--glas-glanz), transparent 40%),
+      var(--glas-hintergrund);
+    -webkit-backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
+    backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
+    border: 1px solid var(--glas-rand);
+    box-shadow: inset 0 1px 0 var(--glas-reflex), var(--glas-schatten);
+
+    /* Geschlossen: unsichtbar und leicht nach oben verschoben.
+       visibility: hidden macht die Links auch für die Tastatur unerreichbar. */
+    opacity: 0;
     visibility: hidden;
-    transition: transform 0.25s ease, visibility 0.25s;
-    box-shadow: var(--schatten);
+    transform: translateY(-8px);
+    /* visibility springt beim Schließen erst NACH dem Ausblenden um
+       (0s Dauer, aber 200 ms Verzögerung) */
+    transition:
+      opacity var(--dauer) ease,
+      transform var(--dauer) ease,
+      visibility 0s linear var(--dauer);
   }
 
   /* Geöffnet: app.js setzt die Klasse "offen" */
-  .sidebar.offen {
-    transform: translateX(0);
+  .nav-panel.offen {
+    opacity: 1;
     visibility: visible;
+    transform: translateY(0);
+    /* Beim Öffnen wird visibility SOFORT sichtbar (ohne Verzögerung),
+       damit app.js den ersten Reiter direkt fokussieren kann */
+    transition-delay: 0s;
   }
 
-  .hamburger {
-    display: inline-flex;
+  /* Im Panel stehen alle Reiter untereinander und linksbündig */
+  .reiter-gruppe {
+    flex-direction: column;
+    justify-self: stretch;
   }
 
-  .kopfzeile,
+  .reiter-gruppe--links {
+    margin-bottom: var(--abstand-xs);
+  }
+
+  /* Im Panel nicht anheben, sonst wackelt die Liste */
+  .reiter:hover,
+  .reiter:focus-visible {
+    transform: none;
+  }
+
   .hauptbereich {
-    padding-left: var(--abstand-m);
-    padding-right: var(--abstand-m);
+    padding: var(--abstand-l) var(--abstand-m);
   }
 }
 
-/* Wer im System "Bewegung reduzieren" eingestellt hat, bekommt keine Animationen */
+
+/* ==========================================================================
+   8. FALLBACK & BARRIEREFREIHEIT
+   ========================================================================== */
+
+/* Browser ohne backdrop-filter: einfarbig halbtransparenter Hintergrund,
+   damit Text auf dem Glas trotzdem gut lesbar bleibt */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .leiste::before {
+    background: var(--leiste-fallback);
+  }
+
+  .reiter::before,
+  .nav-panel,
+  .icon-button {
+    background: var(--glas-fallback);
+  }
+}
+
+/* Wer im System "Bewegung reduzieren" eingestellt hat: keine Bewegung,
+   nur sanftes Ein- und Ausblenden */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
+  .reiter:hover,
+  .reiter:focus-visible,
+  .nav-panel {
+    transform: none !important;
   }
 }
