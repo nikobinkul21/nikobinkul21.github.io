@@ -12,18 +12,21 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   WÜRFELANIMATION – alle Werte an einer Stelle
+   KAMPFANIMATIONEN (Würfel und Schadensaufbau) – alle Werte an einer Stelle
    Die Stufe wählt man in den Einstellungen; gespeichert wird sie im Browser.
+   Die Werte des Schadensaufbaus selbst: SUDOKU_FX_KONFIG in js/sudoku-damage-fx.js
    -------------------------------------------------------------------------- */
 const SUDOKU_WUERFEL_KONFIG = {
-  speicherSchluessel: "ntb-wuerfel-animation",
+  speicherSchluessel: "ntb-kampf-animation",
+  alterSchluessel: "ntb-wuerfel-animation",   // frühere Einstellung "Würfelanimation"
   standard: "normal",
-  // Dauer in Millisekunden: "gross" = eigene Würfelfläche (Desktop),
-  // "klein" = Würfel im Kampffenster (Smartphone)
+  // Würfel in Millisekunden: "gross" = eigene Würfelfläche (Desktop),
+  // "klein" = Würfel im Kampffenster (Smartphone).
+  // "fx" = Tempo des Schadensaufbaus (1 = normal, 0 = aus)
   stufen: [
-    { id: "normal", name: "Normal (2 Sekunden)", gross: 2000, klein: 800 },
-    { id: "schnell", name: "Schnell (0,6 Sekunden)", gross: 600, klein: 600 },
-    { id: "aus", name: "Aus", gross: 0, klein: 0 },
+    { id: "normal", name: "Normal", gross: 2000, klein: 800, fx: 1 },
+    { id: "schnell", name: "Schnell", gross: 600, klein: 600, fx: 0.4 },
+    { id: "aus", name: "Aus", gross: 0, klein: 0, fx: 0 },
   ],
   landung: 0.2,            // Anteil der Dauer für den Aufprall am Ende
   umdrehungen: 3,          // so oft dreht sich der große Würfel im Flug
@@ -40,7 +43,9 @@ const SudokuKampf = (function () {
   /** Die gewählte Stufe der Würfelanimation ({ id, name, gross, klein }). */
   function wuerfelEinstellung() {
     let id = null;
-    try { id = localStorage.getItem(W.speicherSchluessel); } catch (fehler) { /* gesperrt */ }
+    try {
+      id = localStorage.getItem(W.speicherSchluessel) || localStorage.getItem(W.alterSchluessel);
+    } catch (fehler) { /* gesperrt */ }
     return W.stufen.find(function (st) { return st.id === id; }) ||
       W.stufen.find(function (st) { return st.id === W.standard; });
   }
@@ -133,9 +138,10 @@ const SudokuKampf = (function () {
    * @param {HTMLElement|null} platz – Platz für den großen Würfel
    * @param {HTMLElement} klein     – der kleine Würfel im Kampffenster
    * @param {HTMLElement} kleinZahl – seine Zahl
-   * @returns {{ rolle, ueberspringe, zeige }}
+   * @param {function} beimKlick    – Klick auf den Würfel (überspringt den Ablauf)
+   * @returns {{ rolle, ueberspringe, zeige, punkt, gross }}
    */
-  function erstelleWuerfel(platz, klein, kleinZahl) {
+  function erstelleWuerfel(platz, klein, kleinZahl, beimKlick) {
     const g = {};       // Teile des großen Würfels
     if (platz) {
       platz.innerHTML =
@@ -151,10 +157,10 @@ const SudokuKampf = (function () {
       g.zahl = platz.querySelector(".wuerfel-zahl");
       g.seiten = platz.querySelector(".wuerfel-seiten");
       g.art = platz.querySelector(".wuerfel-art");
-      // Ein Klick auf den Würfel überspringt die laufende Animation
-      g.knopf.addEventListener("click", ueberspringe);
+      // Ein Klick auf den Würfel überspringt die laufende Animation (Würfel UND Schadensaufbau)
+      g.knopf.addEventListener("click", beimKlick);
     }
-    klein.addEventListener("click", ueberspringe);
+    klein.addEventListener("click", beimKlick);
 
     let lauf = null;    // der laufende Wurf: { e, art, animationen, zeit, fertig }
 
@@ -329,7 +335,13 @@ const SudokuKampf = (function () {
       if (lauf) lande(false);
     }
 
-    return { rolle: rolle, ueberspringe: ueberspringe, zeige: zeige };
+    /** Mitte der Zahl auf dem gerade sichtbaren Würfel (Seitenkoordinaten). */
+    function punkt() {
+      const r = (grossSichtbar() ? g.zahl : klein).getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
+
+    return { rolle: rolle, ueberspringe: ueberspringe, zeige: zeige, punkt: punkt, gross: grossSichtbar };
   }
 
   /**
@@ -338,6 +350,8 @@ const SudokuKampf = (function () {
    * @param {object} optionen
    *   beimZuruecksetzen – Funktion, die bei Klick auf "Abenteuer zurücksetzen" läuft
    *   wuerfelPlatz      – Element für den großen Würfel (Desktop), optional
+   *   gitterFeld(i)     – liefert Feld i des Sudokus (Herkunft des Doppelschadens)
+   *   gradAnzeige       – Element mit der Schwierigkeit (Herkunft des Schwierigkeitsbonus)
    * @returns {object} Steuerung des Fensters (siehe unten "return")
    */
   function erstelle(container, optionen) {
@@ -468,7 +482,8 @@ const SudokuKampf = (function () {
 
     SudokuSprites.zeichne(el.heldCanvas, "held", 0);
 
-    const wuerfel = erstelleWuerfel(optionen && optionen.wuerfelPlatz, el.wuerfel, el.wuerfelZahl);
+    const wuerfel = erstelleWuerfel(optionen && optionen.wuerfelPlatz, el.wuerfel, el.wuerfelZahl,
+      function () { beschleunige(); });
 
     container.querySelector(".kampf-reset").addEventListener("click", function () {
       if (optionen && optionen.beimZuruecksetzen) optionen.beimZuruecksetzen();
@@ -536,6 +551,13 @@ const SudokuKampf = (function () {
       eiligBis = schrittNummer;
       wartende.forEach(function (sofort) { sofort(); });
       wuerfel.ueberspringe();
+      SudokuSchadenFx.aufraeumen();
+    }
+
+    /** Pause, die auch bei "Bewegung reduzieren" wartet (z. B. Hochzählen an Ort und Stelle). */
+    function pause(ms) {
+      if (ms <= 0 || eilig()) return Promise.resolve();
+      return wartezeit(ms);
     }
 
     /** Wartet ms Millisekunden – außer bei "Bewegung reduzieren" oder wenn es eilt. */
@@ -730,6 +752,7 @@ const SudokuKampf = (function () {
         const knopf = document.createElement("button");
         knopf.type = "button";
         knopf.className = "kampf-chip hat-tipp";
+        knopf.dataset.id = v.id;           // Herkunft fliegender Boni (sudoku-damage-fx.js)
         knopf.setAttribute("role", "listitem");
         knopf.style.setProperty("--chip-farbe", v.farbe);
         knopf.innerHTML = symbolSvg(v.symbol) + '<span class="kampf-chip-stufe"></span>' + tippHtml();
@@ -1078,6 +1101,99 @@ const SudokuKampf = (function () {
      * Richtige Zahl: würfeln, zuschlagen (oder stolpern), Schaden, Gift,
      * Kombo, Münzen, Leben – kurz nacheinander.
      */
+    /**
+     * Alles, was der Schadensaufbau (js/sudoku-damage-fx.js) über die Seite
+     * wissen muss: Punkte, Herkunft der Boni, Tempo, Wartezeiten.
+     */
+    function fxUmgebung(e) {
+      const FX = SudokuSchadenFx.KONFIG;
+      const stufe = wuerfelEinstellung();
+      const handy = !wuerfel.gross();
+      const mitte = function (element) {
+        if (!element) return null;
+        const r = element.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return null;      // unsichtbar
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      };
+      const start = wuerfel.punkt();
+      const versatz = handy ? FX.daneben.handy : FX.daneben.desktop;
+      const held = el.heldFigur.getBoundingClientRect();
+      return {
+        aktiv: stufe.fx > 0,
+        faktor: stufe.fx * (handy ? FX.faktorHandy : 1),
+        reduziert: ohneBewegung(),
+        start: start,
+        daneben: { x: start.x + versatz.x, y: start.y + versatz.y },
+        schwert: { x: held.left + held.width * FX.schwertPunkt.x, y: held.top + held.height * FX.schwertPunkt.y },
+        boss: mitte(el.bossFigur),
+        held: el.heldFigur,
+        // Woher ein Bonus kommt
+        quelle: function (name) {
+          if (name === "kombo") return mitte(el.kombo);
+          if (name === "klinge") return mitte(el.verbesserungen.querySelector('[data-id="klinge"]'));
+          if (name === "selten") return el.selten.hidden ? null : mitte(el.selten);
+          if (name === "grad") return mitte(optionen && optionen.gradAnzeige);
+          if (name === "doppelt") return einheitMitte(e);
+          return null;
+        },
+        warte: warte,
+        pause: pause,
+        eilig: eilig,
+        beimSchritt: function (i, wert) { zeigeAufbau(e, i + 2, wert); },
+      };
+    }
+
+    /** Mitte der Zeile, Spalte oder des Blocks, die diese Zahl vervollständigt hat. */
+    function einheitMitte(e) {
+      if (!optionen || !optionen.gitterFeld) return null;
+      const z = Math.floor(e.index / 9), sp = e.index % 9;
+      let ecken;
+      if (e.einheiten.zeile) ecken = [z * 9, z * 9 + 8];
+      else if (e.einheiten.spalte) ecken = [sp, 72 + sp];
+      else if (e.einheiten.block) {
+        const z0 = z - (z % 3), s0 = sp - (sp % 3);
+        ecken = [z0 * 9 + s0, (z0 + 2) * 9 + s0 + 2];
+      } else return null;
+      const a = optionen.gitterFeld(ecken[0]).getBoundingClientRect();
+      const b = optionen.gitterFeld(ecken[1]).getBoundingClientRect();
+      return { x: (a.left + b.right) / 2, y: (a.top + b.bottom) / 2 };
+    }
+
+    /**
+     * "Letzter Treffer" im Takt des Aufbaus: die ersten n Zeilen der Rechnung,
+     * als Gesamt der aktuelle Zwischenwert. Belohnung kommt erst am Ende.
+     */
+    function zeigeAufbau(e, n, zwischenwert) {
+      el.panel.classList.remove("ist-leer");
+      const zeilen = rechnungsZeilen(e).filter(function (z) { return z.key !== "gift" && z.key !== "spruch"; });
+      setzeZeilen(el.trefferZeilen, zeilen.slice(0, n));
+      setzeZeile(el.trefferSumme, { label: "Gesamt", wert: String(zwischenwert) }, true);
+      if (n === 1) {
+        setzeZeilen(el.belohnungZeilen, []);
+        setzeZeile(el.belohnungSumme, { label: "Summe", wert: "…" }, false);
+      }
+    }
+
+    /** Der Boss wird getroffen – je höher die Leuchtstufe, desto heftiger. */
+    function bossGetroffen(e, stufe) {
+      const n = stufe.nummer;
+      if (n >= 4) {
+        faerbe(el.blitz, "an-regenbogen", 500);
+        animiere(el.buehne, "wackelt-max", 700);
+      } else if (n === 3) {
+        faerbe(el.blitz, "an-glut", 360);
+        animiere(el.buehne, "wackelt-stark", DAUER.kritisch);
+      } else if (n === 2) {
+        faerbe(el.blitz, "an-blau", 300);
+        animiere(el.buehne, "wackelt", 360);
+      }
+      return animiere(el.bossFigur, n >= 2 ? "getroffen-stark" : "getroffen", n >= 3 ? DAUER.kritisch : DAUER.treffer);
+    }
+
+    /**
+     * Richtige Zahl: würfeln → Schaden sichtbar aufbauen (Boni fliegen auf
+     * die Zahl zu) → ins Schwert → Schlag → Einschlag im Boss → Gift, Münzen.
+     */
     function treffer(e) {
       beschleunige();       // ein noch laufender Zug springt sofort zu seinem Ende
       return einreihen(function () {
@@ -1085,55 +1201,21 @@ const SudokuKampf = (function () {
         // 1. Würfel rollt – erst wenn er gelandet ist, wird der Treffer sichtbar
         return wuerfel.rolle(e, eilig()).then(function () {
           meldung(trefferText(e));
-          protokolliereTreffer(e);
-          // 2. Held schlägt zu – oder stolpert bei einer 1
-          if (e.fehlschlag) return animiere(el.heldFigur, "stolpert", DAUER.stolpern);
-          return animiere(el.heldFigur, e.kritisch ? "schlaegt-stark" : "schlaegt", DAUER.schlag);
-        }).then(function () {
-          // 3. Der Treffer
           zeigeKombo(e.kombo, e.komboBonus, true);
-          if (e.fehlschlag) {
-            schwebeZahl("Daneben!", "daneben");
-            return null;
-          }
-          if (e.immun) {
-            // Seltene Eigenschaft: Wurf wirkungslos – Würfel grau (siehe Würfel), Boss wehrt ab
-            schwebeZahl(e.selten.art === "geblockt" ? "Geblockt!" : "Immun!", "immun");
-            banner(e.selten.name + "!", e.selten.farbe, "selten");
-            animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
-            return faerbe(el.selten, "ausgeloest", 900);
-          }
-          if (e.eigenheit) {
-            // Rüstung hat den Wurf geblockt
-            schwebeZahl("Geblockt!", "geblockt");
-            animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
-            return eigenheitAusgeloest(e.eigenheit);
-          }
-          zeigeHp(e.hpNachSchaden, e.boss.maxHp);
-          if (e.kritisch) {
-            // Kritisch: riesige Zahl in eigener Farbe, Blitz, starkes Wackeln
-            schwebeZahl("−" + e.schaden, "kritisch");
-            banner("Kritisch!", null, "kritisch");
-            faerbe(el.blitz, "an", 260);
-            animiere(el.buehne, "wackelt-stark", DAUER.kritisch);
-            return animiere(el.bossFigur, "getroffen-stark", DAUER.kritisch);
-          }
-          if (e.doppelt) {
-            // Doppelschaden: größere Zahl in eigener Farbe, Fenster wackelt
-            schwebeZahl("−" + e.schaden, "doppelt");
-            animiere(el.buehne, "wackelt", 360);
-            return animiere(el.bossFigur, "getroffen-stark", DAUER.treffer);
-          }
-          schwebeZahl("−" + e.schaden, "boss");
-          return animiere(el.bossFigur, "getroffen", DAUER.treffer);
+          const u = fxUmgebung(e);
+          if (e.fehlschlag || e.immun || e.eigenheit) return keinAufbau(e, u);
+          return mitAufbau(e, u);
         }).then(function () {
-          // 4. Gift (grünes Power-up): eigene grüne Zahl, Boss kurz grün
+          // Gift (grünes Power-up): wie bisher eigene grüne Zahl nach dem Treffer
+          // (der Boss bleibt kurz grün, die Münzen kommen gleichzeitig)
           if (e.gift <= 0) return null;
           schwebeZahl("−" + e.gift, "gift");
           zeigeHp(e.hpNachher, e.boss.maxHp);
-          return faerbe(el.bossFigur, "vergiftet", 520);
+          faerbe(el.bossFigur, "vergiftet", 520);
+          return warte(160);
         }).then(function () {
-          // 5. Münzen und Leben
+          // Münzen und Leben – jetzt steht auch "Letzter Treffer" komplett
+          protokolliereTreffer(e);
           schwebeZahl("+" + (e.muenzenPlus + e.eliteBonus), "muenzen");
           if (e.lebenPlus > 0) {
             zeigeHerzen(e.leben, e.maxLeben);
@@ -1143,6 +1225,55 @@ const SudokuKampf = (function () {
           return zeigeMuenzen(e.muenzen, true);
         });
       });
+    }
+
+    /** Schaden wird aufgebaut, fliegt ins Schwert und entlädt sich im Boss. */
+    function mitAufbau(e, u) {
+      zeigeAufbau(e, 1, e.wurf);
+      const aufbau = u.aktiv
+        ? SudokuSchadenFx.aufbau(e, u)
+        : Promise.resolve(SudokuSchadenFx.stufeFuer(e.schaden));
+      return aufbau.then(function (stufe) {
+        // Das Schwert leuchtet, der Held schlägt zu – die Entladung beginnt
+        // mitten im Schlag (so bleibt der Ablauf kurz)
+        animiere(el.heldFigur, e.kritisch ? "schlaegt-stark" : "schlaegt", DAUER.schlag);
+        const mitte = DAUER.schlag * 0.5 * (u.aktiv ? Math.max(0.4, u.faktor) : 1);
+        return warte(mitte).then(function () { return stufe; });
+      }).then(function (stufe) {
+        // … und das Leuchten entlädt sich im Boss. Erst jetzt sinkt der HP-Balken.
+        SudokuSchadenFx.schwertAus(el.heldFigur);
+        zeigeAufbau(e, Infinity, e.schaden);
+        zeigeHp(e.hpNachSchaden, e.boss.maxHp);
+        schwebeZahl("−" + e.schaden, e.kritisch ? "kritisch" : e.doppelt ? "doppelt" : "boss");
+        // Ohne Schadensaufbau (Kampfanimationen aus) wird der Krit hier betont
+        if (!u.aktiv && e.kritisch) banner("Kritisch!", null, "kritisch");
+        // Boss blitzt und die Bühne wackelt weiter, während schon Gift und Münzen kommen
+        const getroffen = bossGetroffen(e, stufe);
+        return u.aktiv ? SudokuSchadenFx.entladen(stufe, u) : getroffen;
+      });
+    }
+
+    /** Fehlschlag, immun oder geblockt: kein Aufbau, die Zahl zerfällt oder prallt ab. */
+    function keinAufbau(e, u) {
+      protokolliereTreffer(e);
+      const art = e.fehlschlag ? "zerfallen" : "abprallen";
+      const zahl = u.aktiv ? SudokuSchadenFx.abprallen(e, u, art) : Promise.resolve();
+      if (e.fehlschlag) {
+        animiere(el.heldFigur, "stolpert", DAUER.stolpern);
+        schwebeZahl("Daneben!", "daneben");
+        return zahl;
+      }
+      if (e.immun) {
+        // Seltene Eigenschaft: Wurf wirkungslos – Würfel grau (siehe Würfel), Boss wehrt ab
+        schwebeZahl(e.selten.art === "geblockt" ? "Geblockt!" : "Immun!", "immun");
+        banner(e.selten.name + "!", e.selten.farbe, "selten");
+        animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
+        return Promise.all([zahl, faerbe(el.selten, "ausgeloest", 900)]);
+      }
+      // Rüstung hat den Wurf geblockt
+      schwebeZahl("Geblockt!", "geblockt");
+      animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
+      return Promise.all([zahl, eigenheitAusgeloest(e.eigenheit)]);
     }
 
     /**

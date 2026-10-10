@@ -1,0 +1,273 @@
+/* ==========================================================================
+   sudoku-damage-fx.css – Aussehen des Schadensaufbaus (js/sudoku-damage-fx.js)
+   Farben der Leuchtstufen und Größen stehen hier oben als Variablen.
+   Animiert werden nur transform und opacity (das macht das JavaScript).
+   ========================================================================== */
+
+:root {
+  /* Leuchtstufen des Schwerts (und Farbe der großen Zahl, des Einschlags) */
+  --fx-glimmen: rgba(255, 255, 255, 0.55);
+  --fx-weiss: #ffffff;
+  --fx-blau: #3d9bff;
+  --fx-glut: #ff5a1f;
+  --fx-glut-hell: #ffb347;
+  --fx-regenbogen: conic-gradient(#ff3d3d, #ffb800, #3ddc5a, #29d3ff, #8b5cff, #ff3df0, #ff3d3d);
+
+  --fx-zahl-schrift: 2.6rem;              /* große Zahl neben dem Würfel */
+  --fx-zahl-schrift-handy: 1.7rem;
+  --fx-etikett-schrift: 0.85rem;
+  --fx-rand: #1b1b24;                     /* Umriss wie im Kampffenster */
+}
+
+
+/* Ebene über der ganzen Seite: fängt keine Klicks ab */
+.fx-ebene {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Jedes fliegende Teil: aussen = Position, fx-mitte = zentriert, fx-inhalt = animiert */
+.fx-teil {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+
+.fx-mitte {
+  transform: translate(-50%, -50%);
+}
+
+.fx-inhalt {
+  will-change: transform, opacity;
+}
+
+
+/* ---------- Die große Zahl ---------- */
+
+.fx-wert {
+  display: block;
+  font-size: var(--fx-zahl-schrift);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #fff;
+  -webkit-text-stroke: 4px var(--fx-rand);
+  paint-order: stroke fill;
+  transform-origin: 50% 60%;
+}
+
+@media (max-width: 999px) {
+  .fx-wert {
+    font-size: var(--fx-zahl-schrift-handy);
+    -webkit-text-stroke-width: 3px;
+  }
+}
+
+/* Je höher der Wert, desto kräftiger die Farbe */
+.fx-zahl[data-stufe="weiss"] .fx-wert { text-shadow: 0 0 10px rgba(255, 255, 255, 0.9); }
+.fx-zahl[data-stufe="blau"] .fx-wert { color: #cfe6ff; text-shadow: 0 0 12px var(--fx-blau), 0 0 22px var(--fx-blau); }
+.fx-zahl[data-stufe="glut"] .fx-wert { color: #ffe0b3; text-shadow: 0 0 12px var(--fx-glut), 0 0 26px var(--fx-glut); }
+.fx-zahl[data-stufe="regenbogen"] .fx-wert {
+  color: #fff;
+  text-shadow: 0 0 8px #ff3df0, 0 0 16px #29d3ff, 0 0 26px #ffb800;
+}
+
+/* Kritisch: Magenta wie im Kampffenster */
+.fx-zahl.ist-krit .fx-wert {
+  -webkit-text-stroke-color: var(--kampf-kritisch-rand, #4a0050);
+}
+
+/* Fehlschlag und immun: grau, ohne Leuchten */
+.fx-zahl[data-stufe="aus"] .fx-wert {
+  color: #c9ced6;
+  text-shadow: none;
+}
+
+.fx-zahl--abprallen .fx-wert {
+  color: #e6d9ff;
+  -webkit-text-stroke-color: var(--kampf-selten-rand, #2e0f5c);
+}
+
+
+/* ---------- Etiketten der Boni ---------- */
+
+.fx-etikett span {
+  display: block;
+  padding: 3px 9px;
+  font-size: var(--fx-etikett-schrift);
+  font-weight: 900;
+  white-space: nowrap;
+  color: #fff;
+  background: #3b3f55;
+  border: 2px solid var(--fx-rand);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Farbe je Quelle – wie die Herkunft im Kampffenster */
+.fx-etikett--kombo span { background: var(--kombo-3, #f07a1a); }
+.fx-etikett--klinge span { background: #5d7fa8; }
+.fx-etikett--grad span { background: #4f6ef7; }
+.fx-etikett--doppelt span { background: var(--kampf-doppelt, #29d3ff); color: #0b2a6b; }
+.fx-etikett--selten span { background: var(--kampf-selten, #a35cff); }
+
+
+/* ---------- Ringe, Funken, Spur, Bröckchen ---------- */
+
+.fx-ring .fx-inhalt {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 6px solid #fff;
+  opacity: 0;
+}
+
+.fx-ring--krit .fx-inhalt { border-color: var(--kampf-kritisch, #ff3df0); }
+.fx-ring--glimmen .fx-inhalt { border-color: var(--fx-glimmen); border-width: 3px; }
+.fx-ring--weiss .fx-inhalt { border-color: var(--fx-weiss); }
+.fx-ring--blau .fx-inhalt { border-color: var(--fx-blau); background: radial-gradient(circle, rgba(61, 155, 255, 0.45), transparent 70%); }
+.fx-ring--glut .fx-inhalt { border-color: var(--fx-glut); background: radial-gradient(circle, rgba(255, 179, 71, 0.7), rgba(255, 90, 31, 0.35) 50%, transparent 72%); }
+.fx-ring--regenbogen .fx-inhalt {
+  border: none;
+  background: var(--fx-regenbogen);
+  -webkit-mask: radial-gradient(circle, transparent 38%, #000 40%, #000 62%, transparent 64%);
+  mask: radial-gradient(circle, transparent 38%, #000 40%, #000 62%, transparent 64%);
+}
+.fx-ring--abprall .fx-inhalt { border-color: var(--kampf-selten, #a35cff); border-style: dashed; }
+
+.fx-funke .fx-inhalt {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--fx-glut-hell);
+  box-shadow: 0 0 6px var(--fx-glut);
+}
+
+.fx-funke--bunt .fx-inhalt {
+  background: var(--funke-farbe);
+  box-shadow: 0 0 8px var(--funke-farbe);
+}
+
+.fx-spur .fx-inhalt {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px #fff;
+  opacity: 0;
+}
+
+.fx-spur[data-stufe="blau"] .fx-inhalt { background: var(--fx-blau); box-shadow: 0 0 12px var(--fx-blau); }
+.fx-spur[data-stufe="glut"] .fx-inhalt { background: var(--fx-glut-hell); box-shadow: 0 0 14px var(--fx-glut); }
+.fx-spur[data-stufe="regenbogen"] .fx-inhalt { background: var(--fx-regenbogen); box-shadow: 0 0 16px #ff3df0; }
+
+.fx-broeckchen .fx-inhalt {
+  width: 8px;
+  height: 8px;
+  background: #c9ced6;
+  border: 2px solid var(--fx-rand);
+}
+
+
+/* ---------- Leuchten am Schwert des Helden ----------
+   Liegt im Bild des Helden über der Klinge. Vier Farbschichten: in den
+   Stufen 1–3 ist eine davon sichtbar, beim Regenbogen blenden alle
+   nacheinander über (nur opacity). */
+
+.schwert-glut {
+  position: absolute;
+  left: 60%;
+  top: -16%;
+  width: 52%;
+  height: 80%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+
+.schwert-glut.an {
+  opacity: 1;
+}
+
+.glut-schicht {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.glut-1 { background: radial-gradient(ellipse 40% 50% at 50% 50%, #fff 0%, rgba(255, 255, 255, 0.85) 35%, rgba(255, 255, 255, 0) 100%); }
+.glut-2 { background: radial-gradient(ellipse 40% 50% at 50% 50%, #e8f3ff 0%, rgba(61, 155, 255, 0.95) 40%, rgba(61, 155, 255, 0) 100%); }
+.glut-3 { background: radial-gradient(ellipse 40% 50% at 50% 50%, #fff3d6 0%, rgba(255, 90, 31, 0.95) 40%, rgba(255, 90, 31, 0) 100%); }
+.glut-4 { background: radial-gradient(ellipse 40% 50% at 50% 50%, #ffe6fb 0%, rgba(160, 80, 255, 0.95) 40%, rgba(139, 92, 255, 0) 100%); }
+
+.schwert-glut[data-stufe="glimmen"] .glut-1 { opacity: 0.25; }
+.schwert-glut[data-stufe="weiss"] .glut-1 { opacity: 0.7; }
+.schwert-glut[data-stufe="blau"] .glut-2 { opacity: 1; }
+.schwert-glut[data-stufe="blau"] .glut-1 { opacity: 0.4; }
+.schwert-glut[data-stufe="glut"] .glut-3 { opacity: 1; }
+.schwert-glut[data-stufe="glut"] .glut-1 { opacity: 0.5; }
+.schwert-glut[data-stufe="glut"] { transform: scale(1.25); }
+
+/* Regenbogen: größer, die Farben laufen durch */
+.schwert-glut[data-stufe="regenbogen"] { transform: scale(1.6); }
+.schwert-glut[data-stufe="regenbogen"] .glut-schicht { animation: glut-durchlauf 0.8s linear infinite; }
+.schwert-glut[data-stufe="regenbogen"] .glut-2 { animation-delay: -0.2s; }
+.schwert-glut[data-stufe="regenbogen"] .glut-3 { animation-delay: -0.4s; }
+.schwert-glut[data-stufe="regenbogen"] .glut-4 { animation-delay: -0.6s; }
+
+@keyframes glut-durchlauf {
+  0%, 100% { opacity: 0.15; }
+  25%      { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* Stärkste Erschütterung der Bühne (Regenbogen-Stufe) */
+.kampf-buehne.wackelt-max { animation: fx-wackeln-max 0.7s linear; }
+
+@keyframes fx-wackeln-max {
+  0%, 100% { transform: none; }
+  8%  { transform: translate(-14px, 6px) rotate(-1.5deg); }
+  20% { transform: translate(12px, -8px) rotate(1.5deg); }
+  32% { transform: translate(-11px, 5px) rotate(-1deg); }
+  44% { transform: translate(9px, -5px) rotate(1deg); }
+  58% { transform: translate(-6px, 3px); }
+  72% { transform: translate(4px, -2px); }
+  86% { transform: translate(-2px, 1px); }
+}
+
+/* Aufblitzen in der Farbe der Stufe */
+.kampf-blitz.an-blau { background: radial-gradient(circle at 70% 35%, #fff 0%, var(--fx-blau) 40%, transparent 80%); animation: kampf-blitz 0.3s ease-out; }
+.kampf-blitz.an-glut { background: radial-gradient(circle at 70% 35%, #fff 0%, var(--fx-glut) 45%, transparent 85%); animation: kampf-blitz 0.36s ease-out; }
+.kampf-blitz.an-regenbogen { background: var(--fx-regenbogen); animation: fx-blitz-regenbogen 0.5s ease-out; }
+
+@keyframes fx-blitz-regenbogen {
+  0%   { opacity: 0; }
+  25%  { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+
+/* "Bewegung reduzieren": nichts bewegt sich, Farben bleiben */
+@media (prefers-reduced-motion: reduce) {
+  .schwert-glut,
+  .schwert-glut .glut-schicht {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .schwert-glut[data-stufe="regenbogen"] .glut-schicht {
+    opacity: 0.6;
+  }
+
+  .kampf-blitz.an-blau,
+  .kampf-blitz.an-glut,
+  .kampf-blitz.an-regenbogen {
+    opacity: 0.35;
+  }
+}

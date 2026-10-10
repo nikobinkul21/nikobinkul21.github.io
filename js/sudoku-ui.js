@@ -528,7 +528,13 @@ function initSudoku(container) {
     const diesesAbenteuer = abenteuer;
 
     if (!kampf) {
-      kampf = SudokuKampf.erstelle(kampfPlatz, { beimZuruecksetzen: abenteuerZuruecksetzen, wuerfelPlatz: wuerfelPlatz });
+      kampf = SudokuKampf.erstelle(kampfPlatz, {
+        beimZuruecksetzen: abenteuerZuruecksetzen,
+        wuerfelPlatz: wuerfelPlatz,
+        // Herkunft fliegender Boni beim Schadensaufbau (Doppelschaden, Schwierigkeit)
+        gitterFeld: function (i) { return felder[i]; },
+        gradAnzeige: abenteuerGrad,
+      });
     }
 
     // Auf die Regeln hören → Kampffenster und Gitter reagieren

@@ -2,7 +2,7 @@
    settings.js – Einstellungen
    - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Abenteuer)
      als eine JSON-Datei – Export und Import
-   - Sudoku-Abenteuer: Dauer der Würfelanimation
+   - Sudoku-Abenteuer: Tempo der Kampfanimationen (Würfel und Schadensaufbau)
 
    Aufbau einer Sicherungsdatei:
    {
@@ -43,13 +43,15 @@ const EinstellungenAnsicht = (function () {
         "</div>" +
         '<p class="einstellungen-hinweis" role="status"></p>' +
       "</section>" +
-      // Sudoku-Abenteuer: wie lange der Würfel rollt (Werte in js/sudoku-battle-ui.js)
+      // Sudoku-Abenteuer: Tempo von Würfel und Schadensaufbau (Werte in js/sudoku-battle-ui.js)
       '<section class="karte einstellungen-block" aria-labelledby="abenteuer-titel">' +
         '<h2 id="abenteuer-titel">Sudoku-Abenteuer</h2>' +
         '<label class="einstellungen-feld">' +
-          "<span>Würfelanimation</span>" +
+          "<span>Kampfanimationen</span>" +
           '<select class="einstellungen-wuerfel"></select>' +
         "</label>" +
+        "<p>Würfelwurf und Schadensaufbau. Normal: Würfel 2 Sekunden, danach höchstens etwa 1,5 Sekunden. " +
+          "Schnell: alles deutlich kürzer. Aus: das Ergebnis erscheint sofort.</p>" +
         '<p class="einstellungen-hinweis einstellungen-hinweis--wuerfel" role="status"></p>' +
       "</section>";
 
