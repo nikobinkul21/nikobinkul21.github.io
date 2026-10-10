@@ -4,11 +4,27 @@
    ========================================================================== */
 
 :root {
-  /* Größen */
-  --sudoku-max-breite: 480px;              /* so breit wird das Gitter höchstens */
-  --sudoku-schrift-groesse: clamp(1.1rem, 5.5vw, 1.75rem); /* Ziffern im Gitter (wächst mit dem Bildschirm) */
+  /* Größe des Gitters (Computer und Tablet)
+     Das Gitter wird so groß, wie die Fensterhöhe erlaubt – aber nie kleiner
+     als --sudoku-min-groesse und nie größer als --sudoku-max-groesse. */
+  --sudoku-max-groesse: 680px;
+  --sudoku-min-groesse: 400px;
+  --sudoku-platz-vertikal: 230px;          /* Platz für Leiste, Titel und Auswahl über dem Gitter */
+
+  /* Handy: Um so viel ragt das Spiel links und rechts in den Seitenrand
+     hinein – macht das Gitter etwas breiter */
+  --sudoku-rand-mobil: 10px;
+
+  /* Ziffern im Gitter: Anteil an der Feldgröße (0.55 = 55 % eines Felds).
+     Die Schrift wächst dadurch automatisch mit dem Gitter mit. */
+  --sudoku-ziffer-anteil: 0.55;
+
   --sudoku-radius: var(--radius-m);        /* Rundung der Außenecken */
-  --sudoku-taste-hoehe: 48px;              /* Höhe der Tasten im Zahlenfeld */
+
+  /* Zahlenfeld */
+  --sudoku-taste-hoehe: 46px;              /* Höhe der Tasten auf dem Handy */
+  --sudoku-taste-hoehe-gross: 64px;        /* Höhe der Tasten neben dem Gitter (Computer) */
+  --sudoku-zahlenfeld-breite: 216px;       /* Breite des Zahlenfelds neben dem Gitter */
 
   /* Linien */
   --sudoku-linie-duenn: 1px;               /* zwischen einzelnen Feldern */
@@ -57,10 +73,23 @@
    AUFBAU
    ========================================================================== */
 
+/*
+  Aufbau als Raster mit benannten Bereichen:
+    Handy/Tablet:  Auswahl, darunter Gitter, darunter Zahlenfeld
+    Computer:      Gitter links, Zahlenfeld rechts daneben (siehe unten)
+*/
 .sudoku {
-  /* Alles bleibt so schmal wie das Gitter */
-  max-width: var(--sudoku-max-breite);
+  display: grid;
+  grid-template-areas:
+    "steuerung"
+    "brett"
+    "zahlen";
+  gap: var(--abstand-s);
 }
+
+.sudoku-steuerung { grid-area: steuerung; }
+.sudoku-brett-rahmen { grid-area: brett; }
+.sudoku-zahlenfeld { grid-area: zahlen; }
 
 /* Schwierigkeit + "Neues Spiel" */
 .sudoku-steuerung {
@@ -68,7 +97,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--abstand-s) var(--abstand-m);
-  margin-bottom: var(--abstand-s);
 }
 
 .sudoku-label {
@@ -109,12 +137,34 @@
   outline-offset: 2px;
 }
 
-/* Statuszeile ("Rätsel wird erzeugt …", Erfolgsmeldung).
-   min-height hält den Platz frei, damit das Gitter nicht springt. */
+/* Statusmeldung ("Rätsel wird erzeugt …", Erfolgsmeldung).
+   Sie schwebt als kleine Glas-Pille mittig über dem Gitter. */
+.sudoku-brett-rahmen {
+  position: relative;               /* Bezugspunkt für die schwebende Meldung */
+}
+
 .sudoku-status {
-  min-height: 1.5em;
-  margin: 0 0 var(--abstand-s);
-  color: var(--farbe-text-leise);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* genau in die Mitte schieben */
+  margin: 0;
+  padding: 10px 20px;
+  border-radius: var(--radius-pille);
+  background: var(--glas-fallback);
+  -webkit-backdrop-filter: blur(var(--glas-blur));
+  backdrop-filter: blur(var(--glas-blur));
+  border: 1px solid var(--glas-rand);
+  box-shadow: var(--glas-schatten);
+  color: var(--farbe-text);
+  font-weight: 500;
+  text-align: center;
+  pointer-events: none;             /* Klicks gehen durch die Meldung hindurch */
+}
+
+/* Ohne Text ist die Meldung unsichtbar */
+.sudoku-status:empty {
+  display: none;
 }
 
 .sudoku-status[data-art="erfolg"] {
@@ -138,8 +188,11 @@
   padding: var(--sudoku-linie-dick);
   background: var(--sudoku-linie-dick-farbe);
   border-radius: var(--sudoku-radius);
-  width: 100%;                          /* passt sich dem Bildschirm an … */
-  aspect-ratio: 1;                      /* … und bleibt dabei immer quadratisch */
+  width: 100%;                          /* so breit wie Platz da ist … */
+  aspect-ratio: 1;                      /* … und dabei immer quadratisch */
+  /* Macht das Gitter zum "Container": Die Ziffern können ihre Größe
+     dann relativ zur Gitterbreite angeben (Einheit cqw, siehe .sudoku-feld) */
+  container-type: inline-size;
   overflow: hidden;                     /* runde Ecken auch für die Eckfelder */
   box-shadow: var(--schatten);
   transition: opacity 0.2s;
@@ -174,7 +227,8 @@
   justify-content: center;
   background: var(--sudoku-feld);
   color: var(--sudoku-eingabe-farbe);
-  font-size: var(--sudoku-schrift-groesse);
+  /* 100cqw = Breite des Gitters, geteilt durch 9 = ein Feld */
+  font-size: calc(100cqw / 9 * var(--sudoku-ziffer-anteil));
   font-weight: var(--sudoku-eingabe-gewicht);
   line-height: 1;
   cursor: pointer;
@@ -226,7 +280,7 @@
   display: grid;
   grid-template-columns: repeat(5, 1fr); /* zwei Reihen: 1–5 und 6–9 + Löschen */
   gap: var(--abstand-s);
-  margin-top: var(--abstand-m);
+  margin-top: var(--abstand-xs);
 }
 
 .sudoku-taste {
@@ -252,4 +306,121 @@
 
 .sudoku-taste--loeschen {
   color: var(--farbe-text-leise);
+}
+
+
+/* ==========================================================================
+   HANDY (unter 768 px)
+   Möglichst großes Gitter, möglichst weit oben.
+   ========================================================================== */
+
+@media (max-width: 767px) {
+
+  /* Das Spiel ragt ein Stück in den Seitenrand → Gitter wird breiter */
+  .sudoku {
+    margin-inline: calc(var(--sudoku-rand-mobil) * -1);
+  }
+
+  /* Text "Schwierigkeit" nur für Screenreader, die Auswahl erklärt sich selbst */
+  .sudoku-label-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Auswahl und "Neues Spiel" teilen sich eine Zeile */
+  .sudoku-steuerung {
+    flex-wrap: nowrap;
+  }
+
+  .sudoku-label,
+  .sudoku-auswahl {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+
+/* ==========================================================================
+   AB 768 px: Gitter mittig und groß
+   Die Größe richtet sich nach der Fensterhöhe, damit alles ohne Scrollen
+   auf den Bildschirm passt.
+   ========================================================================== */
+
+@media (min-width: 768px) {
+
+  /* Das ganze Spiel (inkl. Kopfzeile) wird mittig ausgerichtet:
+     fit-content = so breit wie der Inhalt, margin auto = zentriert */
+  .spiel-bereich {
+    width: fit-content;
+    margin-inline: auto;
+  }
+
+  .sudoku {
+    /* Zahlenfeld unter dem Gitter → dafür etwas Höhe abziehen */
+    --sudoku-groesse: clamp(
+      var(--sudoku-min-groesse),
+      100dvh - var(--sudoku-platz-vertikal) - 120px,
+      min(var(--sudoku-max-groesse), 100vw - 2 * var(--abstand-l))
+    );
+    grid-template-columns: var(--sudoku-groesse);
+  }
+}
+
+/* Ab 1000 px: Zahlenfeld RECHTS neben dem Gitter – so kann das Gitter
+   die ganze Höhe nutzen */
+@media (min-width: 1000px) {
+
+  /* Ist ein Spiel offen, darf der Hauptbereich die volle Fensterbreite nutzen
+     (sonst begrenzt --inhalt-max-breite aus style.css das Spiel) */
+  .hauptbereich:has(.zeigt-spiel) {
+    max-width: none;
+  }
+
+  .sudoku {
+    /* Höhe begrenzt durch das Fenster, Breite durch Platz für beide Seitenspalten */
+    --sudoku-groesse: clamp(
+      var(--sudoku-min-groesse),
+      100dvh - var(--sudoku-platz-vertikal),
+      min(
+        var(--sudoku-max-groesse),
+        100vw - 2 * var(--abstand-l) - 2 * (var(--sudoku-zahlenfeld-breite) + var(--abstand-l))
+      )
+    );
+    /* Drei Spalten: links eine LEERE Spalte, genauso breit wie das
+       Zahlenfeld rechts. Dadurch steht das Gitter genau in der Mitte. */
+    grid-template-columns:
+      var(--sudoku-zahlenfeld-breite)
+      var(--sudoku-groesse)
+      var(--sudoku-zahlenfeld-breite);
+    grid-template-areas:
+      ".  steuerung  ."
+      ".  brett      zahlen";
+    column-gap: var(--abstand-l);
+  }
+
+  /* Kopfzeile ("← Übersicht  Sudoku") bündig über dem Gitter statt über
+     der leeren linken Spalte */
+  .spiel-kopf {
+    padding-left: calc(var(--sudoku-zahlenfeld-breite) + var(--abstand-l));
+  }
+
+  /* Zahlenfeld als 3×3-Block, Löschen darunter über die ganze Breite */
+  .sudoku-zahlenfeld {
+    grid-template-columns: repeat(3, 1fr);
+    align-self: center;             /* senkrecht mittig neben dem Gitter */
+    margin-top: 0;
+  }
+
+  .sudoku-taste {
+    height: var(--sudoku-taste-hoehe-gross);
+    font-size: 1.5rem;
+  }
+
+  .sudoku-taste--loeschen {
+    grid-column: 1 / -1;            /* über alle drei Spalten */
+  }
 }

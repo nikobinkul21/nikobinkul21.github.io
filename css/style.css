@@ -478,10 +478,30 @@ button:focus-visible {
   color: var(--farbe-text-leise);
 }
 
-/* "← Zur Übersicht" über einem geöffneten Spiel */
+/* Ist ein Spiel offen, verschwindet die Überschrift "Games" optisch.
+   Für Screenreader bleibt sie erhalten (deshalb nicht display: none). */
+.zeigt-spiel > h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Kopfzeile eines geöffneten Spiels: "← Übersicht" und Titel in einer Zeile */
+.spiel-kopf {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-m);
+  margin-bottom: var(--abstand-xs);
+}
+
+.spiel-titel {
+  margin: 0;
+}
+
 .zurueck-link {
-  display: inline-block;
-  margin-bottom: var(--abstand-s);
   color: var(--farbe-text-leise);
   text-decoration: none;
 }

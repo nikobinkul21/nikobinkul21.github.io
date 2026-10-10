@@ -39,14 +39,20 @@ function initSudoku(container) {
   container.innerHTML =
     '<div class="sudoku">' +
       '<div class="sudoku-steuerung">' +
-        '<label class="sudoku-label">Schwierigkeit ' +
+        '<label class="sudoku-label">' +
+          // Der Text ist auf dem Handy versteckt (Platz sparen), bleibt aber für Screenreader da
+          '<span class="sudoku-label-text">Schwierigkeit</span>' +
           '<select class="sudoku-auswahl"></select>' +
         "</label>" +
         '<button type="button" class="sudoku-knopf sudoku-neu">Neues Spiel</button>' +
       "</div>" +
-      // role="status": Screenreader lesen Änderungen dieses Texts automatisch vor
-      '<p class="sudoku-status" role="status"></p>' +
-      '<div class="sudoku-brett" role="group" aria-label="Sudoku-Gitter. Pfeiltasten zum Bewegen, Ziffern zum Eintragen."></div>' +
+      // Der Rahmen hält Gitter und Statusmeldung zusammen:
+      // Die Meldung schwebt ÜBER dem Gitter und braucht so keinen eigenen Platz.
+      '<div class="sudoku-brett-rahmen">' +
+        '<div class="sudoku-brett" role="group" aria-label="Sudoku-Gitter. Pfeiltasten zum Bewegen, Ziffern zum Eintragen."></div>' +
+        // role="status": Screenreader lesen Änderungen dieses Texts automatisch vor
+        '<p class="sudoku-status" role="status"></p>' +
+      "</div>" +
       '<div class="sudoku-zahlenfeld" role="group" aria-label="Zahlenfeld"></div>' +
     "</div>";
 

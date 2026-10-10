@@ -42,8 +42,10 @@ function initGames(container) {
   SPIELE.forEach(function (spiel) {
     html +=
       '<div class="spiel-bereich" id="spiel-' + spiel.id + '" hidden>' +
-        '<a class="zurueck-link" href="#games">← Zur Übersicht</a>' +
-        '<h2 class="spiel-titel" tabindex="-1">' + spiel.name + "</h2>" +
+        '<div class="spiel-kopf">' +
+          '<a class="zurueck-link" href="#games">← Übersicht</a>' +
+          '<h2 class="spiel-titel" tabindex="-1">' + spiel.name + "</h2>" +
+        "</div>" +
         '<div class="spiel-inhalt"></div>' +
       "</div>";
   });
@@ -63,6 +65,10 @@ function initGames(container) {
 function zeigeGames(unterseite) {
   const container = document.getElementById("games-root");
   const spiel = SPIELE.find(function (s) { return s.id === unterseite; });
+
+  // Ist ein Spiel offen, wird die große Überschrift "Games" ausgeblendet –
+  // so bleibt mehr Platz für das Spiel (siehe .zeigt-spiel in style.css)
+  document.getElementById("view-games").classList.toggle("zeigt-spiel", Boolean(spiel));
 
   // Übersicht nur zeigen, wenn kein (bekanntes) Spiel gewählt ist
   container.querySelector(".spiele-uebersicht").hidden = Boolean(spiel);
