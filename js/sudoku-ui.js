@@ -83,6 +83,11 @@ function initSudoku(container) {
     feld.type = "button";
     feld.className = "sudoku-feld";
     feld.dataset.index = i;
+    // Die Ziffer steckt in einem eigenen <span>, damit die Erfolgsanimation
+    // nur die Zahl vergrößern kann und nicht das ganze Feld
+    const ziffer = document.createElement("span");
+    ziffer.className = "sudoku-ziffer";
+    feld.appendChild(ziffer);
     felder.push(feld);
   }
   // Felder in ihre Blöcke einsortieren (Zeile für Zeile, damit die Reihenfolge im Block stimmt)
@@ -162,7 +167,7 @@ function initSudoku(container) {
       const istVorgabe = spiel.vorgaben[i] !== 0;
       const istFalsch = !istVorgabe && wert !== 0 && wert !== spiel.loesung[i];
 
-      feld.textContent = wert === 0 ? "" : wert;
+      feld.firstChild.textContent = wert === 0 ? "" : wert;
 
       // CSS-Klassen für die Optik (Farben stehen in css/sudoku.css)
       feld.classList.toggle("ist-vorgabe", istVorgabe);
@@ -203,22 +208,44 @@ function initSudoku(container) {
     }
   }
 
+  /** Das komplette aktuelle Gitter: Vorgaben + eigene Eingaben (81 Zahlen). */
+  function aktuellesGitter() {
+    return spiel.vorgaben.map(function (v, i) { return v || spiel.eingaben[i]; });
+  }
+
   /** Trägt eine Ziffer ins gewählte Feld ein (0 = löschen). */
   function setze(ziffer) {
     if (wirdErzeugt || spiel.geloest || spiel.vorgaben[ausgewaehlt] !== 0) {
       return;                   // vorgegebene Felder sind gesperrt
     }
-    spiel.eingaben[ausgewaehlt] = ziffer;
+    const index = ausgewaehlt;
+    const vorher = aktuellesGitter();
+    spiel.eingaben[index] = ziffer;
+    const nachher = aktuellesGitter();
 
     // Alles richtig ausgefüllt?
-    const aktuell = spiel.vorgaben.map(function (v, i) { return v || spiel.eingaben[i]; });
-    if (SudokuEngine.istGeloest(aktuell, spiel.loesung)) {
+    const jetztGeloest = SudokuEngine.istGeloest(nachher, spiel.loesung);
+    if (jetztGeloest) {
       spiel.geloest = true;
-      zeigeStatus("Geschafft! Alle Zahlen sind richtig.", "erfolg");
     }
 
     speichern();
     zeichne();
+
+    // Erfolgsanimationen (js/sudoku-effects.js)
+    if (jetztGeloest) {
+      // Große Welle – die Erfolgsmeldung erscheint erst, wenn sie vorbei ist.
+      // Wurde inzwischen ein neues Spiel gestartet, entfällt die Meldung.
+      const diesesSpiel = spiel;
+      SudokuEffekte.spieleSieg(felder, index).then(function () {
+        if (spiel === diesesSpiel) {
+          zeigeStatus("Geschafft! Alle Zahlen sind richtig.", "erfolg");
+        }
+      });
+    } else {
+      const einheiten = SudokuEffekte.fertigeEinheiten(vorher, nachher, spiel.loesung, index);
+      SudokuEffekte.spieleEinheiten(felder, index, einheiten);
+    }
   }
 
   /** Läuft gerade ein Spiel, in dem man schon etwas eingetragen hat? */

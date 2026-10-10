@@ -48,6 +48,16 @@
 
   /* Meldungen */
   --sudoku-erfolg-farbe: #1a7f37;
+
+  /* Erfolgsanimationen (siehe Abschnitt "ERFOLGSANIMATIONEN" weiter unten) */
+  --sudoku-effekt-farbe: #4f6ef7;                     /* Farbe von Zahl und Rand beim Aufleuchten */
+  --sudoku-effekt-schein: rgba(79, 110, 247, 0.22);   /* Einfärbung des Felds */
+  --sudoku-effekt-schein-stark: rgba(79, 110, 247, 0.34); /* … beim gelösten Rätsel */
+  --sudoku-effekt-dauer: 450ms;                       /* so lange leuchtet EIN Feld */
+  --sudoku-effekt-dauer-stark: 600ms;                 /* … beim gelösten Rätsel */
+  --sudoku-effekt-schritt: 45ms;                      /* Verzögerung pro Feld Abstand = Tempo der Welle */
+  --sudoku-effekt-skalierung: 1.25;                   /* so stark wächst die Zahl (1 = gar nicht) */
+  --sudoku-effekt-skalierung-stark: 1.45;             /* … beim gelösten Rätsel */
 }
 
 /* Dunkles Design: nur die Farben ändern sich */
@@ -66,6 +76,10 @@
   --sudoku-fehler-hintergrund: #47262a;
 
   --sudoku-erfolg-farbe: #56d364;
+
+  --sudoku-effekt-farbe: #a3b5ff;
+  --sudoku-effekt-schein: rgba(123, 147, 255, 0.26);
+  --sudoku-effekt-schein-stark: rgba(123, 147, 255, 0.40);
 }
 
 
@@ -269,6 +283,115 @@
 .sudoku-brett.ist-geloest .sudoku-feld {
   background: var(--sudoku-feld);
   cursor: default;
+}
+
+
+/* ==========================================================================
+   ERFOLGSANIMATIONEN
+   js/sudoku-effects.js setzt bei fertigen Einheiten die Klasse "leuchtet"
+   (beim gelösten Rätsel "leuchtet-stark") und pro Feld die Variable
+   --welle-schritte = Abstand zum gesetzten Feld. Daraus wird hier die
+   Verzögerung: weiter weg = später = Welle.
+
+   Animiert werden nur opacity (Leucht-Ebene), transform (Größe der Zahl)
+   und color – das bleibt auch auf dem Handy flüssig, und das Gitter
+   verschiebt sich dabei nicht.
+   ========================================================================== */
+
+/* Die Ziffer im Feld. inline-block ist nötig, damit sie wachsen kann.
+   position: relative legt sie über die Leucht-Ebene (::before). */
+.sudoku-ziffer {
+  display: inline-block;
+  position: relative;
+}
+
+/* Die Leucht-Ebene: liegt unsichtbar über dem ganzen Feld und wird beim
+   Aufleuchten eingeblendet – Rand in Akzentfarbe + Einfärbung.
+   Sie ist eine eigene Ebene, damit der Browser das Feld selbst während
+   der Animation nicht neu zeichnen muss (flüssiger, keine Bildfehler). */
+.sudoku-feld {
+  position: relative;
+}
+
+.sudoku-feld::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 2px var(--sudoku-effekt-farbe);
+  background: var(--effekt-schein, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Interne Werte je nach Stärke – die Keyframes unten lesen nur diese */
+.sudoku-feld.leuchtet {
+  --effekt-schein: var(--sudoku-effekt-schein);
+  --effekt-skalierung: var(--sudoku-effekt-skalierung);
+  --effekt-dauer: var(--sudoku-effekt-dauer);
+}
+
+.sudoku-feld.leuchtet-stark {
+  --effekt-schein: var(--sudoku-effekt-schein-stark);
+  --effekt-skalierung: var(--sudoku-effekt-skalierung-stark);
+  --effekt-dauer: var(--sudoku-effekt-dauer-stark);
+}
+
+/* Das Feld glüht, die Zahl wächst – beide mit derselben Verzögerung */
+.sudoku-feld.leuchtet::before,
+.sudoku-feld.leuchtet-stark::before {
+  animation: sudoku-feld-gluehen var(--effekt-dauer) ease-out;
+  animation-delay: calc(var(--welle-schritte, 0) * var(--sudoku-effekt-schritt));
+}
+
+.sudoku-feld.leuchtet .sudoku-ziffer,
+.sudoku-feld.leuchtet-stark .sudoku-ziffer {
+  animation: sudoku-ziffer-wachsen var(--effekt-dauer) ease-out;
+  animation-delay: calc(var(--welle-schritte, 0) * var(--sudoku-effekt-schritt));
+}
+
+/* Glühen: die Leucht-Ebene kurz einblenden und wieder ausblenden */
+@keyframes sudoku-feld-gluehen {
+  0%, 100% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+}
+
+/* Zahl kurz vergrößern und in der Akzentfarbe zeigen.
+   Anfang und Ende haben keine Farbe → dort gilt die normale Farbe des Felds. */
+@keyframes sudoku-ziffer-wachsen {
+  0%, 100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(var(--effekt-skalierung));
+    color: var(--sudoku-effekt-farbe);
+  }
+}
+
+/* Nur Farbe, keine Bewegung (für "Bewegung reduzieren", siehe unten) */
+@keyframes sudoku-ziffer-einfaerben {
+  35% {
+    color: var(--sudoku-effekt-farbe);
+  }
+}
+
+/* "Bewegung reduzieren" im System eingestellt:
+   keine Welle (alle gleichzeitig) und keine Vergrößerung – nur kurz einfärben */
+@media (prefers-reduced-motion: reduce) {
+  .sudoku-feld.leuchtet::before,
+  .sudoku-feld.leuchtet-stark::before,
+  .sudoku-feld.leuchtet .sudoku-ziffer,
+  .sudoku-feld.leuchtet-stark .sudoku-ziffer {
+    animation-delay: 0s;
+  }
+
+  .sudoku-feld.leuchtet .sudoku-ziffer,
+  .sudoku-feld.leuchtet-stark .sudoku-ziffer {
+    animation-name: sudoku-ziffer-einfaerben;
+  }
 }
 
 
