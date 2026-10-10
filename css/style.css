@@ -527,6 +527,64 @@ button:focus-visible {
   outline: none;
 }
 
+/* Einfacher Button (z. B. in den Einstellungen) */
+.knopf {
+  height: 40px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.knopf:hover {
+  border-color: var(--farbe-akzent);
+}
+
+/* Einstellungen */
+.einstellungen-block {
+  max-width: 720px;
+}
+
+.einstellungen-block p {
+  margin: 0 0 var(--abstand-m);
+  color: var(--farbe-text-leise);
+}
+
+.einstellungen-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-s);
+}
+
+.einstellungen-block .einstellungen-hinweis {
+  margin: var(--abstand-s) 0 0;
+}
+
+.einstellungen-hinweis:empty {
+  display: none;
+}
+
+.einstellungen-hinweis[data-art="erfolg"] {
+  color: #1a7f37;
+}
+
+.einstellungen-hinweis[data-art="fehler"] {
+  color: #d1242f;
+  font-weight: 500;
+}
+
+:root[data-theme="dark"] .einstellungen-hinweis[data-art="erfolg"] {
+  color: #56d364;
+}
+
+:root[data-theme="dark"] .einstellungen-hinweis[data-art="fehler"] {
+  color: #ff7b72;
+}
+
 /* Platzhaltertext der noch leeren Tools */
 .platzhalter {
   color: var(--farbe-text-leise);
@@ -534,13 +592,36 @@ button:focus-visible {
 
 
 /* ==========================================================================
-   7. MOBIL / SCHMALE FENSTER (unter 900 px)
-   Unter 900 px passen die fünf Reiter nicht mehr links und rechts neben
-   NTB – dann gibt es das Hamburger-Menü. Diese Grenze steht auch in
-   app.js (mobilAbfrage) und muss dort gleich sein.
+   6b. MITTELBREITE FENSTER: kompaktere Reiter
+   Mit sechs Reitern wird es in der Leiste eng. Bis 1280 px Breite rücken
+   die Reiter deshalb etwas zusammen, damit sie neben NTB passen.
    ========================================================================== */
 
-@media (max-width: 899px) {
+@media (min-width: 1050px) and (max-width: 1279px) {
+  .leiste__nav {
+    column-gap: 2px;
+  }
+
+  .reiter-gruppe {
+    gap: 0;
+  }
+
+  .reiter:not(.marke) {
+    padding: 8px 10px;
+    font-size: 0.92rem;
+  }
+}
+
+
+/* ==========================================================================
+   7. MOBIL / SCHMALE FENSTER (unter 1050 px)
+   Unter 1050 px passen die sechs Reiter nicht mehr links und rechts neben
+   NTB – dann gibt es das Hamburger-Menü. Diese Grenze steht auch in
+   app.js (mobilAbfrage) und muss dort gleich sein.
+   Zwischen 1050 und 1280 px sind die Reiter kompakter (Abschnitt 6b).
+   ========================================================================== */
+
+@media (max-width: 1049px) {
 
   .leiste__nav {
     padding: 0 var(--abstand-m);

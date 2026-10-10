@@ -7,6 +7,7 @@
   <title>NTB</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/calendar.css">
+  <link rel="stylesheet" href="css/schedule.css">
   <link rel="stylesheet" href="css/sudoku.css">
   <link rel="stylesheet" href="css/media.css">
 
@@ -71,6 +72,7 @@
         <a class="reiter marke marke--desktop" href="#home" data-view="home">NTB</a>
 
         <ul class="reiter-gruppe reiter-gruppe--rechts">
+          <li><a class="reiter" href="#schedule" data-view="schedule">Stundenplan/Termine</a></li>
           <li><a class="reiter" href="#einstellungen" data-view="einstellungen">Einstellungen</a></li>
           <li><a class="reiter" href="#customising" data-view="customising">Customising</a></li>
         </ul>
@@ -115,11 +117,16 @@
       <div id="media-root"></div>
     </section>
 
+    <section class="ansicht" id="view-schedule" aria-labelledby="titel-schedule" hidden>
+      <h1 id="titel-schedule" tabindex="-1">Stundenplan/Termine</h1>
+      <!-- schedule.js füllt diesen Container mit der Wochenansicht -->
+      <div id="schedule-root"></div>
+    </section>
+
     <section class="ansicht" id="view-einstellungen" aria-labelledby="titel-einstellungen" hidden>
       <h1 id="titel-einstellungen" tabindex="-1">Einstellungen</h1>
-      <div class="karte">
-        <p>Hier kommen später deine Einstellungen hin.</p>
-      </div>
+      <!-- settings.js füllt diesen Container (u. a. Sicherung aller Daten) -->
+      <div id="settings-root"></div>
     </section>
 
     <section class="ansicht" id="view-customising" aria-labelledby="titel-customising" hidden>
@@ -137,7 +144,10 @@
     Bewusst KEIN type="module": Module funktionieren nicht, wenn man
     index.html per Doppelklick (file://) öffnet.
   -->
+  <!-- Termine: der Store zuerst – Kalender und Stundenplan lesen beide daraus -->
+  <script src="js/events-store.js"></script>
   <script src="js/calendar.js"></script>
+  <script src="js/schedule.js"></script>
   <!-- Sudoku: erst die Logik, dann die Effekte, dann die Oberfläche,
        dann die Games-Übersicht, die das Sudoku startet -->
   <script src="js/sudoku-engine.js"></script>
@@ -147,6 +157,8 @@
   <!-- Filme/Serien: erst die Speicherung, dann die Darstellung -->
   <script src="js/media-store.js"></script>
   <script src="js/media.js"></script>
+  <!-- Einstellungen: braucht MediaStore und EventsStore (für die Sicherung) -->
+  <script src="js/settings.js"></script>
   <script src="js/customising.js"></script>
   <script src="js/app.js"></script>
 </body>

@@ -1,0 +1,168 @@
+/* ==========================================================================
+   settings.js – Einstellungen
+   Vorerst: Sicherung ALLER Daten der Seite (Filme/Serien und Termine)
+   als eine JSON-Datei – Export und Import.
+
+   Aufbau einer Sicherungsdatei:
+   {
+     format:      "ntb-sicherung",
+     version:     1,
+     erstellt:    "2026-10-10T14:03:00.000Z",
+     filmeSerien: { … }    ← Daten aus MediaStore  (js/media-store.js)
+     termine:     { … }    ← Daten aus EventsStore (js/events-store.js)
+   }
+   Neue Bereiche mit eigenen Daten? Hier in exportieren() und importieren()
+   ergänzen – die Stores selbst bleiben für die Speicherung zuständig.
+   ========================================================================== */
+
+const EinstellungenAnsicht = (function () {
+
+  const FORMAT = "ntb-sicherung";
+  const VERSION = 1;
+
+  const el = {};
+
+  /**
+   * Baut die Ansicht auf. Wird von app.js EINMAL aufgerufen.
+   * @param {HTMLElement} container – das Element <div id="settings-root">
+   */
+  function init(container) {
+    container.innerHTML =
+      '<section class="karte einstellungen-block" aria-labelledby="sicherung-titel">' +
+        '<h2 id="sicherung-titel">Daten sichern</h2>' +
+        "<p>Deine Daten liegen nur in diesem Browser. Mit einer Sicherung kannst du sie " +
+          "auf einem anderen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. " +
+          "Die Datei enthält <strong>Filme/Serien</strong> und <strong>Stundenplan/Termine</strong>.</p>" +
+        '<div class="einstellungen-knoepfe">' +
+          '<button type="button" class="knopf" data-aktion="exportieren">Daten exportieren</button>' +
+          '<button type="button" class="knopf" data-aktion="importieren">Daten importieren</button>' +
+          // Unsichtbares Datei-Auswahlfeld – wird über den Import-Button geöffnet
+          '<input type="file" class="einstellungen-datei" accept=".json,application/json" hidden>' +
+        "</div>" +
+        '<p class="einstellungen-hinweis" role="status"></p>' +
+      "</section>";
+
+    el.datei = container.querySelector(".einstellungen-datei");
+    el.hinweis = container.querySelector(".einstellungen-hinweis");
+
+    container.addEventListener("click", function (event) {
+      const knopf = event.target.closest("[data-aktion]");
+      if (!knopf) return;
+      if (knopf.dataset.aktion === "exportieren") exportieren();
+      if (knopf.dataset.aktion === "importieren") el.datei.click();
+    });
+    el.datei.addEventListener("change", importieren);
+  }
+
+
+  /* ------------------------------------------------------------------------
+     EXPORT
+     ------------------------------------------------------------------------ */
+
+  /** Lädt alle Daten als JSON-Datei herunter. */
+  function exportieren() {
+    const sicherung = {
+      format: FORMAT,
+      version: VERSION,
+      erstellt: new Date().toISOString(),
+      filmeSerien: MediaStore.alsObjekt(),
+      termine: EventsStore.alsObjekt(),
+    };
+    const datei = new Blob([JSON.stringify(sicherung, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(datei);
+    link.download = "ntb-sicherung-" + EventsStore.datumText(new Date()) + ".json";
+    document.body.appendChild(link);
+    link.click();                       // startet den Download
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+    zeigeHinweis("Export gestartet: " + link.download, "erfolg");
+  }
+
+
+  /* ------------------------------------------------------------------------
+     IMPORT
+     ------------------------------------------------------------------------ */
+
+  /**
+   * Prüft den Inhalt einer Datei, OHNE etwas zu speichern.
+   * Versteht auch ältere Dateien, die nur Filme/Serien enthalten
+   * (Export aus der Zeit vor den Einstellungen).
+   * @returns {{ok: true, media, termine|null, frage} | {ok: false, fehler}}
+   */
+  function pruefe(text) {
+    let roh;
+    try {
+      roh = JSON.parse(text);
+    } catch (fehler) {
+      return { ok: false, fehler: "Die Datei enthält kein gültiges JSON." };
+    }
+
+    // Ältere Filme/Serien-Sicherung
+    if (roh && roh.kategorien && !roh.format) {
+      const media = MediaStore.pruefeDaten(roh);
+      if (!media.ok) return { ok: false, fehler: media.fehler };
+      return {
+        ok: true, media: media, termine: null,
+        frage: "Das ist eine ältere Sicherung, die nur Filme/Serien enthält (" + media.anzahl + " Einträge).\n" +
+          "Deine Filme/Serien werden dadurch ERSETZT, deine Termine bleiben unverändert. Fortfahren?",
+      };
+    }
+
+    if (!roh || roh.format !== FORMAT) {
+      return { ok: false, fehler: "Das ist keine NTB-Sicherungsdatei." };
+    }
+    if (roh.version !== VERSION) {
+      return { ok: false, fehler: "Unbekannte Version der Sicherung (" + roh.version + ")." };
+    }
+    const media = MediaStore.pruefeDaten(roh.filmeSerien);
+    if (!media.ok) return { ok: false, fehler: "Filme/Serien: " + media.fehler };
+    const termine = EventsStore.pruefeDaten(roh.termine);
+    if (!termine.ok) return { ok: false, fehler: termine.fehler };
+
+    const erstellt = typeof roh.erstellt === "string" ? new Date(roh.erstellt) : null;
+    const vom = erstellt && !isNaN(erstellt) ? " vom " + erstellt.toLocaleString("de-DE") : "";
+    return {
+      ok: true, media: media, termine: termine,
+      frage: "Sicherung" + vom + ":\n" +
+        "• " + media.anzahl + " Filme/Serien-Einträge\n" +
+        "• " + termine.daten.eintraege.length + " Termine/Vorlesungen\n\n" +
+        "ALLE aktuellen Daten werden dadurch ersetzt. Fortfahren?",
+    };
+  }
+
+  /** Eine gewählte Datei prüfen und nach Rückfrage einspielen. */
+  function importieren() {
+    const datei = el.datei.files[0];
+    el.datei.value = "";                // damit dieselbe Datei erneut gewählt werden kann
+    if (!datei) return;
+
+    datei.text().then(function (text) {
+      const pruefung = pruefe(text);
+      if (!pruefung.ok) {
+        zeigeHinweis("Import abgebrochen: " + pruefung.fehler, "fehler");
+        return;
+      }
+      if (!window.confirm(pruefung.frage)) {
+        zeigeHinweis("Import abgebrochen.");
+        return;
+      }
+      MediaStore.ersetzen(pruefung.media.daten);
+      if (pruefung.termine) {
+        EventsStore.ersetzen(pruefung.termine.daten);
+      }
+      zeigeHinweis("Import erfolgreich. Alle Bereiche zeigen jetzt die wiederhergestellten Daten.", "erfolg");
+    });
+  }
+
+  /** art: "" (neutral), "erfolg" oder "fehler" */
+  function zeigeHinweis(text, art) {
+    el.hinweis.textContent = text;
+    el.hinweis.dataset.art = art || "";
+  }
+
+
+  return {
+    init: init,
+  };
+})();

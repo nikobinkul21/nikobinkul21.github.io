@@ -5,8 +5,14 @@
 
    Jeder Tag ist ein eigenes Element mit seinem Datum, z. B.
      <div class="kalender-tag" data-datum="2026-10-10">…</div>
-   So lassen sich später Termine oder Notizen an einzelne Tage hängen:
-     document.querySelector('[data-datum="2026-12-24"]')
+
+   Verbindung zum Stundenplan (Daten aus js/events-store.js):
+     - Tage mit einem Eintrag der Art "Termin" bekommen einen blauen
+       Glas-Kreis (Klasse "hat-termin"). Vorlesungen werden hier nicht
+       markiert – sonst wäre fast jeder Tag blau.
+     - Hover, Tastaturfokus oder Antippen eines markierten Tages zeigt ein
+       kleines Glas-Panel mit den Einträgen des Tages.
+     - Ein Klick auf einen Tag öffnet den Stundenplan mit dieser Woche.
    ========================================================================== */
 
 const KalenderAnsicht = (function () {
@@ -27,6 +33,13 @@ const KalenderAnsicht = (function () {
 
   let angezeigtesJahr = new Date().getFullYear();
   let mitternachtTimer = null;
+
+  // Einträge des angezeigten Jahres: { "2026-10-12": [eintrag, …], … }
+  let eintraegeImJahr = {};
+
+  // Vorschau-Panel: für welchen Tag es gerade offen ist, und ob per Antippen
+  let vorschauFuer = null;
+  let letzteZeigerArt = "mouse";        // "mouse", "touch" oder "pen"
 
   // Elemente (werden in init gefüllt)
   const el = {};
@@ -99,6 +112,16 @@ const KalenderAnsicht = (function () {
       }
     });
 
+    // Das Vorschau-Panel hängt direkt am <body>, damit es über allem liegt
+    el.vorschau = document.createElement("div");
+    el.vorschau.className = "kalender-vorschau";
+    el.vorschau.id = "kalender-vorschau";
+    el.vorschau.setAttribute("role", "tooltip");
+    el.vorschau.hidden = true;
+    document.body.appendChild(el.vorschau);
+
+    richteTagEreignisseEin();
+
     zeigeJahr(angezeigtesJahr);
     mitternachtPlanen();
 
@@ -117,6 +140,7 @@ const KalenderAnsicht = (function () {
    * Auf dem Smartphone wird zum aktuellen Monat gescrollt.
    */
   function zeige() {
+    markiereTage();                 // Einträge könnten sich inzwischen geändert haben
     zumAktuellenMonatScrollen();
     return null;                    // Fokus wie üblich auf die Überschrift "Kalender"
   }
@@ -170,7 +194,7 @@ const KalenderAnsicht = (function () {
       feld.className = "kalender-tag";
       feld.dataset.datum = datumText(jahr, monat, tag);
       // Für Screenreader das volle Datum, z. B. "10. Oktober 2026"
-      feld.setAttribute("aria-label", tag + ". " + MONATE[monat] + " " + jahr);
+      feld.setAttribute("aria-label", vollesDatum(feld.dataset.datum));
 
       const zahl = document.createElement("span");
       zahl.className = "kalender-zahl";
@@ -200,14 +224,34 @@ const KalenderAnsicht = (function () {
   function markiereTage() {
     if (!el.jahr) return;
     const heute = heuteText();
+    eintraegeImJahr = EventsStore.eintraegeImZeitraum(angezeigtesJahr + "-01-01", angezeigtesJahr + "-12-31");
+
     el.jahr.querySelectorAll(".kalender-tag").forEach(function (feld) {
       const datum = feld.dataset.datum;
+      const amTag = eintraegeImJahr[datum] || [];
+      const hatTermin = amTag.some(function (e) { return e.art === "termin"; });
+
       feld.classList.toggle("ist-vergangen", datum < heute);
       feld.classList.toggle("ist-heute", datum === heute);
+      feld.classList.toggle("hat-termin", hatTermin);
       if (datum === heute) {
         feld.setAttribute("aria-current", "date");
       } else {
         feld.removeAttribute("aria-current");
+      }
+
+      // Per Tastatur erreichbar: Tage mit Termin und heute
+      if (hatTermin || datum === heute) {
+        feld.tabIndex = 0;
+      } else {
+        feld.removeAttribute("tabindex");
+      }
+      feld.setAttribute("aria-label", vollesDatum(datum) +
+        (hatTermin ? ", " + amTag.length + (amTag.length === 1 ? " Eintrag" : " Einträge") : ""));
+      if (hatTermin) {
+        feld.setAttribute("aria-describedby", "kalender-vorschau");
+      } else {
+        feld.removeAttribute("aria-describedby");
       }
     });
   }
@@ -226,6 +270,172 @@ const KalenderAnsicht = (function () {
       markiereTage();
       mitternachtPlanen();
     }, wartezeit);
+  }
+
+
+  /** "2026-10-10" → "Samstag, 10. Oktober 2026" */
+  function vollesDatum(text) {
+    const d = EventsStore.alsDatum(text);
+    return WOCHENTAGE_LANG[(d.getDay() + 6) % 7] + ", " + d.getDate() + ". " + MONATE[d.getMonth()] + " " + d.getFullYear();
+  }
+
+
+  /* ------------------------------------------------------------------------
+     TAGE ANKLICKEN UND VORSCHAU-PANEL
+     ------------------------------------------------------------------------ */
+
+  function richteTagEreignisseEin() {
+    // Merken, ob mit Maus oder Finger geklickt wird
+    el.jahr.addEventListener("pointerdown", function (event) {
+      letzteZeigerArt = event.pointerType;
+    });
+
+    // Maus: Panel beim Darüberfahren zeigen, beim Verlassen verstecken
+    el.jahr.addEventListener("mouseover", function (event) {
+      const feld = event.target.closest(".kalender-tag.hat-termin");
+      if (feld && feld !== vorschauFuer) zeigeVorschau(feld, false);
+    });
+    el.jahr.addEventListener("mouseout", function (event) {
+      const feld = event.target.closest(".kalender-tag");
+      if (feld && feld === vorschauFuer && !feld.contains(event.relatedTarget) &&
+          !el.vorschau.classList.contains("ist-angetippt")) {
+        versteckeVorschau();
+      }
+    });
+
+    // Tastatur: Panel bei Fokus zeigen
+    el.jahr.addEventListener("focusin", function (event) {
+      const feld = event.target.closest(".kalender-tag.hat-termin");
+      if (feld) zeigeVorschau(feld, false);
+    });
+    el.jahr.addEventListener("focusout", function (event) {
+      if (!el.vorschau.contains(event.relatedTarget)) versteckeVorschau();
+    });
+
+    // Klick / Antippen
+    el.jahr.addEventListener("click", function (event) {
+      const feld = event.target.closest(".kalender-tag");
+      if (!feld) return;
+      // Smartphone: erstes Antippen eines markierten Tages zeigt nur das Panel
+      // (Hovern gibt es dort nicht). Im Panel geht es dann weiter zum Stundenplan.
+      if (letzteZeigerArt === "touch" && feld.classList.contains("hat-termin") &&
+          !(vorschauFuer === feld && el.vorschau.classList.contains("ist-angetippt"))) {
+        zeigeVorschau(feld, true);
+        return;
+      }
+      oeffneStundenplan(feld.dataset.datum);
+    });
+
+    // Enter oder Leertaste auf einem Tag (Tastatur) = Klick
+    el.jahr.addEventListener("keydown", function (event) {
+      const feld = event.target.closest(".kalender-tag");
+      if (feld && (event.key === "Enter" || event.key === " ")) {
+        event.preventDefault();
+        oeffneStundenplan(feld.dataset.datum);
+      }
+    });
+
+    // Panel schließen: Escape, Antippen daneben, Scrollen, Ansicht wechseln
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") versteckeVorschau();
+    });
+    document.addEventListener("click", function (event) {
+      if (vorschauFuer && !el.vorschau.contains(event.target) && !event.target.closest(".kalender-tag.hat-termin")) {
+        versteckeVorschau();
+      }
+    });
+    window.addEventListener("scroll", versteckeVorschau, { passive: true });
+    window.addEventListener("resize", versteckeVorschau);
+    window.addEventListener("hashchange", versteckeVorschau);
+  }
+
+  function oeffneStundenplan(datum) {
+    versteckeVorschau();
+    window.location.hash = "#schedule/" + datum;
+  }
+
+  /**
+   * Zeigt das Panel mit den Einträgen eines Tages neben dem Tag.
+   * @param {boolean} angetippt – true: per Finger geöffnet (Panel ist dann
+   *                              anklickbar und enthält einen Link)
+   */
+  function zeigeVorschau(feld, angetippt) {
+    const datum = feld.dataset.datum;
+    const eintraege = eintraegeImJahr[datum] || [];
+    const panel = el.vorschau;
+    panel.innerHTML = "";
+
+    const kopf = document.createElement("div");
+    kopf.className = "kalender-vorschau-datum";
+    kopf.textContent = vollesDatum(datum);
+    panel.appendChild(kopf);
+
+    const liste = document.createElement("ul");
+    liste.className = "kalender-vorschau-liste";
+    eintraege.forEach(function (e) {
+      const li = document.createElement("li");
+      li.className = "kalender-vorschau-eintrag art-" + e.art;
+      // Texte immer per textContent – nie als HTML einsetzen
+      zeile(li, "kalender-vorschau-titel", e.titel);
+      zeile(li, "kalender-vorschau-zeit",
+        (e.ganztaegig ? "ganztägig" : e.start + "–" + e.ende) +
+        (e.art === "vorlesung" ? " · Vorlesung" : ""));
+      if (e.ort) zeile(li, "kalender-vorschau-ort", "📍 " + e.ort);
+      if (e.notiz) zeile(li, "kalender-vorschau-notiz", e.notiz);
+      liste.appendChild(li);
+    });
+    panel.appendChild(liste);
+
+    if (angetippt) {
+      const link = document.createElement("a");
+      link.className = "kalender-vorschau-link";
+      link.href = "#schedule/" + datum;
+      link.textContent = "Im Stundenplan öffnen →";
+      panel.appendChild(link);
+    }
+
+    panel.classList.toggle("ist-angetippt", angetippt);
+    panel.hidden = false;
+    vorschauFuer = feld;
+    positioniereVorschau(feld);
+  }
+
+  function zeile(eltern, klasse, text) {
+    const div = document.createElement("div");
+    div.className = klasse;
+    div.textContent = text;
+    eltern.appendChild(div);
+  }
+
+  /**
+   * Setzt das Panel unter (oder, wenn dort kein Platz ist, über) den Tag –
+   * und schiebt es so, dass es nie aus dem Bildschirm ragt.
+   */
+  function positioniereVorschau(feld) {
+    const panel = el.vorschau;
+    const rand = 8;                                   // Mindestabstand zum Bildschirmrand
+    const tag = feld.getBoundingClientRect();
+    const breite = panel.offsetWidth;
+    const hoehe = panel.offsetHeight;
+
+    let links = tag.left + tag.width / 2 - breite / 2;  // mittig unter dem Tag
+    links = Math.max(rand, Math.min(links, window.innerWidth - breite - rand));
+
+    let oben = tag.bottom + rand;                        // bevorzugt darunter …
+    if (oben + hoehe > window.innerHeight - rand) {
+      oben = tag.top - hoehe - rand;                     // … sonst darüber
+    }
+    oben = Math.max(rand, Math.min(oben, window.innerHeight - hoehe - rand));
+
+    panel.style.left = links + "px";
+    panel.style.top = oben + "px";
+  }
+
+  function versteckeVorschau() {
+    if (!vorschauFuer) return;
+    el.vorschau.hidden = true;
+    el.vorschau.classList.remove("ist-angetippt");
+    vorschauFuer = null;
   }
 
 

@@ -1,0 +1,549 @@
+/* ==========================================================================
+   schedule.css – Aussehen von Stundenplan/Termine
+   Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
+   ========================================================================== */
+
+:root {
+  /* Größen */
+  --sp-stunden-hoehe: 48px;               /* Höhe einer Stunde im Raster */
+  --sp-zeitachse-breite: 3.75rem;         /* Breite der Uhrzeit-Spalte links */
+  --sp-abstand: var(--abstand-s);         /* allgemeiner Abstand */
+  --sp-eintrag-radius: 6px;
+  --sp-eintrag-abstand: 2px;              /* Luft zwischen Einträgen und zum Spaltenrand */
+
+  /* Farben der Arten: Hintergrund, Rand links, Text */
+  --sp-termin-hintergrund: #dceaff;
+  --sp-termin-rand: #3b82f6;
+  --sp-termin-text: #1e3a6e;
+  --sp-vorlesung-hintergrund: #efe4ff;
+  --sp-vorlesung-rand: #8b5cf6;
+  --sp-vorlesung-text: #44267a;
+
+  /* Raster */
+  --sp-linie: rgba(0, 0, 0, 0.07);        /* Stundenlinien */
+  --sp-heute-hintergrund: rgba(46, 170, 80, 0.06); /* Spalte von heute */
+  --sp-heute-akzent: #1f8a43;             /* Datum von heute */
+  --sp-jetzt-farbe: #e5484d;              /* Linie für die aktuelle Uhrzeit */
+}
+
+:root[data-theme="dark"] {
+  --sp-termin-hintergrund: #1f3354;
+  --sp-termin-rand: #60a5fa;
+  --sp-termin-text: #dbeafe;
+  --sp-vorlesung-hintergrund: #2f2550;
+  --sp-vorlesung-rand: #a78bfa;
+  --sp-vorlesung-text: #ede9fe;
+
+  --sp-linie: rgba(255, 255, 255, 0.07);
+  --sp-heute-hintergrund: rgba(70, 200, 105, 0.07);
+  --sp-heute-akzent: #5fd884;
+  --sp-jetzt-farbe: #ff6b6f;
+}
+
+
+/* ==========================================================================
+   KOPF: ‹ KW 41 · 5.–11. Oktober 2026 › [Heute]      [+ Neuer Eintrag]
+   ========================================================================== */
+
+.sp-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-abstand);
+  margin-bottom: var(--abstand-m);
+}
+
+.sp-navigation {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-abstand);
+}
+
+.sp-navigation .icon-button {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.sp-titel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 11rem;
+  line-height: 1.25;
+}
+
+.sp-kw {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+.sp-zeitraum {
+  font-weight: 600;
+}
+
+.sp-knopf {
+  height: 40px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-pille);
+  box-shadow: var(--schatten);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sp-knopf:hover {
+  border-color: var(--farbe-akzent);
+}
+
+.sp-knopf--haupt {
+  background: var(--sp-termin-rand);
+  border-color: var(--sp-termin-rand);
+  color: #fff;
+}
+
+.sp-knopf--gefahr {
+  color: var(--sp-jetzt-farbe);
+}
+
+
+/* ==========================================================================
+   WOCHENRASTER
+   Drei Zeilen (Kopf, ganztägig, Stunden) mit denselben Spalten:
+   Zeitachse + 7 Tage.
+   ========================================================================== */
+
+.sp-woche {
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten);
+  overflow: hidden;
+}
+
+.sp-zeile {
+  display: grid;
+  grid-template-columns: var(--sp-zeitachse-breite) repeat(7, minmax(0, 1fr));
+}
+
+/* Kopfzeile: Wochentag + Datum */
+.sp-tagkopf {
+  padding: var(--sp-abstand) 4px;
+  text-align: center;
+  border-left: 1px solid var(--sp-linie);
+  line-height: 1.2;
+}
+
+.sp-tagkopf-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+.sp-tagkopf-datum {
+  font-weight: 600;
+}
+
+.sp-tagkopf.ist-heute .sp-tagkopf-name,
+.sp-tagkopf.ist-heute .sp-tagkopf-datum {
+  color: var(--sp-heute-akzent);
+}
+
+/* Zeile für ganztägige Einträge */
+.sp-ganztag-zeile {
+  border-top: 1px solid var(--sp-linie);
+  border-bottom: 1px solid var(--farbe-rand);
+}
+
+.sp-ganztag-label {
+  align-self: center;
+  padding: 0 4px;
+  font-size: 0.62rem;
+  white-space: nowrap;                     /* "ganztägig" in einer Zeile */
+  color: var(--farbe-text-leise);
+  text-align: right;
+}
+
+.sp-ganztag-zelle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-eintrag-abstand);
+  min-height: 2rem;
+  padding: var(--sp-eintrag-abstand);
+  border-left: 1px solid var(--sp-linie);
+  cursor: copy;                            /* Klick legt einen Eintrag an */
+}
+
+/* Stundenbereich: Höhe = Anzahl Stunden × Stundenhöhe */
+.sp-koerper {
+  height: calc(var(--sp-stunden) * var(--sp-stunden-hoehe));
+}
+
+.sp-zeitachse {
+  display: grid;
+  grid-auto-rows: var(--sp-stunden-hoehe);
+}
+
+.sp-stunde {
+  padding: 0 6px;
+  font-size: 0.7rem;
+  color: var(--farbe-text-leise);
+  text-align: right;
+  transform: translateY(-0.6em);           /* Uhrzeit auf Höhe der Linie */
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-stunde:first-child {
+  transform: none;                         /* die erste nicht abschneiden */
+}
+
+/* Eine Tagesspalte: Stundenlinien als Hintergrund-Muster */
+.sp-tagspalte {
+  position: relative;                      /* Bezugspunkt für die Eintrags-Blöcke */
+  border-left: 1px solid var(--sp-linie);
+  background-image: linear-gradient(to bottom, var(--sp-linie) 1px, transparent 1px);
+  background-size: 100% var(--sp-stunden-hoehe);
+  cursor: copy;
+}
+
+/* Heute: Spalte leicht grün getönt */
+.sp-tagspalte.ist-heute,
+.sp-ganztag-zelle.ist-heute,
+.sp-tagkopf.ist-heute {
+  background-color: var(--sp-heute-hintergrund);
+}
+
+/* Linie für die aktuelle Uhrzeit, mit kleinem Punkt am Anfang */
+.sp-jetzt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--sp-jetzt-farbe);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.sp-jetzt::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sp-jetzt-farbe);
+}
+
+
+/* ==========================================================================
+   EINTRÄGE
+   ========================================================================== */
+
+.sp-eintrag {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  overflow: hidden;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  text-align: left;
+  border: none;
+  border-left: 3px solid;
+  border-radius: var(--sp-eintrag-radius);
+  cursor: pointer;
+}
+
+/* Mit Uhrzeit: frei in der Spalte positioniert (top/left/width/height setzt schedule.js) */
+.sp-tagspalte .sp-eintrag {
+  position: absolute;
+  /* Ein bisschen Luft rundum, damit benachbarte Blöcke getrennt aussehen */
+  box-sizing: border-box;
+  border: var(--sp-eintrag-abstand) solid transparent;
+  border-left-width: 3px;
+  background-clip: padding-box;
+  min-height: 1.4rem;
+  z-index: 1;
+}
+
+.sp-eintrag:hover,
+.sp-eintrag:focus-visible {
+  filter: brightness(0.96);
+  z-index: 3;
+}
+
+.sp-eintrag-titel {
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-eintrag-zeit,
+.sp-eintrag-ort {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+/* Kurze Einträge (unter 45 Min.): nur der Titel */
+.sp-eintrag.ist-kurz .sp-eintrag-ort {
+  display: none;
+}
+
+/* Farben je Art */
+.art-termin.sp-eintrag {
+  background-color: var(--sp-termin-hintergrund);
+  border-left-color: var(--sp-termin-rand);
+  color: var(--sp-termin-text);
+}
+
+.art-vorlesung.sp-eintrag {
+  background-color: var(--sp-vorlesung-hintergrund);
+  border-left-color: var(--sp-vorlesung-rand);
+  color: var(--sp-vorlesung-text);
+}
+
+
+/* ==========================================================================
+   SMARTPHONE: ein Tag auf einmal + Leiste zum Wechseln
+   ========================================================================== */
+
+.sp-tagwahl {
+  display: none;                           /* nur auf dem Smartphone */
+}
+
+@media (max-width: 599px) {
+
+  .sp-kopf {
+    justify-content: center;
+  }
+
+  .sp-titel {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .sp-tagwahl {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: var(--sp-abstand);
+  }
+
+  .sp-tagwahl-knopf {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 0;
+    font: inherit;
+    font-size: 0.75rem;
+    color: var(--farbe-text-leise);
+    background: var(--farbe-flaeche);
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+  }
+
+  .sp-tagwahl-knopf strong {
+    font-size: 1rem;
+    color: var(--farbe-text);
+  }
+
+  .sp-tagwahl-knopf.ist-heute strong {
+    color: var(--sp-heute-akzent);
+  }
+
+  /* Kleiner Punkt: an diesem Tag gibt es Einträge */
+  .sp-tagwahl-knopf.hat-eintraege::after {
+    content: "";
+    width: 5px;
+    height: 5px;
+    margin-top: 2px;
+    border-radius: 50%;
+    background: var(--sp-termin-rand);
+  }
+
+  .sp-tagwahl-knopf[aria-pressed="true"] {
+    border-color: var(--sp-termin-rand);
+    box-shadow: 0 0 0 1px var(--sp-termin-rand);
+  }
+
+  /* Nur Zeitachse + der gewählte Tag */
+  .sp-zeile {
+    grid-template-columns: var(--sp-zeitachse-breite) minmax(0, 1fr);
+  }
+
+  .sp-woche [data-tag]:not(.ist-gewaehlt) {
+    display: none;
+  }
+
+  .sp-eintrag {
+    font-size: 0.85rem;
+  }
+}
+
+
+/* ==========================================================================
+   FORMULAR (Dialog)
+   ========================================================================== */
+
+.sp-dialog {
+  width: min(460px, calc(100vw - 2 * var(--abstand-m)));
+  max-height: calc(100dvh - 2 * var(--abstand-m));
+  padding: var(--abstand-l);
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+/* Abgedunkelter, leicht verschwommener Hintergrund hinter dem Dialog */
+.sp-dialog::backdrop {
+  background: var(--farbe-overlay, rgba(0, 0, 0, 0.4));
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.sp-formular {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sp-dialog-titel {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.sp-serien-hinweis {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  background: var(--sp-vorlesung-hintergrund);
+  color: var(--sp-vorlesung-text);
+  font-size: 0.85rem;
+}
+
+.sp-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--farbe-text-leise);
+}
+
+.sp-optional {
+  font-weight: 400;
+}
+
+.sp-feld input,
+.sp-feld select,
+.sp-feld textarea {
+  min-height: 40px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--farbe-text);
+  background: var(--farbe-hintergrund);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-s);
+}
+
+.sp-feld textarea {
+  resize: vertical;
+}
+
+.sp-feld [aria-invalid="true"] {
+  border-color: var(--sp-jetzt-farbe);
+  box-shadow: 0 0 0 1px var(--sp-jetzt-farbe);
+}
+
+/* Art: zwei Auswahl-"Pillen" nebeneinander */
+.sp-arten {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--sp-abstand);
+  padding: 0;
+  border: none;
+}
+
+.sp-arten legend {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.sp-art-wahl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pille);
+  border: 1px solid var(--farbe-rand);
+  color: var(--farbe-text);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sp-art-wahl.art-termin:has(input:checked) {
+  background: var(--sp-termin-hintergrund);
+  border-color: var(--sp-termin-rand);
+  color: var(--sp-termin-text);
+}
+
+.sp-art-wahl.art-vorlesung:has(input:checked) {
+  background: var(--sp-vorlesung-hintergrund);
+  border-color: var(--sp-vorlesung-rand);
+  color: var(--sp-vorlesung-text);
+}
+
+.sp-haken {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sp-zeiten {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-abstand);
+}
+
+.sp-fehler {
+  margin: 0;
+  color: var(--sp-jetzt-farbe);
+  font-weight: 500;
+}
+
+.sp-fehler:empty {
+  display: none;
+}
+
+.sp-dialog-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-abstand);
+  margin-top: 4px;
+}
+
+.sp-platzhalter {
+  flex: 1;                                 /* schiebt Abbrechen/Speichern nach rechts */
+}

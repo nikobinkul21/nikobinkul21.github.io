@@ -283,22 +283,20 @@ const MediaStore = (function () {
     return { ok: true };
   }
 
-  /** Alle Daten als JSON-Text (für den Export). */
-  function exportieren() {
-    return JSON.stringify(laden(), null, 2);
+  /* ------------------------------------------------------------------------
+     SICHERUNG (wird von settings.js benutzt – Export/Import in den Einstellungen)
+     ------------------------------------------------------------------------ */
+
+  /** Alle Daten als Objekt (für die Gesamtsicherung). */
+  function alsObjekt() {
+    return laden();
   }
 
   /**
-   * Prüft einen JSON-Text aus einer Import-Datei, OHNE etwas zu speichern.
+   * Prüft Daten aus einer Sicherung, OHNE etwas zu speichern.
    * @returns {{ok: true, daten, anzahl} | {ok: false, fehler}}
    */
-  function pruefeImport(text) {
-    let roh;
-    try {
-      roh = JSON.parse(text);
-    } catch (fehler) {
-      return { ok: false, fehler: "Die Datei enthält kein gültiges JSON." };
-    }
+  function pruefeDaten(roh) {
     const ergebnis = pruefe(roh);
     if (ergebnis.ok) {
       let summe = 0;
@@ -311,8 +309,8 @@ const MediaStore = (function () {
     return ergebnis;
   }
 
-  /** Ersetzt ALLE gespeicherten Daten durch geprüfte Import-Daten. */
-  function importieren(gepruefteDaten) {
+  /** Ersetzt ALLE gespeicherten Daten durch geprüfte Daten. */
+  function ersetzen(gepruefteDaten) {
     speichern(gepruefteDaten);
   }
 
@@ -328,8 +326,8 @@ const MediaStore = (function () {
     aendere: aendere,
     loesche: loesche,
     alsGeschautMarkieren: alsGeschautMarkieren,
-    exportieren: exportieren,
-    pruefeImport: pruefeImport,
-    importieren: importieren,
+    alsObjekt: alsObjekt,
+    pruefeDaten: pruefeDaten,
+    ersetzen: ersetzen,
   };
 })();

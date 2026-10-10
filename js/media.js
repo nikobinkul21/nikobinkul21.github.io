@@ -10,7 +10,7 @@
    Alle Kategorien benutzen denselben Code – nur die id ist anders.
 
    Alles steckt in "MediaAnsicht", damit die Hilfsfunktionen (knopf,
-   exportieren …) nicht mit gleichnamigen Funktionen anderer Dateien
+   zeigeHinweis …) nicht mit gleichnamigen Funktionen anderer Dateien
    zusammenstoßen. Nach außen sichtbar sind nur init und zeige.
    ========================================================================== */
 
@@ -57,19 +57,8 @@ const MediaAnsicht = (function () {
     });
     html += "</div>";
 
-    // Export / Import
-    html +=
-      '<section class="karte media-daten" aria-labelledby="media-daten-titel">' +
-        '<h2 id="media-daten-titel">Daten</h2>' +
-        "<p>Sichere alle Listen als Datei oder spiele eine Sicherung wieder ein.</p>" +
-        '<div class="media-daten-knoepfe">' +
-          '<button type="button" class="media-knopf" data-aktion="exportieren">Daten exportieren</button>' +
-          '<button type="button" class="media-knopf" data-aktion="importieren">Daten importieren</button>' +
-          // Unsichtbares Datei-Auswahlfeld – wird über den Import-Button geöffnet
-          '<input type="file" class="media-datei" accept=".json,application/json" hidden>' +
-        "</div>" +
-        '<p class="media-hinweis" role="status"></p>' +
-      "</section>";
+    // Export/Import ist in die Einstellungen umgezogen (Sicherung aller Daten)
+    html += '<p class="media-sicherung">Sichern oder Wiederherstellen: <a href="#einstellungen">Einstellungen</a></p>';
     html += "</div>";
 
     // Der Kategorie-Bereich (Inhalt wird beim Anzeigen gefüllt)
@@ -93,8 +82,6 @@ const MediaAnsicht = (function () {
     container.innerHTML = html;
 
     mediaEl.uebersicht = container.querySelector(".media-uebersicht");
-    mediaEl.datenHinweis = container.querySelector(".media-daten .media-hinweis");
-    mediaEl.datei = container.querySelector(".media-datei");
     mediaEl.kategorie = container.querySelector(".media-kategorie");
     mediaEl.titel = container.querySelector(".media-kategorie .unterseite-titel");
     mediaEl.tabs = container.querySelector(".media-tabs");
@@ -123,13 +110,6 @@ const MediaAnsicht = (function () {
         fokusAufEintrag(id);
       }
     });
-    mediaEl.uebersicht.addEventListener("click", function (event) {
-      const knopf = event.target.closest("[data-aktion]");
-      if (!knopf) return;
-      if (knopf.dataset.aktion === "exportieren") exportieren();
-      if (knopf.dataset.aktion === "importieren") mediaEl.datei.click();
-    });
-    mediaEl.datei.addEventListener("change", importieren);
   }
 
   /**
@@ -416,43 +396,6 @@ const MediaAnsicht = (function () {
       zeichneKategorie();
       fokusAufEintrag(id);
     }
-  }
-
-  /** Alle Daten als JSON-Datei herunterladen. */
-  function exportieren() {
-    const datei = new Blob([MediaStore.exportieren()], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(datei);
-    link.download = "ntb-filme-serien-" + new Date().toISOString().slice(0, 10) + ".json";
-    document.body.appendChild(link);
-    link.click();                       // startet den Download
-    link.remove();
-    setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
-    zeigeHinweis(mediaEl.datenHinweis, "Export gestartet: " + link.download, "erfolg");
-  }
-
-  /** Eine gewählte JSON-Datei prüfen und nach Rückfrage einspielen. */
-  function importieren() {
-    const datei = mediaEl.datei.files[0];
-    mediaEl.datei.value = "";           // damit dieselbe Datei erneut gewählt werden kann
-    if (!datei) return;
-
-    datei.text().then(function (text) {
-      const pruefung = MediaStore.pruefeImport(text);
-      if (!pruefung.ok) {
-        zeigeHinweis(mediaEl.datenHinweis, "Import abgebrochen: " + pruefung.fehler, "fehler");
-        return;
-      }
-      const frage = "Die Datei enthält " + pruefung.anzahl + " Einträge.\n" +
-        "Alle aktuellen Filme/Serien-Daten werden dadurch ERSETZT. Fortfahren?";
-      if (!window.confirm(frage)) {
-        zeigeHinweis(mediaEl.datenHinweis, "Import abgebrochen.");
-        return;
-      }
-      MediaStore.importieren(pruefung.daten);
-      zeichneUebersicht();
-      zeigeHinweis(mediaEl.datenHinweis, "Import erfolgreich: " + pruefung.anzahl + " Einträge.", "erfolg");
-    });
   }
 
 

@@ -49,23 +49,15 @@
    ÜBERSICHT
    ========================================================================== */
 
-.media-daten {
-  margin-top: var(--abstand-l);
-}
-
-.media-daten p {
-  margin: 0 0 var(--abstand-m);
+/* Hinweis unter den Karten: Sicherung findet sich in den Einstellungen */
+.media-sicherung {
+  margin: var(--abstand-l) 0 0;
+  font-size: 0.9rem;
   color: var(--farbe-text-leise);
 }
 
-.media-daten-knoepfe {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--abstand-s);
-}
-
-.media-daten .media-hinweis {
-  margin: var(--abstand-s) 0 0;
+.media-sicherung a {
+  color: var(--farbe-akzent);
 }
 
 

@@ -26,6 +26,17 @@
   --kal-heute-saettigung: 180%;
   --kal-heute-fallback: rgba(46, 170, 80, 0.35);      /* Browser ohne backdrop-filter */
 
+  /* Tage mit Termin: hellblauer Glas-Kreis (gleicher Aufbau wie "heute") */
+  --kal-termin-glas: rgba(90, 170, 255, 0.28);
+  --kal-termin-rand: rgba(255, 255, 255, 0.75);
+  --kal-termin-leuchten: rgba(90, 170, 255, 0.45);
+  --kal-termin-ring: #5aa9ff;                         /* Ring um "heute", wenn heute ein Termin ist */
+  --kal-termin-glas-vergangen: rgba(90, 170, 255, 0.13); /* vergangene Termine: Kreis abgeschwächt */
+
+  /* Vorschau-Panel beim Hovern / Antippen */
+  --kal-vorschau-hintergrund: rgba(255, 255, 255, 0.78);
+  --kal-vorschau-breite: 260px;
+
   /* Desktop: ganzes Jahr ohne Scrollen (siehe Abschnitt "DESKTOP" unten) */
   --kal-desktop-rand: var(--abstand-m);               /* Abstand oben/unten/seitlich */
   --kal-desktop-schrift: clamp(0.7rem, 1.7vh, 1rem);  /* Tageszahlen wachsen mit der Fensterhöhe */
@@ -44,6 +55,14 @@
   --kal-heute-leuchten: rgba(70, 200, 105, 0.45);
   --kal-heute-text: #eafff0;
   --kal-heute-fallback: rgba(70, 200, 105, 0.38);
+
+  --kal-termin-glas: rgba(110, 180, 255, 0.26);
+  --kal-termin-rand: rgba(255, 255, 255, 0.28);
+  --kal-termin-leuchten: rgba(110, 180, 255, 0.40);
+  --kal-termin-ring: #7cbcff;
+  --kal-termin-glas-vergangen: rgba(110, 180, 255, 0.12);
+
+  --kal-vorschau-hintergrund: rgba(31, 34, 40, 0.80);
 }
 
 
@@ -202,11 +221,141 @@
     0 2px 6px rgba(0, 0, 0, 0.08);              /* leichter Schatten nach unten */
 }
 
+/* Jeder Tag ist anklickbar (öffnet den Stundenplan mit dieser Woche) */
+.kalender-tag {
+  cursor: pointer;
+}
+
+.kalender-tag:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: 1px;
+}
+
+/* Tag mit Termin: hellblauer Glas-Kreis hinter der Zahl.
+   Die Zahl behält ihre Farbe (bei vergangenen Tagen also rot). */
+.kalender-tag.hat-termin .kalender-zahl {
+  position: relative;
+  font-weight: 600;
+  background:
+    linear-gradient(to bottom, var(--kal-heute-glanz), transparent 55%),
+    var(--kal-termin-glas);
+  -webkit-backdrop-filter: blur(var(--kal-heute-blur)) saturate(var(--kal-heute-saettigung));
+  backdrop-filter: blur(var(--kal-heute-blur)) saturate(var(--kal-heute-saettigung));
+  border: 1px solid var(--kal-termin-rand);
+  box-shadow:
+    inset 0 1px 0 var(--kal-heute-reflex),
+    0 0 10px var(--kal-termin-leuchten);
+}
+
+/* Vergangener Termin: Kreis abgeschwächt (nur der Kreis, die rote Zahl bleibt kräftig) */
+.kalender-tag.ist-vergangen.hat-termin .kalender-zahl {
+  background:
+    linear-gradient(to bottom, var(--kal-heute-glanz), transparent 55%),
+    var(--kal-termin-glas-vergangen);
+  box-shadow: inset 0 1px 0 var(--kal-heute-reflex);
+}
+
+/* Heute UND Termin: bleibt grün, bekommt zusätzlich einen hellblauen Ring */
+.kalender-tag.ist-heute.hat-termin .kalender-zahl {
+  background:
+    linear-gradient(to bottom, var(--kal-heute-glanz), transparent 55%),
+    var(--kal-heute-glas);
+  border-color: var(--kal-heute-rand);
+  box-shadow:
+    inset 0 1px 0 var(--kal-heute-reflex),
+    0 0 0 2px var(--kal-termin-ring),           /* der blaue Ring */
+    0 0 12px var(--kal-heute-leuchten);
+}
+
 /* Fallback für Browser ohne backdrop-filter */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .kalender-tag.ist-heute .kalender-zahl {
     background: var(--kal-heute-fallback);
   }
+
+  .kalender-tag.hat-termin:not(.ist-heute) .kalender-zahl {
+    background: var(--kal-termin-glas);
+  }
+}
+
+
+/* ==========================================================================
+   VORSCHAU-PANEL (Einträge eines Tages)
+   calendar.js setzt die Position (left/top) so, dass es im Bildschirm bleibt.
+   ========================================================================== */
+
+.kalender-vorschau {
+  position: fixed;
+  z-index: 50;
+  width: max-content;
+  max-width: min(var(--kal-vorschau-breite), calc(100vw - 16px));
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--farbe-text);
+  background: var(--kal-vorschau-hintergrund);
+  -webkit-backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
+  backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
+  border: 1px solid var(--glas-rand);
+  border-radius: var(--radius-m);
+  box-shadow: inset 0 1px 0 var(--glas-reflex), var(--glas-schatten);
+  pointer-events: none;                     /* Maus: Panel stört nicht beim Weiterfahren */
+}
+
+/* Per Finger geöffnet: anklickbar (für den Link zum Stundenplan) */
+.kalender-vorschau.ist-angetippt {
+  pointer-events: auto;
+}
+
+.kalender-vorschau-datum {
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+.kalender-vorschau-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Jeder Eintrag mit farbigem Strich links (Farbe wie im Stundenplan) */
+.kalender-vorschau-eintrag {
+  padding-left: 8px;
+  border-left: 3px solid var(--sp-termin-rand);
+}
+
+.kalender-vorschau-eintrag.art-vorlesung {
+  border-left-color: var(--sp-vorlesung-rand);
+}
+
+.kalender-vorschau-titel {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.kalender-vorschau-zeit,
+.kalender-vorschau-ort {
+  color: var(--farbe-text-leise);
+}
+
+.kalender-vorschau-notiz {
+  margin-top: 2px;
+  font-style: italic;
+  white-space: pre-line;                    /* Zeilenumbrüche aus der Notiz behalten */
+  overflow-wrap: anywhere;
+}
+
+.kalender-vorschau-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-weight: 600;
+  color: var(--farbe-akzent);
+  text-decoration: none;
 }
 
 
