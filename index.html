@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NTB</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/calendar.css">
   <link rel="stylesheet" href="css/schedule.css">
   <link rel="stylesheet" href="css/sudoku.css">
@@ -94,8 +95,13 @@
 
     <section class="ansicht" id="view-home" aria-labelledby="titel-home">
       <h1 id="titel-home" tabindex="-1">Willkommen bei NTB</h1>
-      <div class="karte">
-        <p>Wähle oben ein Tool aus, um loszulegen.</p>
+      <!-- Drei Spalten: links frei, Mitte Uhr (exakt in der Seitenmitte), rechts News -->
+      <div class="home-raster">
+        <div class="home-links">
+          <!-- Vorerst leer – Platz für spätere Inhalte -->
+        </div>
+        <div class="home-mitte" id="uhr-root"></div>
+        <div class="home-rechts" id="news-root"></div>
       </div>
     </section>
 
@@ -144,6 +150,7 @@
     Bewusst KEIN type="module": Module funktionieren nicht, wenn man
     index.html per Doppelklick (file://) öffnet.
   -->
+  <script src="js/clock.js"></script>
   <!-- Termine: der Store zuerst – Kalender und Stundenplan lesen beide daraus -->
   <script src="js/events-store.js"></script>
   <script src="js/calendar.js"></script>

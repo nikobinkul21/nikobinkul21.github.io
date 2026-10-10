@@ -19,7 +19,7 @@
 // Neues Tool? Hier eine Zeile ergänzen (plus Reiter in der Leiste und
 // eine <section> in index.html).
 const ANSICHTEN = {
-  home: null,
+  home: { init: Uhr.init, root: "uhr-root" },
   kalender: { init: KalenderAnsicht.init, zeige: KalenderAnsicht.zeige, root: "calendar-root" },
   games: { init: initGames, zeige: zeigeGames, root: "games-root" },
   media: { init: MediaAnsicht.init, zeige: MediaAnsicht.zeige, root: "media-root" },
