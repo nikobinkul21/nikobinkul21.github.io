@@ -12,14 +12,16 @@
    -------------------------------------------------------------------------- */
 
 // Alle Ansichten. Bei Tools steht dabei:
-//   init – die Startfunktion aus der Tool-Datei (z. B. calendar.js)
-//   root – die ID des Containers in index.html, in den das Tool zeichnet
+//   init  – die Startfunktion aus der Tool-Datei (z. B. calendar.js)
+//   root  – die ID des Containers in index.html, in den das Tool zeichnet
+//   zeige – (optional) wird bei JEDEM Öffnen aufgerufen und bekommt die
+//           Unterseite aus der Adresse, z. B. "sudoku" bei #games/sudoku
 // Neues Tool? Hier eine Zeile ergänzen (plus Reiter in der Leiste und
 // eine <section> in index.html).
 const ANSICHTEN = {
   home: null,
   kalender: { init: initCalendar, root: "calendar-root" },
-  games: { init: initGames, root: "games-root" },
+  games: { init: initGames, zeige: zeigeGames, root: "games-root" },
   einstellungen: null,
   customising: { init: initCustomising, root: "customising-root" },
 };
@@ -54,26 +56,29 @@ const mobilAbfrage = window.matchMedia("(max-width: 767px)");
    ========================================================================== */
 
 /**
- * Liest den Namen der Ansicht aus dem URL-Hash.
- * Beispiel: "…/index.html#games" → "games"
+ * Liest Ansicht und Unterseite aus dem URL-Hash.
+ * Beispiele: "#games"        → { name: "games", unterseite: "" }
+ *            "#games/sudoku" → { name: "games", unterseite: "sudoku" }
  * Unbekannte oder leere Hashes führen zur Startansicht.
  */
 function ansichtAusHash() {
-  const name = window.location.hash.slice(1); // "#" am Anfang entfernen
+  const teile = window.location.hash.slice(1).split("/"); // "#" entfernen, bei "/" trennen
+  const name = teile[0];
   if (name in ANSICHTEN) {
-    return name;
+    return { name: name, unterseite: teile.slice(1).join("/") };
   }
-  return START_ANSICHT;
+  return { name: START_ANSICHT, unterseite: "" };
 }
 
 /**
  * Blendet die gewünschte Ansicht ein und alle anderen aus.
  * @param {string} name – z. B. "kalender"
+ * @param {string} unterseite – z. B. "sudoku" (leer = keine Unterseite)
  * @param {boolean} fokusSetzen – true, wenn der Fokus auf die Überschrift
  *                                springen soll (hilft Tastatur- und
  *                                Screenreader-Nutzern)
  */
-function zeigeAnsicht(name, fokusSetzen) {
+function zeigeAnsicht(name, unterseite, fokusSetzen) {
   // Alle Ansichten durchgehen: die gewünschte zeigen, den Rest verstecken
   for (const ansichtName in ANSICHTEN) {
     const section = document.getElementById("view-" + ansichtName);
@@ -97,6 +102,13 @@ function zeigeAnsicht(name, fokusSetzen) {
     gestarteteTools[name] = true;
   }
 
+  // Das Tool entscheidet selbst, was es bei dieser Unterseite zeigt.
+  // Gibt es ein Element zurück, bekommt dieses den Fokus.
+  let fokusZiel = null;
+  if (tool && tool.zeige) {
+    fokusZiel = tool.zeige(unterseite);
+  }
+
   // Titel im Browser-Tab anpassen: "NTB" auf Home, sonst z. B. "Games – NTB"
   const ueberschrift = document.getElementById("titel-" + name);
   if (name === START_ANSICHT) {
@@ -106,14 +118,15 @@ function zeigeAnsicht(name, fokusSetzen) {
   }
 
   if (fokusSetzen) {
-    ueberschrift.focus();
+    (fokusZiel || ueberschrift).focus();
   }
 }
 
 // Wenn sich der Hash ändert (Klick auf einen Reiter, Zurück-Button im Browser),
 // die passende Ansicht zeigen.
 window.addEventListener("hashchange", function () {
-  zeigeAnsicht(ansichtAusHash(), true);
+  const ziel = ansichtAusHash();
+  zeigeAnsicht(ziel.name, ziel.unterseite, true);
 });
 
 
@@ -245,4 +258,6 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", fun
    ========================================================================== */
 
 setzeTheme(aktuellesTheme());       // Schalter an das bereits gesetzte Theme anpassen
-zeigeAnsicht(ansichtAusHash(), false); // Ansicht aus der URL zeigen (ohne Fokus-Sprung)
+// Ansicht aus der URL zeigen (ohne Fokus-Sprung)
+const startZiel = ansichtAusHash();
+zeigeAnsicht(startZiel.name, startZiel.unterseite, false);

@@ -1,0 +1,255 @@
+/* ==========================================================================
+   sudoku.css – Aussehen des Sudokus
+   Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
+   ========================================================================== */
+
+:root {
+  /* Größen */
+  --sudoku-max-breite: 480px;              /* so breit wird das Gitter höchstens */
+  --sudoku-schrift-groesse: clamp(1.1rem, 5.5vw, 1.75rem); /* Ziffern im Gitter (wächst mit dem Bildschirm) */
+  --sudoku-radius: var(--radius-m);        /* Rundung der Außenecken */
+  --sudoku-taste-hoehe: 48px;              /* Höhe der Tasten im Zahlenfeld */
+
+  /* Linien */
+  --sudoku-linie-duenn: 1px;               /* zwischen einzelnen Feldern */
+  --sudoku-linie-dick: 3px;                /* um die 3×3-Blöcke und außen */
+  --sudoku-linie-duenn-farbe: #d5d9e0;
+  --sudoku-linie-dick-farbe: #3b4250;
+
+  /* Felder */
+  --sudoku-feld: #ffffff;                  /* normaler Hintergrund */
+  --sudoku-verwandt: #eef1f7;              /* gleiche Zeile, Spalte, Block */
+  --sudoku-gleich: #d9e1fb;                /* Felder mit derselben Zahl */
+  --sudoku-ausgewaehlt: #bccafa;           /* das gewählte Feld */
+
+  /* Ziffern */
+  --sudoku-vorgabe-farbe: #1f2328;         /* vorgegebene Zahlen */
+  --sudoku-vorgabe-gewicht: 700;           /* … in fett */
+  --sudoku-eingabe-farbe: #3f5fe0;         /* deine eigenen Zahlen */
+  --sudoku-eingabe-gewicht: 500;
+  --sudoku-fehler-farbe: #d1242f;          /* falsche Eingaben */
+  --sudoku-fehler-hintergrund: #fde8e8;
+
+  /* Meldungen */
+  --sudoku-erfolg-farbe: #1a7f37;
+}
+
+/* Dunkles Design: nur die Farben ändern sich */
+:root[data-theme="dark"] {
+  --sudoku-linie-duenn-farbe: #343944;
+  --sudoku-linie-dick-farbe: #8a93a3;
+
+  --sudoku-feld: #1f2228;
+  --sudoku-verwandt: #2a2f39;
+  --sudoku-gleich: #2f3a5c;
+  --sudoku-ausgewaehlt: #4a5fa8;
+
+  --sudoku-vorgabe-farbe: #e6e8eb;
+  --sudoku-eingabe-farbe: #8fa5ff;
+  --sudoku-fehler-farbe: #ff7b72;
+  --sudoku-fehler-hintergrund: #47262a;
+
+  --sudoku-erfolg-farbe: #56d364;
+}
+
+
+/* ==========================================================================
+   AUFBAU
+   ========================================================================== */
+
+.sudoku {
+  /* Alles bleibt so schmal wie das Gitter */
+  max-width: var(--sudoku-max-breite);
+}
+
+/* Schwierigkeit + "Neues Spiel" */
+.sudoku-steuerung {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--abstand-s) var(--abstand-m);
+  margin-bottom: var(--abstand-s);
+}
+
+.sudoku-label {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-s);
+  color: var(--farbe-text-leise);
+}
+
+.sudoku-auswahl,
+.sudoku-knopf {
+  font: inherit;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-s);
+  padding: 6px 12px;
+  box-shadow: var(--schatten);
+}
+
+.sudoku-knopf {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.sudoku-knopf:hover:not(:disabled) {
+  border-color: var(--farbe-akzent);
+}
+
+.sudoku-auswahl:disabled,
+.sudoku-knopf:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.sudoku-auswahl:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+
+/* Statuszeile ("Rätsel wird erzeugt …", Erfolgsmeldung).
+   min-height hält den Platz frei, damit das Gitter nicht springt. */
+.sudoku-status {
+  min-height: 1.5em;
+  margin: 0 0 var(--abstand-s);
+  color: var(--farbe-text-leise);
+}
+
+.sudoku-status[data-art="erfolg"] {
+  color: var(--sudoku-erfolg-farbe);
+  font-weight: 600;
+}
+
+
+/* ==========================================================================
+   DAS GITTER
+   Trick für die Linien: Das Brett hat die Farbe der DICKEN Linien, die
+   Blöcke die Farbe der DÜNNEN Linien. Die Abstände (gap) dazwischen lassen
+   diese Farben durchscheinen – so entstehen die Linien ganz ohne Rahmen.
+   ========================================================================== */
+
+.sudoku-brett {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: var(--sudoku-linie-dick);
+  padding: var(--sudoku-linie-dick);
+  background: var(--sudoku-linie-dick-farbe);
+  border-radius: var(--sudoku-radius);
+  width: 100%;                          /* passt sich dem Bildschirm an … */
+  aspect-ratio: 1;                      /* … und bleibt dabei immer quadratisch */
+  overflow: hidden;                     /* runde Ecken auch für die Eckfelder */
+  box-shadow: var(--schatten);
+  transition: opacity 0.2s;
+}
+
+/* Während ein Rätsel erzeugt wird, ist das Gitter blass */
+.sudoku-brett.wird-erzeugt {
+  opacity: 0.4;
+}
+
+.sudoku-block {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: var(--sudoku-linie-duenn);
+  background: var(--sudoku-linie-duenn-farbe);
+  min-width: 0;                         /* verhindert, dass Inhalt das Raster sprengt */
+  min-height: 0;
+}
+
+.sudoku-feld {
+  /* Button-Standardaussehen entfernen */
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  font-family: inherit;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sudoku-feld);
+  color: var(--sudoku-eingabe-farbe);
+  font-size: var(--sudoku-schrift-groesse);
+  font-weight: var(--sudoku-eingabe-gewicht);
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Hervorhebungen – die Reihenfolge ist wichtig: spätere Regeln gewinnen */
+.sudoku-feld.ist-verwandt {
+  background: var(--sudoku-verwandt);
+}
+
+.sudoku-feld.ist-gleich {
+  background: var(--sudoku-gleich);
+}
+
+.sudoku-feld.ist-falsch {
+  color: var(--sudoku-fehler-farbe);
+  background: var(--sudoku-fehler-hintergrund);
+}
+
+.sudoku-feld.ist-ausgewaehlt {
+  background: var(--sudoku-ausgewaehlt);
+}
+
+/* Vorgegebene Zahlen: fett und in normaler Textfarbe */
+.sudoku-feld.ist-vorgabe {
+  color: var(--sudoku-vorgabe-farbe);
+  font-weight: var(--sudoku-vorgabe-gewicht);
+  cursor: default;
+}
+
+/* Tastaturfokus: Rahmen nach innen, damit er nicht von Nachbarn verdeckt wird */
+.sudoku-feld:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: -2px;
+}
+
+/* Gelöst: keine Hervorhebung mehr, nur noch das fertige Gitter */
+.sudoku-brett.ist-geloest .sudoku-feld {
+  background: var(--sudoku-feld);
+  cursor: default;
+}
+
+
+/* ==========================================================================
+   ZAHLENFELD
+   ========================================================================== */
+
+.sudoku-zahlenfeld {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); /* zwei Reihen: 1–5 und 6–9 + Löschen */
+  gap: var(--abstand-s);
+  margin-top: var(--abstand-m);
+}
+
+.sudoku-taste {
+  height: var(--sudoku-taste-hoehe);
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-s);
+  box-shadow: var(--schatten);
+  cursor: pointer;
+}
+
+.sudoku-taste:hover {
+  border-color: var(--farbe-akzent);
+}
+
+.sudoku-taste:active {
+  background: var(--sudoku-verwandt);
+}
+
+.sudoku-taste--loeschen {
+  color: var(--farbe-text-leise);
+}

@@ -454,6 +454,47 @@ button:focus-visible {
   margin: 0;
 }
 
+/* Games-Übersicht: eine anklickbare Karte pro Spiel */
+.spiele-uebersicht {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--abstand-m);
+}
+
+.spiel-karte {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: transform var(--dauer) ease, border-color var(--dauer) ease;
+}
+
+.spiel-karte:hover,
+.spiel-karte:focus-visible {
+  border-color: var(--farbe-akzent);
+  transform: translateY(var(--anheben));
+}
+
+.spiel-karte p {
+  color: var(--farbe-text-leise);
+}
+
+/* "← Zur Übersicht" über einem geöffneten Spiel */
+.zurueck-link {
+  display: inline-block;
+  margin-bottom: var(--abstand-s);
+  color: var(--farbe-text-leise);
+  text-decoration: none;
+}
+
+.zurueck-link:hover {
+  color: var(--farbe-text);
+  text-decoration: underline;
+}
+
+.spiel-titel:focus {
+  outline: none;
+}
+
 /* Platzhaltertext der noch leeren Tools */
 .platzhalter {
   color: var(--farbe-text-leise);
@@ -577,7 +618,9 @@ button:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .reiter:hover,
   .reiter:focus-visible,
-  .nav-panel {
+  .nav-panel,
+  .spiel-karte:hover,
+  .spiel-karte:focus-visible {
     transform: none !important;
   }
 }
