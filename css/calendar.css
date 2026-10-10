@@ -25,6 +25,11 @@
   --kal-heute-blur: 10px;
   --kal-heute-saettigung: 180%;
   --kal-heute-fallback: rgba(46, 170, 80, 0.35);      /* Browser ohne backdrop-filter */
+
+  /* Desktop: ganzes Jahr ohne Scrollen (siehe Abschnitt "DESKTOP" unten) */
+  --kal-desktop-rand: var(--abstand-m);               /* Abstand oben/unten/seitlich */
+  --kal-desktop-schrift: clamp(0.7rem, 1.7vh, 1rem);  /* Tageszahlen wachsen mit der Fensterhöhe */
+  --kal-desktop-monat-innen: 10px 12px;               /* Innenabstand eines Monats */
 }
 
 /* Dunkles Design: nur die Farben ändern sich */
@@ -201,5 +206,108 @@
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .kalender-tag.ist-heute .kalender-zahl {
     background: var(--kal-heute-fallback);
+  }
+}
+
+
+/* ==========================================================================
+   DESKTOP: das ganze Jahr auf einen Blick, ohne Scrollen
+   Der Kalender wird genau so hoch wie das Fenster (minus Leiste) und die
+   zwölf Monate teilen sich diese Höhe. Die Tage sind dafür nicht mehr
+   quadratisch, sondern füllen ihre Zelle.
+   Gilt ab 900 px Breite UND mindestens 640 px Höhe – in sehr niedrigen
+   Fenstern wäre alles zu klein, dort wird wie gewohnt gescrollt.
+   ========================================================================== */
+
+@media (min-width: 900px) and (min-height: 640px) {
+
+  /* Hauptbereich: volle Breite und wenig Rand, solange der Kalender offen ist */
+  .hauptbereich:has(#view-kalender:not([hidden])) {
+    max-width: none;
+    padding: var(--kal-desktop-rand) var(--abstand-l);
+  }
+
+  /* Die große Überschrift "Kalender" nur für Screenreader –
+     die Jahreszahl darunter zeigt schon, wo man ist */
+  #view-kalender > h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Kalender = Fensterhöhe minus Leiste minus Rand oben und unten */
+  #calendar-root {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--leiste-hoehe) - 2 * var(--kal-desktop-rand));
+  }
+
+  .kalender-kopf {
+    margin-bottom: var(--abstand-s);
+  }
+
+  /* 4 Spalten × 3 Reihen, die Reihen teilen sich die Höhe gleichmäßig */
+  .kalender-jahr {
+    flex: 1;
+    min-height: 0;                          /* darf schrumpfen */
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: var(--abstand-s) var(--kal-abstand-monate);
+  }
+
+  .kalender-monat {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: var(--kal-desktop-monat-innen);
+  }
+
+  .kalender-monatsname {
+    margin-bottom: 2px;
+    font-size: 0.95rem;
+  }
+
+  /* Wochentagszeile + immer 6 Wochenzeilen → alle Monate gleich aufgebaut */
+  .kalender-raster {
+    flex: 1;
+    min-height: 0;
+    /* minmax(0, 1fr): Spalten dürfen schmaler werden als ihr Inhalt –
+       sonst würde der Monat bei wenig Platz rechts überlaufen */
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: auto repeat(6, 1fr);
+    gap: 2px;
+    font-size: var(--kal-desktop-schrift);
+  }
+
+  .kalender-wochentag {
+    padding-bottom: 0;
+  }
+
+  .kalender-tag {
+    aspect-ratio: auto;                     /* füllt die Zelle statt quadratisch zu sein */
+    min-height: 0;
+    /* Macht die Zelle zum "Container": Der Kreis darin kann sich dann nach
+       ihrer kleineren Seite richten (Einheit cqmin, siehe unten) */
+    container-type: size;
+  }
+
+  /* Der Kreis für "heute" bleibt rund und passt immer in die Zelle:
+     100cqmin = die kürzere Seite der Zelle (Breite oder Höhe) */
+  .kalender-zahl {
+    width: min(var(--kal-heute-groesse), 100cqmin);
+    height: min(var(--kal-heute-groesse), 100cqmin);
+  }
+}
+
+/* Breite Bildschirme (z. B. 16:9, ab 1200 px): 6 Spalten × 2 Reihen –
+   so werden die Tage nicht zu flach. Unter 1200 px wären die Spalten
+   dafür zu schmal, dort bleibt es bei 4 × 3. */
+@media (min-width: 1200px) and (min-height: 640px) and (min-aspect-ratio: 7/5) {
+  .kalender-jahr {
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(2, 1fr);
   }
 }
