@@ -10,6 +10,7 @@
      erstellt:    "2026-10-10T14:03:00.000Z",
      filmeSerien: { … }    ← Daten aus MediaStore  (js/media-store.js)
      termine:     { … }    ← Daten aus EventsStore (js/events-store.js)
+     sudokuAbenteuer: { … } oder null ← Spielstand aus SudokuRPG (js/sudoku-rpg.js)
    }
    Neue Bereiche mit eigenen Daten? Hier in exportieren() und importieren()
    ergänzen – die Stores selbst bleiben für die Speicherung zuständig.
@@ -32,7 +33,7 @@ const EinstellungenAnsicht = (function () {
         '<h2 id="sicherung-titel">Daten sichern</h2>' +
         "<p>Deine Daten liegen nur in diesem Browser. Mit einer Sicherung kannst du sie " +
           "auf einem anderen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. " +
-          "Die Datei enthält <strong>Filme/Serien</strong> und <strong>Stundenplan/Termine</strong>.</p>" +
+          "Die Datei enthält <strong>Filme/Serien</strong>, <strong>Stundenplan/Termine</strong> und den Spielstand des <strong>Sudoku-Abenteuers</strong>.</p>" +
         '<div class="einstellungen-knoepfe">' +
           '<button type="button" class="knopf" data-aktion="exportieren">Daten exportieren</button>' +
           '<button type="button" class="knopf" data-aktion="importieren">Daten importieren</button>' +
@@ -67,6 +68,7 @@ const EinstellungenAnsicht = (function () {
       erstellt: new Date().toISOString(),
       filmeSerien: MediaStore.alsObjekt(),
       termine: EventsStore.alsObjekt(),
+      sudokuAbenteuer: SudokuRPG.alsObjekt(),
     };
     const datei = new Blob([JSON.stringify(sicherung, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
@@ -120,13 +122,30 @@ const EinstellungenAnsicht = (function () {
     const termine = EventsStore.pruefeDaten(roh.termine);
     if (!termine.ok) return { ok: false, fehler: termine.fehler };
 
+    // Sudoku-Abenteuer: in älteren Sicherungen fehlt es → bleibt dann unverändert
+    let abenteuer = { vorhanden: false };
+    let abenteuerText = "• Sudoku-Abenteuer: nicht enthalten (bleibt unverändert)\n";
+    if ("sudokuAbenteuer" in roh) {
+      if (roh.sudokuAbenteuer === null) {
+        abenteuer = { vorhanden: true, daten: null };
+        abenteuerText = "• Sudoku-Abenteuer: noch nicht begonnen\n";
+      } else {
+        const geprueft = SudokuRPG.pruefeDaten(roh.sudokuAbenteuer);
+        if (!geprueft.ok) return { ok: false, fehler: geprueft.fehler };
+        abenteuer = { vorhanden: true, daten: geprueft.daten };
+        abenteuerText = "• Sudoku-Abenteuer: Boss " + geprueft.daten.bossNummer +
+          ", Rekord " + geprueft.daten.rekord + "\n";
+      }
+    }
+
     const erstellt = typeof roh.erstellt === "string" ? new Date(roh.erstellt) : null;
     const vom = erstellt && !isNaN(erstellt) ? " vom " + erstellt.toLocaleString("de-DE") : "";
     return {
-      ok: true, media: media, termine: termine,
+      ok: true, media: media, termine: termine, abenteuer: abenteuer,
       frage: "Sicherung" + vom + ":\n" +
         "• " + media.anzahl + " Filme/Serien-Einträge\n" +
-        "• " + termine.daten.eintraege.length + " Termine/Vorlesungen\n\n" +
+        "• " + termine.daten.eintraege.length + " Termine/Vorlesungen\n" +
+        abenteuerText + "\n" +
         "ALLE aktuellen Daten werden dadurch ersetzt. Fortfahren?",
     };
   }
@@ -148,6 +167,9 @@ const EinstellungenAnsicht = (function () {
         return;
       }
       MediaStore.ersetzen(pruefung.media.daten);
+      if (pruefung.abenteuer && pruefung.abenteuer.vorhanden) {
+        SudokuRPG.ersetzen(pruefung.abenteuer.daten);
+      }
       if (pruefung.termine) {
         EventsStore.ersetzen(pruefung.termine.daten);
       }

@@ -58,13 +58,16 @@ function initGames(container) {
  * Wird von app.js bei JEDEM Öffnen der Games-Ansicht aufgerufen.
  *
  * @param {string} unterseite – der Teil der Adresse nach "#games/",
- *                              z. B. "sudoku" (leer = Übersicht)
+ *                              z. B. "sudoku" (leer = Übersicht) oder
+ *                              "sudoku/abenteuer" – alles nach dem Spielnamen
+ *                              bekommt das Spiel selbst (siehe zeige unten)
  * @returns {HTMLElement|null} – Element, das den Fokus bekommen soll
  *                              (null = die Überschrift "Games")
  */
 function zeigeGames(unterseite) {
   const container = document.getElementById("games-root");
-  const spiel = SPIELE.find(function (s) { return s.id === unterseite; });
+  const teile = unterseite.split("/");
+  const spiel = SPIELE.find(function (s) { return s.id === teile[0]; });
 
   // Ist ein Spiel offen, wird die große Überschrift "Games" ausgeblendet –
   // so bleibt mehr Platz für das Spiel (siehe .zeigt-unterseite in style.css)
@@ -80,11 +83,16 @@ function zeigeGames(unterseite) {
     return null;
   }
 
-  // Spiel beim ersten Öffnen starten
+  // Spiel beim ersten Öffnen starten. init darf eine Steuerung zurückgeben
+  // ({ zeige }), die bei JEDEM Öffnen den Rest der Adresse bekommt –
+  // z. B. "abenteuer" bei #games/sudoku/abenteuer.
   const bereich = document.getElementById("spiel-" + spiel.id);
   if (!gestarteteSpiele[spiel.id]) {
-    spiel.init(bereich.querySelector(".spiel-inhalt"));
-    gestarteteSpiele[spiel.id] = true;
+    gestarteteSpiele[spiel.id] = spiel.init(bereich.querySelector(".spiel-inhalt")) || true;
+  }
+  const steuerung = gestarteteSpiele[spiel.id];
+  if (steuerung.zeige) {
+    steuerung.zeige(teile.slice(1).join("/"));
   }
   return bereich.querySelector(".unterseite-titel");
 }

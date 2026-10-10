@@ -1,0 +1,621 @@
+/* ==========================================================================
+   sudoku-rpg.css – Sudoku-Abenteuer: Moduswahl, Kampffenster, Walze
+   Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
+   ========================================================================== */
+
+:root {
+  /* Größen */
+  --sudoku-kampf-breite: 300px;            /* Breite des Kampffensters neben dem Gitter */
+  --kampf-figur-groesse: 104px;            /* Boss und Held (Desktop) */
+  --kampf-figur-groesse-klein: 72px;       /* Boss und Held (Smartphone) */
+  --kampf-radius: 10px;
+
+  /* Kampfplatz: Himmel oben, Wiese unten */
+  --kampf-himmel-oben: #bfe3ff;
+  --kampf-himmel-unten: #e9f7ff;
+  --kampf-wiese: #9bd57a;
+  --kampf-wiese-dunkel: #7cbc5c;
+  --kampf-plattform: rgba(60, 110, 40, 0.35);  /* Schatten unter den Figuren */
+
+  /* Infokästen und Textbox */
+  --kampf-kasten: #fbfaf3;
+  --kampf-kasten-rand: #2b2b38;
+  --kampf-kasten-text: #2b2b38;
+  --kampf-textbox: #22263a;
+  --kampf-textbox-text: #f4f4f8;
+
+  /* HP-Balken */
+  --kampf-hp-voll: #3fbf5f;
+  --kampf-hp-mittel: #e9b52f;
+  --kampf-hp-knapp: #e0483f;
+  --kampf-hp-leer: #c9c9d1;
+
+  /* Herzen, Würfel, Schaden */
+  --kampf-herz: #e8364a;
+  --kampf-herz-leer: rgba(43, 43, 56, 0.2);
+  --kampf-wuerfel: #6c4bd8;
+  --kampf-schaden: #ffffff;
+  --kampf-schaden-rand: #c0182c;
+
+  /* Falsche Zahl im Gitter */
+  --sudoku-fehlversuch: #e0483f;
+}
+
+:root[data-theme="dark"] {
+  --kampf-himmel-oben: #1d2a4d;
+  --kampf-himmel-unten: #2c3d63;
+  --kampf-wiese: #2f5d3a;
+  --kampf-wiese-dunkel: #24492d;
+  --kampf-plattform: rgba(0, 0, 0, 0.35);
+  --kampf-kasten: #e9e7dc;
+  --kampf-textbox: #12141f;
+  --kampf-hp-leer: #8d8d98;
+}
+
+
+/* ==========================================================================
+   MODUSWAHL
+   ========================================================================== */
+
+.sudoku-modi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--abstand-m);
+  width: min(720px, calc(100vw - 2 * var(--abstand-m)));
+}
+
+.sudoku-modus h3 {
+  margin: 0 0 var(--abstand-s);
+  font-size: 1.15rem;
+}
+
+.sudoku-modus p {
+  margin: 0;
+}
+
+.sudoku-modus-stand {
+  margin-top: var(--abstand-s) !important;
+  font-weight: 600;
+  color: var(--farbe-akzent) !important;
+}
+
+.sudoku-modus-stand:empty {
+  display: none;
+}
+
+/* Kopfzeile nicht einrücken, solange die Moduswahl zu sehen ist */
+.spiel-bereich:has(.sudoku[hidden]) .unterseite-kopf {
+  padding-left: 0;
+}
+
+
+/* ==========================================================================
+   STEUERUNG JE NACH MODUS
+   ========================================================================== */
+
+.sudoku.ist-abenteuer .nur-frei,
+.sudoku:not(.ist-abenteuer) .nur-abenteuer {
+  display: none !important;
+}
+
+.sudoku-moduslink {
+  color: var(--farbe-text-leise);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sudoku-moduslink:hover {
+  color: var(--farbe-akzent);
+}
+
+.sudoku-abenteuer-grad {
+  font-weight: 600;
+}
+
+/* Im Abenteuer kann man nichts löschen – die Taste bleibt als Platzhalter */
+.sudoku.ist-abenteuer .sudoku-taste--loeschen {
+  visibility: hidden;
+}
+
+
+/* ==========================================================================
+   LAYOUT: Kampffenster über (schmal) bzw. links neben (breit) dem Gitter
+   ========================================================================== */
+
+.sudoku-kampf {
+  grid-area: kampf;
+  min-width: 0;
+}
+
+.sudoku.ist-abenteuer {
+  grid-template-areas:
+    "steuerung"
+    "kampf"
+    "brett"
+    "zahlen";
+}
+
+@media (min-width: 1000px) {
+  .sudoku.ist-abenteuer {
+    /* Gitter so groß wie möglich: Fensterhöhe, und in der Breite Platz für
+       Kampffenster links und Zahlenfeld rechts */
+    --sudoku-groesse: clamp(
+      var(--sudoku-min-groesse),
+      100dvh - var(--sudoku-platz-vertikal),
+      min(
+        var(--sudoku-max-groesse),
+        100vw - 2 * var(--abstand-l) - var(--sudoku-kampf-breite) - var(--sudoku-zahlenfeld-breite) - 2 * var(--abstand-l)
+      )
+    );
+    grid-template-columns:
+      var(--sudoku-kampf-breite)
+      var(--sudoku-groesse)
+      var(--sudoku-zahlenfeld-breite);
+    grid-template-areas:
+      ".      steuerung  ."
+      "kampf  brett      zahlen";
+  }
+
+  .sudoku.ist-abenteuer .sudoku-kampf {
+    align-self: start;
+  }
+
+  /* Kopfzeile bündig über dem Gitter */
+  .spiel-bereich:has(.sudoku.ist-abenteuer:not([hidden])) .unterseite-kopf {
+    padding-left: calc(var(--sudoku-kampf-breite) + var(--abstand-l));
+  }
+}
+
+
+/* ==========================================================================
+   KAMPFFENSTER
+   ========================================================================== */
+
+.kampf {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Die Bühne: Himmel + Wiese, Figuren und Infokästen darauf verteilt */
+.kampf-buehne {
+  position: relative;
+  aspect-ratio: 4 / 3.3;
+  overflow: hidden;
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: var(--kampf-radius);
+  background:
+    linear-gradient(to bottom, var(--kampf-himmel-oben), var(--kampf-himmel-unten) 52%,
+      var(--kampf-wiese) 52%, var(--kampf-wiese-dunkel));
+  color: var(--kampf-kasten-text);
+}
+
+/* Figuren */
+.kampf-figur {
+  position: absolute;
+  width: var(--kampf-figur-groesse);
+  height: var(--kampf-figur-groesse);
+}
+
+/* Ovaler Schatten ("Plattform") unter jeder Figur */
+.kampf-figur::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -6%;
+  height: 16%;
+  border-radius: 50%;
+  background: var(--kampf-plattform);
+  z-index: -1;
+}
+
+.kampf-figur canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;            /* harte Pixelkanten beim Vergrößern */
+  image-rendering: crisp-edges;
+}
+
+.kampf-figur--boss {
+  top: 10%;
+  right: 6%;
+  z-index: 1;
+}
+
+.kampf-figur--held {
+  bottom: 6%;
+  left: 6%;
+  z-index: 2;
+}
+
+/* Infokästen */
+.kampf-info {
+  position: absolute;
+  z-index: 3;
+  padding: 5px 8px;
+  background: var(--kampf-kasten);
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.kampf-info--boss {
+  top: 6%;
+  left: 4%;
+  width: 52%;
+}
+
+.kampf-info--held {
+  right: 4%;
+  bottom: 6%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kampf-name {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kampf-boss-nr {
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.kampf-hp {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.kampf-hp-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #d08a00;
+}
+
+.kampf-hp-balken {
+  flex: 1;
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid var(--kampf-kasten-rand);
+  border-radius: 4px;
+  background: var(--kampf-hp-leer);
+}
+
+.kampf-hp-fuellung {
+  height: 100%;
+  width: 100%;
+  background: var(--kampf-hp-voll);
+  transition: width 0.45s ease-out, background-color 0.3s;
+}
+
+.kampf-hp-balken[data-stufe="mittel"] .kampf-hp-fuellung { background: var(--kampf-hp-mittel); }
+.kampf-hp-balken[data-stufe="knapp"] .kampf-hp-fuellung { background: var(--kampf-hp-knapp); }
+
+.kampf-hp-zahl {
+  margin-top: 2px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Herzen */
+.kampf-herzen {
+  display: flex;
+  gap: 3px;
+}
+
+.kampf-herz svg {
+  display: block;
+  width: 17px;
+  height: 15px;
+  fill: var(--kampf-herz);
+}
+
+.kampf-herz.ist-leer svg {
+  fill: var(--kampf-herz-leer);
+}
+
+/* Würfel (W20): Sechseck mit der Zahl des letzten Wurfs */
+.kampf-wuerfel {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 32px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--kampf-wuerfel);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ebene für aufsteigende Zahlen */
+.kampf-effekte {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.kampf-schwebezahl {
+  position: absolute;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--kampf-schaden);
+  -webkit-text-stroke: 2px var(--kampf-schaden-rand);
+  paint-order: stroke fill;
+  animation: kampf-aufsteigen 0.9s ease-out forwards;
+}
+
+.kampf-schwebezahl--boss {
+  top: 22%;
+  right: 14%;
+}
+
+/* Textbox wie in klassischen Rollenspielen */
+.kampf-text {
+  min-height: 2.9em;
+  margin: 0;
+  padding: 7px 10px;
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: var(--kampf-radius);
+  background: var(--kampf-textbox);
+  color: var(--kampf-textbox-text);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.kampf-fuss {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  font-size: 0.8rem;
+  color: var(--farbe-text-leise);
+}
+
+.kampf-reset {
+  padding: 4px 10px;
+  font: inherit;
+  color: var(--farbe-text-leise);
+  background: transparent;
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-pille);
+  cursor: pointer;
+}
+
+.kampf-reset:hover {
+  color: var(--sudoku-fehlversuch);
+  border-color: var(--sudoku-fehlversuch);
+}
+
+
+/* ==========================================================================
+   ANIMATIONEN (nur transform, opacity, filter – nichts verschiebt das Layout)
+   sudoku-battle-ui.js setzt die Klassen; bei "Bewegung reduzieren" gar nicht.
+   ========================================================================== */
+
+.kampf-figur--held.schlaegt { animation: kampf-schlag 0.26s ease-out; }
+.kampf-figur--boss.getroffen { animation: kampf-getroffen 0.42s steps(1, end); }
+.kampf-figur--boss.greift-an { animation: kampf-angriff 0.38s ease-in-out; }
+.kampf-figur--held.wird-getroffen { animation: kampf-wackeln 0.3s linear; }
+.kampf-figur--held.faellt { animation: kampf-fallen 0.5s ease-in forwards; }
+.kampf-figur--boss.ist-besiegt { animation: kampf-besiegt 0.9s ease-in forwards; }
+.kampf-figur--boss.erscheint { animation: kampf-erscheinen 0.45s ease-out; }
+.kampf-herz.verschwindet { animation: kampf-herz-weg 0.4s ease-out; }
+.kampf-wuerfel.rollt { animation: kampf-rollen 0.38s linear; }
+
+@keyframes kampf-schlag {
+  0%   { transform: none; }
+  45%  { transform: translate(18px, -14px) rotate(-8deg); }
+  100% { transform: none; }
+}
+
+@keyframes kampf-getroffen {
+  0%, 50%  { opacity: 0.15; transform: translateX(4px); }
+  25%, 75% { opacity: 1; transform: translateX(-4px); }
+  100%     { opacity: 1; transform: none; }
+}
+
+@keyframes kampf-angriff {
+  0%   { transform: none; }
+  45%  { transform: translate(-30px, 22px) scale(1.08); }
+  100% { transform: none; }
+}
+
+@keyframes kampf-wackeln {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes kampf-fallen {
+  to { transform: translateY(14px) rotate(-80deg); opacity: 0.4; }
+}
+
+@keyframes kampf-besiegt {
+  0%   { filter: brightness(1); opacity: 1; transform: none; }
+  30%  { filter: brightness(3); opacity: 1; }
+  100% { filter: brightness(3); opacity: 0; transform: translateY(16px) scale(0.6); }
+}
+
+@keyframes kampf-erscheinen {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes kampf-herz-weg {
+  0%   { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+@keyframes kampf-rollen {
+  from { transform: rotate(0); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes kampf-aufsteigen {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.8); }
+  20%  { opacity: 1; transform: translateY(0) scale(1.15); }
+  100% { opacity: 0; transform: translateY(-36px) scale(1); }
+}
+
+/* Falsche Zahl im Gitter: blinkt rot und verschwindet wieder */
+.sudoku-feld.ist-fehlversuch {
+  color: var(--sudoku-fehlversuch) !important;
+  animation: sudoku-fehlversuch 0.7s steps(1, end);
+}
+
+@keyframes sudoku-fehlversuch {
+  0%, 50% { background-color: rgba(224, 72, 63, 0.28); }
+  25%, 75% { background-color: transparent; }
+}
+
+
+/* ==========================================================================
+   SLOT-WALZE und NIEDERLAGE – liegen über dem Gitter
+   ========================================================================== */
+
+.slot,
+.niederlage {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  border-radius: var(--sudoku-radius);
+  background: rgba(20, 22, 30, 0.55);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.slot-kasten,
+.niederlage-kasten {
+  width: min(320px, 86%);
+  padding: 16px 18px 18px;
+  text-align: center;
+  background: var(--kampf-kasten);
+  color: var(--kampf-kasten-text);
+  border: 3px solid var(--kampf-kasten-rand);
+  border-radius: 12px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.slot-titel {
+  margin: 0 0 10px;
+  font-weight: 700;
+}
+
+/* Das Fenster zeigt genau EINE Zeile der Walze */
+.slot-fenster {
+  --slot-zeile: 52px;
+  height: var(--slot-zeile);
+  overflow: hidden;
+  border: 3px solid var(--kampf-kasten-rand);
+  border-radius: 8px;
+  background: linear-gradient(to bottom, #d9d9e3, #ffffff 30%, #ffffff 70%, #d9d9e3);
+}
+
+.slot-walze {
+  /* ease-out: schnell los, am Ende immer langsamer – wie eine echte Walze */
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.12, 0.75, 0.18, 1);
+}
+
+.slot-eintrag {
+  height: var(--slot-zeile);
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #2b2b38;
+}
+
+.slot.ist-fertig .slot-fenster {
+  border-color: var(--kampf-hp-voll);
+  box-shadow: 0 0 0 3px rgba(63, 191, 95, 0.35);
+}
+
+.niederlage-titel {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--kampf-schaden-rand);
+}
+
+.niederlage-text,
+.niederlage-rekord {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+
+.niederlage-rekord {
+  font-weight: 700;
+}
+
+.niederlage-knopf {
+  margin-top: 6px;
+  padding: 8px 18px;
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: var(--kampf-wuerfel);
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+
+/* ==========================================================================
+   SMARTPHONE: Kampffenster kompakt über dem Sudoku
+   ========================================================================== */
+
+@media (max-width: 767px) {
+  .kampf-buehne {
+    aspect-ratio: auto;
+    height: 150px;
+  }
+
+  .kampf-figur {
+    width: var(--kampf-figur-groesse-klein);
+    height: var(--kampf-figur-groesse-klein);
+  }
+
+  .kampf-figur--boss {
+    top: 6%;
+  }
+
+  .kampf-info--boss {
+    width: 56%;
+  }
+
+  .kampf-text {
+    min-height: 0;
+    padding: 5px 9px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Bewegung reduzieren: Sicherheitshalber alle Kampf-Animationen aus */
+@media (prefers-reduced-motion: reduce) {
+  .kampf *,
+  .sudoku-feld.ist-fehlversuch,
+  .slot-walze {
+    animation: none !important;
+    transition: none !important;
+  }
+}
