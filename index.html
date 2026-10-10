@@ -94,15 +94,10 @@
   <main class="hauptbereich" id="main">
 
     <section class="ansicht" id="view-home" aria-labelledby="titel-home">
-      <h1 id="titel-home" tabindex="-1">Willkommen bei NTB</h1>
-      <!-- Drei Spalten: links frei, Mitte Uhr (exakt in der Seitenmitte), rechts News -->
-      <div class="home-raster">
-        <div class="home-links">
-          <!-- Vorerst leer – Platz für spätere Inhalte -->
-        </div>
-        <div class="home-mitte" id="uhr-root"></div>
-        <div class="home-rechts" id="news-root"></div>
-      </div>
+      <!-- Die Begrüßung ("Guten Morgen" …) setzt home.js -->
+      <h1 id="titel-home" class="home-gruss" tabindex="-1">Willkommen bei NTB</h1>
+      <!-- home.js füllt diesen Container: Datum, "Heute" und Kacheln -->
+      <div id="home-root"></div>
     </section>
 
     <section class="ansicht" id="view-kalender" aria-labelledby="titel-kalender" hidden>
@@ -150,7 +145,6 @@
     Bewusst KEIN type="module": Module funktionieren nicht, wenn man
     index.html per Doppelklick (file://) öffnet.
   -->
-  <script src="js/clock.js"></script>
   <!-- Termine: der Store zuerst – Kalender und Stundenplan lesen beide daraus -->
   <script src="js/events-store.js"></script>
   <script src="js/calendar.js"></script>
@@ -166,6 +160,8 @@
   <script src="js/media.js"></script>
   <!-- Einstellungen: braucht MediaStore und EventsStore (für die Sicherung) -->
   <script src="js/settings.js"></script>
+  <!-- Startseite: liest aus allen Stores, deshalb zuletzt vor app.js -->
+  <script src="js/home.js"></script>
   <script src="js/customising.js"></script>
   <script src="js/app.js"></script>
 </body>

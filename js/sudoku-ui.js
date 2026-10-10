@@ -9,6 +9,26 @@
 const SUDOKU_SPEICHER_SCHLUESSEL = "ntb-sudoku";
 
 /**
+ * Liest das gespeicherte Sudoku (nur lesen, ändert nichts).
+ * Wird vom Sudoku selbst und von der Startseite (home.js) benutzt.
+ * @returns {object|null} – { grad, vorgaben, loesung, eingaben, geloest }
+ *                          oder null, wenn keins da oder es kaputt ist
+ */
+function sudokuSpielstandLesen() {
+  try {
+    const daten = JSON.parse(localStorage.getItem(SUDOKU_SPEICHER_SCHLUESSEL));
+    const istListe = function (liste) { return Array.isArray(liste) && liste.length === 81; };
+    if (daten && SudokuEngine.gradMitId(daten.grad) &&
+        istListe(daten.vorgaben) && istListe(daten.loesung) && istListe(daten.eingaben)) {
+      return daten;
+    }
+  } catch (fehler) {
+    // kaputte oder fehlende Daten
+  }
+  return null;
+}
+
+/**
  * Startet das Sudoku.
  * Wird von games.js EINMAL aufgerufen, wenn das Sudoku zum ersten Mal
  * geöffnet wird.
@@ -128,17 +148,8 @@ function initSudoku(container) {
 
   /** Lädt ein gespeichertes Spiel. Gibt null zurück, wenn keins da oder es kaputt ist. */
   function laden() {
-    try {
-      const daten = JSON.parse(localStorage.getItem(SUDOKU_SPEICHER_SCHLUESSEL));
-      const istListe = function (liste) { return Array.isArray(liste) && liste.length === 81; };
-      if (daten && SudokuEngine.gradMitId(daten.grad) &&
-          istListe(daten.vorgaben) && istListe(daten.loesung) && istListe(daten.eingaben)) {
-        return daten;
-      }
-    } catch (fehler) {
-      // kaputte oder fehlende Daten → einfach ein neues Spiel starten
-    }
-    return null;
+    // Fehlt das Spiel oder ist es kaputt, kommt null → neues Spiel
+    return sudokuSpielstandLesen();
   }
 
 

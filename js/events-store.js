@@ -70,6 +70,22 @@ const EventsStore = (function () {
     return (alsDatum(text).getDay() + 6) % 7;
   }
 
+  /**
+   * Kalenderwoche nach ISO 8601 (wie in Deutschland üblich):
+   * Woche 1 ist die Woche mit dem ersten Donnerstag des Jahres.
+   * @param {string} text – irgendein Tag der Woche, "JJJJ-MM-TT"
+   * @returns {{kw: number, jahr: number}} – jahr = Jahr, zu dem die Woche zählt
+   */
+  function kalenderwoche(text) {
+    const montag = plusTage(text, -wochentag(text));
+    const donnerstag = alsDatum(plusTage(montag, 3));
+    const jahr = donnerstag.getFullYear();
+    const vierterJanuar = jahr + "-01-04";                   // liegt immer in Woche 1
+    const montagWoche1 = alsDatum(plusTage(vierterJanuar, -wochentag(vierterJanuar)));
+    const wochen = Math.round((alsDatum(montag) - montagWoche1) / (7 * 24 * 60 * 60 * 1000));
+    return { kw: wochen + 1, jahr: jahr };
+  }
+
   /** "10:30" → 630 (Minuten seit Mitternacht). */
   function inMinuten(zeit) {
     const teile = zeit.split(":").map(Number);
@@ -320,6 +336,7 @@ const EventsStore = (function () {
     alsDatum: alsDatum,
     plusTage: plusTage,
     wochentag: wochentag,
+    kalenderwoche: kalenderwoche,
     inMinuten: inMinuten,
     // Abfragen
     eintraegeImZeitraum: eintraegeImZeitraum,

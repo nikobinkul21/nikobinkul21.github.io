@@ -1,144 +1,284 @@
 /* ==========================================================================
-   home.css – Aussehen der Home-Ansicht (Uhr und Spalten)
+   home.css – Aussehen der Startseite
    Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
    ========================================================================== */
 
 :root {
-  /* Uhr: Größe – wächst mit der Bildschirmbreite, aber in Grenzen */
-  --uhr-breite: clamp(260px, 36vw, 600px);
+  /* Breite und Abstände */
+  --home-breite: 760px;                     /* maximale Breite der Spalte */
+  --home-abstand: var(--abstand-l);         /* Abstand zwischen den Bereichen */
 
-  /* Uhr: Farben */
-  --uhr-farbe: #ff2b2b;                     /* leuchtende Segmente */
-  --uhr-aus-deckkraft: 0.07;                /* ausgeschaltete Segmente: ganz schwach sichtbar */
-  --uhr-leuchten: 6px;                      /* Stärke des Leuchtens (0 = keins) */
-  --uhr-leuchtfarbe: rgba(255, 30, 30, 0.75);
-  --uhr-hintergrund: #140808;               /* "Display" hinter den Ziffern */
-  --uhr-rand: rgba(255, 60, 60, 0.18);
-  --uhr-datum-farbe: #ff8a80;               /* Wochentag und Datum */
+  /* Kacheln */
+  --home-kachel-min: 280px;                 /* Mindestbreite: so viele passen nebeneinander (760 px → 2 × 2) */
+  --home-kachel-hoehe: 132px;               /* Mindesthöhe einer Kachel */
+  --home-symbol-groesse: 28px;
+  --home-symbol-farbe: var(--farbe-akzent);
 
-  /* Spalten */
-  --home-abstand: var(--abstand-l);
-  --home-max-breite: 1500px;
+  /* "Heute" */
+  --home-vorbei-deckkraft: 0.5;             /* vergangene Einträge abgeschwächt */
+  --home-termin-farbe: #3b82f6;             /* Strich links: Termin */
+  --home-vorlesung-farbe: #8b5cf6;          /* Strich links: Vorlesung */
 }
 
 :root[data-theme="dark"] {
-  --uhr-hintergrund: #0c0505;
-  --uhr-rand: rgba(255, 60, 60, 0.14);
+  --home-termin-farbe: #60a5fa;
+  --home-vorlesung-farbe: #a78bfa;
 }
 
 
 /* ==========================================================================
-   LAYOUT: links (frei) – Mitte (Uhr) – rechts (News)
-   Wie in der Navigationsleiste: Spalten "1fr auto 1fr". Die mittlere
-   Spalte ist genau so breit wie die Uhr, die beiden äußeren teilen sich
-   den Rest gleichmäßig – dadurch steht die Uhr exakt in der Seitenmitte.
+   SPALTE
+   Eine zentrierte Spalte mit maximaler Breite. (Kommen später News dazu,
+   wird daraus ein Raster mit zwei Spalten.)
    ========================================================================== */
 
-/* Home darf breiter werden als andere Seiten */
-.hauptbereich:has(#view-home:not([hidden])) {
-  max-width: var(--home-max-breite);
+#view-home {
+  max-width: var(--home-breite);
+  margin-inline: auto;
 }
 
-/* Die große Überschrift nur für Screenreader – die Uhr ist der Blickfang */
-#view-home > h1 {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.home-raster {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: start;
+.home {
+  display: flex;
+  flex-direction: column;
   gap: var(--home-abstand);
 }
 
-.home-links {
-  /* Vorerst leer – Platz für spätere Inhalte */
-  min-height: 1px;
+
+/* ==========================================================================
+   BEGRÜSSUNG
+   ========================================================================== */
+
+.home-gruss {
+  margin-bottom: 2px;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
 }
 
-.home-mitte {
-  width: var(--uhr-breite);
+.home-datum {
+  margin: 0 0 calc(var(--home-abstand) * -0.5);   /* rückt etwas näher an die Begrüßung */
+  color: var(--farbe-text-leise);
 }
 
-/* Smartphone und Tablet: Uhr und News untereinander, linke Spalte weg */
-@media (max-width: 1049px) {
-  .home-raster {
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-  }
 
-  .home-links {
-    display: none;
-  }
+/* ==========================================================================
+   HEUTE
+   ========================================================================== */
 
-  .home-mitte {
-    width: min(var(--uhr-breite), 100%);
-  }
+.home-heute {
+  padding: var(--abstand-m) var(--abstand-l) var(--abstand-l);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten);
+}
 
-  .home-rechts {
-    width: 100%;
-    max-width: 600px;
-  }
+.home-abschnitt-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--abstand-m);
+  margin-bottom: var(--abstand-s);
+}
 
-  /* Die Uhr darf hier fast die ganze Breite nutzen */
-  :root {
-    --uhr-breite: clamp(260px, 80vw, 560px);
+.home-abschnitt-kopf h2 {
+  margin: 0;
+}
+
+.home-mehr {
+  font-size: 0.9rem;
+  color: var(--farbe-text-leise);
+  text-decoration: none;
+}
+
+.home-mehr:hover {
+  color: var(--farbe-akzent);
+}
+
+.home-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Ein Eintrag: Uhrzeit links (feste Breite), daneben Titel und Ort */
+.home-eintrag {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: var(--abstand-m);
+  padding: 8px 12px;
+  border-left: 3px solid var(--home-termin-farbe);
+  border-radius: 4px;
+  background: var(--farbe-hintergrund);
+}
+
+.home-eintrag.art-vorlesung {
+  border-left-color: var(--home-vorlesung-farbe);
+}
+
+.home-eintrag.ist-vorbei {
+  opacity: var(--home-vorbei-deckkraft);
+}
+
+.home-eintrag-zeit {
+  color: var(--farbe-text-leise);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-eintrag-text {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--abstand-s);
+  min-width: 0;
+}
+
+.home-eintrag-titel {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.home-eintrag-ort {
+  color: var(--farbe-text-leise);
+}
+
+.home-eintrag-ort::before {
+  content: "· ";
+}
+
+.home-leer {
+  margin: 0;
+  color: var(--farbe-text-leise);
+}
+
+.home-leer a {
+  color: var(--farbe-akzent);
+}
+
+.home-naechster-titel {
+  margin: var(--abstand-s) 0 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+
+/* ==========================================================================
+   KACHELN
+   auto-fill + minmax: Es passen so viele nebeneinander, wie Platz ist.
+   Auf dem Smartphone steht dadurch automatisch alles untereinander.
+   ========================================================================== */
+
+.home-kacheln {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--home-kachel-min), 1fr));
+  gap: var(--abstand-m);
+}
+
+.home-kachel {
+  position: relative;
+  z-index: 0;                               /* damit das Glas (z-index -1) hinter dem Text bleibt */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: var(--home-kachel-hoehe);
+  padding: var(--abstand-m) var(--abstand-l);
+  color: var(--farbe-text);
+  text-decoration: none;
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten);
+  transition: transform var(--dauer) ease, background-color var(--dauer) ease;
+}
+
+/* Glas-Effekt wie bei den Reitern der Navigation: eine Glasfläche, die beim
+   Hovern / bei Tastaturfokus eingeblendet wird. Die Kachel wird dabei
+   durchsichtig, damit das Glas den Hintergrund verwischen kann. */
+.home-kachel::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    linear-gradient(to bottom, var(--glas-glanz), transparent 55%),
+    var(--glas-hintergrund);
+  -webkit-backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
+  backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
+  border: 1px solid var(--glas-rand);
+  box-shadow: inset 0 1px 0 var(--glas-reflex), var(--glas-schatten);
+  opacity: 0;
+  transition: opacity var(--dauer) ease;
+}
+
+.home-kachel:hover,
+.home-kachel:focus-visible {
+  background-color: transparent;
+  transform: translateY(var(--anheben));
+}
+
+.home-kachel:hover::before,
+.home-kachel:focus-visible::before {
+  opacity: 1;
+}
+
+.home-kachel-symbol {
+  width: var(--home-symbol-groesse);
+  height: var(--home-symbol-groesse);
+  margin-bottom: 6px;
+  fill: none;
+  stroke: var(--home-symbol-farbe);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.home-kachel-name {
+  font-weight: 600;
+}
+
+.home-kachel-info {
+  font-size: 0.9rem;
+  color: var(--farbe-text-leise);
+}
+
+/* Fallback ohne backdrop-filter: einfarbig halbtransparent */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .home-kachel::before {
+    background: var(--glas-fallback);
+  }
+}
+
+/* Bewegung reduzieren: kein Anheben */
+@media (prefers-reduced-motion: reduce) {
+  .home-kachel:hover,
+  .home-kachel:focus-visible {
+    transform: none;
   }
 }
 
 
 /* ==========================================================================
-   UHR
+   SMARTPHONE
    ========================================================================== */
 
-.uhr {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: clamp(14px, 2.5vw, 28px) clamp(16px, 3vw, 36px);
-  background: var(--uhr-hintergrund);
-  border: 1px solid var(--uhr-rand);
-  border-radius: var(--radius-m);
-  /* Leichte Tiefe: dunkler Rand innen + normaler Schatten außen */
-  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.6), var(--schatten);
-}
+@media (max-width: 599px) {
+  .home-heute {
+    padding: var(--abstand-m);
+  }
 
-.uhr-anzeige-rahmen {
-  width: 100%;
-}
+  /* Uhrzeit über dem Titel statt daneben */
+  .home-eintrag {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
 
-.uhr-anzeige {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-  /* Weiches Leuchten um die ganze Anzeige (die ausgeschalteten Segmente
-     sind so blass, dass sie praktisch nicht mitleuchten) */
-  filter: drop-shadow(0 0 var(--uhr-leuchten) var(--uhr-leuchtfarbe));
-}
+  .home-eintrag-zeit {
+    font-size: 0.85rem;
+  }
 
-/* Alle Segmente: ausgeschaltet nur ganz schwach … */
-.uhr-segment {
-  fill: var(--uhr-farbe);
-  opacity: var(--uhr-aus-deckkraft);
-}
-
-/* … eingeschaltet kräftig */
-.uhr-segment.ist-an {
-  opacity: 1;
-}
-
-.uhr-datum {
-  margin: 0;
-  color: var(--uhr-datum-farbe);
-  font-size: clamp(0.8rem, 1.3vw, 1.05rem);
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-shadow: 0 0 6px rgba(255, 60, 60, 0.45);
+  .home-kachel {
+    min-height: 0;
+  }
 }

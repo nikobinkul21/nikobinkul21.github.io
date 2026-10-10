@@ -53,18 +53,6 @@ const StundenplanAnsicht = (function () {
     return D.plusTage(tag, -D.wochentag(tag));
   }
 
-  /**
-   * Kalenderwoche nach ISO 8601 (wie in Deutschland üblich):
-   * Woche 1 ist die Woche mit dem ersten Donnerstag des Jahres.
-   */
-  function kalenderwoche(montag) {
-    const donnerstag = D.alsDatum(D.plusTage(montag, 3));
-    const jahr = donnerstag.getFullYear();
-    const montagWoche1 = D.alsDatum(montagVon(jahr + "-01-04")); // der 4.1. liegt immer in Woche 1
-    const wochen = Math.round((D.alsDatum(montag) - montagWoche1) / (7 * 24 * 60 * 60 * 1000));
-    return { kw: wochen + 1, jahr: jahr };
-  }
-
   /** "5.–11. Oktober 2026" / "28. September – 4. Oktober 2026" / über den Jahreswechsel. */
   function bereichText(von, bis) {
     const a = D.alsDatum(von);
@@ -176,7 +164,7 @@ const StundenplanAnsicht = (function () {
     zustand.gezeichnetAm = heuteTag;
 
     // Kopf: "KW 41" und "5.–11. Oktober 2026"
-    const kw = kalenderwoche(von);
+    const kw = D.kalenderwoche(von);   // Kalenderwoche nach ISO 8601 (aus events-store.js)
     el.kw.textContent = "KW " + kw.kw;
     el.zeitraum.textContent = bereichText(von, bis);
 
