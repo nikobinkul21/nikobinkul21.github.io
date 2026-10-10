@@ -1,4 +1,25 @@
 /* ==========================================================================
+   0. LOGO-SCHRIFT
+   Eigene Schrift nur für den Schriftzug "NTB".
+   Die Datei liegt im Ordner fonts/ (der Pfad ist relativ zu DIESER CSS-Datei,
+   deshalb "../fonts/"). Fehlt die Datei, nimmt der Browser einfach die
+   nächste Schrift aus --logo-schrift (siehe unten).
+   ========================================================================== */
+
+@font-face {
+  font-family: "NTB Logo";
+  /* Der Browser nimmt die erste Datei, die er findet und versteht:
+     zuerst .woff2 (klein und modern), sonst .ttf */
+  src:
+    url("../fonts/ntb-logo.woff2") format("woff2"),
+    url("../fonts/ntb-logo.ttf") format("truetype");
+  /* swap: Bis die Schrift geladen ist, wird der Fallback gezeigt –
+     der Text ist also nie unsichtbar */
+  font-display: swap;
+}
+
+
+/* ==========================================================================
    1. CSS-VARIABLEN
    Hier änderst du Farben, Abstände, Radien und den Glas-Effekt an EINER Stelle.
    ========================================================================== */
@@ -48,6 +69,17 @@
   --radius-m: 12px;
   --radius-pille: 999px;             /* so groß, dass jede Ecke ganz rund wird */
 
+  /* Logo "NTB" */
+  --logo-schrift: "NTB Logo", Impact, "Arial Black", sans-serif;
+  --logo-groesse: 1.6rem;            /* ca. 1,6-mal so groß wie die Reiter (1rem) */
+  --logo-groesse-mobil: 1.35rem;     /* auf dem Handy etwas kleiner */
+  --logo-farbe: #000000;             /* Buchstaben */
+  --logo-kontur-farbe: #ffffff;      /* Kontur außen um die Buchstaben */
+  --logo-kontur-staerke: 1.25px;     /* sichtbare Breite der Kontur */
+  /* Feiner dunkler Schatten um die weiße Kontur – damit sie auf hellem
+     Grund erkennbar bleibt. Im dunklen Design ausgeschaltet (siehe unten). */
+  --logo-schatten: 0 0 1px rgba(0, 0, 0, 0.7), 0 0 2px rgba(0, 0, 0, 0.35);
+
   /* Größen */
   --leiste-hoehe: 64px;
   --inhalt-max-breite: 1100px;
@@ -86,6 +118,9 @@
   --leiste-hintergrund: rgba(20, 22, 27, 0.55);
   --leiste-rand: rgba(255, 255, 255, 0.08);
   --leiste-fallback: rgba(20, 22, 27, 0.94);
+
+  /* Auf dunklem Grund ist die weiße Kontur gut sichtbar – kein Schatten nötig */
+  --logo-schatten: none;
 
   --schatten: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
 
@@ -251,14 +286,6 @@ button:focus-visible {
     transform var(--dauer) ease;
 }
 
-/* NTB (Seitenname) ist größer und kräftiger als die anderen Reiter */
-.reiter.marke {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: var(--farbe-text);
-}
-
 /* Die Handy-Variante von NTB ist auf dem Computer versteckt.
    (Steht bewusst NACH .reiter, sonst würde dessen display: block gewinnen.) */
 .marke--mobil {
@@ -320,6 +347,50 @@ button:focus-visible {
 .reiter[aria-current="page"]:hover::before,
 .reiter[aria-current="page"]:focus-visible::before {
   opacity: 1;
+}
+
+/*
+  Der Schriftzug "NTB".
+  Er ist ebenfalls ein .reiter (Glas beim Hover, Link zu Home), sieht aber
+  anders aus. Dieser Block steht bewusst NACH den Hover- und Aktiv-Regeln
+  oben, damit seine Farbe und Schriftstärke dort nicht überschrieben werden.
+*/
+.reiter.marke {
+  font-family: var(--logo-schrift);
+  font-size: var(--logo-groesse);
+  font-weight: 900;
+  /* Kein "künstliches" Fett: Die Logo-Schrift wird genau so gezeigt,
+     wie sie gestaltet ist. */
+  font-synthesis: none;
+  line-height: 1;                   /* damit die Leiste trotz großer Schrift nicht höher wird */
+  padding: 8px 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--logo-farbe);
+
+  /*
+    Kontur außen:
+    -webkit-text-stroke zeichnet eine Linie MITTIG auf den Buchstabenrand –
+    halb nach außen, halb nach innen. paint-order: stroke fill malt erst die
+    Kontur und DANN die Füllung darüber. Die innere Hälfte verschwindet so
+    unter der schwarzen Füllung, die Buchstaben werden nicht dünner.
+    Deshalb ist die Linie doppelt so breit wie die sichtbare Kontur.
+  */
+  -webkit-text-stroke: calc(var(--logo-kontur-staerke) * 2) var(--logo-kontur-farbe);
+  paint-order: stroke fill;
+  text-shadow: var(--logo-schatten);
+}
+
+/* Fallback für Browser ohne -webkit-text-stroke:
+   Die Kontur entsteht aus vier verschobenen weißen Schatten. */
+@supports not (-webkit-text-stroke: 1px black) {
+  .reiter.marke {
+    text-shadow:
+      var(--logo-kontur-staerke) 0 0 var(--logo-kontur-farbe),
+      calc(var(--logo-kontur-staerke) * -1) 0 0 var(--logo-kontur-farbe),
+      0 var(--logo-kontur-staerke) 0 var(--logo-kontur-farbe),
+      0 calc(var(--logo-kontur-staerke) * -1) 0 var(--logo-kontur-farbe);
+  }
 }
 
 
@@ -411,6 +482,10 @@ button:focus-visible {
     display: block;
     grid-column: 2;
     grid-row: 1;
+  }
+
+  .reiter.marke {
+    font-size: var(--logo-groesse-mobil);
   }
 
   .marke--desktop {
