@@ -1,0 +1,205 @@
+/* ==========================================================================
+   calendar.css – Aussehen des Kalenders
+   Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
+   ========================================================================== */
+
+:root {
+  /* Größen */
+  --kal-abstand-monate: var(--abstand-m);   /* Abstand zwischen den Monaten */
+  --kal-abstand-tage: 3px;                  /* Abstand zwischen den Tagen */
+  --kal-tag-schrift: 0.875rem;              /* Größe der Tageszahlen */
+  --kal-tag-radius: 7px;                    /* Rundung der roten Tagesfelder */
+  --kal-heute-groesse: 2.1em;               /* Durchmesser des grünen Glas-Kreises (relativ zur Zahl) */
+
+  /* Vergangene Tage: rote Zahl auf sehr dezentem rotem Grund */
+  --kal-vergangen-text: #c0383f;
+  --kal-vergangen-hintergrund: rgba(209, 36, 47, 0.07);
+
+  /* Heute: grünes Glas (gleicher Aufbau wie das Glas der Navigation) */
+  --kal-heute-glas: rgba(46, 170, 80, 0.30);          /* halbtransparentes Grün */
+  --kal-heute-glanz: rgba(255, 255, 255, 0.45);       /* Glanz in der oberen Hälfte */
+  --kal-heute-rand: rgba(255, 255, 255, 0.75);        /* feiner heller Rand */
+  --kal-heute-reflex: rgba(255, 255, 255, 0.9);       /* Lichtkante oben */
+  --kal-heute-leuchten: rgba(46, 170, 80, 0.45);      /* weiches grünes Leuchten außen */
+  --kal-heute-text: #0d4a1f;                          /* Zahl: dunkles Grün, gut lesbar */
+  --kal-heute-blur: 10px;
+  --kal-heute-saettigung: 180%;
+  --kal-heute-fallback: rgba(46, 170, 80, 0.35);      /* Browser ohne backdrop-filter */
+}
+
+/* Dunkles Design: nur die Farben ändern sich */
+:root[data-theme="dark"] {
+  --kal-vergangen-text: #f08a84;
+  --kal-vergangen-hintergrund: rgba(255, 110, 100, 0.07);
+
+  --kal-heute-glas: rgba(70, 200, 105, 0.28);
+  --kal-heute-glanz: rgba(255, 255, 255, 0.14);
+  --kal-heute-rand: rgba(255, 255, 255, 0.28);
+  --kal-heute-reflex: rgba(255, 255, 255, 0.35);
+  --kal-heute-leuchten: rgba(70, 200, 105, 0.45);
+  --kal-heute-text: #eafff0;
+  --kal-heute-fallback: rgba(70, 200, 105, 0.38);
+}
+
+
+/* ==========================================================================
+   KOPF: ‹ 2026 ›  [Heute]
+   ========================================================================== */
+
+.kalender-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--abstand-s);
+  margin-bottom: var(--abstand-l);
+}
+
+.kalender-jahreszahl {
+  min-width: 4.5ch;                 /* Breite bleibt gleich → Pfeile springen nicht */
+  margin: 0;
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.kalender-pfeil {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.kalender-heute-knopf {
+  height: 40px;
+  margin-left: var(--abstand-s);
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-pille);
+  box-shadow: var(--schatten);
+  cursor: pointer;
+}
+
+.kalender-heute-knopf:hover {
+  border-color: var(--farbe-akzent);
+}
+
+
+/* ==========================================================================
+   JAHR: 1 / 2 / 4 Monate nebeneinander
+   ========================================================================== */
+
+.kalender-jahr {
+  display: grid;
+  grid-template-columns: 1fr;                    /* Smartphone: ein Monat pro Zeile */
+  gap: var(--kal-abstand-monate);
+}
+
+@media (min-width: 600px) {
+  .kalender-jahr {
+    grid-template-columns: repeat(2, 1fr);       /* Tablet: zwei */
+  }
+}
+
+@media (min-width: 1100px) {
+  .kalender-jahr {
+    grid-template-columns: repeat(4, 1fr);       /* großer Bildschirm: vier */
+  }
+}
+
+
+/* ==========================================================================
+   MONAT
+   ========================================================================== */
+
+.kalender-monat {
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten);
+  padding: var(--abstand-m);
+  /* Beim automatischen Scrollen nicht unter der festen Leiste verschwinden */
+  scroll-margin-top: calc(var(--leiste-hoehe) + var(--abstand-m));
+}
+
+.kalender-monatsname {
+  margin: 0 0 var(--abstand-s);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* 7 Spalten: Mo bis So */
+.kalender-raster {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--kal-abstand-tage);
+  font-size: var(--kal-tag-schrift);
+}
+
+.kalender-wochentag {
+  padding-bottom: var(--abstand-xs);
+  text-align: center;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+  text-decoration: none;            /* <abbr> ist sonst unterstrichen */
+  cursor: default;
+}
+
+/* Ein Tag: quadratisch, Zahl in der Mitte */
+.kalender-tag {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--kal-tag-radius);
+  font-variant-numeric: tabular-nums;
+}
+
+.kalender-zahl {
+  /* Die Zahl bekommt eine eigene runde Fläche – für den Glas-Kreis von heute */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--kal-heute-groesse);
+  height: var(--kal-heute-groesse);
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 50%;
+}
+
+
+/* ==========================================================================
+   MARKIERUNGEN (setzt calendar.js)
+   ========================================================================== */
+
+/* Vergangene Tage: rot, aber ruhig – normale Schriftstärke, sehr blasser Grund */
+.kalender-tag.ist-vergangen {
+  color: var(--kal-vergangen-text);
+  background: var(--kal-vergangen-hintergrund);
+}
+
+/* Heute: grüner Glas-Kreis hinter der Zahl */
+.kalender-tag.ist-heute .kalender-zahl {
+  position: relative;
+  font-weight: 700;
+  color: var(--kal-heute-text);
+  background:
+    linear-gradient(to bottom, var(--kal-heute-glanz), transparent 55%),
+    var(--kal-heute-glas);
+  -webkit-backdrop-filter: blur(var(--kal-heute-blur)) saturate(var(--kal-heute-saettigung));
+  backdrop-filter: blur(var(--kal-heute-blur)) saturate(var(--kal-heute-saettigung));
+  border: 1px solid var(--kal-heute-rand);
+  box-shadow:
+    inset 0 1px 0 var(--kal-heute-reflex),      /* Lichtreflex oben */
+    0 0 12px var(--kal-heute-leuchten),         /* weiches grünes Leuchten */
+    0 2px 6px rgba(0, 0, 0, 0.08);              /* leichter Schatten nach unten */
+}
+
+/* Fallback für Browser ohne backdrop-filter */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .kalender-tag.ist-heute .kalender-zahl {
+    background: var(--kal-heute-fallback);
+  }
+}

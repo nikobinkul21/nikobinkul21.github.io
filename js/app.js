@@ -12,7 +12,7 @@
    -------------------------------------------------------------------------- */
 
 // Alle Ansichten. Bei Tools steht dabei:
-//   init  – die Startfunktion aus der Tool-Datei (z. B. calendar.js)
+//   init  – die Startfunktion aus der Tool-Datei (z. B. games.js)
 //   root  – die ID des Containers in index.html, in den das Tool zeichnet
 //   zeige – (optional) wird bei JEDEM Öffnen aufgerufen und bekommt die
 //           Unterseite aus der Adresse, z. B. "sudoku" bei #games/sudoku
@@ -20,7 +20,7 @@
 // eine <section> in index.html).
 const ANSICHTEN = {
   home: null,
-  kalender: { init: initCalendar, root: "calendar-root" },
+  kalender: { init: KalenderAnsicht.init, zeige: KalenderAnsicht.zeige, root: "calendar-root" },
   games: { init: initGames, zeige: zeigeGames, root: "games-root" },
   media: { init: MediaAnsicht.init, zeige: MediaAnsicht.zeige, root: "media-root" },
   einstellungen: null,
