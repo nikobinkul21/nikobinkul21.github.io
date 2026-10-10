@@ -23,6 +23,8 @@ const SudokuKampf = (function () {
     kritisch: 560,     // Wackeln bei kritischem Treffer
     stolpern: 520,
     banner: 1100,      // Hinweis, wenn eine Boss-Eigenheit auslöst
+    eliteAuftritt: 1500, // Einblendung "Ein Elite-Boss erscheint"
+    eliteSieg: 1500,   // größere Siegesanimation nach einem Elite-Boss
     walze: 1900,       // Slot-Walze bis zum Stillstand
     walzePause: 550,   // kurz stehen lassen, bevor das Sudoku startet
     walzeSpecial: 900, // bei Special Grade etwas länger
@@ -101,10 +103,15 @@ const SudokuKampf = (function () {
             '<button type="button" class="kampf-eigenheit hat-tipp">' +
               '<span class="kampf-eigenheit-name"></span>' + tippHtml() +
             "</button>" +
+            // Nur bei Elite-Bossen: die seltene Eigenschaft
+            '<button type="button" class="kampf-selten hat-tipp" hidden>' +
+              '<span class="kampf-selten-marke">Selten</span><span class="kampf-selten-name"></span>' + tippHtml() +
+            "</button>" +
             '<div class="kampf-hp"><span class="kampf-hp-label">HP</span>' +
               '<div class="kampf-hp-balken"><div class="kampf-hp-fuellung"></div></div>' +
             "</div>" +
-            '<div class="kampf-hp-zahl"></div>' +
+            // Links: wann der nächste Elite-Boss kommt bzw. Zähler der seltenen Eigenschaft
+            '<div class="kampf-hp-zeile"><span class="kampf-elite-hinweis"></span><span class="kampf-hp-zahl"></span></div>' +
           "</div>" +
           '<div class="kampf-figur kampf-figur--boss"><canvas class="kampf-boss"></canvas></div>' +
           // Held unten: Figur links, Herzen, Münzen und Würfel rechts
@@ -178,6 +185,11 @@ const SudokuKampf = (function () {
       hpFuellung: container.querySelector(".kampf-hp-fuellung"),
       hpBalken: container.querySelector(".kampf-hp-balken"),
       hpZahl: container.querySelector(".kampf-hp-zahl"),
+      bossInfo: container.querySelector(".kampf-info--boss"),
+      selten: container.querySelector(".kampf-selten"),
+      seltenName: container.querySelector(".kampf-selten-name"),
+      seltenTipp: container.querySelector(".kampf-selten .kampf-tipp"),
+      eliteHinweis: container.querySelector(".kampf-elite-hinweis"),
       bossFigur: container.querySelector(".kampf-figur--boss"),
       bossCanvas: container.querySelector(".kampf-boss"),
       heldFigur: container.querySelector(".kampf-figur--held"),
@@ -261,8 +273,34 @@ const SudokuKampf = (function () {
         anzeige.bossNummer = boss.nummer;
       }
       el.bossName.textContent = boss.name;
-      el.bossNr.textContent = "Nr. " + boss.nummer;
+      // Elite-Boss: Zusatz "Elite" am Namen, größere Figur mit Aura, eigener HP-Rahmen (CSS)
+      el.bossNr.textContent = boss.elite ? "★ Elite" : "Nr. " + boss.nummer;
+      el.bossNr.title = "Boss Nr. " + boss.nummer;
+      el.buehne.classList.toggle("ist-elite", boss.elite);
       zeigeEigenheit(boss.eigenheit);
+      zeigeSelten(boss.elite ? boss.selten : null);
+      // Klein links unter dem HP-Balken: Zähler der seltenen Eigenschaft bzw.
+      // bei normalen Bossen, wann der nächste Elite-Boss kommt
+      let hinweis = "";
+      if (boss.elite) {
+        hinweis = boss.selten && boss.selten.zaehlerText ? "🛡 " + boss.selten.zaehlerText : "";
+      } else if (boss.bisElite !== null) {
+        hinweis = boss.bisElite === 1 ? "Nächster: Elite!" : "Elite in " + boss.bisElite;
+      }
+      el.eliteHinweis.textContent = hinweis;
+      el.eliteHinweis.title = boss.elite ? "" : "So viele Bosse bis zum nächsten Elite-Boss";
+    }
+
+    /** Seltene Eigenschaft unter der Eigenheit – mit Kennzeichnung "Selten" und Erklärung. */
+    function zeigeSelten(selten) {
+      el.selten.classList.remove("offen");
+      el.selten.hidden = !selten;
+      if (!selten) return;
+      el.selten.style.setProperty("--selten-farbe", selten.farbe);
+      el.seltenName.textContent = selten.name;
+      el.seltenTipp.textContent = "Selten – " + selten.name + ": " + selten.beschreibung;
+      el.selten.setAttribute("aria-label", "Seltene Eigenschaft " + selten.name + ": " + selten.beschreibung);
+      el.selten.setAttribute("aria-expanded", "false");
     }
 
     /** Eigenheit unter dem Bossnamen – mit Erklärung beim Darüberfahren/Antippen. */
@@ -532,6 +570,14 @@ const SudokuKampf = (function () {
      */
     function rechnungsZeilen(e) {
       const zeilen = [];
+      if (e.immun) {
+        // "Wurf 6 · gerade · immun" – sonst wurde nichts berechnet
+        return [
+          { key: "wurf", label: "Wurf", wert: String(e.wurf) },
+          { key: "immun", label: e.selten.grund, wert: e.selten.art, art: "selten", farbe: e.selten.farbe },
+          { key: "selten", label: e.selten.name, wert: "", art: "notiz" },
+        ];
+      }
       e.rechnung.schritte.forEach(function (schritt, i) {
         const teil = /^(.*) (\S+)$/.exec(schritt);
         const name = teil ? teil[1] : schritt;
@@ -552,6 +598,8 @@ const SudokuKampf = (function () {
             wert: "+" + Math.round(SudokuRPG.belohnung(grad.id).schadensBonus * 100) + " %" });
         } else if (name === "Doppelt") {
           zeilen.push({ key: "doppelt", label: "Doppelschaden", wert: wert, art: "doppelt" });
+        } else if (e.boss.selten && name === e.boss.selten.name) {
+          zeilen.push({ key: "selten", label: name, wert: wert, art: "selten", farbe: e.boss.selten.farbe });
         } else if (e.eigenheit && name === e.eigenheit.name) {
           zeilen.push({ key: "eigenheit", label: name, wert: wert, art: "eigenheit", farbe: e.eigenheit.farbe });
         } else {
@@ -577,6 +625,7 @@ const SudokuKampf = (function () {
       if (e.muenzFaktor !== 1) {
         zeilen.push({ key: "faktor", label: "Schwierigkeit", wert: "×" + SudokuRPG.zahlText(e.muenzFaktor) });
       }
+      if (e.eliteBonus > 0) zeilen.push({ key: "elite", label: "Elite-Bonus", wert: "+" + e.eliteBonus, art: "gold" });
       if (e.lebenPlus > 0) {
         zeilen.push({ key: "leben", label: "Leben", wert: "+" + e.lebenPlus, art: "leben" });
       } else if (e.lebenGewuenscht > 0) {
@@ -592,19 +641,24 @@ const SudokuKampf = (function () {
     /** Panel und Verlauf nach einer richtigen Zahl. */
     function protokolliereTreffer(e) {
       const gesamt = e.schaden + e.gift;
-      const art = e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" : e.eigenheit ? "eigenheit" : e.doppelt ? "doppelt" : "";
+      const muenzen = e.muenzenPlus + e.eliteBonus;
+      const art = e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
+        e.eigenheit ? "eigenheit" : e.doppelt ? "doppelt" : "";
+      const farbe = e.immun ? e.selten.farbe : e.eigenheit ? e.eigenheit.farbe : null;
+      let kurz = gesamt + " Schaden";
+      if (e.immun) kurz = e.selten.art === "geblockt" ? "Geblockt" : "Immun";
+      else if (e.fehlschlag) kurz = "Fehlschlag";
+      else if (e.eigenheit) kurz = "Geblockt";
       zeigeZug({
         treffer: rechnungsZeilen(e),
-        schaden: { label: "Gesamt", wert: String(gesamt), art: art, farbe: e.eigenheit && e.eigenheit.farbe },
+        schaden: { label: "Gesamt", wert: String(gesamt), art: art, farbe: farbe },
         belohnung: belohnungsZeilen(e),
-        muenzen: { label: "Summe", wert: muenzenText(e.muenzenPlus), art: "gold" },
-        kurz: {
-          schaden: e.fehlschlag ? "Fehlschlag" : e.eigenheit ? "Geblockt" : gesamt + " Schaden",
-          schadenArt: art,
-          muenzen: muenzenText(e.muenzenPlus) + " Münzen",
-        },
+        muenzen: { label: "Summe", wert: muenzenText(muenzen), art: "gold" },
+        kurz: { schaden: kurz, schadenArt: art, muenzen: muenzenText(muenzen) + " Münzen" },
       });
-      if (e.kritisch) {
+      if (e.immun) {
+        verlaufEintrag({ text: e.selten.name + ": Wurf " + e.wurf + " " + e.selten.art, wert: "0", art: "selten", symbol: "stern", farbe: e.selten.farbe });
+      } else if (e.kritisch) {
         verlaufEintrag({ text: e.doppelt ? "Kritisch und doppelt!" : "Kritischer Treffer", wert: "−" + gesamt, art: "kritisch", symbol: "blitz" });
       } else if (e.fehlschlag) {
         verlaufEintrag({ text: "Fehlschlag", wert: "0", art: "daneben", symbol: "kreuz" });
@@ -672,7 +726,8 @@ const SudokuKampf = (function () {
       if (farbe) b.style.setProperty("--banner-farbe", farbe);
       b.textContent = text;
       el.effekte.appendChild(b);
-      setTimeout(function () { b.remove(); }, DAUER.banner);
+      setTimeout(function () { b.remove(); }, art === "elite" || art === "elite-sieg" ? DAUER.eliteAuftritt : DAUER.banner);
+      return b;
     }
 
     /** Eine Eigenheit hat ausgelöst: Hinweis auf der Bühne, Eigenheit blinkt auf. */
@@ -698,14 +753,16 @@ const SudokuKampf = (function () {
         zeigeKombo(stand.kombo, stand.komboBonus, false);
         zeigeVerbesserungen(stand.verbesserungen);
         zeigeRekord(stand.boss, stand.rekord);
-        el.bossFigur.classList.remove("ist-besiegt");
+        el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite");
       });
     }
 
     /** Fasst zusammen, was eine richtige Zahl bewirkt hat – mit der Rechnung. */
     function trefferText(e) {
       const teile = [];
-      if (e.fehlschlag) {
+      if (e.immun) {
+        teile.push(e.selten.name + "! Wurf " + e.wurf + ", " + e.selten.grund + ", " + e.selten.art + ": kein Schaden.");
+      } else if (e.fehlschlag) {
         teile.push(e.spruch);
       } else {
         let kopf = "";
@@ -720,6 +777,7 @@ const SudokuKampf = (function () {
       }
       if (e.powerup && e.powerup.typ === "gold") teile.push("Goldfeld!");
       teile.push("+" + e.muenzenPlus + (e.muenzenPlus === 1 ? " Münze." : " Münzen."));
+      if (e.eliteBonus > 0) teile.push("Elite-Bonus +" + e.eliteBonus + " Münzen.");
       return teile.join(" ");
     }
 
@@ -736,6 +794,7 @@ const SudokuKampf = (function () {
         zeigeBoss(e.boss);
         // 1. Würfel rollt
         let wuerfeln = Promise.resolve();
+        el.wuerfel.classList.remove("ist-wirkungslos");
         if (!ohneBewegung()) {
           el.wuerfel.classList.add("rollt");
           const zufallsAnzeige = setInterval(function () {
@@ -758,10 +817,19 @@ const SudokuKampf = (function () {
             schwebeZahl("Daneben!", "daneben");
             return null;
           }
+          if (e.immun) {
+            // Seltene Eigenschaft: Wurf wirkungslos – Würfel grau, Boss wehrt ab
+            el.wuerfel.classList.add("ist-wirkungslos");
+            schwebeZahl(e.selten.art === "geblockt" ? "Geblockt!" : "Immun!", "immun");
+            banner(e.selten.name + "!", e.selten.farbe, "selten");
+            animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
+            return faerbe(el.selten, "ausgeloest", 900);
+          }
           if (e.eigenheit) {
             // Rüstung hat den Wurf geblockt
+            el.wuerfel.classList.add("ist-wirkungslos");
             schwebeZahl("Geblockt!", "geblockt");
-            animiere(el.bossFigur, "blockt", DAUER.treffer);
+            animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
             return eigenheitAusgeloest(e.eigenheit);
           }
           zeigeHp(e.hpNachSchaden, e.boss.maxHp);
@@ -789,7 +857,7 @@ const SudokuKampf = (function () {
           return faerbe(el.bossFigur, "vergiftet", 520);
         }).then(function () {
           // 5. Münzen und Leben
-          schwebeZahl("+" + e.muenzenPlus, "muenzen");
+          schwebeZahl("+" + (e.muenzenPlus + e.eliteBonus), "muenzen");
           if (e.lebenPlus > 0) {
             zeigeHerzen(e.leben, e.maxLeben);
             const neuesHerz = el.herzen.children[e.leben - 1];
@@ -850,13 +918,23 @@ const SudokuKampf = (function () {
     /** Boss besiegt. */
     function sieg(e) {
       spaeter(function () {
-        meldung(e.boss.name + " ist besiegt!");
-        verlaufEintrag({ text: e.boss.name + " besiegt!", wert: "", art: "besiegt", symbol: "krone" });
+        meldung(e.boss.name + " ist besiegt!" + (e.elite ? " Elite-Bonus: " + e.eliteBonus + " Münzen." : ""));
+        verlaufEintrag(e.elite
+          ? { text: "Elite " + e.boss.name + " besiegt!", wert: "+" + e.eliteBonus, art: "elite", symbol: "krone" }
+          : { text: e.boss.name + " besiegt!", wert: "", art: "besiegt", symbol: "krone" });
       });
       return einreihen(function () {
         zeigeHp(0, e.boss.maxHp);
         if (ohneBewegung()) {
           return Promise.resolve();
+        }
+        if (e.elite) {
+          // Größer: goldener Blitz, starkes Wackeln, längeres Verglühen, Hinweis mit Bonus
+          faerbe(el.blitz, "an-gold", 420);
+          animiere(el.buehne, "wackelt-stark", DAUER.kritisch);
+          banner("Elite besiegt! +" + e.eliteBonus + " Münzen", null, "elite-sieg");
+          el.bossFigur.classList.add("ist-besiegt-elite");
+          return warte(DAUER.eliteSieg);
         }
         el.bossFigur.classList.add("ist-besiegt");
         return warte(DAUER.sieg);
@@ -866,21 +944,34 @@ const SudokuKampf = (function () {
     /** Der nächste Boss erscheint (volle HP, Leben aufgefüllt) – mit seiner Eigenheit. */
     function neuerBoss(e, rekord) {
       spaeter(function () {
-        let text = "Boss " + e.boss.nummer + ": " + e.boss.name + " erscheint, " + e.boss.maxHp + " HP.";
+        let text = (e.boss.elite ? "Ein Elite-Boss erscheint! " : "") +
+          "Boss " + e.boss.nummer + ": " + e.boss.name + ", " + e.boss.maxHp + " HP.";
         if (e.boss.eigenheit) text += " Eigenheit " + e.boss.eigenheit.name + ": " + e.boss.eigenheit.beschreibung;
+        if (e.boss.selten) text += " Selten, " + e.boss.selten.name + ": " + e.boss.selten.beschreibung;
         meldung(text);
-        verlaufEintrag(e.boss.eigenheit
+        verlaufEintrag(e.boss.elite
+          ? { text: "Elite " + e.boss.nummer + ": " + e.boss.name + (e.boss.selten ? " · " + e.boss.selten.name : ""),
+              wert: e.boss.maxHp + " HP", art: "elite", symbol: "stern" }
+          : e.boss.eigenheit
           ? { text: "Boss " + e.boss.nummer + ": " + e.boss.name + " · " + e.boss.eigenheit.name, wert: "",
               art: "eigenheit", symbol: "warnung", farbe: e.boss.eigenheit.farbe }
           : { text: "Boss " + e.boss.nummer + ": " + e.boss.name, wert: e.boss.maxHp + " HP" });
       });
       return einreihen(function () {
-        el.bossFigur.classList.remove("ist-besiegt");
+        el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite");
         zeigeBoss(e.boss);
         zeigeHp(e.hp, e.boss.maxHp);
         zeigeHerzen(e.leben, e.maxLeben);
         zeigeRekord(e.boss, rekord);
-        if (e.boss.eigenheit) banner(e.boss.eigenheit.name, e.boss.eigenheit.farbe, "eigenheit");
+        if (e.boss.elite) {
+          // Eigene Einblendung (entfällt bei "Bewegung reduzieren" – die Kennzeichnungen bleiben)
+          if (!ohneBewegung()) {
+            const b = banner("Ein Elite-Boss erscheint!", null, "elite");
+            setTimeout(function () { b.remove(); }, DAUER.eliteAuftritt);
+          }
+        } else if (e.boss.eigenheit) {
+          banner(e.boss.eigenheit.name, e.boss.eigenheit.farbe, "eigenheit");
+        }
         return animiere(el.bossFigur, "erscheint", DAUER.erscheinen);
       });
     }
@@ -1003,7 +1094,19 @@ const SudokuKampf = (function () {
     let auswahlNummer = 0;          // nur die zuletzt angeforderte Auswahl wird gezeigt
     let offeneAuswahl = null;       // { overlay, weiter } der gerade sichtbaren Auswahl
 
-    function auswahl(rahmen, angebote, beimWaehlen) {
+    function auswahl(rahmen, angebote, beimWaehlen, info) {
+      info = info || { rest: 1, elite: false };
+      // Titel: "Boss besiegt! Wähle eine …" / "Elite besiegt! Wähle zwei …" / "Wähle noch eine …"
+      const gesamt = info.elite ? Math.max(1, K.elite.verbesserungenWaehlen) : 1;
+      const zahlwort = { 1: "eine", 2: "zwei", 3: "drei" };
+      let titel;
+      if (info.rest > 1) {
+        titel = "Elite besiegt! Wähle " + (zahlwort[info.rest] || info.rest) + " Verbesserungen:";
+      } else if (info.elite && gesamt > 1) {
+        titel = "Wähle noch eine Verbesserung:";
+      } else {
+        titel = (info.elite ? "Elite" : "Boss") + " besiegt! Wähle eine Verbesserung:";
+      }
       schliesseAuswahl();             // eine ältere (z. B. vor dem Neuladen) ist damit erledigt
       const nummer = ++auswahlNummer;
       return einreihen(function () {
@@ -1016,9 +1119,11 @@ const SudokuKampf = (function () {
           overlay.setAttribute("aria-label", "Verbesserung wählen");
           overlay.innerHTML =
             '<div class="auswahl-kasten">' +
-              '<p class="auswahl-titel">Boss besiegt! Wähle eine Verbesserung:</p>' +
+              '<p class="auswahl-titel"></p>' +
               '<div class="auswahl-karten"></div>' +
             "</div>";
+          overlay.querySelector(".auswahl-titel").textContent = titel;
+          if (info.elite) overlay.classList.add("ist-elite");
           const karten = overlay.querySelector(".auswahl-karten");
           angebote.forEach(function (v) {
             const karte = document.createElement("button");

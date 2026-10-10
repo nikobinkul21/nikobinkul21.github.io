@@ -69,6 +69,13 @@
   --panel-daneben: #b8bec8;
   --panel-leben: #7be38f;
 
+  /* Elite-Bosse */
+  --kampf-elite: #f5c542;                  /* Gold: Rahmen, Aura, "Elite" */
+  --kampf-elite-dunkel: #8a5a00;
+  --kampf-selten: #a35cff;                 /* Violett: seltene Eigenschaft, "Immun" */
+  --kampf-selten-rand: #2e0f5c;
+  --elite-figur-faktor: 1.28;              /* so viel größer ist der Sprite eines Elite-Bosses */
+
   /* Kombo-Zähler: Farben je Stufe (0 = keine Kombo … 4 = ab 10 in Folge) */
   --kombo-1: #4f6ef7;
   --kombo-2: #e9b52f;
@@ -399,6 +406,130 @@
   box-shadow: 0 0 0 2px var(--eigenheit-farbe, #777);
 }
 
+/* Seltene Eigenschaft eines Elite-Bosses: Kennzeichnung "Selten" + Name */
+.kampf-selten {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin: 2px 0 0;
+  padding: 0 4px 0 0;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.5;
+  color: #fff;
+  background: linear-gradient(90deg, var(--selten-farbe, var(--kampf-selten)), color-mix(in srgb, var(--selten-farbe, var(--kampf-selten)) 60%, #000));
+  border: none;
+  border-radius: 4px;
+  cursor: help;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.kampf-selten[hidden] {
+  display: none;
+}
+
+.kampf-selten-marke {
+  padding: 0 4px;
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--kampf-selten-rand);
+  background: var(--kampf-elite);
+  border-radius: 4px 0 0 4px;
+}
+
+.kampf-selten-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kampf-selten.ausgeloest {
+  background: #fff;
+  color: var(--selten-farbe, var(--kampf-selten));
+  box-shadow: 0 0 0 2px var(--selten-farbe, var(--kampf-selten));
+}
+
+/* Zeile unter dem HP-Balken: links Elite-Hinweis bzw. Zähler, rechts die HP */
+.kampf-hp-zeile {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.kampf-elite-hinweis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6rem;
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+/* Elite-Boss: goldener Kasten, eigener HP-Rahmen, "Elite" am Namen */
+.kampf-buehne.ist-elite .kampf-info--boss {
+  border-color: var(--kampf-elite-dunkel);
+  box-shadow: 0 0 0 2px var(--kampf-elite), 2px 2px 0 rgba(0, 0, 0, 0.25), 0 0 14px rgba(245, 197, 66, 0.6);
+}
+
+.kampf-boss-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kampf-buehne.ist-elite .kampf-info--boss {
+  width: 56%;
+}
+
+.kampf-buehne.ist-elite .kampf-boss-nr {
+  flex: none;
+  font-size: 0.62rem;
+  padding: 0 5px;
+  color: var(--kampf-selten-rand);
+  background: var(--kampf-elite);
+  border-radius: 4px;
+  opacity: 1;
+}
+
+.kampf-buehne.ist-elite .kampf-hp-balken {
+  height: 9px;
+  border: 2px solid var(--kampf-elite-dunkel);
+  box-shadow: 0 0 0 1px var(--kampf-elite), 0 0 6px rgba(245, 197, 66, 0.8);
+}
+
+.kampf-buehne.ist-elite .kampf-elite-hinweis {
+  opacity: 1;
+  color: var(--kampf-selten);
+}
+
+/* Größerer Sprite mit leuchtender Aura */
+.kampf-buehne.ist-elite .kampf-figur--boss {
+  width: calc(var(--kampf-figur-groesse) * var(--elite-figur-faktor));
+  height: calc(var(--kampf-figur-groesse) * var(--elite-figur-faktor));
+  top: 4%;
+  right: 3%;
+}
+
+.kampf-buehne.ist-elite .kampf-figur--boss::before {
+  content: "";
+  position: absolute;
+  inset: -6%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 197, 66, 0.75) 0%, rgba(163, 92, 255, 0.45) 45%, transparent 70%);
+  animation: elite-aura 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes elite-aura {
+  from { opacity: 0.6; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1.08); }
+}
+
 /* Erklärtexte: erscheinen beim Darüberfahren, mit Tastatur oder nach Antippen */
 .kampf-tipp {
   display: none;
@@ -571,6 +702,21 @@
   -webkit-text-stroke: 2px var(--kampf-daneben-rand);
 }
 
+/* Seltene Eigenschaft wehrt ab: "Immun!" bzw. "Geblockt!" in Violett */
+.kampf-schwebezahl--immun {
+  top: 20%;
+  right: 8%;
+  font-size: 1.6rem;
+  color: #fff;
+  -webkit-text-stroke: 3px var(--kampf-selten);
+}
+
+/* Wirkungsloser Wurf: Würfel ausgegraut */
+.kampf-wuerfel.ist-wirkungslos {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
 /* Regeneration: der Boss heilt sich */
 .kampf-schwebezahl--heilung {
   top: 26%;
@@ -609,6 +755,19 @@
   animation: kampf-banner 1.1s ease-out forwards;
 }
 
+/* Elite-Boss erscheint bzw. ist besiegt: größer, golden, länger sichtbar */
+.kampf-banner--elite,
+.kampf-banner--elite-sieg {
+  top: 50%;
+  padding: 6px 14px;
+  font-size: 1.15rem;
+  color: var(--kampf-selten-rand);
+  background: linear-gradient(90deg, var(--kampf-elite), #fff1b8, var(--kampf-elite));
+  border-color: var(--kampf-elite-dunkel);
+  box-shadow: 0 0 18px rgba(245, 197, 66, 0.9), 3px 3px 0 rgba(0, 0, 0, 0.3);
+  animation-duration: 1.5s;
+}
+
 /* "Kritisch!" ohne Kasten, als große Schrift */
 .kampf-banner--kritisch {
   top: 54%;                    /* unter der Schadenszahl, zwischen den Figuren */
@@ -635,6 +794,12 @@
 
 .kampf-blitz.an {
   animation: kampf-blitz 0.26s ease-out;
+}
+
+/* Goldener Blitz beim Sieg über einen Elite-Boss */
+.kampf-blitz.an-gold {
+  background: radial-gradient(circle at 70% 35%, #fff 0%, var(--kampf-elite) 45%, transparent 85%);
+  animation: kampf-blitz 0.42s ease-out;
 }
 
 @keyframes kampf-blitz {
@@ -969,7 +1134,9 @@
 .panel-zeile--daneben,
 .panel-summe--daneben .panel-wert { color: var(--panel-daneben); }
 .panel-zeile--eigenheit,
-.panel-summe--eigenheit .panel-wert { color: color-mix(in srgb, var(--zeilen-farbe) 55%, #fff); }
+.panel-summe--eigenheit .panel-wert,
+.panel-zeile--selten,
+.panel-summe--selten .panel-wert { color: color-mix(in srgb, var(--zeilen-farbe) 55%, #fff); }
 
 /* Spruch beim Fehlschlag: darf umbrechen */
 .panel-zeile--notiz {
@@ -1068,7 +1235,9 @@
 .panel-eintrag--daneben { color: var(--panel-daneben); }
 .panel-eintrag--fehler { color: var(--panel-fehler); font-weight: 700; }
 .panel-eintrag--besiegt { color: var(--panel-gold); font-weight: 700; }
-.panel-eintrag--eigenheit { color: color-mix(in srgb, var(--zeilen-farbe) 55%, #fff); font-weight: 700; }
+.panel-eintrag--eigenheit,
+.panel-eintrag--selten { color: color-mix(in srgb, var(--zeilen-farbe) 55%, #fff); font-weight: 700; }
+.panel-eintrag--elite { color: var(--kampf-elite); font-weight: 800; }
 
 /* Kompakte Zeile (nur auf schmalen Bildschirmen, siehe unten) */
 .panel-kurz {
@@ -1105,6 +1274,7 @@
 .panel-kurz-schaden[data-art="doppelt"] { color: var(--kampf-doppelt); }
 .panel-kurz-schaden[data-art="daneben"] { color: var(--panel-daneben); }
 .panel-kurz-schaden[data-art="fehler"] { color: var(--panel-fehler); }
+.panel-kurz-schaden[data-art="selten"] { color: color-mix(in srgb, var(--kampf-selten) 55%, #fff); }
 
 .panel-kurz-muenzen {
   font-weight: 800;
@@ -1195,6 +1365,22 @@
 .kampf-figur--held.schlaegt-stark { animation: kampf-schlag-stark 0.26s ease-out; }
 .kampf-figur--held.stolpert { animation: kampf-stolpern 0.52s ease-in-out; }
 .kampf-figur--boss.blockt { animation: kampf-blocken 0.42s steps(1, end); }
+.kampf-figur--boss.wehrt-ab { animation: kampf-abwehren 0.42s ease-out; }
+.kampf-figur--boss.ist-besiegt-elite { animation: kampf-besiegt-elite 1.4s ease-in forwards; }
+
+/* Der Boss wehrt ab: weicht zurück, ein heller Schild leuchtet auf */
+@keyframes kampf-abwehren {
+  0%   { transform: none; filter: none; }
+  30%  { transform: translateX(8px) rotate(6deg); filter: drop-shadow(-6px 0 0 rgba(255, 255, 255, 0.9)) brightness(1.2); }
+  100% { transform: none; filter: none; }
+}
+
+@keyframes kampf-besiegt-elite {
+  0%   { filter: brightness(1); opacity: 1; transform: none; }
+  20%  { filter: brightness(4) drop-shadow(0 0 12px #f5c542); transform: scale(1.15); }
+  45%  { filter: brightness(2.5) drop-shadow(0 0 18px #a35cff); transform: scale(1.1) rotate(-4deg); }
+  100% { filter: brightness(4); opacity: 0; transform: translateY(20px) scale(0.4) rotate(12deg); }
+}
 
 @keyframes kampf-buehne-wackeln-stark {
   0%, 100% { transform: none; }
@@ -1413,6 +1599,12 @@
   to   { transform: scale(1.04); }
 }
 
+/* Auswahl nach einem Elite-Boss: goldener Rahmen */
+.auswahl.ist-elite .auswahl-kasten {
+  border-color: var(--kampf-elite-dunkel);
+  box-shadow: 0 0 0 4px var(--kampf-elite), 0 0 24px rgba(245, 197, 66, 0.7), 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
 /* Verbesserungsauswahl: drei Karten */
 .auswahl-kasten {
   width: min(560px, 94%);
@@ -1538,6 +1730,17 @@
     top: 6%;
   }
 
+  /* Elite-Boss: Kasten hat eine Zeile mehr – etwas höhere Bühne, damit der Held sichtbar bleibt */
+  .kampf-buehne.ist-elite {
+    height: 192px;
+  }
+
+  .kampf-buehne.ist-elite .kampf-figur--boss {
+    width: calc(var(--kampf-figur-groesse-klein) * var(--elite-figur-faktor));
+    height: calc(var(--kampf-figur-groesse-klein) * var(--elite-figur-faktor));
+    top: 3%;
+  }
+
   .kampf-info--boss {
     width: 56%;
   }
@@ -1626,6 +1829,15 @@
   .auswahl-karte {
     animation: none !important;
     transition: none !important;
+  }
+
+  /* Elite-Aura: leuchtet, pulsiert aber nicht */
+  .kampf-buehne.ist-elite .kampf-figur--boss::before {
+    animation: none !important;
+  }
+
+  .kampf-blitz.an-gold {
+    opacity: 0.35;
   }
 
   /* Kritischer Treffer: statt eines Blitzes nur kurz eingefärbt */

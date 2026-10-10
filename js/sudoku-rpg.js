@@ -16,6 +16,9 @@
        Wirkung aus (Leben, Gift, Münzen …).
      - Nach jedem besiegten Boss wählt man eine von drei Verbesserungen.
      - Jeder Boss kann eine Eigenheit haben (Regeneration, Rüstung …).
+     - Jeder fünfte Boss ist ein Elite-Boss: doppelte HP, dazu eine seltene
+       Eigenschaft (Immunität, Schildwall …), als Belohnung Extra-Münzen und
+       zwei Verbesserungen.
 
    Die Regeln MELDEN, was passiert (Ereignisse), statt selbst etwas
    anzuzeigen. Die Oberfläche hört zu und spielt Animationen ab:
@@ -262,6 +265,95 @@ const SUDOKU_RPG_KONFIG = {
       },
     },
   ],
+
+  // Elite-Bosse: jeder "abstand"-te Boss (5, 10, 15 …)
+  elite: {
+    abstand: 5,             // 0 = keine Elite-Bosse
+    hpFaktor: 2,            // so viel mehr HP als ein normaler Boss an dieser Stelle
+    muenzen: 50,            // Extra-Münzen für den Sieg (ohne Münzfaktor)
+    verbesserungenWaehlen: 2, // so viele der angebotenen Verbesserungen darf man wählen
+  },
+
+  // Seltene Eigenschaften: Jeder Elite-Boss bekommt zusätzlich zu seiner
+  // normalen Eigenheit eine davon – zufällig nach "gewicht", nie dieselbe
+  // wie beim Elite-Boss davor. Aufbau wie bei den Eigenheiten oben, dazu:
+  //   rechnung.abwehren(grund, art) – der Treffer macht gar keinen Schaden
+  //       (art: "immun" oder "geblockt"); in der Stufe "wurf" geprüft, also
+  //       vor kritischem Treffer, Zuschlägen, Doppelschaden und Gift
+  //   kontext.eliteTreffer – der wievielte Treffer gegen diesen Elite-Boss
+  //   zaehler(treffer, wert) – optional: kurzer Text für das Kampffenster
+  seltenEigenschaften: [
+    {
+      id: "immunGerade", name: "Immun gegen Gerade", farbe: "#a35cff", gewicht: 1, wert: 0,
+      beschreibung: "Ist der Würfelwurf gerade, macht der Treffer keinen Schaden.",
+      wirkung: {
+        schaden: {
+          wurf: function (rechnung) {
+            if (rechnung.wurf % 2 === 0) rechnung.abwehren("gerade", "immun");
+          },
+        },
+      },
+    },
+    {
+      id: "immunUngerade", name: "Immun gegen Ungerade", farbe: "#a35cff", gewicht: 1, wert: 0,
+      beschreibung: "Ist der Würfelwurf ungerade, macht der Treffer keinen Schaden.",
+      wirkung: {
+        schaden: {
+          wurf: function (rechnung) {
+            if (rechnung.wurf % 2 === 1) rechnung.abwehren("ungerade", "immun");
+          },
+        },
+      },
+    },
+    {
+      id: "hochmut", name: "Hochmut", farbe: "#c04cff", gewicht: 1, wert: 0.25,
+      beschreibung: "Würfe im obersten Viertel der Augenzahlen machen keinen Schaden (beim W20: 16 bis 20).",
+      wirkung: {
+        schaden: {
+          wurf: function (rechnung, kontext) {
+            const seiten = kontext.werte.wuerfelSeiten;
+            const anzahl = Math.max(1, Math.round(seiten * kontext.selten.wert));
+            if (rechnung.wurf > seiten - anzahl) rechnung.abwehren("oberstes Viertel", "immun");
+          },
+        },
+      },
+    },
+    {
+      id: "schildwall", name: "Schildwall", farbe: "#7f6bff", gewicht: 1, wert: 3,
+      beschreibung: "Jeder {wert}. Treffer wird vollständig geblockt.",
+      wirkung: {
+        schaden: {
+          wurf: function (rechnung, kontext) {
+            if (kontext.eliteTreffer % kontext.selten.wert === 0) {
+              rechnung.abwehren(kontext.eliteTreffer + ". Treffer", "geblockt");
+            }
+          },
+        },
+      },
+      // Wann kommt der nächste Block? (treffer = bisherige Treffer gegen diesen Boss)
+      zaehler: function (treffer, wert) {
+        const rest = wert - (treffer % wert);
+        return rest === 1 ? "Nächster: Block" : "Block in " + rest;
+      },
+    },
+    {
+      id: "kombofluch", name: "Kombofluch", farbe: "#d0459b", gewicht: 1, wert: 0,
+      beschreibung: "Die Kombo gibt gegen diesen Boss keinen Schadensbonus.",
+      wirkung: {
+        schaden: {
+          // Nimmt den Kombo-Bonus, den die Grundregel gerade gegeben hat, wieder zurück
+          kombo: function (rechnung) {
+            if (rechnung.komboBonus > 0) {
+              rechnung.wert /= 1 + rechnung.komboBonus;
+              rechnung.schritte.pop();
+              rechnung.komboBonus = 0;
+              rechnung.schritte.push("Kombofluch ×1");
+            }
+          },
+        },
+      },
+    },
+  ],
 };
 
 
@@ -275,7 +367,9 @@ const SudokuRPG = (function () {
   const SPEICHER_SCHLUESSEL = "ntb-sudoku-abenteuer";
   // Version 1: noch "fehler" statt Leben. Version 2: Leben, Münzen, Power-ups.
   // Version 3: dazu Kombo, Münz-Rest, Verbesserungen und offene Auswahl.
-  const VERSION = 3;
+  // Version 4: dazu Elite-Bosse (seltene Eigenschaft, Treffer-Zähler) und
+  //            mehrere Wahlen bei einer Auswahl.
+  const VERSION = 4;
 
 
   /* ------------------------------------------------------------------------
@@ -333,9 +427,39 @@ const SudokuRPG = (function () {
      BOSSE, EIGENHEITEN, SCHWIERIGKEIT, POWER-UPS, VERBESSERUNGEN
      ------------------------------------------------------------------------ */
 
-  /** Höchste HP des Bosses mit dieser Nummer (1, 2, 3 …). */
+  /** Ist der Boss mit dieser Nummer ein Elite-Boss (jeder elite.abstand-te)? */
+  function istElite(nummer) {
+    return K.elite.abstand > 0 && nummer % K.elite.abstand === 0;
+  }
+
+  /** In wie vielen Bossen kommt der nächste Elite-Boss? (0 = dieser ist einer, null = gar keiner) */
+  function bisElite(nummer) {
+    if (!(K.elite.abstand > 0)) return null;
+    return (K.elite.abstand - (nummer % K.elite.abstand)) % K.elite.abstand;
+  }
+
+  /** Höchste HP des Bosses mit dieser Nummer (1, 2, 3 …) – bei Elite-Bossen × hpFaktor. */
   function maxHp(nummer) {
-    return K.startHp + (nummer - 1) * K.hpZuwachs;
+    const normal = K.startHp + (nummer - 1) * K.hpZuwachs;
+    return istElite(nummer) ? Math.round(normal * K.elite.hpFaktor) : normal;
+  }
+
+  /** Seltene Eigenschaft über ihre id (oder null). */
+  function seltenInfo(id) {
+    return K.seltenEigenschaften.find(function (e) { return e.id === id; }) || null;
+  }
+
+  /**
+   * Seltene Eigenschaft für die Anzeige: mit fertiger Beschreibung und – falls
+   * sie einen hat – dem Zählertext (z. B. "Block in 2 Treffern").
+   */
+  function seltenFuerAnzeige(id, treffer) {
+    const s = seltenInfo(id);
+    if (!s) return null;
+    return Object.assign({}, s, {
+      beschreibung: beschreibungVon(s),
+      zaehlerText: s.zaehler ? s.zaehler(treffer || 0, s.wert) : null,
+    });
   }
 
   /** Eigenheit über ihre id (oder null). */
@@ -357,6 +481,9 @@ const SudokuRPG = (function () {
       sprite: K.bosse[index].sprite,
       runde: Math.floor((nummer - 1) / K.bosse.length),
       maxHp: maxHp(nummer),
+      elite: istElite(nummer),
+      bisElite: bisElite(nummer),
+      selten: null,          // seltene Eigenschaft – kommt aus dem Spielstand (siehe bossMitStand)
       // Für die Anzeige: { id, name, farbe, wert, beschreibung (fertiger Text), wirkung }
       eigenheit: eigenheit ? Object.assign({}, eigenheit, { beschreibung: beschreibungVon(eigenheit) }) : null,
     };
@@ -523,12 +650,14 @@ const SudokuRPG = (function () {
    *   giftAnteil    – 0.5 = die Hälfte als Gift (0 = kein Gift)
    *   modifikatoren – Liste { <stufe>: function (rechnung, kontext) }
    *   eigenheit     – die Eigenheit des Bosses (für ihre Modifikatoren)
+   *   selten        – die seltene Eigenschaft eines Elite-Bosses (oder null)
+   *   eliteTreffer  – der wievielte Treffer gegen diesen Elite-Boss
    * @returns {object} rechnung: { wurf, schaden, gift, kritisch, fehlschlag,
-   *   geblockt, komboBonus, schritte, text, ausgeloest }
+   *   geblockt, immun, abwehrGrund, abwehrArt, komboBonus, schritte, text, ausgeloest }
    */
   function berechneSchaden(kontext) {
     kontext = Object.assign({ werte: werteVon({}), kombo: 0, grad: null, doppelt: false,
-      giftAnteil: 0, modifikatoren: [] }, kontext);
+      giftAnteil: 0, modifikatoren: [], selten: null, eliteTreffer: 0 }, kontext);
     const w = kontext.werte;
     const r = {
       wurf: kontext.wurf,
@@ -536,7 +665,20 @@ const SudokuRPG = (function () {
       wert: 0, giftWert: 0, komboBonus: 0,
       kritisch: false, fehlschlag: false, geblockt: false, ende: false,
       ausgeloest: null,          // Text, wenn eine Eigenheit eingegriffen hat
+      immun: false,              // seltene Eigenschaft hat den Treffer abgewehrt
+      abwehrGrund: null,         // z. B. "gerade"
+      abwehrArt: null,           // "immun" oder "geblockt"
       schritte: [],
+    };
+    // Für seltene Eigenschaften: Treffer ganz abwehren – kein Schaden, kein
+    // kritischer Treffer, keine Zuschläge, kein Doppelschaden, kein Gift
+    r.abwehren = function (grund, art) {
+      r.immun = true;
+      r.abwehrGrund = grund;
+      r.abwehrArt = art || "immun";
+      r.wert = 0;
+      r.ende = true;
+      r.schritte.push(grund, r.abwehrArt);
     };
     SCHADEN_STUFEN.forEach(function (stufe) {
       if (r.ende) return;
@@ -561,6 +703,12 @@ const SudokuRPG = (function () {
        verbesserungen,     ← { id: Stufe }
        auswahl,            ← null oder ids der angebotenen Verbesserungen
                              (dann muss erst gewählt werden)
+       auswahlAnzahl,      ← wie viele davon noch gewählt werden dürfen (0 = keine Auswahl)
+       elite,              ← null oder { nummer, selten, treffer } für den
+                             aktuellen Elite-Boss: seine seltene Eigenschaft
+                             und wie oft er schon getroffen wurde
+       vorigeSelten,       ← seltene Eigenschaft des letzten Elite-Bosses
+                             (der nächste bekommt eine andere)
        raetsel: null | { grad, vorgaben, loesung, eingaben, geloest,
                          powerups: [ { index, typ } ] },
        extras: {}          ← frei für spätere Erweiterungen
@@ -580,9 +728,19 @@ const SudokuRPG = (function () {
       kombo: 0,
       verbesserungen: {},
       auswahl: null,
+      auswahlAnzahl: 0,
+      elite: null,          // Boss 1 ist nie ein Elite-Boss (abstand ≥ 2)
+      vorigeSelten: null,
       raetsel: null,
       extras: {},
     };
+  }
+
+  /** Lost eine seltene Eigenschaft aus – nach Gewicht, nie dieselbe wie "ausser". */
+  function loseSelten(ausser, zufall) {
+    let liste = K.seltenEigenschaften.filter(function (e) { return e.id !== ausser; });
+    if (liste.length === 0) liste = K.seltenEigenschaften;
+    return ziehe(liste, function (e) { return e.gewicht === undefined ? 1 : e.gewicht; }, zufall).id;
   }
 
   /**
@@ -601,8 +759,8 @@ const SudokuRPG = (function () {
 
   /**
    * Prüft einen Spielstand (beim Laden und beim Import) und ergänzt ältere
-   * Stände: Version 1 ("fehler" statt Leben, keine Münzen/Power-ups) und
-   * Version 2 (ohne Kombo und Verbesserungen).
+   * Stände: Version 1 ("fehler" statt Leben, keine Münzen/Power-ups),
+   * Version 2 (ohne Kombo und Verbesserungen) und Version 3 (ohne Elite-Bosse).
    * @param {function} [zufall] – zum Auslosen fehlender Power-up-Felder (Standard: Math.random)
    * @returns {{ok: true, daten, ergaenzt: boolean} | {ok: false, fehler}}
    */
@@ -612,6 +770,7 @@ const SudokuRPG = (function () {
     }
     const v1 = roh.version === 1;
     const vorV3 = roh.version < 3;
+    const vorV4 = roh.version < 4;
 
     // Leben: in Version 1 aus den Fehlern berechnen (3 − Fehler)
     let leben = roh.leben;
@@ -649,6 +808,14 @@ const SudokuRPG = (function () {
       if (!gueltig) return { ok: false, fehler: "Abenteuer: ungültige Auswahl an Verbesserungen." };
       auswahl = roh.auswahl.slice();
     }
+    // Neu in Version 4: wie viele Verbesserungen noch gewählt werden dürfen
+    let auswahlAnzahl = auswahl ? 1 : 0;
+    if (auswahl && !vorV4) {
+      if (!istGanzzahl(roh.auswahlAnzahl, 1, Math.max(1, K.elite.verbesserungenWaehlen))) {
+        return { ok: false, fehler: "Abenteuer: ungültige Anzahl an Wahlen." };
+      }
+      auswahlAnzahl = roh.auswahlAnzahl;
+    }
     const werte = werteVon(stufen);
 
     if (!istGanzzahl(roh.bossNummer, 1, 1e6) ||
@@ -659,6 +826,23 @@ const SudokuRPG = (function () {
         !istGanzzahl(kombo, 0, 1e6) ||
         typeof muenzRest !== "number" || !(muenzRest >= 0 && muenzRest < 1)) {
       return { ok: false, fehler: "Abenteuer: ungültige Werte für Boss, HP, Leben, Münzen, Kombo oder Rekord." };
+    }
+
+    // Elite-Boss: seltene Eigenschaft aus dem Spielstand – fehlt sie (älterer
+    // Stand) oder passt sie nicht zum Boss, wird sie jetzt ausgelost
+    const vorigeSelten = !vorV4 && seltenInfo(roh.vorigeSelten) ? roh.vorigeSelten : null;
+    let elite = null;
+    let bossHp = roh.bossHp;
+    if (istElite(roh.bossNummer)) {
+      const e = vorV4 ? null : roh.elite;
+      if (e && e.nummer === roh.bossNummer && seltenInfo(e.selten) && istGanzzahl(e.treffer, 0, 1e6)) {
+        elite = { nummer: e.nummer, selten: e.selten, treffer: e.treffer };
+      } else {
+        elite = { nummer: roh.bossNummer, selten: loseSelten(vorigeSelten, zufall || Math.random), treffer: 0 };
+      }
+      // Älterer Stand, Kampf noch nicht begonnen: gleich mit den vollen Elite-HP
+      const normal = K.startHp + (roh.bossNummer - 1) * K.hpZuwachs;
+      if (vorV4 && bossHp === normal) bossHp = maxHp(roh.bossNummer);
     }
 
     let raetsel = null;
@@ -691,11 +875,11 @@ const SudokuRPG = (function () {
     }
     return {
       ok: true,
-      ergaenzt: vorV3,
+      ergaenzt: vorV4,
       daten: {
         version: VERSION,
         bossNummer: roh.bossNummer,
-        bossHp: roh.bossHp,
+        bossHp: bossHp,
         leben: leben,
         muenzen: muenzen,
         muenzRest: muenzRest,
@@ -703,6 +887,9 @@ const SudokuRPG = (function () {
         kombo: kombo,
         verbesserungen: stufen,
         auswahl: auswahl,
+        auswahlAnzahl: auswahlAnzahl,
+        elite: elite,
+        vorigeSelten: vorigeSelten,
         raetsel: raetsel,
         extras: roh.extras && typeof roh.extras === "object" ? roh.extras : {},
       },
@@ -747,6 +934,7 @@ const SudokuRPG = (function () {
     // Ein älterer Stand wird dabei ergänzt (Leben, Münzen, Power-ups, Kombo …)
     const geladen = pruefeDaten(speicher.laden(), zufall);
     let zustand = geladen.ok ? geladen.daten : neuerZustand();
+    if (!zustand.elite && istElite(zustand.bossNummer)) eliteAuslosen();   // nur bei elite.abstand = 1
     if (geladen.ok) {
       speicher.speichern(zustand);          // ergänzte Werte gleich festhalten
     }
@@ -767,10 +955,30 @@ const SudokuRPG = (function () {
       return werteVon(zustand.verbesserungen);
     }
 
-    /** Alle Modifikatoren für die Schadensberechnung: Eigenheit des Bosses + Erweiterungen. */
+    /**
+     * Wie bossInfo, aber mit dem, was nur im Spielstand steht: die seltene
+     * Eigenschaft eines Elite-Bosses (mit Zählertext).
+     */
+    function bossMitStand(nummer) {
+      const boss = bossInfo(nummer);
+      if (zustand.elite && zustand.elite.nummer === nummer) {
+        boss.selten = seltenFuerAnzeige(zustand.elite.selten, zustand.elite.treffer);
+      }
+      return boss;
+    }
+
+    /** Ist der aktuelle Boss ein Elite-Boss, bekommt er seine seltene Eigenschaft. */
+    function eliteAuslosen() {
+      zustand.elite = istElite(zustand.bossNummer)
+        ? { nummer: zustand.bossNummer, selten: loseSelten(zustand.vorigeSelten, zufall), treffer: 0 }
+        : null;
+    }
+
+    /** Alle Modifikatoren für die Schadensberechnung: Eigenheit, seltene Eigenschaft, Erweiterungen. */
     function modifikatoren(boss) {
       const liste = [];
       if (boss.eigenheit && boss.eigenheit.wirkung.schaden) liste.push(boss.eigenheit.wirkung.schaden);
+      if (boss.selten && boss.selten.wirkung.schaden) liste.push(boss.selten.wirkung.schaden);
       erweiterungen.forEach(function (erw) { if (erw.schaden) liste.push(erw.schaden); });
       return liste;
     }
@@ -805,13 +1013,13 @@ const SudokuRPG = (function () {
 
     /** Daten für das Ereignis "neuerBoss" (auch nach dem Wählen einer Verbesserung). */
     function neuerBossDaten() {
-      const boss = bossInfo(zustand.bossNummer);
+      const boss = bossMitStand(zustand.bossNummer);
       return { boss: boss, hp: zustand.bossHp, leben: zustand.leben, maxLeben: werte().maxLeben, rekord: zustand.rekord };
     }
 
     /** Falsche Zahl → Leben weg, Kombo weg, Eigenheit des Bosses (Zahl und Power-up bleiben). */
     function falscheZahl(index, ziffer) {
-      const boss = bossInfo(zustand.bossNummer);
+      const boss = bossMitStand(zustand.bossNummer);
       const komboVorher = zustand.kombo;
       const hpVorher = zustand.bossHp;
       const muenzenVorher = zustand.muenzen;
@@ -844,6 +1052,7 @@ const SudokuRPG = (function () {
         zustand.bossHp = boss.maxHp;
         zustand.leben = K.startLeben;
         zustand.raetsel = null;
+        if (zustand.elite) zustand.elite.treffer = 0;   // seltene Eigenschaft bleibt, der Zähler beginnt neu
         speichern();
         melde("fehler", ereignis);
         melde("niederlage", niederlage);
@@ -873,8 +1082,10 @@ const SudokuRPG = (function () {
       // ---- Richtige Zahl → eintragen (gesperrt), Kombo +1
       r.eingaben[index] = ziffer;
       zustand.kombo++;
+      // Elite-Boss: Treffer zählen (z. B. für "Schildwall")
+      const eliteTreffer = zustand.elite ? ++zustand.elite.treffer : 0;
       const w = werte();
-      const bossVorher = bossInfo(zustand.bossNummer);
+      const bossVorher = bossMitStand(zustand.bossNummer);
       const hpVorher = zustand.bossHp;
 
       // 1. Fertige Einheiten → Doppelschaden und Münzen
@@ -898,6 +1109,7 @@ const SudokuRPG = (function () {
         wurf: wurf, werte: w, kombo: zustand.kombo, grad: r.grad, doppelt: doppelt,
         giftAnteil: effekt.giftAnteil > 0 ? effekt.giftAnteil + w.giftBonus : 0,
         modifikatoren: modifikatoren(bossVorher), eigenheit: bossVorher.eigenheit,
+        selten: bossVorher.selten, eliteTreffer: eliteTreffer,
       });
       const spruch = rechnung.fehlschlag
         ? K.fehlschlagSprueche[Math.floor(zufall() * K.fehlschlagSprueche.length)]
@@ -924,14 +1136,25 @@ const SudokuRPG = (function () {
       zustand.leben = Math.min(w.maxLeben, zustand.leben + effekt.leben);
       const lebenPlus = zustand.leben - lebenVorher;
 
-      // 6. Boss besiegt? → Rekord, nächster Boss, Leben auffüllen, Verbesserungen anbieten
+      // 6. Boss besiegt? → Rekord, nächster Boss, Leben auffüllen, Verbesserungen anbieten.
+      //    Elite-Boss: Extra-Münzen und mehrere Verbesserungen zur Wahl.
       const besiegt = hpNachher === 0;
+      let eliteBonus = 0;
       if (besiegt) {
+        if (bossVorher.elite) {
+          eliteBonus = K.elite.muenzen;
+          zustand.muenzen += eliteBonus;
+          if (zustand.elite) zustand.vorigeSelten = zustand.elite.selten;
+        }
         zustand.rekord = Math.max(zustand.rekord, bossVorher.nummer);
         zustand.bossNummer++;
+        eliteAuslosen();
         zustand.bossHp = maxHp(zustand.bossNummer);
         zustand.leben = Math.max(zustand.leben, K.lebenNachBoss);
         zustand.auswahl = loseAngebot();
+        zustand.auswahlAnzahl = zustand.auswahl
+          ? Math.min(zustand.auswahl.length, bossVorher.elite ? Math.max(1, K.elite.verbesserungenWaehlen) : 1)
+          : 0;
       }
 
       // 7. Sudoku komplett?
@@ -953,9 +1176,16 @@ const SudokuRPG = (function () {
           id: bossVorher.eigenheit.id, name: bossVorher.eigenheit.name,
           farbe: bossVorher.eigenheit.farbe, text: rechnung.ausgeloest,
         } : null,
+        // Seltene Eigenschaft hat den Treffer abgewehrt ("immun" oder "geblockt")
+        immun: rechnung.immun,
+        selten: rechnung.immun ? {
+          id: bossVorher.selten.id, name: bossVorher.selten.name, farbe: bossVorher.selten.farbe,
+          grund: rechnung.abwehrGrund, art: rechnung.abwehrArt,
+        } : null,
+        eliteBonus: eliteBonus,
         hpVorher: hpVorher, hpNachSchaden: hpNachSchaden, hpNachher: hpNachher,
         powerup: powerup,
-        muenzenPlus: muenzenPlus, muenzen: zustand.muenzen, muenzFaktor: muenzFaktor,
+        muenzenPlus: muenzenPlus, muenzen: zustand.muenzen, muenzFaktor: muenzFaktor,   // muenzen inkl. eliteBonus
         lebenGewuenscht: effekt.leben, lebenPlus: lebenPlus,
         leben: lebenVorher + lebenPlus, maxLeben: w.maxLeben,
       };
@@ -964,10 +1194,10 @@ const SudokuRPG = (function () {
         melde("powerup", { index: index, typ: powerup.typ, effekt: effekt, treffer: treffer });
       }
       if (besiegt) {
-        melde("bossBesiegt", { boss: bossVorher, rekord: zustand.rekord });
+        melde("bossBesiegt", { boss: bossVorher, rekord: zustand.rekord, elite: bossVorher.elite, eliteBonus: eliteBonus });
         if (zustand.auswahl) {
           // Der nächste Boss erscheint erst nach der Wahl (waehleVerbesserung)
-          melde("auswahl", { angebote: angebote() });
+          melde("auswahl", auswahlInfo());
         } else {
           melde("neuerBoss", neuerBossDaten());
         }
@@ -975,11 +1205,12 @@ const SudokuRPG = (function () {
       if (geloest) {
         // Neues Sudoku nötig – Boss (HP) und Leben bleiben, wie sie sind.
         // Das Rätsel bleibt bis zum nächsten starteRaetsel() zum Anschauen stehen.
-        melde("sudokuGeloest", { grad: r.grad, boss: bossInfo(zustand.bossNummer), hp: zustand.bossHp });
+        melde("sudokuGeloest", { grad: r.grad, boss: bossMitStand(zustand.bossNummer), hp: zustand.bossHp });
       }
       return {
         art: "richtig", wurf: wurf, schaden: rechnung.schaden, gift: rechnung.gift,
-        kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, doppelt: doppelt,
+        kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, doppelt: doppelt, immun: rechnung.immun,
+        eliteBonus: eliteBonus,
         powerup: powerup, muenzenPlus: muenzenPlus, lebenPlus: lebenPlus,
         besiegt: besiegt, geloest: geloest, auswahl: Boolean(zustand.auswahl),
       };
@@ -991,6 +1222,17 @@ const SudokuRPG = (function () {
     }
 
     /**
+     * Alles zur offenen Auswahl: { angebote, rest (noch zu wählen), elite (nach einem Elite-Boss) }
+     */
+    function auswahlInfo() {
+      return {
+        angebote: angebote(),
+        rest: zustand.auswahlAnzahl,
+        elite: zustand.bossNummer > 1 && istElite(zustand.bossNummer - 1),
+      };
+    }
+
+    /**
      * Eine der angebotenen Verbesserungen wählen. Danach erscheint der nächste Boss.
      * @returns {boolean} – false, wenn gerade keine Wahl offen ist oder die id nicht angeboten wurde
      */
@@ -998,7 +1240,18 @@ const SudokuRPG = (function () {
       if (!zustand.auswahl || zustand.auswahl.indexOf(id) === -1) return false;
       const v = verbesserungInfo(id);
       zustand.verbesserungen[id] = (zustand.verbesserungen[id] || 0) + 1;
-      zustand.auswahl = null;
+      // Darf noch eine weitere gewählt werden (Elite-Boss)? Dann bleiben die
+      // übrigen Angebote stehen – sofern sie nicht schon voll sind.
+      zustand.auswahlAnzahl--;
+      const uebrig = zustand.auswahl.filter(function (a) {
+        return a !== id && (zustand.verbesserungen[a] || 0) < verbesserungInfo(a).maxStufe;
+      });
+      if (zustand.auswahlAnzahl > 0 && uebrig.length > 0) {
+        zustand.auswahl = uebrig;
+      } else {
+        zustand.auswahl = null;
+        zustand.auswahlAnzahl = 0;
+      }
       const w = werte();
       const lebenVorher = zustand.leben;
       if (v.beimWaehlen) v.beimWaehlen(zustand, w, v.wert);
@@ -1008,7 +1261,11 @@ const SudokuRPG = (function () {
         leben: zustand.leben, lebenPlus: zustand.leben - lebenVorher, maxLeben: w.maxLeben,
         gesammelt: gesammelteVerbesserungen(zustand.verbesserungen),
       });
-      melde("neuerBoss", neuerBossDaten());
+      if (zustand.auswahl) {
+        melde("auswahl", auswahlInfo());      // die nächste Wahl
+      } else {
+        melde("neuerBoss", neuerBossDaten());
+      }
       return true;
     }
 
@@ -1020,6 +1277,7 @@ const SudokuRPG = (function () {
     /** Alles auf Anfang: Boss 1, Startleben, 0 Münzen, keine Kombo, keine Verbesserungen, kein Rekord. */
     function zuruecksetzen() {
       zustand = neuerZustand();
+      if (istElite(1)) eliteAuslosen();       // nur bei elite.abstand = 1
       speichern();
       melde("zurueckgesetzt", { boss: bossInfo(1) });
     }
@@ -1027,10 +1285,11 @@ const SudokuRPG = (function () {
     return {
       /** Der aktuelle Spielstand (nur lesen!) */
       get zustand() { return zustand; },
-      boss: function () { return bossInfo(zustand.bossNummer); },
+      boss: function () { return bossMitStand(zustand.bossNummer); },
       werte: werte,
       gesammelt: function () { return gesammelteVerbesserungen(zustand.verbesserungen); },
       angebote: angebote,
+      auswahlInfo: auswahlInfo,
       an: function (name, fn) { (hoerer[name] = hoerer[name] || []).push(fn); },
       erweitere: function (erweiterung) { erweiterungen.push(erweiterung); },
       loseGrad: loseGrad,
@@ -1068,6 +1327,8 @@ const SudokuRPG = (function () {
     SCHADEN_STUFEN: SCHADEN_STUFEN,
     bossInfo: bossInfo,
     maxHp: maxHp,
+    istElite: istElite,
+    seltenFuerAnzeige: seltenFuerAnzeige,
     belohnung: belohnung,
     powerupTyp: powerupTyp,
     werteVon: werteVon,

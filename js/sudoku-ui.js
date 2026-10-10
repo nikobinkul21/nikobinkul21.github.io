@@ -543,7 +543,7 @@ function initSudoku(container) {
     abenteuer.an("auswahl", function (e) {
       if (abenteuer !== diesesAbenteuer) return;
       setzeBeschaeftigtAnzeige();           // Gitter gesperrt, bis gewählt ist
-      zeigeAuswahl(e.angebote);
+      zeigeAuswahl(e);
     });
     abenteuer.an("verbesserung", function (e) { if (abenteuer === diesesAbenteuer) kampf.verbesserung(e); });
     abenteuer.an("neuerBoss", function (e) {
@@ -563,7 +563,7 @@ function initSudoku(container) {
       ? "Der Kampf geht weiter!"
       : "Ein Boss stellt sich dir in den Weg!");
     // Beim letzten Mal wurde nicht mehr gewählt? → Auswahl gleich zeigen
-    if (abenteuer.zustand.auswahl) zeigeAuswahl(abenteuer.angebote());
+    if (abenteuer.zustand.auswahl) zeigeAuswahl(abenteuer.auswahlInfo());
 
     if (beschaeftigt.abenteuer) return;      // es wird schon ausgelost
     if (abenteuer.brauchtRaetsel()) {
@@ -587,14 +587,18 @@ function initSudoku(container) {
   }
 
   /** Karten zur Verbesserungswahl zeigen; die Wahl geht an die Regeln. */
-  function zeigeAuswahl(angebote) {
+  /**
+   * @param {object} info – { angebote, rest (noch zu wählen), elite } aus den Regeln
+   */
+  function zeigeAuswahl(info) {
     const diesesAbenteuer = abenteuer;
-    kampf.auswahl(rahmen, angebote, function (id) {
+    kampf.auswahl(rahmen, info.angebote, function (id) {
       if (abenteuer !== diesesAbenteuer) return;
-      abenteuer.waehleVerbesserung(id);     // → Ereignisse "verbesserung" und "neuerBoss"
+      // → Ereignisse "verbesserung" und "neuerBoss" (oder "auswahl" für die nächste Wahl)
+      abenteuer.waehleVerbesserung(id);
       setzeBeschaeftigtAnzeige();
-      if (spiel && !beschaeftigt.abenteuer) waehle(ausgewaehlt, true);
-    });
+      if (spiel && !beschaeftigt.abenteuer && !waehltVerbesserung()) waehle(ausgewaehlt, true);
+    }, info);
   }
 
   /** Schwierigkeit über dem Gitter – mit dem, was sie bringt. */
