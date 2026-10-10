@@ -71,8 +71,8 @@
 
   /* Logo "NTB" */
   --logo-schrift: "NTB Logo", Impact, "Arial Black", sans-serif;
-  --logo-groesse: 1.6rem;            /* ca. 1,6-mal so groß wie die Reiter (1rem) */
-  --logo-groesse-mobil: 1.35rem;     /* auf dem Handy etwas kleiner */
+  --logo-groesse: 2.4rem;            /* Größe von NTB. 1rem = Größe der Reiter (16px) */
+  --logo-groesse-mobil: 2rem;        /* Größe von NTB auf dem Handy */
   --logo-farbe: #000000;             /* Buchstaben */
   --logo-kontur-farbe: #ffffff;      /* Kontur außen um die Buchstaben */
   --logo-kontur-staerke: 1.25px;     /* sichtbare Breite der Kontur */
