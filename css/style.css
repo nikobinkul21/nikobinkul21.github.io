@@ -1,0 +1,305 @@
+/* ==========================================================================
+   1. CSS-VARIABLEN
+   Hier änderst du Farben, Abstände und Radien an EINER Stelle.
+   ========================================================================== */
+
+:root {
+  /* Farben – helles Design */
+  --farbe-hintergrund: #f4f5f7;
+  --farbe-flaeche: #ffffff;          /* Karten, Sidebar, Kopfzeile */
+  --farbe-text: #1f2328;
+  --farbe-text-leise: #656d76;       /* weniger wichtiger Text */
+  --farbe-rand: #e3e5e8;
+  --farbe-akzent: #4f6ef7;           /* Hervorhebungen, aktiver Menüpunkt */
+  --farbe-akzent-hell: #eaeefe;      /* Hintergrund des aktiven Menüpunkts */
+  --farbe-hover: #eef0f3;
+  --farbe-overlay: rgba(0, 0, 0, 0.4);
+
+  /* Schatten */
+  --schatten: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.05);
+
+  /* Abstände */
+  --abstand-xs: 4px;
+  --abstand-s: 8px;
+  --abstand-m: 16px;
+  --abstand-l: 24px;
+  --abstand-xl: 40px;
+
+  /* Rundungen */
+  --radius-s: 8px;
+  --radius-m: 12px;
+
+  /* Größen */
+  --sidebar-breite: 240px;
+  --kopfzeile-hoehe: 64px;
+
+  /* System-Schriftarten: nutzt die Schrift des Betriebssystems, kein Download nötig */
+  --schrift: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Sagt dem Browser, dass Formularelemente & Scrollbalken hell sein sollen */
+  color-scheme: light;
+}
+
+/* Dunkles Design: überschreibt nur die Farben.
+   Aktiv, wenn <html data-theme="dark"> gesetzt ist (macht app.js). */
+:root[data-theme="dark"] {
+  --farbe-hintergrund: #16181d;
+  --farbe-flaeche: #1f2228;
+  --farbe-text: #e6e8eb;
+  --farbe-text-leise: #9aa1ab;
+  --farbe-rand: #2e323a;
+  --farbe-akzent: #7b93ff;
+  --farbe-akzent-hell: #262d45;
+  --farbe-hover: #2a2e36;
+  --farbe-overlay: rgba(0, 0, 0, 0.6);
+  --schatten: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  color-scheme: dark;
+}
+
+
+/* ==========================================================================
+   2. GRUNDLAGEN
+   ========================================================================== */
+
+/* box-sizing: border-box macht Breitenberechnungen einfacher
+   (Rand und Innenabstand zählen zur Breite dazu) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--schrift);
+  line-height: 1.5;
+  color: var(--farbe-text);
+  background: var(--farbe-hintergrund);
+  /* Sidebar links, Inhalt rechts nebeneinander */
+  display: flex;
+  min-height: 100vh;
+}
+
+h1 {
+  margin: 0 0 var(--abstand-l);
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+/* Überschriften bekommen per JS den Fokus (für Screenreader),
+   sollen dabei aber keinen sichtbaren Rahmen zeigen */
+h1:focus {
+  outline: none;
+}
+
+/* Sichtbarer Fokusrahmen für Tastaturnutzer.
+   :focus-visible erscheint nur bei Tastatur, nicht bei Mausklick. */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+
+/* Das hidden-Attribut soll immer gewinnen */
+[hidden] {
+  display: none !important;
+}
+
+
+/* ==========================================================================
+   3. SIDEBAR
+   ========================================================================== */
+
+.sidebar {
+  width: var(--sidebar-breite);
+  flex-shrink: 0;                   /* nicht schmaler werden */
+  background: var(--farbe-flaeche);
+  border-right: 1px solid var(--farbe-rand);
+  padding: var(--abstand-l) var(--abstand-m);
+  /* bleibt beim Scrollen stehen */
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar__logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 0 var(--abstand-s);
+  margin-bottom: var(--abstand-l);
+}
+
+.sidebar__liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-xs);
+}
+
+.sidebar__link {
+  display: block;
+  padding: 10px var(--abstand-m);
+  border-radius: var(--radius-s);
+  color: var(--farbe-text-leise);
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar__link:hover {
+  background: var(--farbe-hover);
+  color: var(--farbe-text);
+}
+
+/* Aktiver Menüpunkt: app.js setzt aria-current="page" */
+.sidebar__link[aria-current="page"] {
+  background: var(--farbe-akzent-hell);
+  color: var(--farbe-akzent);
+}
+
+
+/* ==========================================================================
+   4. KOPFZEILE & BUTTONS
+   ========================================================================== */
+
+.inhalt {
+  flex: 1;
+  min-width: 0;                     /* verhindert, dass breiter Inhalt das Layout sprengt */
+  display: flex;
+  flex-direction: column;
+}
+
+.kopfzeile {
+  height: var(--kopfzeile-hoehe);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--abstand-l);
+}
+
+/* Runder Button nur mit Symbol (Hamburger, Dark-Mode) */
+.icon-button {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-s);
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: var(--schatten);
+  transition: background 0.15s;
+}
+
+.icon-button:hover {
+  background: var(--farbe-hover);
+}
+
+/* margin-left: auto schiebt den Schalter ganz nach rechts */
+.theme-schalter {
+  margin-left: auto;
+}
+
+/* Hamburger: drei Striche, auf großen Bildschirmen versteckt */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hamburger__strich {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+
+/* ==========================================================================
+   5. HAUPTBEREICH & KARTEN
+   ========================================================================== */
+
+.hauptbereich {
+  flex: 1;
+  padding: 0 var(--abstand-l) var(--abstand-xl);
+  max-width: 1100px;
+  width: 100%;
+}
+
+/* "Karte": weiße Box mit Rundung und Schatten – Baustein für alle Tools */
+.karte {
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten);
+  padding: var(--abstand-l);
+}
+
+.karte p {
+  margin: 0;
+}
+
+/* Platzhaltertext der noch leeren Tools */
+.platzhalter {
+  color: var(--farbe-text-leise);
+}
+
+/* Overlay hinter der mobilen Sidebar */
+.overlay {
+  position: fixed;
+  inset: 0;                         /* füllt den ganzen Bildschirm */
+  background: var(--farbe-overlay);
+  z-index: 10;
+}
+
+
+/* ==========================================================================
+   6. MOBIL (unter 768 px)
+   ========================================================================== */
+
+@media (max-width: 767px) {
+
+  /* Sidebar liegt jetzt über dem Inhalt und ist nach links herausgeschoben */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 20;                    /* über dem Overlay */
+    transform: translateX(-100%);
+    /* visibility: hidden macht die Links auch für die Tastatur unerreichbar,
+       solange die Sidebar zu ist */
+    visibility: hidden;
+    transition: transform 0.25s ease, visibility 0.25s;
+    box-shadow: var(--schatten);
+  }
+
+  /* Geöffnet: app.js setzt die Klasse "offen" */
+  .sidebar.offen {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .hamburger {
+    display: inline-flex;
+  }
+
+  .kopfzeile,
+  .hauptbereich {
+    padding-left: var(--abstand-m);
+    padding-right: var(--abstand-m);
+  }
+}
+
+/* Wer im System "Bewegung reduzieren" eingestellt hat, bekommt keine Animationen */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

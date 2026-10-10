@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <!-- Sorgt dafür, dass die Seite auf Handys richtig skaliert wird -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mein Hub</title>
+  <link rel="stylesheet" href="css/style.css">
+
+  <!--
+    Kleines Skript direkt im <head>:
+    Es setzt das Farbschema (hell/dunkel), BEVOR die Seite gezeichnet wird.
+    Stünde es erst in app.js, würde die Seite beim Laden kurz hell
+    aufblitzen, obwohl Dark Mode gewählt ist.
+  -->
+  <script>
+    (function () {
+      var gespeichert = null;
+      try {
+        gespeichert = localStorage.getItem("hub-theme");
+      } catch (fehler) {
+        // localStorage kann gesperrt sein (z. B. im privaten Modus) – dann ignorieren
+      }
+      var systemDunkel = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var theme = gespeichert || (systemDunkel ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Sidebar: die Navigation links -->
+  <nav class="sidebar" id="sidebar" aria-label="Hauptnavigation">
+    <div class="sidebar__logo">Mein Hub</div>
+    <ul class="sidebar__liste">
+      <!-- data-view verbindet den Link mit der passenden Ansicht im <main> -->
+      <li><a class="sidebar__link" href="#home" data-view="home">Home</a></li>
+      <li><a class="sidebar__link" href="#kalender" data-view="kalender">Kalender</a></li>
+      <li><a class="sidebar__link" href="#sudoku" data-view="sudoku">Sudoku</a></li>
+      <li><a class="sidebar__link" href="#einstellungen" data-view="einstellungen">Einstellungen</a></li>
+    </ul>
+  </nav>
+
+  <!-- Halbdurchsichtiger Hintergrund hinter der mobilen Sidebar.
+       Ein Klick darauf schließt die Sidebar. -->
+  <div class="overlay" id="overlay" hidden></div>
+
+  <!-- Rechte Seite: Kopfzeile + Hauptbereich -->
+  <div class="inhalt">
+
+    <header class="kopfzeile">
+      <!-- Hamburger-Button: nur auf kleinen Bildschirmen sichtbar -->
+      <button class="icon-button hamburger" id="menu-button" type="button"
+              aria-label="Menü öffnen" aria-controls="sidebar" aria-expanded="false">
+        <span class="hamburger__strich"></span>
+        <span class="hamburger__strich"></span>
+        <span class="hamburger__strich"></span>
+      </button>
+
+      <!-- Dark-Mode-Schalter oben rechts -->
+      <button class="icon-button theme-schalter" id="theme-button" type="button"
+              aria-label="Dunkles Design" aria-pressed="false">
+        <!-- Das Symbol wird von app.js gesetzt (☾ oder ☀) -->
+        <span id="theme-symbol" aria-hidden="true">☾</span>
+      </button>
+    </header>
+
+    <!-- Hauptbereich: hier liegen alle Ansichten. Nur eine ist sichtbar,
+         die anderen haben das Attribut "hidden". -->
+    <main class="hauptbereich" id="main">
+
+      <section class="ansicht" id="view-home" aria-labelledby="titel-home">
+        <h1 id="titel-home" tabindex="-1">Willkommen in deinem Hub</h1>
+        <div class="karte">
+          <p>Wähle links ein Tool aus, um loszulegen.</p>
+        </div>
+      </section>
+
+      <section class="ansicht" id="view-kalender" aria-labelledby="titel-kalender" hidden>
+        <h1 id="titel-kalender" tabindex="-1">Kalender</h1>
+        <!-- calendar.js füllt diesen Container später -->
+        <div class="karte" id="calendar-root"></div>
+      </section>
+
+      <section class="ansicht" id="view-sudoku" aria-labelledby="titel-sudoku" hidden>
+        <h1 id="titel-sudoku" tabindex="-1">Sudoku</h1>
+        <!-- sudoku.js füllt diesen Container später -->
+        <div class="karte" id="sudoku-root"></div>
+      </section>
+
+      <section class="ansicht" id="view-einstellungen" aria-labelledby="titel-einstellungen" hidden>
+        <h1 id="titel-einstellungen" tabindex="-1">Einstellungen</h1>
+        <div class="karte">
+          <p>Hier kommen später deine Einstellungen hin.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!--
+    Die Skripte stehen am Ende des <body>, damit das HTML schon geladen ist,
+    wenn sie laufen. Reihenfolge: zuerst die Tools, zuletzt app.js,
+    weil app.js die init-Funktionen der Tools aufruft.
+    Bewusst KEIN type="module": Module funktionieren nicht, wenn man
+    index.html per Doppelklick (file://) öffnet.
+  -->
+  <script src="js/calendar.js"></script>
+  <script src="js/sudoku.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
