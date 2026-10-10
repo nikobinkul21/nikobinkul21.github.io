@@ -66,7 +66,11 @@ function initSudoku(container) {
   // Wird gerade ein Rätsel erzeugt/ausgelost? (je Modus getrennt)
   const beschaeftigt = { frei: false, abenteuer: false };
   function wirdErzeugt() {
-    return Boolean(modus && beschaeftigt[modus]);
+    return Boolean(modus && beschaeftigt[modus]) || waehltVerbesserung();
+  }
+  /** Im Abenteuer ist gerade eine Verbesserungsauswahl offen → keine Eingabe. */
+  function waehltVerbesserung() {
+    return modus === "abenteuer" && Boolean(abenteuer && abenteuer.zustand.auswahl);
   }
 
 
@@ -79,8 +83,8 @@ function initSudoku(container) {
     '<div class="sudoku-modi" hidden>' +
       '<a class="karte link-karte sudoku-modus" href="#games/sudoku/abenteuer">' +
         '<h3>⚔ Abenteuer</h3>' +
-        "<p>Besiege Bosse mit richtigen Zahlen. Jede richtige Zahl wirft einen Würfel – " +
-        "drei Fehler beim selben Boss und du musst neu antreten.</p>" +
+        "<p>Besiege Bosse mit richtigen Zahlen. Jede richtige Zahl wirft einen Würfel, " +
+        "nach jedem Boss wählst du eine Verbesserung – verlierst du alle Leben, musst du neu antreten.</p>" +
         '<p class="sudoku-modus-stand"></p>' +
       "</a>" +
       '<a class="karte link-karte sudoku-modus" href="#games/sudoku/frei">' +
@@ -308,7 +312,7 @@ function initSudoku(container) {
    * Die Liste steht im Rätsel des Abenteuers (siehe js/sudoku-rpg.js).
    */
   function powerupTypAuf(i) {
-    if (modus !== "abenteuer" || !spiel.powerups) return null;
+    if (modus !== "abenteuer" || !spiel.powerups || powerupsVersteckt()) return null;
     const eintrag = spiel.powerups.find(function (p) { return p.index === i; });
     return eintrag ? SudokuRPG.powerupTyp(eintrag.typ) : null;
   }
@@ -338,10 +342,22 @@ function initSudoku(container) {
     }
   }
 
-  /** Ausgelöstes Power-up: Markierung leuchtet kurz auf und verschwindet. */
-  function loesePowerupAus(index) {
-    const ebene = felder[index].querySelector(".sudoku-powerup");
-    if (!ebene) return;
+  /** Boss-Eigenheit "Nebel": Power-up-Felder werden nicht gezeigt (wirken aber). */
+  function powerupsVersteckt() {
+    const eigenheit = abenteuer && abenteuer.boss().eigenheit;
+    return Boolean(eigenheit && eigenheit.wirkung.powerupsUnsichtbar);
+  }
+
+  /**
+   * Ausgelöstes Power-up: Markierung leuchtet kurz auf und verschwindet.
+   * War es im Nebel versteckt, taucht es dafür kurz auf.
+   */
+  function loesePowerupAus(index, typId) {
+    let ebene = felder[index].querySelector(".sudoku-powerup");
+    if (!ebene) {
+      zeichnePowerup(felder[index], SudokuRPG.powerupTyp(typId));
+      ebene = felder[index].querySelector(".sudoku-powerup");
+    }
     ebene.classList.add("loest-aus");
     setTimeout(function () {
       ebene.remove();
@@ -516,8 +532,18 @@ function initSudoku(container) {
     abenteuer.an("richtig", function (e) { if (abenteuer === diesesAbenteuer) kampf.treffer(e); });
     abenteuer.an("fehler", function (e) { if (abenteuer === diesesAbenteuer) kampf.fehler(e); });
     abenteuer.an("bossBesiegt", function (e) { if (abenteuer === diesesAbenteuer) kampf.sieg(e); });
+    abenteuer.an("auswahl", function (e) {
+      if (abenteuer !== diesesAbenteuer) return;
+      setzeBeschaeftigtAnzeige();           // Gitter gesperrt, bis gewählt ist
+      zeigeAuswahl(e.angebote);
+    });
+    abenteuer.an("verbesserung", function (e) { if (abenteuer === diesesAbenteuer) kampf.verbesserung(e); });
     abenteuer.an("neuerBoss", function (e) {
-      if (abenteuer === diesesAbenteuer) kampf.neuerBoss(e, diesesAbenteuer.zustand.rekord);
+      if (abenteuer !== diesesAbenteuer) return;
+      // Nach dem Erscheinen neu zeichnen: Ein Boss mit "Nebel" versteckt die Power-ups
+      kampf.neuerBoss(e, diesesAbenteuer.zustand.rekord).then(function () {
+        if (abenteuer === diesesAbenteuer && spiel) zeichne();
+      });
     });
     abenteuer.an("niederlage", function (e) { letzteNiederlage = e; });
     abenteuer.an("sudokuGeloest", function () {
@@ -528,6 +554,8 @@ function initSudoku(container) {
     kampf.text(abenteuer.zustand.raetsel && !abenteuer.zustand.raetsel.geloest
       ? "Der Kampf geht weiter!"
       : "Ein Boss stellt sich dir in den Weg!");
+    // Beim letzten Mal wurde nicht mehr gewählt? → Auswahl gleich zeigen
+    if (abenteuer.zustand.auswahl) zeigeAuswahl(abenteuer.angebote());
 
     if (beschaeftigt.abenteuer) return;      // es wird schon ausgelost
     if (abenteuer.brauchtRaetsel()) {
@@ -541,12 +569,39 @@ function initSudoku(container) {
 
   function standFuerAnzeige() {
     const z = abenteuer.zustand;
-    return { boss: abenteuer.boss(), hp: z.bossHp, leben: z.leben,
-      muenzen: z.muenzen, rekord: z.rekord };
+    const werte = abenteuer.werte();
+    return {
+      boss: abenteuer.boss(), hp: z.bossHp, leben: z.leben, maxLeben: werte.maxLeben,
+      muenzen: z.muenzen, rekord: z.rekord,
+      kombo: z.kombo, komboBonus: Math.min(z.kombo * SudokuRPG.KONFIG.kombo.proStufe, werte.komboMax),
+      verbesserungen: abenteuer.gesammelt(),
+    };
   }
 
+  /** Karten zur Verbesserungswahl zeigen; die Wahl geht an die Regeln. */
+  function zeigeAuswahl(angebote) {
+    const diesesAbenteuer = abenteuer;
+    kampf.auswahl(rahmen, angebote, function (id) {
+      if (abenteuer !== diesesAbenteuer) return;
+      abenteuer.waehleVerbesserung(id);     // → Ereignisse "verbesserung" und "neuerBoss"
+      setzeBeschaeftigtAnzeige();
+      if (spiel && !beschaeftigt.abenteuer) waehle(ausgewaehlt, true);
+    });
+  }
+
+  /** Schwierigkeit über dem Gitter – mit dem, was sie bringt. */
   function zeigeAbenteuerGrad() {
-    abenteuerGrad.textContent = spiel ? "Schwierigkeit: " + SudokuEngine.gradMitId(spiel.grad).name : "";
+    if (!spiel) {
+      abenteuerGrad.textContent = "";
+      return;
+    }
+    const b = SudokuRPG.belohnung(spiel.grad);
+    abenteuerGrad.textContent = "Schwierigkeit: " + SudokuEngine.gradMitId(spiel.grad).name;
+    const belohnung = document.createElement("span");
+    belohnung.className = "sudoku-abenteuer-belohnung";
+    belohnung.textContent = "Münzen ×" + SudokuRPG.zahlText(b.muenzFaktor) +
+      (b.schadensBonus > 0 ? " · Schaden +" + Math.round(b.schadensBonus * 100) + " %" : "");
+    abenteuerGrad.appendChild(belohnung);
   }
 
   /**
@@ -561,7 +616,7 @@ function initSudoku(container) {
 
     // Erst die laufenden Kampf-Animationen abwarten, dann die Walze zeigen
     const walze = kampf.fertig().then(function () {
-      return modus === "abenteuer" ? kampf.losen(rahmen, SudokuEngine.SCHWIERIGKEITSGRADE, grad) : null;
+      return modus === "abenteuer" ? kampf.losen(rahmen, SudokuEngine.SCHWIERIGKEITSGRADE, grad, SudokuRPG.belohnung(grad.id)) : null;
     });
     const raetsel = SudokuEngine.erzeugeRaetsel(grad.vorgaben);
 
@@ -582,6 +637,10 @@ function initSudoku(container) {
 
   /** Abenteuer: richtige Zahlen bleiben gesperrt, falsche verursachen einen Fehler. */
   function setzeImAbenteuer(index, ziffer) {
+    if (waehltVerbesserung()) {
+      kampf.text("Wähle zuerst eine Verbesserung!");
+      return;
+    }
     if (ziffer === 0 || spiel.eingaben[index] !== 0) {
       // Löschen gibt es im Abenteuer nicht: richtige Zahlen bleiben stehen
       if (spiel.eingaben[index] !== 0) kampf.text("Richtige Zahlen bleiben stehen – sie haben schon getroffen.");
@@ -593,7 +652,7 @@ function initSudoku(container) {
 
     if (ergebnis.art === "richtig") {
       const nachher = aktuellesGitter();
-      if (ergebnis.powerup) loesePowerupAus(index);   // vor zeichne(): Ebene bleibt für die Animation
+      if (ergebnis.powerup) loesePowerupAus(index, ergebnis.powerup.typ);   // vor zeichne(): Ebene bleibt für die Animation
       zeichne();
       if (ergebnis.geloest) {
         // Große Welle über das Gitter, danach neue Schwierigkeit auslosen
@@ -647,10 +706,12 @@ function initSudoku(container) {
 
   function abenteuerZuruecksetzen() {
     if (!window.confirm("Abenteuer wirklich zurücksetzen? Du beginnst wieder bei Boss 1 mit " + SudokuRPG.KONFIG.startLeben +
-      " Leben – Rekord und Münzen werden gelöscht.")) {
+      " Leben – Rekord, Münzen, Kombo und Verbesserungen werden gelöscht.")) {
       return;
     }
     abenteuer.zuruecksetzen();
+    kampf.schliesseAuswahl();
+    setzeBeschaeftigtAnzeige();
     kampf.zeigeStand(standFuerAnzeige());
     kampf.zeigeWurf(null);
     kampf.text("Ein neues Abenteuer beginnt!");

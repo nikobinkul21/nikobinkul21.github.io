@@ -42,6 +42,20 @@
   --kampf-gift-rand: #145a24;
   --kampf-muenze: #e6b422;                 /* Münzsymbol und "+N" */
   --kampf-muenze-rand: #6b4a00;
+  --kampf-kritisch: #ff3df0;               /* Kritischer Treffer: Magenta */
+  --kampf-kritisch-rand: #4a0050;
+  --kampf-daneben: #d9dde3;                /* Fehlschlag und "Geblockt!" */
+  --kampf-daneben-rand: #3b4250;
+  --kampf-heilung: #eafff0;                /* Boss heilt sich (Regeneration) */
+  --kampf-heilung-rand: #1f8f4a;
+  --kampf-verlust: #ff6b6b;                /* gestohlene Münzen */
+  --kampf-verlust-rand: #5c0f0f;
+
+  /* Kombo-Zähler: Farben je Stufe (0 = keine Kombo … 4 = ab 10 in Folge) */
+  --kombo-1: #4f6ef7;
+  --kombo-2: #e9b52f;
+  --kombo-3: #f07a1a;
+  --kombo-4: #ff3df0;
 
   /* Power-up-Felder im Gitter (Farbe je Typ kommt aus SUDOKU_RPG_KONFIG) */
   --powerup-toenung: 26%;                  /* wie stark das Feld eingefärbt wird */
@@ -120,6 +134,22 @@
 
 .sudoku-abenteuer-grad {
   font-weight: 600;
+}
+
+/* Was die Schwierigkeit bringt: kleiner und leiser daneben */
+.sudoku-abenteuer-belohnung {
+  margin-left: 6px;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .sudoku-abenteuer-belohnung {
+    display: block;
+    margin-left: 0;
+  }
 }
 
 /* Im Abenteuer kann man nichts löschen – die Taste bleibt als Platzhalter */
@@ -310,6 +340,74 @@
   opacity: 0.7;
 }
 
+/* Eigenheit des Bosses unter dem Namen (Knopf mit Erklärung) */
+.kampf-eigenheit {
+  display: block;
+  max-width: 100%;
+  margin: 1px 0 0;
+  padding: 0 4px;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.5;
+  color: #fff;
+  background: var(--eigenheit-farbe, #777);
+  border: none;
+  border-radius: 4px;
+  cursor: help;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kampf-eigenheit.ist-leer {
+  color: inherit;
+  background: none;
+  padding: 0;
+  font-weight: 600;
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Löst die Eigenheit aus: kurz hell aufleuchten (nur Farbe) */
+.kampf-eigenheit.ausgeloest {
+  color: var(--eigenheit-farbe, #777);
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--eigenheit-farbe, #777);
+}
+
+/* Erklärtexte: erscheinen beim Darüberfahren, mit Tastatur oder nach Antippen */
+.kampf-tipp {
+  display: none;
+  position: absolute;
+  z-index: 8;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  color: var(--kampf-textbox-text);
+  background: var(--kampf-textbox);
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.hat-tipp:hover > .kampf-tipp,
+.hat-tipp:focus-visible > .kampf-tipp,
+.hat-tipp.offen > .kampf-tipp {
+  display: block;
+}
+
+/* Erklärung der Eigenheit: unter dem Boss-Kasten, so breit wie er */
+.kampf-info--boss .kampf-tipp {
+  top: calc(100% + 4px);
+  left: -2px;
+  right: -2px;
+}
+
 .kampf-hp {
   display: flex;
   align-items: center;
@@ -430,6 +528,273 @@
   -webkit-text-stroke: 2px var(--kampf-muenze-rand);
 }
 
+/* Kritischer Treffer: noch größer als Doppelschaden, Magenta */
+.kampf-schwebezahl--kritisch {
+  top: 12%;
+  right: 6%;
+  font-size: 3rem;
+  color: var(--kampf-kritisch);
+  -webkit-text-stroke: 3px var(--kampf-kritisch-rand);
+  animation-duration: 1s;
+}
+
+/* Fehlschlag und Rüstung: graues Wort am Boss */
+.kampf-schwebezahl--daneben,
+.kampf-schwebezahl--geblockt {
+  top: 24%;
+  right: 10%;
+  font-size: 1.15rem;
+  color: var(--kampf-daneben);
+  -webkit-text-stroke: 2px var(--kampf-daneben-rand);
+}
+
+/* Regeneration: der Boss heilt sich */
+.kampf-schwebezahl--heilung {
+  top: 26%;
+  right: 12%;
+  font-size: 1.35rem;
+  color: var(--kampf-heilung);
+  -webkit-text-stroke: 2px var(--kampf-heilung-rand);
+}
+
+/* Dieb: gestohlene Münzen */
+.kampf-schwebezahl--muenzen-weg {
+  right: 14%;
+  bottom: 30%;
+  font-size: 1.1rem;
+  color: var(--kampf-verlust);
+  -webkit-text-stroke: 2px var(--kampf-verlust-rand);
+}
+
+/* Großer Hinweis mitten auf der Bühne */
+.kampf-banner {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  z-index: 6;
+  padding: 4px 12px;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--banner-farbe, var(--kampf-textbox));
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -50%);
+  animation: kampf-banner 1.1s ease-out forwards;
+}
+
+/* "Kritisch!" ohne Kasten, als große Schrift */
+.kampf-banner--kritisch {
+  top: 54%;                    /* unter der Schadenszahl, zwischen den Figuren */
+  padding: 0;
+  font-size: 1.6rem;
+  text-transform: uppercase;
+  color: #fff;
+  background: none;
+  border: none;
+  box-shadow: none;
+  -webkit-text-stroke: 3px var(--kampf-kritisch);
+  paint-order: stroke fill;
+}
+
+/* Blitz bei kritischen Treffern */
+.kampf-blitz {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(circle at 70% 35%, #fff 0%, var(--kampf-kritisch) 45%, transparent 80%);
+  opacity: 0;
+}
+
+.kampf-blitz.an {
+  animation: kampf-blitz 0.26s ease-out;
+}
+
+@keyframes kampf-blitz {
+  0%   { opacity: 0; }
+  30%  { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+@keyframes kampf-banner {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  25%  { transform: translate(-50%, -50%) scale(1); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -60%); }
+}
+
+
+/* ==========================================================================
+   LEISTE UNTER DER BÜHNE: Kombo-Zähler und gesammelte Verbesserungen
+   ========================================================================== */
+
+.kampf-leiste {
+  position: relative;          /* Bezug für die Erklärtexte der Symbole */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.kampf-kombo {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--farbe-text-leise);
+  background: var(--farbe-flaeche);
+  border: 2px solid var(--farbe-rand);
+  border-radius: 999px;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.kampf-kombo-titel {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.kampf-kombo-zahl {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.kampf-kombo-bonus {
+  font-size: 0.75rem;
+}
+
+/* Je höher die Stufe, desto kräftiger */
+.kampf-kombo[data-stufe="1"] {
+  color: var(--kombo-1);
+  border-color: var(--kombo-1);
+}
+
+.kampf-kombo[data-stufe="2"] {
+  color: #3a2a00;
+  background: var(--kombo-2);
+  border-color: #a77c0c;
+}
+
+.kampf-kombo[data-stufe="3"] {
+  color: #fff;
+  background: var(--kombo-3);
+  border-color: #9a4300;
+  box-shadow: 0 0 10px rgba(240, 122, 26, 0.6);
+}
+
+.kampf-kombo[data-stufe="4"] {
+  color: #fff;
+  background: linear-gradient(90deg, var(--kombo-3), var(--kombo-4));
+  border-color: #6d0062;
+  box-shadow: 0 0 14px rgba(255, 61, 240, 0.75);
+}
+
+.kampf-kombo[data-stufe="4"] .kampf-kombo-zahl {
+  font-size: 1.25rem;
+}
+
+.kampf-kombo.pulsiert {
+  animation: kombo-puls 0.3s ease-out;
+}
+
+/* Ein Fehler: kurz rot (nur Farbe – auch bei "Bewegung reduzieren") */
+.kampf-kombo.zerbrochen {
+  color: #fff;
+  background: var(--kampf-hp-knapp);
+  border-color: #7a1712;
+}
+
+/* Die beiden Hälften, die beim Zerbrechen auseinanderfallen */
+.kampf-kombo-scherbe {
+  position: absolute;
+  z-index: 3;
+  margin: 0;
+  pointer-events: none;
+  justify-content: center;
+}
+
+.kampf-kombo-scherbe--links {
+  clip-path: polygon(0 0, 55% 0, 42% 50%, 50% 100%, 0 100%);
+  animation: kombo-scherbe-links 0.65s ease-in forwards;
+}
+
+.kampf-kombo-scherbe--rechts {
+  clip-path: polygon(55% 0, 100% 0, 100% 100%, 50% 100%, 42% 50%);
+  animation: kombo-scherbe-rechts 0.65s ease-in forwards;
+}
+
+@keyframes kombo-puls {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+@keyframes kombo-scherbe-links {
+  0%   { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translate(-14px, 18px) rotate(-24deg); }
+}
+
+@keyframes kombo-scherbe-rechts {
+  0%   { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translate(14px, 22px) rotate(28deg); }
+}
+
+/* Gesammelte Verbesserungen */
+.kampf-verbesserungen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kampf-verbesserungen-leer {
+  font-size: 0.75rem;
+  color: var(--farbe-text-leise);
+}
+
+.kampf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 0 5px 0 4px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 2px solid color-mix(in srgb, var(--chip-farbe) 60%, transparent);
+  border-radius: 7px;
+  cursor: help;
+}
+
+.kampf-chip svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: var(--chip-farbe);
+}
+
+.kampf-chip.ist-neu {
+  animation: kombo-puls 0.6s ease-out;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--chip-farbe) 45%, transparent);
+}
+
+/* Erklärung eines Symbols: über der Leiste, so breit wie sie */
+.kampf-leiste .kampf-tipp {
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+}
+
 /* Textbox wie in klassischen Rollenspielen */
 .kampf-text {
   min-height: 2.9em;
@@ -485,6 +850,40 @@
 .kampf-wuerfel.rollt { animation: kampf-rollen 0.38s linear; }
 .kampf-figur--boss.getroffen-stark { animation: kampf-getroffen-stark 0.42s steps(1, end); }
 .kampf-buehne.wackelt { animation: kampf-buehne-wackeln 0.36s linear; }
+.kampf-buehne.wackelt-stark { animation: kampf-buehne-wackeln-stark 0.56s linear; }
+.kampf-figur--held.schlaegt-stark { animation: kampf-schlag-stark 0.26s ease-out; }
+.kampf-figur--held.stolpert { animation: kampf-stolpern 0.52s ease-in-out; }
+.kampf-figur--boss.blockt { animation: kampf-blocken 0.42s steps(1, end); }
+
+@keyframes kampf-buehne-wackeln-stark {
+  0%, 100% { transform: none; }
+  10% { transform: translate(-10px, 4px) rotate(-1deg); }
+  25% { transform: translate(9px, -5px) rotate(1deg); }
+  40% { transform: translate(-8px, 3px); }
+  55% { transform: translate(6px, -3px); }
+  70% { transform: translate(-4px, 2px); }
+  85% { transform: translate(2px, -1px); }
+}
+
+@keyframes kampf-schlag-stark {
+  0%   { transform: none; }
+  45%  { transform: translate(34px, -22px) rotate(-14deg) scale(1.1); }
+  100% { transform: none; }
+}
+
+@keyframes kampf-stolpern {
+  0%   { transform: none; }
+  30%  { transform: translate(14px, 2px) rotate(18deg); }
+  55%  { transform: translate(18px, 6px) rotate(28deg); }
+  80%  { transform: translate(6px, 0) rotate(-6deg); }
+  100% { transform: none; }
+}
+
+@keyframes kampf-blocken {
+  0%, 50%  { filter: brightness(0.6) contrast(1.4); transform: translateX(3px); }
+  25%, 75% { filter: none; transform: translateX(-2px); }
+  100%     { filter: none; transform: none; }
+}
 
 /* Gift: Boss kurz grün eingefärbt (nur Farbe – auch bei "Bewegung reduzieren") */
 .kampf-figur--boss.vergiftet canvas {
@@ -577,7 +976,8 @@
    ========================================================================== */
 
 .slot,
-.niederlage {
+.niederlage,
+.auswahl {
   position: absolute;
   inset: 0;
   z-index: 5;
@@ -636,6 +1036,118 @@
   box-shadow: 0 0 0 3px rgba(63, 191, 95, 0.35);
 }
 
+/* Was der ausgeloste Grad bringt – erscheint, wenn die Walze steht */
+.slot-belohnung {
+  min-height: 1.35em;
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Special Grade: goldener Rahmen, leuchtende Schrift */
+.slot.ist-special .slot-kasten {
+  border-color: #b8860b;
+  box-shadow: 0 0 0 4px #ffd84a, 0 0 28px 8px rgba(255, 61, 240, 0.55), 4px 4px 0 rgba(0, 0, 0, 0.3);
+  animation: slot-special 0.9s ease-in-out infinite alternate;
+}
+
+.slot.ist-special .slot-fenster {
+  border-color: #b8860b;
+  background: linear-gradient(to bottom, #ffe9a3, #fff8dc 30%, #fff8dc 70%, #ffe9a3);
+  box-shadow: 0 0 0 3px rgba(255, 216, 74, 0.6);
+}
+
+.slot.ist-special .slot-titel {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #b0119f;
+}
+
+.slot.ist-special .slot-belohnung {
+  color: #8a5a00;
+}
+
+@keyframes slot-special {
+  from { transform: scale(1); }
+  to   { transform: scale(1.04); }
+}
+
+/* Verbesserungsauswahl: drei Karten */
+.auswahl-kasten {
+  width: min(560px, 94%);
+  padding: 14px 12px 14px;
+  text-align: center;
+  background: var(--kampf-kasten);
+  color: var(--kampf-kasten-text);
+  border: 3px solid var(--kampf-kasten-rand);
+  border-radius: 12px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  animation: kampf-erscheinen 0.3s ease-out;
+}
+
+.auswahl-titel {
+  margin: 0 0 10px;
+  font-weight: 800;
+}
+
+.auswahl-karten {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);     /* alle Karten gleich breit */
+  gap: 8px;
+}
+
+.auswahl-karte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 6px 8px;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  background: #fff;
+  border: 2px solid var(--kampf-kasten-rand);
+  border-top: 6px solid var(--chip-farbe);
+  border-radius: 10px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+
+.auswahl-karte:hover,
+.auswahl-karte:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 3px 5px 0 rgba(0, 0, 0, 0.25), 0 0 0 3px color-mix(in srgb, var(--chip-farbe) 45%, transparent);
+  outline: none;
+}
+
+.auswahl-symbol svg {
+  display: block;
+  width: 34px;
+  height: 34px;
+  fill: var(--chip-farbe);
+}
+
+.auswahl-name {
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.auswahl-text {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.auswahl-stufe {
+  margin-top: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
 .niederlage-titel {
   margin: 0 0 6px;
   font-size: 1.4rem;
@@ -673,7 +1185,7 @@
 @media (max-width: 767px) {
   .kampf-buehne {
     aspect-ratio: auto;
-    height: 150px;
+    height: 168px;
   }
 
   .kampf-figur {
@@ -693,6 +1205,23 @@
     min-height: 0;
     padding: 5px 9px;
     font-size: 0.8rem;
+  }
+
+  .auswahl-karte {
+    padding: 8px 4px 6px;
+  }
+
+  .auswahl-symbol svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .auswahl-name {
+    font-size: 0.8rem;
+  }
+
+  .auswahl-text {
+    font-size: 0.7rem;
   }
 }
 
@@ -756,9 +1285,27 @@
   .kampf *,
   .kampf-buehne,
   .sudoku-feld.ist-fehlversuch,
-  .slot-walze {
+  .slot-walze,
+  .slot-kasten,
+  .auswahl-kasten,
+  .auswahl-karte {
     animation: none !important;
     transition: none !important;
+  }
+
+  /* Kritischer Treffer: statt eines Blitzes nur kurz eingefärbt */
+  .kampf-blitz.an {
+    opacity: 0.35;
+  }
+
+  .auswahl-karte:hover,
+  .auswahl-karte:focus-visible {
+    transform: none;
+  }
+
+  /* Hinweis steht still in der Mitte */
+  .kampf-banner {
+    transform: translate(-50%, -50%);
   }
 
   /* Aufsteigende Zahlen stehen still und verschwinden nach kurzer Zeit */
