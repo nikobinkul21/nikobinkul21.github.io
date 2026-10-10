@@ -49,6 +49,10 @@
   /* Meldungen */
   --sudoku-erfolg-farbe: #1a7f37;
 
+  /* Fertige Ziffern im Zahlenfeld (alle 9 richtig gesetzt) */
+  --sudoku-fertig-haken-farbe: #1a7f37;    /* Farbe des Hakens */
+  --sudoku-fertig-deckkraft: 0.4;          /* wie stark die Ziffer ausgegraut ist (1 = gar nicht) */
+
   /* Erfolgsanimationen (siehe Abschnitt "ERFOLGSANIMATIONEN" weiter unten) */
   --sudoku-effekt-farbe: #4f6ef7;                     /* Farbe von Zahl und Rand beim Aufleuchten */
   --sudoku-effekt-schein: rgba(79, 110, 247, 0.22);   /* Einfärbung des Felds */
@@ -76,6 +80,7 @@
   --sudoku-fehler-hintergrund: #47262a;
 
   --sudoku-erfolg-farbe: #56d364;
+  --sudoku-fertig-haken-farbe: #56d364;
 
   --sudoku-effekt-farbe: #a3b5ff;
   --sudoku-effekt-schein: rgba(123, 147, 255, 0.26);
@@ -419,8 +424,45 @@
   cursor: pointer;
 }
 
-.sudoku-taste:hover {
+.sudoku-taste:hover:not(:disabled) {
   border-color: var(--farbe-akzent);
+}
+
+/* Ziffer ist überall richtig gesetzt: ausgegraut + grüner Haken.
+   Die Taste wird selbst NICHT durchsichtig, nur die Ziffer darin –
+   so bleibt der Haken kräftig. */
+.sudoku-taste {
+  position: relative;               /* Bezugspunkt für den Haken */
+}
+
+.sudoku-taste.ist-fertig {
+  color: transparent;               /* die Ziffer selbst ausblenden … */
+  cursor: default;
+  box-shadow: none;
+}
+
+/* … und stattdessen blass neu zeichnen (data-ziffer = die Ziffer der Taste) */
+.sudoku-taste.ist-fertig::before {
+  content: attr(data-ziffer);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--farbe-text);
+  opacity: var(--sudoku-fertig-deckkraft);
+}
+
+/* Der grüne Haken oben rechts in der Ecke */
+.sudoku-taste.ist-fertig::after {
+  content: "✓";
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  font-size: 0.85em;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--sudoku-fertig-haken-farbe);
 }
 
 .sudoku-taste:active {

@@ -192,6 +192,36 @@ function initSudoku(container) {
     }
 
     brett.classList.toggle("ist-geloest", spiel.geloest);
+
+    zeichneZahlenfeld();
+  }
+
+  /**
+   * Hakt im Zahlenfeld jede Ziffer ab, die schon an ALLEN 9 Stellen
+   * richtig im Gitter steht: Taste ausgegraut + grüner Haken (siehe CSS).
+   * Wird eine davon wieder gelöscht, ist die Taste wieder normal.
+   */
+  function zeichneZahlenfeld() {
+    // Für jede Ziffer zählen, wie oft sie RICHTIG eingetragen ist
+    const richtig = new Array(10).fill(0);
+    for (let i = 0; i < 81; i++) {
+      const wert = wertVon(i);
+      if (wert !== 0 && wert === spiel.loesung[i]) {
+        richtig[wert]++;
+      }
+    }
+
+    for (let ziffer = 1; ziffer <= 9; ziffer++) {
+      const taste = zahlenfeld.querySelector('[data-ziffer="' + ziffer + '"]');
+      const fertig = richtig[ziffer] === 9;
+      taste.classList.toggle("ist-fertig", fertig);
+      // disabled: Die Taste ist nicht mehr anklickbar – es gibt für die
+      // Ziffer ja keinen freien Platz mehr
+      taste.disabled = fertig;
+      taste.setAttribute("aria-label", fertig
+        ? "Ziffer " + ziffer + ": alle gesetzt"
+        : "Ziffer " + ziffer + " eintragen");
+    }
   }
 
 
