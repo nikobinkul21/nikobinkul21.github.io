@@ -42,11 +42,28 @@ const SudokuKampf = (function () {
     return warte(ms).then(function () { element.classList.remove(klasse); });
   }
 
-  // Pixel-Herz als SVG (7 × 6 "Pixel", harte Kanten)
-  const HERZ_SVG =
-    '<svg viewBox="0 0 7 6" aria-hidden="true" shape-rendering="crispEdges">' +
-      '<path d="M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z"/>' +
-    "</svg>";
+  /* ------------------------------------------------------------------------
+     SYMBOLE als kleine Pixel-SVGs (harte Kanten). Werden im Kampffenster
+     UND auf den Power-up-Feldern im Gitter benutzt (sudoku-ui.js).
+     Neuer Power-up-Typ mit neuem Symbol? Hier ein weiteres Symbol ergänzen
+     und in SUDOKU_RPG_KONFIG.powerupTypen den Namen eintragen.
+     ------------------------------------------------------------------------ */
+  const SYMBOLE = {
+    herz: '<path d="M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z"/>',
+    muenze: '<path d="M2 0h3v1h1v1h1v3H6v1H5v1H2V6H1V5H0V2h1V1h1z"/><path fill="rgba(255,255,255,.55)" d="M3 2h1v3H3z"/>',
+    tropfen: '<path d="M3 0h1v1h1v2h1v3H5v1H2V6H1V3h1V1h1z"/><path fill="rgba(255,255,255,.55)" d="M2 4h1v1H2z"/>',
+    stern: '<path d="M3 0h1v2h3v1H6v1h1v3H6V6H5V5H2v1H1v1H0V4h1V3H0V2h3z"/>',
+    blitz: '<path d="M3 0h3v2H5v1h2v1H6v1H5v1H4v1H3V5h1V4H1V3h1V2h1z"/>',
+  };
+
+  /** Ein Symbol als fertiges SVG (Farbe kommt über CSS: fill). */
+  function symbolSvg(name) {
+    return '<svg viewBox="0 0 7 7" aria-hidden="true" shape-rendering="crispEdges">' +
+      (SYMBOLE[name] || SYMBOLE.stern) + "</svg>";
+  }
+
+  // Das Herz für die Lebensanzeige
+  const HERZ_SVG = symbolSvg("herz");
 
 
   /**
@@ -73,7 +90,12 @@ const SudokuKampf = (function () {
           '<div class="kampf-figur kampf-figur--held"><canvas class="kampf-held"></canvas></div>' +
           '<div class="kampf-info kampf-info--held">' +
             '<div class="kampf-herzen" role="img"></div>' +
-            '<div class="kampf-wuerfel" role="img"><span class="kampf-wuerfel-zahl">–</span></div>' +
+            '<div class="kampf-info-zeile">' +
+              // Münzstand mit Münzsymbol
+              '<div class="kampf-muenzen" role="img">' + symbolSvg("muenze") +
+                '<span class="kampf-muenzen-zahl">0</span></div>' +
+              '<div class="kampf-wuerfel" role="img"><span class="kampf-wuerfel-zahl">–</span></div>' +
+            "</div>" +
           "</div>" +
           // Ebene für aufsteigende Schadenszahlen
           '<div class="kampf-effekte" aria-hidden="true"></div>' +
@@ -100,6 +122,9 @@ const SudokuKampf = (function () {
       wuerfel: container.querySelector(".kampf-wuerfel"),
       wuerfelZahl: container.querySelector(".kampf-wuerfel-zahl"),
       effekte: container.querySelector(".kampf-effekte"),
+      buehne: container.querySelector(".kampf-buehne"),
+      muenzen: container.querySelector(".kampf-muenzen"),
+      muenzenZahl: container.querySelector(".kampf-muenzen-zahl"),
       text: container.querySelector(".kampf-text"),
       rekord: container.querySelector(".kampf-rekord"),
     };
@@ -112,7 +137,8 @@ const SudokuKampf = (function () {
 
     // Was gerade ANGEZEIGT wird (kann wegen der Warteschlange kurz hinter
     // dem echten Spielstand liegen)
-    const anzeige = { bossNummer: 0, maxFehler: 3 };
+    const anzeige = { bossNummer: 0, muenzen: 0 };
+    const K = SudokuRPG.KONFIG;
 
     /* ---------- Warteschlange ---------- */
     let kette = Promise.resolve();
@@ -142,11 +168,15 @@ const SudokuKampf = (function () {
       el.hpBalken.setAttribute("aria-label", "HP " + Math.max(0, hp) + " von " + maxHp);
     }
 
-    function zeigeHerzen(verbleibend, max) {
-      anzeige.maxFehler = max;
-      if (el.herzen.children.length !== max) {
+    /**
+     * Leben als Herzen. Es gibt immer mindestens so viele Plätze wie
+     * Startleben (verlorene sind leer), bei mehr Leben entsprechend mehr.
+     */
+    function zeigeHerzen(leben) {
+      const plaetze = Math.max(K.startLeben, leben);
+      if (el.herzen.children.length !== plaetze) {
         el.herzen.innerHTML = "";
-        for (let i = 0; i < max; i++) {
+        for (let i = 0; i < plaetze; i++) {
           const herz = document.createElement("span");
           herz.className = "kampf-herz";
           herz.innerHTML = HERZ_SVG;
@@ -154,9 +184,36 @@ const SudokuKampf = (function () {
         }
       }
       Array.from(el.herzen.children).forEach(function (herz, i) {
-        herz.classList.toggle("ist-leer", i >= verbleibend);
+        herz.classList.toggle("ist-leer", i >= leben);
       });
-      el.herzen.setAttribute("aria-label", verbleibend + " von " + max + " Herzen");
+      el.herzen.setAttribute("aria-label", leben + (leben === 1 ? " Leben" : " Leben") + " (höchstens " + K.maxLeben + ")");
+    }
+
+    /**
+     * Münzstand. animiert = true: Der Zähler zählt in kleinen Schritten hoch.
+     */
+    function zeigeMuenzen(ziel, animiert) {
+      const start = anzeige.muenzen;
+      anzeige.muenzen = ziel;
+      el.muenzen.setAttribute("aria-label", ziel + " Münzen");
+      if (!animiert || ohneBewegung() || ziel <= start) {
+        el.muenzenZahl.textContent = ziel;
+        return Promise.resolve();
+      }
+      return new Promise(function (fertig) {
+        const dauer = 420;
+        const t0 = performance.now();
+        function schritt(jetzt) {
+          const anteil = Math.min(1, (jetzt - t0) / dauer);
+          el.muenzenZahl.textContent = Math.round(start + (ziel - start) * anteil);
+          if (anteil < 1) {
+            requestAnimationFrame(schritt);
+          } else {
+            fertig();
+          }
+        }
+        requestAnimationFrame(schritt);
+      });
     }
 
     function zeigeWurf(zahl) {
@@ -173,9 +230,12 @@ const SudokuKampf = (function () {
       el.text.textContent = text;
     }
 
-    /** Aufsteigende Zahl über dem Boss (Schaden) oder dem Helden. */
+    /**
+     * Aufsteigende Zahl: Schaden über dem Boss, Gift, Münzen am Münzzähler.
+     * Bei "Bewegung reduzieren" erscheint sie nur kurz an Ort und Stelle.
+     * @param {string} ziel – "boss", "doppelt", "gift" oder "muenzen"
+     */
     function schwebeZahl(text, ziel) {
-      if (ohneBewegung()) return;
       const zahl = document.createElement("span");
       zahl.className = "kampf-schwebezahl kampf-schwebezahl--" + ziel;
       zahl.textContent = text;
@@ -188,19 +248,38 @@ const SudokuKampf = (function () {
 
     /**
      * Zeigt einen Stand SOFORT (ohne Animation) – z. B. nach dem Laden.
-     * @param {object} stand – { boss, hp, fehler, maxFehler, rekord }
+     * @param {object} stand – { boss, hp, leben, muenzen, rekord }
      */
     function zeigeStand(stand) {
       return einreihen(function () {
         zeigeBoss(stand.boss);
         zeigeHp(stand.hp, stand.boss.maxHp);
-        zeigeHerzen(stand.maxFehler - stand.fehler, stand.maxFehler);
+        zeigeHerzen(stand.leben);
+        zeigeMuenzen(stand.muenzen, false);
         zeigeRekord(stand.boss, stand.rekord);
         el.bossFigur.classList.remove("ist-besiegt");
       });
     }
 
-    /** Richtige Zahl: würfeln, zuschlagen, Boss getroffen, HP sinken. */
+    /** Fasst in einem Satz zusammen, was eine richtige Zahl bewirkt hat. */
+    function trefferText(e) {
+      const teile = [];
+      teile.push(e.doppelt
+        ? "Doppelter Schaden! Wurf " + e.wurf + " × " + K.doppelschadenFaktor + " = " + e.schaden + "."
+        : "Treffer! Wurf " + e.wurf + " – " + e.schaden + " Schaden.");
+      if (e.gift > 0) teile.push("Gift: " + e.gift + " extra.");
+      if (e.powerup && e.lebenGewuenscht > 0) {
+        teile.push(e.lebenPlus > 0 ? "+" + e.lebenPlus + " Leben!" : "Leben schon voll (" + K.maxLeben + ").");
+      }
+      if (e.powerup && e.powerup.typ === "gold") teile.push("Goldfeld!");
+      teile.push("+" + e.muenzenPlus + (e.muenzenPlus === 1 ? " Münze." : " Münzen."));
+      return teile.join(" ");
+    }
+
+    /**
+     * Richtige Zahl: würfeln, zuschlagen, Schaden (ggf. doppelt), Gift,
+     * Münzen, Leben – kurz nacheinander.
+     */
     function treffer(e) {
       return einreihen(function () {
         zeigeBoss(e.boss);
@@ -209,7 +288,7 @@ const SudokuKampf = (function () {
         if (!ohneBewegung()) {
           el.wuerfel.classList.add("rollt");
           const zufallsAnzeige = setInterval(function () {
-            el.wuerfelZahl.textContent = 1 + Math.floor(Math.random() * SudokuRPG.KONFIG.wuerfelSeiten);
+            el.wuerfelZahl.textContent = 1 + Math.floor(Math.random() * K.wuerfelSeiten);
           }, 55);
           wuerfeln = warte(DAUER.wuerfeln).then(function () {
             clearInterval(zufallsAnzeige);
@@ -221,24 +300,56 @@ const SudokuKampf = (function () {
           // 2. Held schlägt zu
           return animiere(el.heldFigur, "schlaegt", DAUER.schlag);
         }).then(function () {
-          // 3. Boss blinkt, Schaden steigt auf, HP sinken
-          schwebeZahl("−" + e.schaden, "boss");
-          zeigeHp(e.hpNachher, e.boss.maxHp);
-          meldung("Treffer! Wurf " + e.wurf + " – " + e.schaden + " Schaden.");
+          // 3. Der Treffer: Schadenszahl, Boss blinkt, HP sinken.
+          //    Doppelschaden: größere Zahl in eigener Farbe, Fenster wackelt,
+          //    Boss blitzt stärker auf.
+          meldung(trefferText(e));
+          schwebeZahl("−" + e.schaden, e.doppelt ? "doppelt" : "boss");
+          zeigeHp(e.hpNachSchaden, e.boss.maxHp);
+          if (e.doppelt) {
+            animiere(el.buehne, "wackelt", 360);
+            return animiere(el.bossFigur, "getroffen-stark", DAUER.treffer);
+          }
           return animiere(el.bossFigur, "getroffen", DAUER.treffer);
+        }).then(function () {
+          // 4. Gift (grünes Power-up): eigene grüne Zahl, Boss kurz grün
+          if (e.gift <= 0) return null;
+          schwebeZahl("−" + e.gift, "gift");
+          zeigeHp(e.hpNachher, e.boss.maxHp);
+          return faerbe(el.bossFigur, "vergiftet", 520);
+        }).then(function () {
+          // 5. Münzen und Leben
+          schwebeZahl("+" + e.muenzenPlus, "muenzen");
+          if (e.lebenPlus > 0) {
+            zeigeHerzen(e.leben);
+            const neuesHerz = el.herzen.children[e.leben - 1];
+            if (neuesHerz) animiere(neuesHerz, "verschwindet", 400);   // kurzes "Aufpoppen"
+          }
+          return zeigeMuenzen(e.muenzen, true);
         });
       });
     }
 
-    /** Falsche Zahl: Boss greift an, ein Herz verschwindet. */
+    /**
+     * Färbt ein Element kurz um (z. B. Boss grün bei Gift). Anders als
+     * animiere() auch bei "Bewegung reduzieren" – es ist nur eine Farbe.
+     */
+    function faerbe(element, klasse, ms) {
+      element.classList.add(klasse);
+      return new Promise(function (fertig) {
+        setTimeout(function () { element.classList.remove(klasse); fertig(); }, ms);
+      });
+    }
+
+    /** Falsche Zahl: Boss greift an, ein Leben (Herz) geht verloren. */
     function fehler(e) {
       return einreihen(function () {
-        const rest = e.maxFehler - e.fehler;
+        const rest = e.leben;
         meldung(e.boss.name + " greift an! Falsche Zahl – " +
-          (rest === 0 ? "keine Herzen mehr." : "noch " + rest + (rest === 1 ? " Herz." : " Herzen.")));
+          (rest === 0 ? "keine Leben mehr." : "noch " + rest + (rest === 1 ? " Leben." : " Leben.")));
         const angriff = animiere(el.bossFigur, "greift-an", DAUER.angriff);
         return warte(DAUER.angriff / 2).then(function () {
-          zeigeHerzen(rest, e.maxFehler);
+          zeigeHerzen(rest);
           const herz = el.herzen.children[rest];
           if (herz) animiere(herz, "verschwindet", 400);
           animiere(el.heldFigur, "wird-getroffen", 300);
@@ -260,13 +371,13 @@ const SudokuKampf = (function () {
       });
     }
 
-    /** Der nächste Boss erscheint (volle HP, Herzen wieder voll). */
+    /** Der nächste Boss erscheint (volle HP, Leben aufgefüllt). */
     function neuerBoss(e, rekord) {
       return einreihen(function () {
         el.bossFigur.classList.remove("ist-besiegt");
         zeigeBoss(e.boss);
         zeigeHp(e.hp, e.boss.maxHp);
-        zeigeHerzen(anzeige.maxFehler, anzeige.maxFehler);
+        zeigeHerzen(e.leben);
         zeigeRekord(e.boss, rekord);
         meldung("Boss " + e.boss.nummer + ": " + e.boss.name + " erscheint! (" + e.boss.maxHp + " HP)");
         return animiere(el.bossFigur, "erscheint", DAUER.erscheinen);
@@ -356,7 +467,7 @@ const SudokuKampf = (function () {
     function niederlage(rahmen, e) {
       return einreihen(function () {
         meldung("Niederlage gegen " + e.boss.name + " …");
-        zeigeHerzen(0, anzeige.maxFehler);
+        zeigeHerzen(0);
         return animiere(el.heldFigur, "faellt", 500);
       }).then(function () {
         return new Promise(function (weiter) {
@@ -390,6 +501,7 @@ const SudokuKampf = (function () {
 
     return {
       zeigeStand: zeigeStand,
+      zeigeMuenzen: zeigeMuenzen,
       zeigeWurf: zeigeWurf,
       treffer: treffer,
       fehler: fehler,
@@ -404,5 +516,6 @@ const SudokuKampf = (function () {
 
   return {
     erstelle: erstelle,
+    symbolSvg: symbolSvg,
   };
 })();

@@ -36,6 +36,16 @@
   --kampf-wuerfel: #6c4bd8;
   --kampf-schaden: #ffffff;
   --kampf-schaden-rand: #c0182c;
+  --kampf-doppelt: #29d3ff;                /* Doppelschaden: kräftiges Cyan */
+  --kampf-doppelt-rand: #0b2a6b;
+  --kampf-gift: #5fe36f;                   /* Giftschaden (grünes Power-up) */
+  --kampf-gift-rand: #145a24;
+  --kampf-muenze: #e6b422;                 /* Münzsymbol und "+N" */
+  --kampf-muenze-rand: #6b4a00;
+
+  /* Power-up-Felder im Gitter (Farbe je Typ kommt aus SUDOKU_RPG_KONFIG) */
+  --powerup-toenung: 26%;                  /* wie stark das Feld eingefärbt wird */
+  --powerup-symbol-groesse: 34%;           /* Symbol in der Ecke, relativ zum Feld */
 
   /* Falsche Zahl im Gitter */
   --sudoku-fehlversuch: #e0483f;
@@ -253,8 +263,36 @@
   right: 4%;
   bottom: 6%;
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* Münzen und Würfel nebeneinander unter den Herzen */
+.kampf-info-zeile {
+  display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.kampf-muenzen {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.kampf-muenzen svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  fill: var(--kampf-muenze);
+}
+
+.kampf-muenzen-zahl {
+  min-width: 2ch;
 }
 
 .kampf-name {
@@ -365,6 +403,33 @@
   right: 14%;
 }
 
+/* Doppelschaden: deutlich größer, eigene Farbe */
+.kampf-schwebezahl--doppelt {
+  top: 16%;
+  right: 10%;
+  font-size: 2.3rem;
+  color: var(--kampf-doppelt);
+  -webkit-text-stroke: 3px var(--kampf-doppelt-rand);
+}
+
+/* Gift: grüne Zahl etwas tiefer, damit sie die Schadenszahl nicht verdeckt */
+.kampf-schwebezahl--gift {
+  top: 36%;
+  right: 6%;
+  font-size: 1.25rem;
+  color: var(--kampf-gift);
+  -webkit-text-stroke: 2px var(--kampf-gift-rand);
+}
+
+/* Münzen: steigt über dem Münzzähler auf */
+.kampf-schwebezahl--muenzen {
+  right: 14%;
+  bottom: 30%;
+  font-size: 1.05rem;
+  color: var(--kampf-muenze);
+  -webkit-text-stroke: 2px var(--kampf-muenze-rand);
+}
+
 /* Textbox wie in klassischen Rollenspielen */
 .kampf-text {
   min-height: 2.9em;
@@ -418,6 +483,27 @@
 .kampf-figur--boss.erscheint { animation: kampf-erscheinen 0.45s ease-out; }
 .kampf-herz.verschwindet { animation: kampf-herz-weg 0.4s ease-out; }
 .kampf-wuerfel.rollt { animation: kampf-rollen 0.38s linear; }
+.kampf-figur--boss.getroffen-stark { animation: kampf-getroffen-stark 0.42s steps(1, end); }
+.kampf-buehne.wackelt { animation: kampf-buehne-wackeln 0.36s linear; }
+
+/* Gift: Boss kurz grün eingefärbt (nur Farbe – auch bei "Bewegung reduzieren") */
+.kampf-figur--boss.vergiftet canvas {
+  filter: sepia(1) hue-rotate(65deg) saturate(4) brightness(0.95);
+}
+
+@keyframes kampf-getroffen-stark {
+  0%, 50%  { filter: brightness(3.2) saturate(0.3); transform: translateX(7px) scale(1.06); }
+  25%, 75% { filter: brightness(1.6); transform: translateX(-7px); }
+  100%     { filter: none; transform: none; }
+}
+
+@keyframes kampf-buehne-wackeln {
+  0%, 100% { transform: none; }
+  20% { transform: translate(-6px, 2px); }
+  40% { transform: translate(5px, -3px); }
+  60% { transform: translate(-4px, 2px); }
+  80% { transform: translate(3px, -1px); }
+}
 
 @keyframes kampf-schlag {
   0%   { transform: none; }
@@ -610,12 +696,81 @@
   }
 }
 
-/* Bewegung reduzieren: Sicherheitshalber alle Kampf-Animationen aus */
+
+/* ==========================================================================
+   POWER-UP-FELDER IM GITTER (nur im Abenteuer)
+   sudoku-ui.js hängt in das Feld eine Ebene .sudoku-powerup mit Symbol
+   und setzt --powerup-farbe auf die Farbe des Typs.
+   ========================================================================== */
+
+.sudoku-powerup {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* Glas-Stil: farbige Tönung, oben ein heller Lichtschein */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 55%),
+    color-mix(in srgb, var(--powerup-farbe) var(--powerup-toenung), transparent);
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--powerup-farbe) 70%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Die Zahl liegt über der Tönung und bleibt gut lesbar */
+.sudoku-feld.hat-powerup .sudoku-ziffer {
+  position: relative;
+  z-index: 1;
+}
+
+.sudoku-powerup svg {
+  position: absolute;
+  top: 6%;
+  right: 6%;
+  width: var(--powerup-symbol-groesse);
+  height: var(--powerup-symbol-groesse);
+  fill: var(--powerup-farbe);
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.55));
+}
+
+/* Ausgelöst: Ebene leuchtet auf, wächst und verschwindet */
+.sudoku-powerup.loest-aus {
+  animation: sudoku-powerup-weg 0.5s ease-out forwards;
+}
+
+@keyframes sudoku-powerup-weg {
+  0%   { opacity: 1; transform: scale(1); filter: brightness(1); }
+  35%  { opacity: 1; transform: scale(1.18); filter: brightness(1.8); }
+  100% { opacity: 0; transform: scale(1.35); filter: brightness(2); }
+}
+
+:root[data-theme="dark"] .sudoku-powerup {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%),
+    color-mix(in srgb, var(--powerup-farbe) calc(var(--powerup-toenung) + 6%), transparent);
+}
+
+
+/* Bewegung reduzieren: keine Bewegung, kein Wackeln – Zahlen und Farben bleiben */
 @media (prefers-reduced-motion: reduce) {
   .kampf *,
+  .kampf-buehne,
   .sudoku-feld.ist-fehlversuch,
   .slot-walze {
     animation: none !important;
     transition: none !important;
+  }
+
+  /* Aufsteigende Zahlen stehen still und verschwinden nach kurzer Zeit */
+  .kampf-schwebezahl {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Ausgelöstes Power-up: verblasst nur (Farbe), ohne zu wachsen */
+  .sudoku-powerup.loest-aus {
+    animation: none;
+    opacity: 0.35;
+    filter: brightness(1.8);
   }
 }

@@ -134,7 +134,8 @@ const EinstellungenAnsicht = (function () {
         if (!geprueft.ok) return { ok: false, fehler: geprueft.fehler };
         abenteuer = { vorhanden: true, daten: geprueft.daten };
         abenteuerText = "• Sudoku-Abenteuer: Boss " + geprueft.daten.bossNummer +
-          ", Rekord " + geprueft.daten.rekord + "\n";
+          ", Rekord " + geprueft.daten.rekord +
+          ", " + geprueft.daten.muenzen + " Münzen\n";
       }
     }
 

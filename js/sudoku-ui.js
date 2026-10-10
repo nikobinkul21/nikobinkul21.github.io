@@ -222,7 +222,8 @@ function initSudoku(container) {
     const stand = SudokuRPG.alsObjekt();
     modiAuswahl.querySelector(".sudoku-modus-stand").textContent = stand
       ? "Weiter bei Boss " + stand.bossNummer + " (" + SudokuRPG.bossInfo(stand.bossNummer).name + ")" +
-        (stand.rekord > 0 ? " · Rekord: " + stand.rekord : "")
+        (stand.rekord > 0 ? " · Rekord: " + stand.rekord : "") +
+        (stand.muenzen > 0 ? " · " + stand.muenzen + " Münzen" : "")
       : "Neues Abenteuer beginnen";
     const frei = sudokuSpielstandLesen();
     modiAuswahl.querySelector(".sudoku-modus-stand--frei").textContent =
@@ -291,12 +292,61 @@ function initSudoku(container) {
       beschreibung += wert === 0 ? "leer" : wert;
       if (istVorgabe) beschreibung += ", vorgegeben";
       if (istFalsch) beschreibung += ", falsch";
+      const powerup = powerupTypAuf(i);
+      if (powerup) beschreibung += ", Power-up: " + powerup.name;
       feld.setAttribute("aria-label", beschreibung);
+      zeichnePowerup(feld, powerup);
     }
 
     brett.classList.toggle("ist-geloest", spiel.geloest);
 
     zeichneZahlenfeld();
+  }
+
+  /**
+   * Power-up-Typ auf Feld i (nur im Abenteuer, sonst null).
+   * Die Liste steht im Rätsel des Abenteuers (siehe js/sudoku-rpg.js).
+   */
+  function powerupTypAuf(i) {
+    if (modus !== "abenteuer" || !spiel.powerups) return null;
+    const eintrag = spiel.powerups.find(function (p) { return p.index === i; });
+    return eintrag ? SudokuRPG.powerupTyp(eintrag.typ) : null;
+  }
+
+  /**
+   * Getönte Glas-Ebene mit Symbol im Feld anlegen oder entfernen.
+   * Eine Ebene, die gerade ihre Auslöse-Animation zeigt, bleibt bis zum Ende stehen.
+   */
+  function zeichnePowerup(feld, typ) {
+    let ebene = feld.querySelector(".sudoku-powerup");
+    if (ebene && ebene.classList.contains("loest-aus")) return;
+    feld.classList.toggle("hat-powerup", Boolean(typ));
+    if (!typ) {
+      if (ebene) ebene.remove();
+      return;
+    }
+    if (!ebene) {
+      ebene = document.createElement("span");
+      ebene.className = "sudoku-powerup";
+      ebene.setAttribute("aria-hidden", "true");
+      feld.appendChild(ebene);
+    }
+    if (ebene.dataset.typ !== typ.id) {
+      ebene.dataset.typ = typ.id;
+      ebene.style.setProperty("--powerup-farbe", typ.farbe);
+      ebene.innerHTML = SudokuKampf.symbolSvg(typ.symbol);
+    }
+  }
+
+  /** Ausgelöstes Power-up: Markierung leuchtet kurz auf und verschwindet. */
+  function loesePowerupAus(index) {
+    const ebene = felder[index].querySelector(".sudoku-powerup");
+    if (!ebene) return;
+    ebene.classList.add("loest-aus");
+    setTimeout(function () {
+      ebene.remove();
+      felder[index].classList.remove("hat-powerup");
+    }, 500);
   }
 
   /**
@@ -491,8 +541,8 @@ function initSudoku(container) {
 
   function standFuerAnzeige() {
     const z = abenteuer.zustand;
-    return { boss: abenteuer.boss(), hp: z.bossHp, fehler: z.fehler,
-      maxFehler: SudokuRPG.KONFIG.maxFehler, rekord: z.rekord };
+    return { boss: abenteuer.boss(), hp: z.bossHp, leben: z.leben,
+      muenzen: z.muenzen, rekord: z.rekord };
   }
 
   function zeigeAbenteuerGrad() {
@@ -543,6 +593,7 @@ function initSudoku(container) {
 
     if (ergebnis.art === "richtig") {
       const nachher = aktuellesGitter();
+      if (ergebnis.powerup) loesePowerupAus(index);   // vor zeichne(): Ebene bleibt für die Animation
       zeichne();
       if (ergebnis.geloest) {
         // Große Welle über das Gitter, danach neue Schwierigkeit auslosen
@@ -595,7 +646,8 @@ function initSudoku(container) {
   }
 
   function abenteuerZuruecksetzen() {
-    if (!window.confirm("Abenteuer wirklich zurücksetzen? Du beginnst wieder bei Boss 1, dein Rekord wird gelöscht.")) {
+    if (!window.confirm("Abenteuer wirklich zurücksetzen? Du beginnst wieder bei Boss 1 mit " + SudokuRPG.KONFIG.startLeben +
+      " Leben – Rekord und Münzen werden gelöscht.")) {
       return;
     }
     abenteuer.zuruecksetzen();
