@@ -529,7 +529,15 @@ function initSudoku(container) {
     }
 
     // Auf die Regeln hören → Kampffenster und Gitter reagieren
-    abenteuer.an("richtig", function (e) { if (abenteuer === diesesAbenteuer) kampf.treffer(e); });
+    abenteuer.an("richtig", function (e) {
+      if (abenteuer !== diesesAbenteuer) return;
+      // Für die Belohnungszeilen im Panel: Werte zum Zeitpunkt des Treffers
+      e.werte = diesesAbenteuer.werte();
+      kampf.treffer(e);
+    });
+    // Das Power-up-Ereignis kommt direkt nach "richtig" – seine Wirkung
+    // (z. B. +10 Münzen) gehört zum selben Treffer
+    abenteuer.an("powerup", function (e) { e.treffer.powerupEffekt = e.effekt; });
     abenteuer.an("fehler", function (e) { if (abenteuer === diesesAbenteuer) kampf.fehler(e); });
     abenteuer.an("bossBesiegt", function (e) { if (abenteuer === diesesAbenteuer) kampf.sieg(e); });
     abenteuer.an("auswahl", function (e) {
@@ -547,7 +555,7 @@ function initSudoku(container) {
     });
     abenteuer.an("niederlage", function (e) { letzteNiederlage = e; });
     abenteuer.an("sudokuGeloest", function () {
-      if (abenteuer === diesesAbenteuer) kampf.text("Sudoku gelöst! Der Kampf geht mit einem neuen Rätsel weiter.");
+      if (abenteuer === diesesAbenteuer) kampf.text("Sudoku gelöst!");
     });
 
     kampf.zeigeStand(standFuerAnzeige());
@@ -630,7 +638,7 @@ function initSudoku(container) {
       setzeBeschaeftigtAnzeige();
       zeigeStatus("");
       zeigeAbenteuerGrad();
-      kampf.text("Neues Sudoku: " + grad.name + ". Auf in den Kampf!");
+      kampf.text("Neues Sudoku: " + grad.name);
       waehle(ersteLeereZelle(), false);
     });
   }
@@ -643,7 +651,7 @@ function initSudoku(container) {
     }
     if (ziffer === 0 || spiel.eingaben[index] !== 0) {
       // Löschen gibt es im Abenteuer nicht: richtige Zahlen bleiben stehen
-      if (spiel.eingaben[index] !== 0) kampf.text("Richtige Zahlen bleiben stehen – sie haben schon getroffen.");
+      if (spiel.eingaben[index] !== 0) kampf.text("Richtige Zahlen bleiben stehen");
       return;
     }
 
@@ -714,6 +722,7 @@ function initSudoku(container) {
     setzeBeschaeftigtAnzeige();
     kampf.zeigeStand(standFuerAnzeige());
     kampf.zeigeWurf(null);
+    kampf.neuesAbenteuer();
     kampf.text("Ein neues Abenteuer beginnt!");
     if (!beschaeftigt.abenteuer) neuesAbenteuerRaetsel();
   }

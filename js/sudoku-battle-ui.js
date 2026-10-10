@@ -64,6 +64,9 @@ const SudokuKampf = (function () {
     karte: '<path d="M0 1h7v5H0z"/><path fill="rgba(0,0,0,.55)" d="M3 2h1v1H3zM5 2h1v1H5zM4 3h1v1H4zM3 4h1v1H3zM5 4h1v1H5zM1 4h1v1H1z"/>',
     pilz: '<path d="M2 0h3v1h1v1h1v2H0V2h1V1h1z"/><path fill="#f4ead5" d="M2 4h3v3H2z"/><path fill="#fff" d="M2 1h1v1H2zM4 2h1v1H4z"/>',
     magnet: '<path d="M0 0h2v4h3V0h2v5H6v1H5v1H2V6H1V5H0z"/><path fill="#fff" d="M0 0h2v1H0zM5 0h2v1H5z"/>',
+    kreuz: '<path d="M0 0h2v1H0zM5 0h2v1H5zM1 1h2v1H1zM4 1h2v1H4zM2 2h3v1H2zM3 3h1v1H3zM2 4h3v1H2zM1 5h2v1H1zM4 5h2v1H4zM0 6h2v1H0zM5 6h2v1H5z"/>',
+    warnung: '<path d="M3 0h1v1h1v2h1v2h1v2H0V5h1V3h1V1h1z"/><path fill="#fff" d="M3 2h1v2H3zM3 5h1v1H3z"/>',
+    krone: '<path d="M0 1h1v2h1V2h1V0h1v2h1v1h1V1h1v6H0z"/>',
   };
 
   /** Ein Symbol als fertiges SVG (Farbe kommt über CSS: fill). */
@@ -129,8 +132,37 @@ const SudokuKampf = (function () {
           "</div>" +
           '<div class="kampf-verbesserungen" role="list" aria-label="Deine Verbesserungen"></div>' +
         "</div>" +
-        // Textbox mit kurzen Meldungen (wird vorgelesen)
-        '<p class="kampf-text" role="status"></p>' +
+        // Kurze Meldungen für Screenreader (unsichtbar, wird vorgelesen)
+        '<p class="kampf-status nur-vorlesen" role="status"></p>' +
+        // Das Protokoll: letzter Treffer, Belohnung, Verlauf.
+        // Auf schmalen Bildschirmen nur eine kompakte Zeile zum Aufklappen.
+        '<div class="kampf-panel ist-leer">' +
+          '<button type="button" class="panel-kurz" aria-expanded="false">' +
+            '<span class="panel-kurz-titel">Letzter Zug</span>' +
+            '<span class="panel-kurz-schaden">Noch kein Zug</span>' +
+            '<span class="panel-kurz-muenzen"></span>' +
+            '<span class="panel-kurz-pfeil" aria-hidden="true">▾</span>' +
+          "</button>" +
+          '<div class="panel-details">' +
+            '<div class="panel-oben">' +
+              '<p class="panel-hinweis">Setze eine Zahl. Hier siehst du dann, wie dein Schaden entsteht und welche Münzen du bekommst.</p>' +
+              '<section class="panel-block panel-treffer" aria-label="Letzter Treffer">' +
+                '<h3 class="panel-titel">Letzter Treffer</h3>' +
+                '<div class="panel-zeilen"></div>' +
+                '<div class="panel-summe"><span class="panel-label">Gesamt</span><span class="panel-wert"></span></div>' +
+              "</section>" +
+              '<section class="panel-block panel-belohnung" aria-label="Belohnung">' +
+                '<h3 class="panel-titel">Belohnung</h3>' +
+                '<div class="panel-zeilen"></div>' +
+                '<div class="panel-summe"><span class="panel-label">Summe</span><span class="panel-wert"></span></div>' +
+              "</section>" +
+            "</div>" +
+            '<section class="panel-block panel-verlauf" aria-label="Verlauf">' +
+              '<h3 class="panel-titel">Verlauf</h3>' +
+              '<ol class="panel-verlauf-liste"></ol>' +
+            "</section>" +
+          "</div>" +
+        "</div>" +
         '<div class="kampf-fuss">' +
           '<span class="kampf-rekord"></span>' +
           '<button type="button" class="kampf-reset">Abenteuer zurücksetzen</button>' +
@@ -162,7 +194,16 @@ const SudokuKampf = (function () {
       komboZahl: container.querySelector(".kampf-kombo-zahl"),
       komboBonus: container.querySelector(".kampf-kombo-bonus"),
       verbesserungen: container.querySelector(".kampf-verbesserungen"),
-      text: container.querySelector(".kampf-text"),
+      status: container.querySelector(".kampf-status"),
+      panel: container.querySelector(".kampf-panel"),
+      kurz: container.querySelector(".panel-kurz"),
+      kurzSchaden: container.querySelector(".panel-kurz-schaden"),
+      kurzMuenzen: container.querySelector(".panel-kurz-muenzen"),
+      trefferZeilen: container.querySelector(".panel-treffer .panel-zeilen"),
+      trefferSumme: container.querySelector(".panel-treffer .panel-summe"),
+      belohnungZeilen: container.querySelector(".panel-belohnung .panel-zeilen"),
+      belohnungSumme: container.querySelector(".panel-belohnung .panel-summe"),
+      verlauf: container.querySelector(".panel-verlauf-liste"),
       rekord: container.querySelector(".kampf-rekord"),
     };
 
@@ -170,6 +211,12 @@ const SudokuKampf = (function () {
 
     container.querySelector(".kampf-reset").addEventListener("click", function () {
       if (optionen && optionen.beimZuruecksetzen) optionen.beimZuruecksetzen();
+    });
+
+    // Smartphone: Antippen der kompakten Zeile klappt die drei Blöcke auf
+    el.kurz.addEventListener("click", function () {
+      const offen = el.panel.classList.toggle("offen");
+      el.kurz.setAttribute("aria-expanded", String(offen));
     });
 
     // Erklärtexte: Darüberfahren zeigt sie (CSS), Antippen/Klicken klappt sie
@@ -365,12 +412,243 @@ const SudokuKampf = (function () {
     }
 
     function zeigeRekord(boss, rekord) {
-      el.rekord.textContent = "Boss " + boss.nummer + " · Rekord: " +
-        (rekord === 0 ? "noch keiner besiegt" : rekord + (rekord === 1 ? " Boss besiegt" : " Bosse besiegt"));
+      // Kurz, damit die Fußzeile in eine Zeile passt (die Bossnummer steht im Kampffenster)
+      el.rekord.textContent = "Rekord: " + (rekord === 0 ? "noch keiner" : rekord + (rekord === 1 ? " Boss" : " Bosse"));
+      el.rekord.title = "Höchster besiegter Boss";
     }
 
+    /** Kurze Meldung für Screenreader (die sichtbare Darstellung übernimmt das Panel). */
     function meldung(text) {
-      el.text.textContent = text;
+      el.status.textContent = text;
+    }
+
+
+    /* ---------- Das Panel: letzter Treffer, Belohnung, Verlauf ----------
+       Es zeigt immer den NEUESTEN Zug – sofort, ohne auf die Animationen
+       in der Warteschlange zu warten. Aktualisiert wird über spaeter():
+       erst wenn die Regeln alle Ereignisse dieses Zugs gemeldet haben
+       (z. B. "powerup" kommt nach "richtig"), in der richtigen Reihenfolge. */
+
+    const VERLAUF_LAENGE = 5;
+
+    function spaeter(fn) {
+      Promise.resolve().then(fn).catch(function (fehler) { console.error(fehler); });
+    }
+
+    /** Hebt ein Element kurz hervor (nur Farbe – auch bei "Bewegung reduzieren"). */
+    function hervorheben(element) {
+      element.classList.remove("panel-neu");
+      void element.offsetWidth;
+      element.classList.add("panel-neu");
+      clearTimeout(element.hervorhebung);
+      element.hervorhebung = setTimeout(function () { element.classList.remove("panel-neu"); }, 900);
+    }
+
+    /** Eine Zeile "Bezeichnung … Wert" setzen – nur Geändertes wird hervorgehoben. */
+    function setzeZeile(zeile, eintrag, immerHervorheben) {
+      const label = zeile.querySelector(".panel-label");
+      const wert = zeile.querySelector(".panel-wert");
+      const geaendert = label.textContent !== eintrag.label || wert.textContent !== eintrag.wert;
+      label.textContent = eintrag.label;
+      wert.textContent = eintrag.wert;
+      zeile.className = zeile.className.split(" ").filter(function (k) {
+        return k.indexOf("panel-zeile--") !== 0 && k.indexOf("panel-summe--") !== 0;
+      }).join(" ");
+      if (eintrag.art) zeile.classList.add((zeile.classList.contains("panel-summe") ? "panel-summe--" : "panel-zeile--") + eintrag.art);
+      if (eintrag.farbe) zeile.style.setProperty("--zeilen-farbe", eintrag.farbe);
+      else zeile.style.removeProperty("--zeilen-farbe");
+      if (geaendert || immerHervorheben) hervorheben(zeile);
+    }
+
+    /**
+     * Bringt eine Liste von Zeilen auf den neuen Stand. Vorhandene Zeilen
+     * (gleicher key) bleiben stehen und werden nur aktualisiert – so springt nichts.
+     * @param {object[]} eintraege – { key, label, wert, art, farbe }
+     */
+    function setzeZeilen(container, eintraege) {
+      const alte = {};
+      Array.from(container.children).forEach(function (z) { alte[z.dataset.key] = z; });
+      eintraege.forEach(function (eintrag) {
+        let zeile = alte[eintrag.key];
+        if (zeile) {
+          delete alte[eintrag.key];
+        } else {
+          zeile = document.createElement("div");
+          zeile.className = "panel-zeile";
+          zeile.dataset.key = eintrag.key;
+          zeile.innerHTML = '<span class="panel-label"></span><span class="panel-wert"></span>';
+        }
+        setzeZeile(zeile, eintrag, false);
+        container.appendChild(zeile);         // bringt die Zeilen in die richtige Reihenfolge
+      });
+      Object.keys(alte).forEach(function (key) { alte[key].remove(); });
+    }
+
+    /**
+     * Zeigt einen Zug im Panel.
+     * @param {object} zug – { treffer: [Zeilen], schaden: {wert, art},
+     *                         belohnung: [Zeilen], muenzen: {wert, art},
+     *                         kurz: {schaden, schadenArt, muenzen} }
+     */
+    function zeigeZug(zug) {
+      el.panel.classList.remove("ist-leer");
+      setzeZeilen(el.trefferZeilen, zug.treffer);
+      setzeZeile(el.trefferSumme, zug.schaden, true);
+      setzeZeilen(el.belohnungZeilen, zug.belohnung);
+      setzeZeile(el.belohnungSumme, zug.muenzen, true);
+      el.kurzSchaden.textContent = zug.kurz.schaden;
+      el.kurzSchaden.dataset.art = zug.kurz.schadenArt || "";
+      el.kurzMuenzen.textContent = zug.kurz.muenzen;
+      el.kurzMuenzen.dataset.art = zug.kurz.muenzenArt || "";
+      hervorheben(el.kurz);
+    }
+
+    /**
+     * Neuer Eintrag oben im Verlauf; der älteste fällt nach fünf Einträgen weg.
+     * @param {object} e – { text, wert, art, symbol, farbe }
+     */
+    function verlaufEintrag(e) {
+      const li = document.createElement("li");
+      li.className = "panel-eintrag" + (e.art ? " panel-eintrag--" + e.art : "");
+      if (e.farbe) li.style.setProperty("--zeilen-farbe", e.farbe);
+      li.innerHTML = '<span class="panel-symbol">' + (e.symbol ? symbolSvg(e.symbol) : "") + "</span>" +
+        '<span class="panel-eintrag-text"></span><span class="panel-eintrag-wert"></span>';
+      li.querySelector(".panel-eintrag-text").textContent = e.text;
+      li.querySelector(".panel-eintrag-wert").textContent = e.wert || "";
+      el.verlauf.insertBefore(li, el.verlauf.firstChild);
+      while (el.verlauf.children.length > VERLAUF_LAENGE) el.verlauf.lastChild.remove();
+      hervorheben(li);
+    }
+
+    /** Name eines Schwierigkeitsgrads → seine id (für die Zeile "Schwierigkeit"). */
+    function gradMitName(name) {
+      return SudokuEngine.SCHWIERIGKEITSGRADE.find(function (g) { return g.name === name; });
+    }
+
+    /**
+     * Die Schadensrechnung als Zeilen. Gelesen wird aus rechnung.schritte –
+     * so erscheinen genau die Stufen, die bei diesem Treffer gewirkt haben
+     * (auch solche aus Erweiterungen).
+     */
+    function rechnungsZeilen(e) {
+      const zeilen = [];
+      e.rechnung.schritte.forEach(function (schritt, i) {
+        const teil = /^(.*) (\S+)$/.exec(schritt);
+        const name = teil ? teil[1] : schritt;
+        const wert = teil ? teil[2] : "";
+        const grad = gradMitName(name);
+        if (name === "Wurf") {
+          zeilen.push({ key: "wurf", label: "Wurf", wert: wert });
+        } else if (name === "Kritisch") {
+          zeilen.push({ key: "kritisch", label: "Kritisch", wert: wert, art: "kritisch" });
+        } else if (schritt === "Fehlschlag") {
+          zeilen.push({ key: "fehlschlag", label: "Fehlschlag", wert: "×0", art: "daneben" });
+        } else if (name === "Zuschlag") {
+          zeilen.push({ key: "zuschlag", label: "Zuschlag", wert: wert });
+        } else if (name === "Kombo") {
+          zeilen.push({ key: "kombo", label: "Kombo", wert: wert });
+        } else if (grad) {
+          zeilen.push({ key: "schwierigkeit", label: "Schwierigkeit",
+            wert: "+" + Math.round(SudokuRPG.belohnung(grad.id).schadensBonus * 100) + " %" });
+        } else if (name === "Doppelt") {
+          zeilen.push({ key: "doppelt", label: "Doppelschaden", wert: wert, art: "doppelt" });
+        } else if (e.eigenheit && name === e.eigenheit.name) {
+          zeilen.push({ key: "eigenheit", label: name, wert: wert, art: "eigenheit", farbe: e.eigenheit.farbe });
+        } else {
+          zeilen.push({ key: "schritt" + i, label: name, wert: wert });
+        }
+      });
+      if (e.gift > 0) zeilen.push({ key: "gift", label: "Gift", wert: "+" + e.gift, art: "gift" });
+      if (e.fehlschlag && e.spruch) zeilen.push({ key: "spruch", label: e.spruch, wert: "", art: "notiz" });
+      return zeilen;
+    }
+
+    /** Münzen dieses Zugs mit Grund, dazu ein gewonnenes Leben. */
+    function belohnungsZeilen(e) {
+      const zeilen = [];
+      const proZahl = e.werte ? e.werte.muenzenProZahl : K.muenzen.proZahl;
+      zeilen.push({ key: "zahl", label: "Zahl", wert: "+" + proZahl });
+      if (e.einheiten.zeile) zeilen.push({ key: "zeile", label: "Zeile", wert: "+" + K.muenzen.proZeileOderSpalte });
+      if (e.einheiten.spalte) zeilen.push({ key: "spalte", label: "Spalte", wert: "+" + K.muenzen.proZeileOderSpalte });
+      if (e.einheiten.block) zeilen.push({ key: "block", label: "Block", wert: "+" + K.muenzen.proBlock });
+      if (e.powerup && e.powerupEffekt && e.powerupEffekt.muenzen > 0) {
+        zeilen.push({ key: "powerup", label: e.powerup.name + "feld", wert: "+" + e.powerupEffekt.muenzen, art: "gold" });
+      }
+      if (e.muenzFaktor !== 1) {
+        zeilen.push({ key: "faktor", label: "Schwierigkeit", wert: "×" + SudokuRPG.zahlText(e.muenzFaktor) });
+      }
+      if (e.lebenPlus > 0) {
+        zeilen.push({ key: "leben", label: "Leben", wert: "+" + e.lebenPlus, art: "leben" });
+      } else if (e.lebenGewuenscht > 0) {
+        zeilen.push({ key: "leben", label: "Leben", wert: "schon voll", art: "daneben" });
+      }
+      return zeilen;
+    }
+
+    function muenzenText(n) {
+      return (n > 0 ? "+" : n < 0 ? "−" : "±") + Math.abs(n);
+    }
+
+    /** Panel und Verlauf nach einer richtigen Zahl. */
+    function protokolliereTreffer(e) {
+      const gesamt = e.schaden + e.gift;
+      const art = e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" : e.eigenheit ? "eigenheit" : e.doppelt ? "doppelt" : "";
+      zeigeZug({
+        treffer: rechnungsZeilen(e),
+        schaden: { label: "Gesamt", wert: String(gesamt), art: art, farbe: e.eigenheit && e.eigenheit.farbe },
+        belohnung: belohnungsZeilen(e),
+        muenzen: { label: "Summe", wert: muenzenText(e.muenzenPlus), art: "gold" },
+        kurz: {
+          schaden: e.fehlschlag ? "Fehlschlag" : e.eigenheit ? "Geblockt" : gesamt + " Schaden",
+          schadenArt: art,
+          muenzen: muenzenText(e.muenzenPlus) + " Münzen",
+        },
+      });
+      if (e.kritisch) {
+        verlaufEintrag({ text: e.doppelt ? "Kritisch und doppelt!" : "Kritischer Treffer", wert: "−" + gesamt, art: "kritisch", symbol: "blitz" });
+      } else if (e.fehlschlag) {
+        verlaufEintrag({ text: "Fehlschlag", wert: "0", art: "daneben", symbol: "kreuz" });
+      } else if (e.eigenheit) {
+        verlaufEintrag({ text: e.eigenheit.name + " blockt", wert: "0", art: "eigenheit", symbol: "warnung", farbe: e.eigenheit.farbe });
+      } else {
+        verlaufEintrag({ text: e.doppelt ? "Doppelschaden" : "Treffer", wert: "−" + gesamt, art: e.doppelt ? "doppelt" : "" });
+      }
+    }
+
+    /** Panel und Verlauf nach einer falschen Zahl. */
+    function protokolliereFehler(e) {
+      const treffer = [{ key: "falsch", label: "Falsche Zahl", wert: "✕", art: "fehler" }];
+      if (e.komboVorher > 0) treffer.push({ key: "kombo", label: "Kombo", wert: e.komboVorher + " → 0", art: "fehler" });
+      if (e.eigenheit && e.hp !== e.hpVorher) {
+        treffer.push({ key: "eigenheit", label: e.eigenheit.name, wert: "+" + (e.hp - e.hpVorher) + " HP", art: "eigenheit", farbe: e.eigenheit.farbe });
+      }
+      const belohnung = [{ key: "leben", label: "Leben", wert: "−1", art: "fehler" }];
+      const verlust = e.muenzen - e.muenzenVorher;
+      if (verlust < 0) {
+        belohnung.push({ key: "dieb", label: e.eigenheit ? e.eigenheit.name : "Verlust", wert: muenzenText(verlust), art: "fehler" });
+      }
+      zeigeZug({
+        treffer: treffer,
+        schaden: { label: "Gesamt", wert: "0", art: "fehler" },
+        belohnung: belohnung,
+        muenzen: { label: "Summe", wert: muenzenText(verlust), art: verlust < 0 ? "fehler" : "" },
+        kurz: { schaden: "Falsche Zahl", schadenArt: "fehler", muenzenArt: "fehler", muenzen: "−1 Leben" + (verlust < 0 ? " · " + muenzenText(verlust) + " Münzen" : "") },
+      });
+      verlaufEintrag({ text: "Falsche Zahl", wert: "−1 Leben", art: "fehler", symbol: "herz" });
+      if (e.eigenheit) {
+        verlaufEintrag({ text: e.eigenheit.name + ": " + e.eigenheit.text, wert: "", art: "eigenheit", symbol: "warnung", farbe: e.eigenheit.farbe });
+      }
+    }
+
+    /** Zurück zum Hinweistext (neues Abenteuer). */
+    function leerePanel() {
+      el.panel.classList.add("ist-leer");
+      el.trefferZeilen.innerHTML = "";
+      el.belohnungZeilen.innerHTML = "";
+      el.verlauf.innerHTML = "";
+      el.kurzSchaden.textContent = "Noch kein Zug";
+      el.kurzSchaden.dataset.art = "";
+      el.kurzMuenzen.textContent = "";
     }
 
     /**
@@ -450,6 +728,10 @@ const SudokuKampf = (function () {
      * Kombo, Münzen, Leben – kurz nacheinander.
      */
     function treffer(e) {
+      spaeter(function () {
+        meldung(trefferText(e));
+        protokolliereTreffer(e);
+      });
       return einreihen(function () {
         zeigeBoss(e.boss);
         // 1. Würfel rollt
@@ -471,7 +753,6 @@ const SudokuKampf = (function () {
           return animiere(el.heldFigur, e.kritisch ? "schlaegt-stark" : "schlaegt", DAUER.schlag);
         }).then(function () {
           // 3. Der Treffer
-          meldung(trefferText(e));
           zeigeKombo(e.kombo, e.komboBonus, true);
           if (e.fehlschlag) {
             schwebeZahl("Daneben!", "daneben");
@@ -532,13 +813,16 @@ const SudokuKampf = (function () {
 
     /** Falsche Zahl: Boss greift an, ein Leben geht verloren, die Kombo zerbricht, ggf. Eigenheit. */
     function fehler(e) {
-      return einreihen(function () {
-        const rest = e.leben;
-        let text = e.boss.name + " greift an! Falsche Zahl – " +
-          (rest === 0 ? "keine Leben mehr." : "noch " + rest + " Leben.");
-        if (e.komboVorher > 0) text += " Kombo verloren (" + e.komboVorher + ").";
+      spaeter(function () {
+        let text = e.boss.name + " greift an! Falsche Zahl, " +
+          (e.leben === 0 ? "keine Leben mehr." : "noch " + e.leben + " Leben.");
+        if (e.komboVorher > 0) text += " Kombo verloren.";
         if (e.eigenheit) text += " " + e.eigenheit.name + ": " + e.eigenheit.text + ".";
         meldung(text);
+        protokolliereFehler(e);
+      });
+      return einreihen(function () {
+        const rest = e.leben;
         const angriff = animiere(el.bossFigur, "greift-an", DAUER.angriff);
         return warte(DAUER.angriff / 2).then(function () {
           zeigeHerzen(rest, e.maxLeben);
@@ -565,8 +849,11 @@ const SudokuKampf = (function () {
 
     /** Boss besiegt. */
     function sieg(e) {
-      return einreihen(function () {
+      spaeter(function () {
         meldung(e.boss.name + " ist besiegt!");
+        verlaufEintrag({ text: e.boss.name + " besiegt!", wert: "", art: "besiegt", symbol: "krone" });
+      });
+      return einreihen(function () {
         zeigeHp(0, e.boss.maxHp);
         if (ohneBewegung()) {
           return Promise.resolve();
@@ -578,35 +865,49 @@ const SudokuKampf = (function () {
 
     /** Der nächste Boss erscheint (volle HP, Leben aufgefüllt) – mit seiner Eigenheit. */
     function neuerBoss(e, rekord) {
+      spaeter(function () {
+        let text = "Boss " + e.boss.nummer + ": " + e.boss.name + " erscheint, " + e.boss.maxHp + " HP.";
+        if (e.boss.eigenheit) text += " Eigenheit " + e.boss.eigenheit.name + ": " + e.boss.eigenheit.beschreibung;
+        meldung(text);
+        verlaufEintrag(e.boss.eigenheit
+          ? { text: "Boss " + e.boss.nummer + ": " + e.boss.name + " · " + e.boss.eigenheit.name, wert: "",
+              art: "eigenheit", symbol: "warnung", farbe: e.boss.eigenheit.farbe }
+          : { text: "Boss " + e.boss.nummer + ": " + e.boss.name, wert: e.boss.maxHp + " HP" });
+      });
       return einreihen(function () {
         el.bossFigur.classList.remove("ist-besiegt");
         zeigeBoss(e.boss);
         zeigeHp(e.hp, e.boss.maxHp);
         zeigeHerzen(e.leben, e.maxLeben);
         zeigeRekord(e.boss, rekord);
-        let text = "Boss " + e.boss.nummer + ": " + e.boss.name + " erscheint! (" + e.boss.maxHp + " HP)";
-        if (e.boss.eigenheit) {
-          text += " Eigenheit " + e.boss.eigenheit.name + ": " + e.boss.eigenheit.beschreibung;
-          banner(e.boss.eigenheit.name, e.boss.eigenheit.farbe, "eigenheit");
-        }
-        meldung(text);
+        if (e.boss.eigenheit) banner(e.boss.eigenheit.name, e.boss.eigenheit.farbe, "eigenheit");
         return animiere(el.bossFigur, "erscheint", DAUER.erscheinen);
       });
     }
 
     /** Eine Verbesserung wurde gewählt: Symbole und ggf. Herzen aktualisieren. */
     function verbesserung(e) {
+      spaeter(function () {
+        meldung(e.name + ", Stufe " + e.stufe + "." + (e.lebenPlus > 0 ? " +" + e.lebenPlus + " Leben." : ""));
+        verlaufEintrag({ text: e.name, wert: "Stufe " + e.stufe });
+      });
       return einreihen(function () {
         zeigeVerbesserungen(e.gesammelt, e.id);
         zeigeHerzen(e.leben, e.maxLeben);
-        meldung(e.name + (e.stufe === 1 ? " gelernt!" : " – jetzt Stufe " + e.stufe + "!") +
-          (e.lebenPlus > 0 ? " +" + e.lebenPlus + " Leben." : ""));
       });
     }
 
-    /** Text in der Textbox (in der Reihenfolge der Warteschlange). */
+    /** Kurze Nachricht: im Verlauf und für Screenreader. */
     function text(nachricht) {
-      return einreihen(function () { meldung(nachricht); });
+      spaeter(function () {
+        meldung(nachricht);
+        verlaufEintrag({ text: nachricht, wert: "" });
+      });
+    }
+
+    /** Ein neues Abenteuer: Panel zurück auf den Hinweistext. */
+    function neuesAbenteuer() {
+      spaeter(leerePanel);
     }
 
     /** Wartet, bis alle Animationen in der Schlange abgespielt sind. */
@@ -765,8 +1066,11 @@ const SudokuKampf = (function () {
      * @returns {Promise} – erfüllt, wenn "Erneut antreten" gedrückt wurde
      */
     function niederlage(rahmen, e) {
+      spaeter(function () {
+        meldung("Niederlage gegen " + e.boss.name + ".");
+        verlaufEintrag({ text: "Niederlage gegen " + e.boss.name, wert: "", art: "fehler", symbol: "kreuz" });
+      });
       return einreihen(function () {
-        meldung("Niederlage gegen " + e.boss.name + " …");
         zeigeHerzen(0);
         return animiere(el.heldFigur, "faellt", 500);
       }).then(function () {
@@ -812,6 +1116,7 @@ const SudokuKampf = (function () {
       auswahl: auswahl,
       schliesseAuswahl: schliesseAuswahl,
       text: text,
+      neuesAbenteuer: neuesAbenteuer,
       fertig: fertig,
       losen: losen,
       niederlage: niederlage,

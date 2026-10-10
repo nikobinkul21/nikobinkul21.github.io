@@ -51,6 +51,24 @@
   --kampf-verlust: #ff6b6b;                /* gestohlene Münzen */
   --kampf-verlust-rand: #5c0f0f;
 
+  /* Panel unter dem Kampffenster (letzter Treffer, Belohnung, Verlauf) */
+  --panel-hintergrund: var(--kampf-textbox);
+  --panel-text: var(--kampf-textbox-text);
+  --panel-leise: #a3a9bd;                  /* Überschriften, ältere Einträge */
+  --panel-linie: rgba(255, 255, 255, 0.14);
+  --panel-hervorhebung: rgba(255, 255, 255, 0.18);  /* neue Werte leuchten kurz auf */
+  --panel-innen: 8px;                      /* Innenabstand */
+  --panel-luecke: 10px;                    /* Abstand zwischen den Blöcken */
+  --panel-zeile: 17px;                     /* Höhe einer Zeile */
+  --panel-zeilen: 7;                       /* so viele Zeilen haben in "Letzter Treffer"/"Belohnung" Platz */
+  --panel-verlauf-zeile: 19px;
+  --panel-schrift: 0.76rem;
+  --panel-summe-schrift: 1.25rem;
+  --panel-gold: #f2c94c;
+  --panel-fehler: #ff7070;
+  --panel-daneben: #b8bec8;
+  --panel-leben: #7be38f;
+
   /* Kombo-Zähler: Farben je Stufe (0 = keine Kombo … 4 = ab 10 in Folge) */
   --kombo-1: #4f6ef7;
   --kombo-2: #e9b52f;
@@ -196,8 +214,13 @@
       "kampf  brett      zahlen";
   }
 
+  /* Die Kampfspalte reicht bis zur Unterkante des Gitters – das Panel füllt den Rest */
   .sudoku.ist-abenteuer .sudoku-kampf {
-    align-self: start;
+    align-self: stretch;
+  }
+
+  .sudoku.ist-abenteuer .kampf {
+    height: 100%;
   }
 
   /* Kopfzeile bündig über dem Gitter */
@@ -795,17 +818,335 @@
   right: 0;
 }
 
-/* Textbox wie in klassischen Rollenspielen */
-.kampf-text {
-  min-height: 2.9em;
-  margin: 0;
-  padding: 7px 10px;
+/* Nur für Screenreader: unsichtbar, wird aber vorgelesen */
+.nur-vorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+/* ==========================================================================
+   PANEL unter dem Kampffenster: Letzter Treffer · Belohnung · Verlauf
+   Feste Höhen: Der Inhalt wechselt, aber nichts springt.
+   ========================================================================== */
+
+.kampf-panel {
+  flex: 1 0 auto;                         /* füllt auf dem Desktop den Platz bis zur Fußzeile */
+  display: flex;
+  flex-direction: column;
+  color: var(--panel-text);
+  background: var(--panel-hintergrund);
   border: 2px solid var(--kampf-kasten-rand);
   border-radius: var(--kampf-radius);
-  background: var(--kampf-textbox);
-  color: var(--kampf-textbox-text);
-  font-size: 0.85rem;
+  font-size: var(--panel-schrift);
   line-height: 1.35;
+  overflow: hidden;
+}
+
+.panel-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--panel-luecke);
+  padding: var(--panel-innen);
+}
+
+/* Oben zwei Blöcke nebeneinander, beide gleich hoch */
+.panel-oben {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* Überschrift + alle Zeilen + Summe */
+  height: calc(1.2rem + var(--panel-zeilen) * var(--panel-zeile) + 2.4rem);
+}
+
+.panel-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.panel-treffer {
+  padding-right: var(--panel-luecke);
+  border-right: 1px solid var(--panel-linie);
+}
+
+.panel-belohnung {
+  padding-left: var(--panel-luecke);
+}
+
+/* Bühne, Leiste und Fußzeile behalten ihre Größe – nur das Panel wächst */
+.kampf > * {
+  flex-shrink: 0;
+}
+
+.panel-titel {
+  margin: 0 0 4px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--panel-leise);
+}
+
+.panel-zeilen {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Eine Zeile: links die Bezeichnung, rechts bündig der Wert */
+.panel-zeile,
+.panel-summe {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 4px;
+  margin: 0 -4px;
+  border-radius: 4px;
+  transition: background-color 0.6s ease-out;
+}
+
+.panel-zeile {
+  height: var(--panel-zeile);
+  line-height: var(--panel-zeile);
+}
+
+.panel-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Gleich breite Ziffern: die Werte stehen sauber untereinander */
+.panel-wert,
+.panel-eintrag-wert,
+.panel-kurz {
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-wert {
+  flex: none;
+  font-weight: 800;
+  text-align: right;
+}
+
+/* Die Summe: abgesetzt und größer */
+.panel-summe {
+  margin-top: 4px;
+  padding-top: 5px;
+  border-top: 1px solid var(--panel-linie);
+  border-radius: 0 0 4px 4px;
+}
+
+.panel-summe .panel-label {
+  font-weight: 700;
+}
+
+.panel-summe .panel-wert {
+  font-size: var(--panel-summe-schrift);
+  line-height: 1.2;
+}
+
+/* Farben – dieselben wie die Animationen im Kampffenster */
+.panel-zeile--kritisch,
+.panel-summe--kritisch .panel-wert { color: var(--kampf-kritisch); }
+.panel-zeile--doppelt,
+.panel-summe--doppelt .panel-wert { color: var(--kampf-doppelt); }
+.panel-zeile--gift { color: var(--kampf-gift); }
+.panel-zeile--gold,
+.panel-summe--gold .panel-wert { color: var(--panel-gold); }
+.panel-zeile--leben { color: var(--panel-leben); }
+.panel-zeile--fehler,
+.panel-summe--fehler .panel-wert { color: var(--panel-fehler); }
+.panel-zeile--daneben,
+.panel-summe--daneben .panel-wert { color: var(--panel-daneben); }
+.panel-zeile--eigenheit,
+.panel-summe--eigenheit .panel-wert { color: color-mix(in srgb, var(--zeilen-farbe) 55%, #fff); }
+
+/* Spruch beim Fehlschlag: darf umbrechen */
+.panel-zeile--notiz {
+  height: auto;
+  margin-top: 4px;
+  line-height: 1.35;
+  font-style: italic;
+  color: var(--panel-daneben);
+}
+
+.panel-zeile--notiz .panel-label {
+  white-space: normal;
+}
+
+/* Neue Werte leuchten kurz auf */
+.panel-neu {
+  background-color: var(--panel-hervorhebung);
+  transition: none;
+}
+
+/* Vor dem ersten Zug: Hinweis statt leerer Blöcke */
+.panel-hinweis {
+  display: none;
+  grid-column: 1 / -1;
+  align-self: center;
+  margin: 0;
+  padding: 0 6px;
+  text-align: center;
+  color: var(--panel-leise);
+  font-size: 0.85rem;
+}
+
+.kampf-panel.ist-leer .panel-hinweis { display: block; }
+.kampf-panel.ist-leer .panel-treffer,
+.kampf-panel.ist-leer .panel-belohnung { display: none; }
+
+/* Verlauf: neuestes oben, ältere blasser */
+.panel-verlauf {
+  padding-top: var(--panel-luecke);
+  border-top: 1px solid var(--panel-linie);
+}
+
+.panel-verlauf-liste {
+  height: calc(5 * var(--panel-verlauf-zeile));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+
+.panel-eintrag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--panel-verlauf-zeile);
+  padding: 0 4px;
+  margin: 0 -4px;
+  border-radius: 4px;
+  transition: background-color 0.6s ease-out;
+}
+
+.panel-eintrag:nth-child(2) { opacity: 0.82; }
+.panel-eintrag:nth-child(3) { opacity: 0.66; }
+.panel-eintrag:nth-child(4) { opacity: 0.52; }
+.panel-eintrag:nth-child(5) { opacity: 0.4; }
+
+.panel-symbol {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.panel-symbol svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.panel-eintrag-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-eintrag-wert {
+  flex: none;
+  font-weight: 800;
+}
+
+/* Besondere Ereignisse: Symbol und Farbe */
+.panel-eintrag--kritisch { color: var(--kampf-kritisch); font-weight: 700; }
+.panel-eintrag--doppelt .panel-eintrag-wert { color: var(--kampf-doppelt); }
+.panel-eintrag--daneben { color: var(--panel-daneben); }
+.panel-eintrag--fehler { color: var(--panel-fehler); font-weight: 700; }
+.panel-eintrag--besiegt { color: var(--panel-gold); font-weight: 700; }
+.panel-eintrag--eigenheit { color: color-mix(in srgb, var(--zeilen-farbe) 55%, #fff); font-weight: 700; }
+
+/* Kompakte Zeile (nur auf schmalen Bildschirmen, siehe unten) */
+.panel-kurz {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 0.85rem;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 0.6s ease-out;
+}
+
+.panel-kurz-titel {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--panel-leise);
+}
+
+.panel-kurz-schaden {
+  font-weight: 800;
+}
+
+.panel-kurz-schaden[data-art="kritisch"] { color: var(--kampf-kritisch); }
+.panel-kurz-schaden[data-art="doppelt"] { color: var(--kampf-doppelt); }
+.panel-kurz-schaden[data-art="daneben"] { color: var(--panel-daneben); }
+.panel-kurz-schaden[data-art="fehler"] { color: var(--panel-fehler); }
+
+.panel-kurz-muenzen {
+  font-weight: 800;
+  color: var(--panel-gold);
+}
+
+.panel-kurz-muenzen[data-art="fehler"] { color: var(--panel-fehler); }
+
+.panel-kurz-pfeil {
+  margin-left: auto;
+  color: var(--panel-leise);
+  transition: transform 0.2s;
+}
+
+.kampf-panel.offen .panel-kurz-pfeil {
+  transform: rotate(180deg);
+}
+
+/* Unter 1000px steht das Kampffenster über dem Gitter, und bei niedrigen
+   Fenstern ist das Gitter zu klein für das ganze Panel: dort nur die
+   kompakte Zeile, ein Antippen klappt die drei Blöcke auf */
+@media (max-width: 999px), (max-height: 820px) {
+  .kampf-panel {
+    flex-grow: 0;                         /* nur so hoch wie die Zeile (bzw. aufgeklappt) */
+  }
+
+  .panel-kurz {
+    display: flex;
+  }
+
+  .panel-details {
+    display: none;
+    padding-top: 2px;
+  }
+
+  .kampf-panel.offen .panel-details {
+    display: flex;
+  }
+
+  .kampf-panel.offen .panel-kurz {
+    border-bottom: 1px solid var(--panel-linie);
+  }
 }
 
 .kampf-fuss {
@@ -1199,12 +1540,6 @@
 
   .kampf-info--boss {
     width: 56%;
-  }
-
-  .kampf-text {
-    min-height: 0;
-    padding: 5px 9px;
-    font-size: 0.8rem;
   }
 
   .auswahl-karte {
