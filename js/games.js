@@ -29,10 +29,10 @@ const gestarteteSpiele = {};
  * @param {HTMLElement} container – das Element <div id="games-root">
  */
 function initGames(container) {
-  let html = '<div class="spiele-uebersicht">';
+  let html = '<div class="karten-raster">';
   SPIELE.forEach(function (spiel) {
     html +=
-      '<a class="karte spiel-karte" href="#games/' + spiel.id + '">' +
+      '<a class="karte link-karte" href="#games/' + spiel.id + '">' +
         "<h2>" + spiel.name + "</h2>" +
         "<p>" + spiel.beschreibung + "</p>" +
       "</a>";
@@ -42,9 +42,9 @@ function initGames(container) {
   SPIELE.forEach(function (spiel) {
     html +=
       '<div class="spiel-bereich" id="spiel-' + spiel.id + '" hidden>' +
-        '<div class="spiel-kopf">' +
+        '<div class="unterseite-kopf">' +
           '<a class="zurueck-link" href="#games">← Übersicht</a>' +
-          '<h2 class="spiel-titel" tabindex="-1">' + spiel.name + "</h2>" +
+          '<h2 class="unterseite-titel" tabindex="-1">' + spiel.name + "</h2>" +
         "</div>" +
         '<div class="spiel-inhalt"></div>' +
       "</div>";
@@ -67,11 +67,11 @@ function zeigeGames(unterseite) {
   const spiel = SPIELE.find(function (s) { return s.id === unterseite; });
 
   // Ist ein Spiel offen, wird die große Überschrift "Games" ausgeblendet –
-  // so bleibt mehr Platz für das Spiel (siehe .zeigt-spiel in style.css)
-  document.getElementById("view-games").classList.toggle("zeigt-spiel", Boolean(spiel));
+  // so bleibt mehr Platz für das Spiel (siehe .zeigt-unterseite in style.css)
+  document.getElementById("view-games").classList.toggle("zeigt-unterseite", Boolean(spiel));
 
   // Übersicht nur zeigen, wenn kein (bekanntes) Spiel gewählt ist
-  container.querySelector(".spiele-uebersicht").hidden = Boolean(spiel);
+  container.querySelector(".karten-raster").hidden = Boolean(spiel);
   SPIELE.forEach(function (s) {
     document.getElementById("spiel-" + s.id).hidden = s !== spiel;
   });
@@ -86,5 +86,5 @@ function zeigeGames(unterseite) {
     spiel.init(bereich.querySelector(".spiel-inhalt"));
     gestarteteSpiele[spiel.id] = true;
   }
-  return bereich.querySelector(".spiel-titel");
+  return bereich.querySelector(".unterseite-titel");
 }

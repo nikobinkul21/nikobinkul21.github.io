@@ -7,6 +7,7 @@
   <title>NTB</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/sudoku.css">
+  <link rel="stylesheet" href="css/media.css">
 
   <!--
     Kleines Skript direkt im <head>:
@@ -63,6 +64,7 @@
         <ul class="reiter-gruppe reiter-gruppe--links">
           <li><a class="reiter" href="#kalender" data-view="kalender">Kalender</a></li>
           <li><a class="reiter" href="#games" data-view="games">Games</a></li>
+          <li><a class="reiter" href="#media" data-view="media">Filme/Serien</a></li>
         </ul>
 
         <a class="reiter marke marke--desktop" href="#home" data-view="home">NTB</a>
@@ -106,6 +108,12 @@
       <div id="games-root"></div>
     </section>
 
+    <section class="ansicht" id="view-media" aria-labelledby="titel-media" hidden>
+      <h1 id="titel-media" tabindex="-1">Filme/Serien</h1>
+      <!-- media.js füllt diesen Container (Übersicht und Kategorien) -->
+      <div id="media-root"></div>
+    </section>
+
     <section class="ansicht" id="view-einstellungen" aria-labelledby="titel-einstellungen" hidden>
       <h1 id="titel-einstellungen" tabindex="-1">Einstellungen</h1>
       <div class="karte">
@@ -135,6 +143,9 @@
   <script src="js/sudoku-effects.js"></script>
   <script src="js/sudoku-ui.js"></script>
   <script src="js/games.js"></script>
+  <!-- Filme/Serien: erst die Speicherung, dann die Darstellung -->
+  <script src="js/media-store.js"></script>
+  <script src="js/media.js"></script>
   <script src="js/customising.js"></script>
   <script src="js/app.js"></script>
 </body>

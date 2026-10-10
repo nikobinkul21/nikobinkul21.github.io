@@ -1,0 +1,295 @@
+/* ==========================================================================
+   media.css – Aussehen von "Filme/Serien"
+   Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
+   Allgemeine Bausteine (Karten, "← Übersicht", Kopfzeile) kommen aus style.css.
+   ========================================================================== */
+
+:root {
+  /* Größen und Abstände */
+  --media-max-breite: 720px;               /* so breit wird eine Kategorie-Seite höchstens */
+  --media-abstand: var(--abstand-m);       /* Abstand zwischen den Bereichen */
+  --media-eintrag-abstand: var(--abstand-s); /* Abstand zwischen den Listeneinträgen */
+  --media-eintrag-innen: 12px 16px;        /* Innenabstand eines Eintrags (oben/unten links/rechts) */
+  --media-knopf-hoehe: 40px;               /* Höhe von Buttons, Eingabe und Auswahl */
+
+  /* Bewertung (die Zahl links neben dem Titel) */
+  --media-bewertung-breite: 3.25rem;
+  --media-bewertung-schrift: 1.25rem;
+  --media-bewertung-hintergrund: #eaeefe;
+  --media-bewertung-farbe: #3f5fe0;
+
+  /* Umschalter Watchlist / Watched */
+  --media-tabs-hintergrund: rgba(0, 0, 0, 0.05);
+  --media-tab-aktiv-hintergrund: var(--farbe-flaeche);
+
+  /* Buttons */
+  --media-haupt-hintergrund: #4f6ef7;      /* "Hinzufügen", "Geschaut", "Speichern" */
+  --media-haupt-text: #ffffff;
+  --media-gefahr-farbe: #d1242f;           /* "Löschen" */
+
+  /* Hinweise */
+  --media-erfolg-farbe: #1a7f37;
+  --media-fehler-farbe: #d1242f;
+}
+
+/* Dunkles Design: nur die Farben ändern sich */
+:root[data-theme="dark"] {
+  --media-bewertung-hintergrund: #2f3a5c;
+  --media-bewertung-farbe: #a3b5ff;
+  --media-tabs-hintergrund: rgba(255, 255, 255, 0.06);
+  --media-tab-aktiv-hintergrund: #2e323a;
+  --media-haupt-hintergrund: #5b78f5;
+  --media-gefahr-farbe: #ff7b72;
+  --media-erfolg-farbe: #56d364;
+  --media-fehler-farbe: #ff7b72;
+}
+
+
+/* ==========================================================================
+   ÜBERSICHT
+   ========================================================================== */
+
+.media-daten {
+  margin-top: var(--abstand-l);
+}
+
+.media-daten p {
+  margin: 0 0 var(--abstand-m);
+  color: var(--farbe-text-leise);
+}
+
+.media-daten-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-s);
+}
+
+.media-daten .media-hinweis {
+  margin: var(--abstand-s) 0 0;
+}
+
+
+/* ==========================================================================
+   KATEGORIE-SEITE
+   ========================================================================== */
+
+.media-kategorie {
+  max-width: var(--media-max-breite);
+  margin-inline: auto;                     /* mittig */
+}
+
+/* Umschalter Watchlist / Watched – zwei Links in einer "Pille" */
+.media-tabs {
+  display: flex;
+  gap: var(--abstand-xs);
+  padding: var(--abstand-xs);
+  margin: var(--abstand-s) 0 var(--media-abstand);
+  border-radius: var(--radius-pille);
+  background: var(--media-tabs-hintergrund);
+}
+
+.media-tab {
+  flex: 1;                                 /* beide gleich breit */
+  padding: 8px 12px;
+  border-radius: var(--radius-pille);
+  text-align: center;
+  color: var(--farbe-text-leise);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.media-tab:hover {
+  color: var(--farbe-text);
+}
+
+/* Aktive Unterseite: helle "Pille" mit Schatten */
+.media-tab[aria-current="page"] {
+  background: var(--media-tab-aktiv-hintergrund);
+  color: var(--farbe-text);
+  box-shadow: var(--schatten);
+}
+
+/* Formular zum Hinzufügen: Eingabe, (Bewertung), Button */
+.media-formular,
+.media-eintrag-formular {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-s);
+}
+
+.media-formular .media-eingabe,
+.media-eintrag-formular .media-eingabe {
+  flex: 1 1 200px;                         /* wächst, bricht unter 200 px in eine eigene Zeile um */
+  min-width: 0;
+}
+
+/* Eingabefeld, Auswahl und Buttons teilen sich das Grundaussehen */
+.media-eingabe,
+.media-auswahl,
+.media-knopf {
+  height: var(--media-knopf-hoehe);
+  padding: 0 12px;
+  font: inherit;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-s);
+}
+
+.media-eingabe:focus-visible,
+.media-auswahl:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: 1px;
+}
+
+.media-knopf {
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.media-knopf:hover {
+  border-color: var(--farbe-akzent);
+}
+
+/* Hauptaktion: farbig gefüllt */
+.media-knopf--haupt {
+  background: var(--media-haupt-hintergrund);
+  border-color: var(--media-haupt-hintergrund);
+  color: var(--media-haupt-text);
+}
+
+.media-knopf--haupt:hover {
+  filter: brightness(1.08);
+}
+
+.media-knopf--gefahr {
+  color: var(--media-gefahr-farbe);
+}
+
+.media-knopf--gefahr:hover {
+  border-color: var(--media-gefahr-farbe);
+}
+
+/* Hinweiszeile (Fehler, Bestätigungen). Ohne Text nimmt sie keinen Platz ein. */
+.media-hinweis {
+  margin: var(--abstand-s) 0 0;
+  color: var(--farbe-text-leise);
+}
+
+.media-hinweis:empty {
+  display: none;
+}
+
+.media-hinweis[data-art="erfolg"] {
+  color: var(--media-erfolg-farbe);
+}
+
+.media-hinweis[data-art="fehler"] {
+  color: var(--media-fehler-farbe);
+  font-weight: 500;
+}
+
+
+/* ==========================================================================
+   LISTE
+   ========================================================================== */
+
+.media-liste {
+  list-style: none;
+  margin: var(--media-abstand) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--media-eintrag-abstand);
+}
+
+/* Ein Eintrag: [Bewertung] Titel ………… [Buttons]
+   Ist zu wenig Platz, rutschen die Buttons in eine eigene Zeile. */
+.media-eintrag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--abstand-s) var(--abstand-m);
+  padding: var(--media-eintrag-innen);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten);
+}
+
+.media-bewertung {
+  flex: none;
+  width: var(--media-bewertung-breite);
+  padding: 6px 0;
+  border-radius: var(--radius-s);
+  background: var(--media-bewertung-hintergrund);
+  color: var(--media-bewertung-farbe);
+  font-size: var(--media-bewertung-schrift);
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;      /* alle Ziffern gleich breit → saubere Spalte */
+}
+
+.media-titel {
+  flex: 1 1 160px;
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;                 /* sehr lange Titel umbrechen statt überlaufen */
+}
+
+.media-aktionen {
+  display: flex;
+  gap: var(--abstand-xs);
+  margin-left: auto;                       /* nach rechts schieben */
+}
+
+.media-aktionen .media-knopf {
+  height: 34px;
+  padding: 0 10px;
+  font-size: 0.9rem;
+}
+
+/* Das kleine Formular beim Bearbeiten / Geschaut nimmt die ganze Breite */
+.media-eintrag-formular {
+  flex: 1 1 100%;
+}
+
+/* Hinweis bei leerer Liste */
+.media-leer {
+  padding: var(--abstand-l);
+  border: 1px dashed var(--farbe-rand);
+  border-radius: var(--radius-m);
+  color: var(--farbe-text-leise);
+  text-align: center;
+}
+
+
+/* ==========================================================================
+   HANDY (unter 768 px)
+   ========================================================================== */
+
+@media (max-width: 767px) {
+
+  /* Größere Tippflächen */
+  :root {
+    --media-knopf-hoehe: 44px;
+  }
+
+  /* Buttons im Formular über die ganze Breite verteilen */
+  .media-formular .media-knopf,
+  .media-formular .media-auswahl,
+  .media-eintrag-formular .media-knopf,
+  .media-eintrag-formular .media-auswahl {
+    flex: 1;
+  }
+
+  .media-aktionen {
+    width: 100%;                           /* Buttons unter den Titel */
+  }
+
+  .media-aktionen .media-knopf {
+    flex: 1;
+    height: 38px;
+  }
+}

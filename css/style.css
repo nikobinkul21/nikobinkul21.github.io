@@ -181,6 +181,17 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/* Text nur für Screenreader: unsichtbar, aber vorgelesen
+   (z. B. Beschriftungen, die optisch schon klar sind) */
+.nur-screenreader {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Das hidden-Attribut soll immer gewinnen */
 [hidden] {
   display: none !important;
@@ -454,33 +465,34 @@ button:focus-visible {
   margin: 0;
 }
 
-/* Games-Übersicht: eine anklickbare Karte pro Spiel */
-.spiele-uebersicht {
+/* Übersichtsseiten (Games, Filme/Serien): ein Raster aus anklickbaren Karten */
+.karten-raster {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--abstand-m);
 }
 
-.spiel-karte {
+.link-karte {
   display: block;
   color: inherit;
   text-decoration: none;
   transition: transform var(--dauer) ease, border-color var(--dauer) ease;
 }
 
-.spiel-karte:hover,
-.spiel-karte:focus-visible {
+.link-karte:hover,
+.link-karte:focus-visible {
   border-color: var(--farbe-akzent);
   transform: translateY(var(--anheben));
 }
 
-.spiel-karte p {
+.link-karte p {
   color: var(--farbe-text-leise);
 }
 
-/* Ist ein Spiel offen, verschwindet die Überschrift "Games" optisch.
+/* Ist eine Unterseite offen (z. B. ein Spiel oder eine Film-Kategorie),
+   verschwindet die große Überschrift der Ansicht optisch.
    Für Screenreader bleibt sie erhalten (deshalb nicht display: none). */
-.zeigt-spiel > h1 {
+.zeigt-unterseite > h1 {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -489,15 +501,15 @@ button:focus-visible {
   white-space: nowrap;
 }
 
-/* Kopfzeile eines geöffneten Spiels: "← Übersicht" und Titel in einer Zeile */
-.spiel-kopf {
+/* Kopfzeile einer Unterseite: "← Übersicht" und Titel in einer Zeile */
+.unterseite-kopf {
   display: flex;
   align-items: center;
   gap: var(--abstand-m);
   margin-bottom: var(--abstand-xs);
 }
 
-.spiel-titel {
+.unterseite-titel {
   margin: 0;
 }
 
@@ -511,7 +523,7 @@ button:focus-visible {
   text-decoration: underline;
 }
 
-.spiel-titel:focus {
+.unterseite-titel:focus {
   outline: none;
 }
 
@@ -522,10 +534,13 @@ button:focus-visible {
 
 
 /* ==========================================================================
-   7. MOBIL (unter 768 px)
+   7. MOBIL / SCHMALE FENSTER (unter 900 px)
+   Unter 900 px passen die fünf Reiter nicht mehr links und rechts neben
+   NTB – dann gibt es das Hamburger-Menü. Diese Grenze steht auch in
+   app.js (mobilAbfrage) und muss dort gleich sein.
    ========================================================================== */
 
-@media (max-width: 767px) {
+@media (max-width: 899px) {
 
   .leiste__nav {
     padding: 0 var(--abstand-m);
@@ -639,8 +654,8 @@ button:focus-visible {
   .reiter:hover,
   .reiter:focus-visible,
   .nav-panel,
-  .spiel-karte:hover,
-  .spiel-karte:focus-visible {
+  .link-karte:hover,
+  .link-karte:focus-visible {
     transform: none !important;
   }
 }

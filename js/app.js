@@ -22,6 +22,7 @@ const ANSICHTEN = {
   home: null,
   kalender: { init: initCalendar, root: "calendar-root" },
   games: { init: initGames, zeige: zeigeGames, root: "games-root" },
+  media: { init: MediaAnsicht.init, zeige: MediaAnsicht.zeige, root: "media-root" },
   einstellungen: null,
   customising: { init: initCustomising, root: "customising-root" },
 };
@@ -47,8 +48,9 @@ const reiterLinks = document.querySelectorAll(".reiter[data-view]");
 // Nur die Reiter im ausklappbaren Panel (für den Fokus auf dem Handy)
 const panelLinks = navPanel.querySelectorAll(".reiter-gruppe .reiter");
 
-// Dieselbe Grenze wie in style.css (@media max-width: 767px)
-const mobilAbfrage = window.matchMedia("(max-width: 767px)");
+// Ab hier gibt es das Hamburger-Menü – dieselbe Grenze wie in style.css
+// (Abschnitt 7: @media max-width: 899px)
+const mobilAbfrage = window.matchMedia("(max-width: 899px)");
 
 
 /* ==========================================================================
@@ -195,7 +197,7 @@ document.addEventListener("keydown", function (event) {
   }
 });
 
-// Wird das Fenster breiter als 768 px, offenes Menü zurücksetzen
+// Wird das Fenster breiter als 900 px, offenes Menü zurücksetzen
 mobilAbfrage.addEventListener("change", function () {
   if (!mobilAbfrage.matches && menueIstOffen()) {
     menueSchliessen(false);

@@ -541,7 +541,7 @@
 
   /* Ist ein Spiel offen, darf der Hauptbereich die volle Fensterbreite nutzen
      (sonst begrenzt --inhalt-max-breite aus style.css das Spiel) */
-  .hauptbereich:has(.zeigt-spiel) {
+  .hauptbereich:has(#view-games.zeigt-unterseite) {
     max-width: none;
   }
 
@@ -569,7 +569,7 @@
 
   /* Kopfzeile ("← Übersicht  Sudoku") bündig über dem Gitter statt über
      der leeren linken Spalte */
-  .spiel-kopf {
+  .unterseite-kopf {
     padding-left: calc(var(--sudoku-zahlenfeld-breite) + var(--abstand-l));
   }
 
