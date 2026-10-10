@@ -1,7 +1,8 @@
 /* ==========================================================================
    settings.js – Einstellungen
-   Vorerst: Sicherung ALLER Daten der Seite (Filme/Serien und Termine)
-   als eine JSON-Datei – Export und Import.
+   - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Abenteuer)
+     als eine JSON-Datei – Export und Import
+   - Sudoku-Abenteuer: Dauer der Würfelanimation
 
    Aufbau einer Sicherungsdatei:
    {
@@ -41,7 +42,31 @@ const EinstellungenAnsicht = (function () {
           '<input type="file" class="einstellungen-datei" accept=".json,application/json" hidden>' +
         "</div>" +
         '<p class="einstellungen-hinweis" role="status"></p>' +
+      "</section>" +
+      // Sudoku-Abenteuer: wie lange der Würfel rollt (Werte in js/sudoku-battle-ui.js)
+      '<section class="karte einstellungen-block" aria-labelledby="abenteuer-titel">' +
+        '<h2 id="abenteuer-titel">Sudoku-Abenteuer</h2>' +
+        '<label class="einstellungen-feld">' +
+          "<span>Würfelanimation</span>" +
+          '<select class="einstellungen-wuerfel"></select>' +
+        "</label>" +
+        '<p class="einstellungen-hinweis einstellungen-hinweis--wuerfel" role="status"></p>' +
       "</section>";
+
+    // Auswahl aus der Liste der Stufen erzeugen und die gespeicherte vorwählen
+    const wuerfelAuswahl = container.querySelector(".einstellungen-wuerfel");
+    SudokuKampf.WUERFEL.stufen.forEach(function (stufe) {
+      const option = document.createElement("option");
+      option.value = stufe.id;
+      option.textContent = stufe.name;
+      wuerfelAuswahl.appendChild(option);
+    });
+    wuerfelAuswahl.value = SudokuKampf.wuerfelEinstellung().id;
+    wuerfelAuswahl.addEventListener("change", function () {
+      SudokuKampf.setzeWuerfelEinstellung(wuerfelAuswahl.value);
+      container.querySelector(".einstellungen-hinweis--wuerfel").textContent =
+        "Gespeichert: " + SudokuKampf.wuerfelEinstellung().name;
+    });
 
     el.datei = container.querySelector(".einstellungen-datei");
     el.hinweis = container.querySelector(".einstellungen-hinweis");

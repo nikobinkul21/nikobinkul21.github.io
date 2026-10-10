@@ -564,6 +564,29 @@ button:focus-visible {
   margin: var(--abstand-s) 0 0;
 }
 
+.einstellungen-block + .einstellungen-block {
+  margin-top: var(--abstand-l);
+}
+
+/* Eine Einstellung: Beschriftung links, Auswahl rechts daneben */
+.einstellungen-feld {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--abstand-s) var(--abstand-m);
+  font-weight: 500;
+}
+
+.einstellungen-feld select {
+  padding: 6px 10px;
+  font: inherit;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-pille);
+  cursor: pointer;
+}
+
 .einstellungen-hinweis:empty {
   display: none;
 }

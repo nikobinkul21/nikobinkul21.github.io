@@ -5,16 +5,52 @@
    Aussehen: css/sudoku-rpg.css
 
    Wichtig: Animationen laufen nacheinander über eine Warteschlange.
-   Setzt man schnell mehrere Zahlen, werden die Würfe der Reihe nach
-   abgespielt – der Spielstand selbst ist aber längst aktuell.
-   Nur die Verbesserungsauswahl hält die Schlange an, bis gewählt ist.
+   Der Spielstand ist dabei längst aktuell – sichtbar wird ein Treffer
+   erst, wenn der Würfel gelandet ist. Setzt man die nächste Zahl vorher,
+   springt alles Laufende sofort zu seinem Ende (beschleunige), es staut
+   sich nichts an. Nur die Verbesserungsauswahl hält die Schlange an.
    ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   WÜRFELANIMATION – alle Werte an einer Stelle
+   Die Stufe wählt man in den Einstellungen; gespeichert wird sie im Browser.
+   -------------------------------------------------------------------------- */
+const SUDOKU_WUERFEL_KONFIG = {
+  speicherSchluessel: "ntb-wuerfel-animation",
+  standard: "normal",
+  // Dauer in Millisekunden: "gross" = eigene Würfelfläche (Desktop),
+  // "klein" = Würfel im Kampffenster (Smartphone)
+  stufen: [
+    { id: "normal", name: "Normal (2 Sekunden)", gross: 2000, klein: 800 },
+    { id: "schnell", name: "Schnell (0,6 Sekunden)", gross: 600, klein: 600 },
+    { id: "aus", name: "Aus", gross: 0, klein: 0 },
+  ],
+  landung: 0.2,            // Anteil der Dauer für den Aufprall am Ende
+  umdrehungen: 3,          // so oft dreht sich der große Würfel im Flug
+  ueberschlaege: 5,        // so oft "überschlägt" er sich (Stauchen)
+  pauseReduziert: 350,     // "Bewegung reduzieren": kurze Pause, dann das Ergebnis
+  ab: "(min-width: 1000px)", // ab dieser Breite gibt es die eigene Würfelfläche
+};
+
 
 const SudokuKampf = (function () {
 
+  const W = SUDOKU_WUERFEL_KONFIG;
+
+  /** Die gewählte Stufe der Würfelanimation ({ id, name, gross, klein }). */
+  function wuerfelEinstellung() {
+    let id = null;
+    try { id = localStorage.getItem(W.speicherSchluessel); } catch (fehler) { /* gesperrt */ }
+    return W.stufen.find(function (st) { return st.id === id; }) ||
+      W.stufen.find(function (st) { return st.id === W.standard; });
+  }
+
+  function setzeWuerfelEinstellung(id) {
+    try { localStorage.setItem(W.speicherSchluessel, id); } catch (fehler) { /* gesperrt */ }
+  }
+
   // Dauer der einzelnen Animationen (Millisekunden)
   const DAUER = {
-    wuerfeln: 380,
     schlag: 260,
     treffer: 420,
     angriff: 380,
@@ -35,19 +71,6 @@ const SudokuKampf = (function () {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  function warte(ms) {
-    if (ohneBewegung() || ms <= 0) return Promise.resolve();
-    return new Promise(function (fertig) { setTimeout(fertig, ms); });
-  }
-
-  /** Setzt eine CSS-Klasse für eine Animation – startet sie auch neu, falls sie gerade läuft. */
-  function animiere(element, klasse, ms) {
-    if (ohneBewegung()) return Promise.resolve();
-    element.classList.remove(klasse);
-    void element.offsetWidth;            // Browser "bemerkt" das Entfernen → Neustart möglich
-    element.classList.add(klasse);
-    return warte(ms).then(function () { element.classList.remove(klasse); });
-  }
 
   /* ------------------------------------------------------------------------
      SYMBOLE als kleine Pixel-SVGs (harte Kanten). Werden im Kampffenster
@@ -81,9 +104,232 @@ const SudokuKampf = (function () {
   const HERZ_SVG = symbolSvg("herz");
 
 
+  /**
+   * Der große Würfel als SVG: eine stilisierte Form mit Facetten (kein echtes
+   * 3D-Modell – die Seitenzahl ändert sich ja durch Verbesserungen).
+   * Die Farben kommen aus dem CSS (Klassen wf-…).
+   */
+  function wuerfelSvg() {
+    return '<svg class="wuerfel-form" viewBox="0 0 100 100" aria-hidden="true">' +
+      '<polygon class="wf-grund" points="50,4 90,27 90,73 50,96 10,73 10,27"/>' +
+      '<polygon class="wf-hell" points="10,27 50,4 50,22"/>' +
+      '<polygon class="wf-heller" points="50,4 90,27 50,22"/>' +
+      '<polygon class="wf-dunkel" points="90,27 90,73 80,68 50,22"/>' +
+      '<polygon class="wf-mittel" points="10,27 50,22 20,68 10,73"/>' +
+      '<polygon class="wf-dunkler" points="20,68 80,68 90,73 50,96 10,73"/>' +
+      '<polygon class="wf-front" points="50,22 80,68 20,68"/>' +
+      '<polygon class="wf-rand" points="50,4 90,27 90,73 50,96 10,73 10,27"/>' +
+      "</svg>";
+  }
+
   /** Ein Element, das beim Darüberfahren oder Antippen einen Erklärtext zeigt. */
   function tippHtml() {
     return '<span class="kampf-tipp" aria-hidden="true"></span>';
+  }
+
+  /**
+   * Der Würfel: auf dem Desktop groß in einer eigenen Fläche, auf dem
+   * Smartphone klein im Kampffenster (welcher sichtbar ist, regelt das CSS).
+   * @param {HTMLElement|null} platz – Platz für den großen Würfel
+   * @param {HTMLElement} klein     – der kleine Würfel im Kampffenster
+   * @param {HTMLElement} kleinZahl – seine Zahl
+   * @returns {{ rolle, ueberspringe, zeige }}
+   */
+  function erstelleWuerfel(platz, klein, kleinZahl) {
+    const g = {};       // Teile des großen Würfels
+    if (platz) {
+      platz.innerHTML =
+        '<div class="wuerfel-flaeche">' +
+          '<button type="button" class="wuerfel-knopf" aria-label="Würfel, noch nicht gewürfelt">' +
+            '<span class="wuerfel-koerper">' + wuerfelSvg() + '<span class="wuerfel-zahl">–</span></span>' +
+          "</button>" +
+          '<p class="wuerfel-info"><span class="wuerfel-seiten">W20</span><span class="wuerfel-art"></span></p>' +
+        "</div>";
+      g.flaeche = platz.querySelector(".wuerfel-flaeche");
+      g.knopf = platz.querySelector(".wuerfel-knopf");
+      g.koerper = platz.querySelector(".wuerfel-koerper");
+      g.zahl = platz.querySelector(".wuerfel-zahl");
+      g.seiten = platz.querySelector(".wuerfel-seiten");
+      g.art = platz.querySelector(".wuerfel-art");
+      // Ein Klick auf den Würfel überspringt die laufende Animation
+      g.knopf.addEventListener("click", ueberspringe);
+    }
+    klein.addEventListener("click", ueberspringe);
+
+    let lauf = null;    // der laufende Wurf: { e, art, animationen, zeit, fertig }
+
+    const ART_TEXT = { kritisch: "Kritisch!", fehlschlag: "Fehlschlag", immun: "Immun", geblockt: "Geblockt" };
+
+    /** Wie ist der Wurf ausgegangen? (bestimmt die Landung und die Farbe) */
+    function artVon(e) {
+      if (e.immun) return e.selten.art;          // "immun" oder "geblockt" (seltene Eigenschaft)
+      if (e.eigenheit) return "geblockt";        // Rüstung
+      if (e.kritisch) return "kritisch";
+      if (e.fehlschlag) return "fehlschlag";
+      return "";
+    }
+
+    /** Ist gerade der große Würfel zu sehen? */
+    function grossSichtbar() {
+      return Boolean(platz) && window.matchMedia(W.ab).matches;
+    }
+
+    /** Ergebnis (oder null = noch keins) auf beiden Würfeln zeigen. */
+    function zeige(zahl, art, seiten) {
+      const text = zahl === null ? "–" : String(zahl);
+      kleinZahl.textContent = text;
+      klein.dataset.art = art || "";
+      klein.classList.remove("rollt", "wartet");
+      klein.setAttribute("aria-label", zahl === null ? "Noch nicht gewürfelt" : "Letzter Wurf: " + zahl);
+      if (!platz) return;
+      g.zahl.textContent = text;
+      g.flaeche.dataset.art = art || "";
+      g.flaeche.classList.remove("rollt", "wartet");
+      g.art.textContent = art ? ART_TEXT[art] : "";
+      if (seiten) g.seiten.textContent = "W" + seiten;
+      g.knopf.setAttribute("aria-label", zahl === null ? "Würfel, noch nicht gewürfelt"
+        : "Letzter Wurf: " + zahl + (art ? ", " + ART_TEXT[art] : ""));
+    }
+
+    /**
+     * Zahlen, die während des Rollens wechseln – immer langsamer.
+     * Das Ergebnis selbst erscheint dabei nie (es soll nichts verraten).
+     */
+    function flackern(seiten, ergebnis, dauer) {
+      const start = performance.now();
+      let letzte = 0;
+      function naechste() {
+        const t = Math.min(1, (performance.now() - start) / dauer);
+        let z;
+        do {
+          z = 1 + Math.floor(Math.random() * seiten);
+        } while ((z === ergebnis || z === letzte) && seiten > 2);
+        letzte = z;
+        kleinZahl.textContent = z;
+        if (platz) g.zahl.textContent = z;
+        if (lauf && t < 1) lauf.zeit = setTimeout(naechste, 45 + 230 * t * t);
+      }
+      naechste();
+    }
+
+    /**
+     * Flugbahn des großen Würfels: hineingeworfen von links oben, dreht sich
+     * (immer langsamer) und überschlägt sich (Stauchen in der Höhe).
+     */
+    function flugBilder() {
+      const bilder = [];
+      const anzahl = 40;
+      for (let i = 0; i <= anzahl; i++) {
+        const t = i / anzahl;
+        const p = 1 - Math.pow(1 - t, 3);                  // schnell los, dann langsamer
+        const x = -150 * (1 - p);
+        const y = -110 * Math.pow(1 - p, 2);
+        const drehung = 360 * W.umdrehungen * p;
+        const kippen = 0.4 + 0.6 * Math.abs(Math.cos(Math.PI * W.ueberschlaege * p));
+        const groesse = 0.65 + 0.35 * p;
+        bilder.push({ transform: "translate(" + x + "%, " + y + "%) rotate(" + drehung + "deg) scale(" + groesse + ", " + (groesse * kippen) + ")" });
+      }
+      return bilder;
+    }
+
+    /** Der kleine Würfel dreht sich nur (immer langsamer). */
+    function drehBilder() {
+      return [{ transform: "rotate(0deg) scale(0.85)" }, { transform: "rotate(" + (360 * 2) + "deg) scale(1)" }];
+    }
+
+    /**
+     * Würfeln. Das Ergebnis steht schon fest (die Regeln haben gewürfelt) –
+     * hier wird es nur gezeigt.
+     * @param {object} e – das Ereignis "richtig" (wurf, wuerfelSeiten, kritisch …)
+     * @param {boolean} sofort – ohne Animation (der Zug wird übersprungen)
+     * @returns {Promise} – erfüllt, wenn der Würfel gelandet ist
+     */
+    function rolle(e, sofort) {
+      ueberspringe();
+      const art = artVon(e);
+      const gross = grossSichtbar();
+      const stufe = wuerfelEinstellung();
+      const normal = gross ? stufe.gross : stufe.klein;
+      let dauer = normal;
+      if (ohneBewegung()) dauer = normal > 0 ? W.pauseReduziert : 0;
+      if (sofort) dauer = 0;
+      if (platz) {
+        g.seiten.textContent = "W" + e.wuerfelSeiten;
+        g.art.textContent = "";
+      }
+      if (dauer === 0) {
+        zeige(e.wurf, art, e.wuerfelSeiten);
+        return Promise.resolve();
+      }
+      return new Promise(function (fertig) {
+        lauf = { e: e, art: art, animationen: [], zeit: null, fertig: fertig, gross: gross };
+        if (ohneBewegung()) {
+          // Nichts dreht sich: kurz abgedunkelt warten, dann das Ergebnis
+          klein.classList.add("wartet");
+          if (platz) g.flaeche.classList.add("wartet");
+          kleinZahl.textContent = "…";
+          if (platz) g.zahl.textContent = "…";
+          lauf.zeit = setTimeout(function () { lande(false); }, dauer);
+          return;
+        }
+        const flugDauer = dauer * (1 - W.landung);
+        const ziel = gross ? g.koerper : klein;
+        if (gross) g.flaeche.classList.add("rollt");
+        klein.classList.add("rollt");
+        const flug = ziel.animate(gross ? flugBilder() : drehBilder(),
+          { duration: flugDauer, easing: gross ? "linear" : "cubic-bezier(0.2, 0.7, 0.3, 1)" });
+        lauf.animationen.push(flug);
+        flackern(e.wuerfelSeiten, e.wurf, flugDauer);
+        flug.onfinish = function () { aufprall(dauer * W.landung); };
+      });
+    }
+
+    /** Aufprall: kurzes Stauchen, dann ist der Würfel gelandet. */
+    function aufprall(ms) {
+      if (!lauf) return;
+      clearTimeout(lauf.zeit);
+      zeige(lauf.e.wurf, lauf.art, lauf.e.wuerfelSeiten);
+      const ziel = lauf.gross ? g.koerper : klein;
+      const stoss = ziel.animate([
+        { transform: "scale(1.16, 0.84)" },
+        { transform: "scale(0.94, 1.06)" },
+        { transform: "none" },
+      ], { duration: ms, easing: "ease-out" });
+      lauf.animationen.push(stoss);
+      landeVariante(lauf.art, lauf.gross);
+      stoss.onfinish = function () { lande(true); };
+    }
+
+    /** Je nach Ergebnis: Aufleuchten mit Erschütterung (kritisch), müdes Umkippen (Fehlschlag) … */
+    function landeVariante(art, gross) {
+      if (art === "kritisch" && gross) {
+        g.flaeche.animate([
+          { transform: "none" }, { transform: "translate(-6px, 3px)" }, { transform: "translate(5px, -4px)" },
+          { transform: "translate(-3px, 2px)" }, { transform: "none" },
+        ], { duration: 360, easing: "linear" });
+      }
+      // Das Umkippen beim Fehlschlag und das Leuchten beim kritischen Treffer
+      // erledigt das CSS über data-art (siehe css/sudoku-rpg.css)
+    }
+
+    /** Der Wurf ist zu Ende (gelandet oder übersprungen). */
+    function lande(mitAufprall) {
+      const l = lauf;
+      if (!l) return;
+      lauf = null;
+      clearTimeout(l.zeit);
+      l.animationen.forEach(function (a) { a.onfinish = null; a.cancel(); });
+      zeige(l.e.wurf, l.art, l.e.wuerfelSeiten);
+      if (!mitAufprall && l.art === "kritisch" && l.gross && !ohneBewegung()) landeVariante(l.art, true);
+      l.fertig();
+    }
+
+    /** Laufenden Wurf sofort beenden – er zeigt dann direkt sein Ergebnis. */
+    function ueberspringe() {
+      if (lauf) lande(false);
+    }
+
+    return { rolle: rolle, ueberspringe: ueberspringe, zeige: zeige };
   }
 
   /**
@@ -91,6 +337,7 @@ const SudokuKampf = (function () {
    * @param {HTMLElement} container – wohin das Fenster gezeichnet wird
    * @param {object} optionen
    *   beimZuruecksetzen – Funktion, die bei Klick auf "Abenteuer zurücksetzen" läuft
+   *   wuerfelPlatz      – Element für den großen Würfel (Desktop), optional
    * @returns {object} Steuerung des Fensters (siehe unten "return")
    */
   function erstelle(container, optionen) {
@@ -221,6 +468,8 @@ const SudokuKampf = (function () {
 
     SudokuSprites.zeichne(el.heldCanvas, "held", 0);
 
+    const wuerfel = erstelleWuerfel(optionen && optionen.wuerfelPlatz, el.wuerfel, el.wuerfelZahl);
+
     container.querySelector(".kampf-reset").addEventListener("click", function () {
       if (optionen && optionen.beimZuruecksetzen) optionen.beimZuruecksetzen();
     });
@@ -257,11 +506,60 @@ const SudokuKampf = (function () {
     const anzeige = { bossNummer: 0, muenzen: 0, kombo: 0, maxLeben: SudokuRPG.KONFIG.maxLeben };
     const K = SudokuRPG.KONFIG;
 
-    /* ---------- Warteschlange ---------- */
+    /* ---------- Warteschlange ----------
+       Jeder Schritt bekommt eine Nummer. Kommt ein neuer Zug, bevor die
+       Animationen des letzten fertig sind, werden alle älteren Schritte
+       "eilig": Sie springen sofort zu ihrem Ende (beschleunige). So staut
+       sich nichts an. */
     let kette = Promise.resolve();
+    let schrittNummer = 0;       // zuletzt vergebene Nummer
+    let laufend = 0;             // Nummer des gerade laufenden Schritts (0 = keiner)
+    let eiligBis = 0;            // alle Schritte bis zu dieser Nummer laufen ohne Wartezeit
+    const wartende = new Set();  // laufende Wartezeiten – beschleunige() beendet sie sofort
+
     function einreihen(schritt) {
-      kette = kette.then(schritt).catch(function (fehler) { console.error(fehler); });
+      const nummer = ++schrittNummer;
+      kette = kette
+        .then(function () { laufend = nummer; return schritt(); })
+        .catch(function (fehler) { console.error(fehler); })
+        .then(function () { if (laufend === nummer) laufend = 0; });
       return kette;
+    }
+
+    /** Läuft gerade ein Schritt, der übersprungen werden soll? */
+    function eilig() {
+      return laufend !== 0 && laufend <= eiligBis;
+    }
+
+    /** Alle bisher eingereihten Schritte sofort zu Ende bringen (der Würfel landet sofort). */
+    function beschleunige() {
+      eiligBis = schrittNummer;
+      wartende.forEach(function (sofort) { sofort(); });
+      wuerfel.ueberspringe();
+    }
+
+    /** Wartet ms Millisekunden – außer bei "Bewegung reduzieren" oder wenn es eilt. */
+    function warte(ms) {
+      if (ohneBewegung() || ms <= 0 || eilig()) return Promise.resolve();
+      return wartezeit(ms);
+    }
+
+    /** Eine Wartezeit, die beschleunige() abbrechen kann. */
+    function wartezeit(ms) {
+      return new Promise(function (fertig) {
+        const sofort = function () { clearTimeout(zeit); wartende.delete(sofort); fertig(); };
+        const zeit = setTimeout(sofort, ms);
+        wartende.add(sofort);
+      });
+    }
+
+    /** Setzt eine CSS-Klasse für eine Animation – startet sie auch neu, falls sie gerade läuft. */
+    function animiere(element, klasse, ms) {
+      if (ohneBewegung() || eilig()) return Promise.resolve();
+      element.classList.remove(klasse);
+      void element.offsetWidth;            // Browser "bemerkt" das Entfernen → Neustart möglich
+      element.classList.add(klasse);
+      return warte(ms).then(function () { element.classList.remove(klasse); });
     }
 
 
@@ -369,10 +667,11 @@ const SudokuKampf = (function () {
         const t0 = performance.now();
         function schritt(jetzt) {
           const anteil = Math.min(1, (jetzt - t0) / dauer);
-          el.muenzenZahl.textContent = Math.round(start + (ziel - start) * anteil);
-          if (anteil < 1) {
+          el.muenzenZahl.textContent = Math.round(start + (ziel - start) * (eilig() ? 1 : anteil));
+          if (anteil < 1 && !eilig()) {
             requestAnimationFrame(schritt);
           } else {
+            el.muenzenZahl.textContent = ziel;
             fertig();
           }
         }
@@ -445,8 +744,7 @@ const SudokuKampf = (function () {
     }
 
     function zeigeWurf(zahl) {
-      el.wuerfelZahl.textContent = zahl === null ? "–" : zahl;
-      el.wuerfel.setAttribute("aria-label", zahl === null ? "Noch nicht gewürfelt" : "Letzter Wurf: " + zahl);
+      wuerfel.zeige(zahl, "");
     }
 
     function zeigeRekord(boss, rekord) {
@@ -462,16 +760,11 @@ const SudokuKampf = (function () {
 
 
     /* ---------- Das Panel: letzter Treffer, Belohnung, Verlauf ----------
-       Es zeigt immer den NEUESTEN Zug – sofort, ohne auf die Animationen
-       in der Warteschlange zu warten. Aktualisiert wird über spaeter():
-       erst wenn die Regeln alle Ereignisse dieses Zugs gemeldet haben
-       (z. B. "powerup" kommt nach "richtig"), in der richtigen Reihenfolge. */
+       Aktualisiert wird in der Warteschlange: ein Treffer erst, wenn der
+       Würfel gelandet ist. Kommt ein neuer Zug, springen die älteren sofort
+       zu ihrem Ende – das Panel zeigt also immer den neuesten gelandeten Zug. */
 
     const VERLAUF_LAENGE = 5;
-
-    function spaeter(fn) {
-      Promise.resolve().then(fn).catch(function (fehler) { console.error(fehler); });
-    }
 
     /** Hebt ein Element kurz hervor (nur Farbe – auch bei "Bewegung reduzieren"). */
     function hervorheben(element) {
@@ -786,27 +1079,13 @@ const SudokuKampf = (function () {
      * Kombo, Münzen, Leben – kurz nacheinander.
      */
     function treffer(e) {
-      spaeter(function () {
-        meldung(trefferText(e));
-        protokolliereTreffer(e);
-      });
+      beschleunige();       // ein noch laufender Zug springt sofort zu seinem Ende
       return einreihen(function () {
         zeigeBoss(e.boss);
-        // 1. Würfel rollt
-        let wuerfeln = Promise.resolve();
-        el.wuerfel.classList.remove("ist-wirkungslos");
-        if (!ohneBewegung()) {
-          el.wuerfel.classList.add("rollt");
-          const zufallsAnzeige = setInterval(function () {
-            el.wuerfelZahl.textContent = 1 + Math.floor(Math.random() * e.wuerfelSeiten);
-          }, 55);
-          wuerfeln = warte(DAUER.wuerfeln).then(function () {
-            clearInterval(zufallsAnzeige);
-            el.wuerfel.classList.remove("rollt");
-          });
-        }
-        return wuerfeln.then(function () {
-          zeigeWurf(e.wurf);
+        // 1. Würfel rollt – erst wenn er gelandet ist, wird der Treffer sichtbar
+        return wuerfel.rolle(e, eilig()).then(function () {
+          meldung(trefferText(e));
+          protokolliereTreffer(e);
           // 2. Held schlägt zu – oder stolpert bei einer 1
           if (e.fehlschlag) return animiere(el.heldFigur, "stolpert", DAUER.stolpern);
           return animiere(el.heldFigur, e.kritisch ? "schlaegt-stark" : "schlaegt", DAUER.schlag);
@@ -818,8 +1097,7 @@ const SudokuKampf = (function () {
             return null;
           }
           if (e.immun) {
-            // Seltene Eigenschaft: Wurf wirkungslos – Würfel grau, Boss wehrt ab
-            el.wuerfel.classList.add("ist-wirkungslos");
+            // Seltene Eigenschaft: Wurf wirkungslos – Würfel grau (siehe Würfel), Boss wehrt ab
             schwebeZahl(e.selten.art === "geblockt" ? "Geblockt!" : "Immun!", "immun");
             banner(e.selten.name + "!", e.selten.farbe, "selten");
             animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
@@ -827,7 +1105,6 @@ const SudokuKampf = (function () {
           }
           if (e.eigenheit) {
             // Rüstung hat den Wurf geblockt
-            el.wuerfel.classList.add("ist-wirkungslos");
             schwebeZahl("Geblockt!", "geblockt");
             animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
             return eigenheitAusgeloest(e.eigenheit);
@@ -874,22 +1151,24 @@ const SudokuKampf = (function () {
      */
     function faerbe(element, klasse, ms) {
       element.classList.add(klasse);
-      return new Promise(function (fertig) {
-        setTimeout(function () { element.classList.remove(klasse); fertig(); }, ms);
-      });
+      const ende = function () { element.classList.remove(klasse); };
+      if (eilig()) {
+        ende();
+        return Promise.resolve();
+      }
+      return wartezeit(ms).then(ende);
     }
 
     /** Falsche Zahl: Boss greift an, ein Leben geht verloren, die Kombo zerbricht, ggf. Eigenheit. */
     function fehler(e) {
-      spaeter(function () {
+      beschleunige();
+      return einreihen(function () {
         let text = e.boss.name + " greift an! Falsche Zahl, " +
           (e.leben === 0 ? "keine Leben mehr." : "noch " + e.leben + " Leben.");
         if (e.komboVorher > 0) text += " Kombo verloren.";
         if (e.eigenheit) text += " " + e.eigenheit.name + ": " + e.eigenheit.text + ".";
         meldung(text);
         protokolliereFehler(e);
-      });
-      return einreihen(function () {
         const rest = e.leben;
         const angriff = animiere(el.bossFigur, "greift-an", DAUER.angriff);
         return warte(DAUER.angriff / 2).then(function () {
@@ -917,15 +1196,13 @@ const SudokuKampf = (function () {
 
     /** Boss besiegt. */
     function sieg(e) {
-      spaeter(function () {
+      return einreihen(function () {
         meldung(e.boss.name + " ist besiegt!" + (e.elite ? " Elite-Bonus: " + e.eliteBonus + " Münzen." : ""));
         verlaufEintrag(e.elite
           ? { text: "Elite " + e.boss.name + " besiegt!", wert: "+" + e.eliteBonus, art: "elite", symbol: "krone" }
           : { text: e.boss.name + " besiegt!", wert: "", art: "besiegt", symbol: "krone" });
-      });
-      return einreihen(function () {
         zeigeHp(0, e.boss.maxHp);
-        if (ohneBewegung()) {
+        if (ohneBewegung() || eilig()) {
           return Promise.resolve();
         }
         if (e.elite) {
@@ -943,7 +1220,7 @@ const SudokuKampf = (function () {
 
     /** Der nächste Boss erscheint (volle HP, Leben aufgefüllt) – mit seiner Eigenheit. */
     function neuerBoss(e, rekord) {
-      spaeter(function () {
+      return einreihen(function () {
         let text = (e.boss.elite ? "Ein Elite-Boss erscheint! " : "") +
           "Boss " + e.boss.nummer + ": " + e.boss.name + ", " + e.boss.maxHp + " HP.";
         if (e.boss.eigenheit) text += " Eigenheit " + e.boss.eigenheit.name + ": " + e.boss.eigenheit.beschreibung;
@@ -956,8 +1233,6 @@ const SudokuKampf = (function () {
           ? { text: "Boss " + e.boss.nummer + ": " + e.boss.name + " · " + e.boss.eigenheit.name, wert: "",
               art: "eigenheit", symbol: "warnung", farbe: e.boss.eigenheit.farbe }
           : { text: "Boss " + e.boss.nummer + ": " + e.boss.name, wert: e.boss.maxHp + " HP" });
-      });
-      return einreihen(function () {
         el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite");
         zeigeBoss(e.boss);
         zeigeHp(e.hp, e.boss.maxHp);
@@ -965,7 +1240,7 @@ const SudokuKampf = (function () {
         zeigeRekord(e.boss, rekord);
         if (e.boss.elite) {
           // Eigene Einblendung (entfällt bei "Bewegung reduzieren" – die Kennzeichnungen bleiben)
-          if (!ohneBewegung()) {
+          if (!ohneBewegung() && !eilig()) {
             const b = banner("Ein Elite-Boss erscheint!", null, "elite");
             setTimeout(function () { b.remove(); }, DAUER.eliteAuftritt);
           }
@@ -978,11 +1253,9 @@ const SudokuKampf = (function () {
 
     /** Eine Verbesserung wurde gewählt: Symbole und ggf. Herzen aktualisieren. */
     function verbesserung(e) {
-      spaeter(function () {
+      return einreihen(function () {
         meldung(e.name + ", Stufe " + e.stufe + "." + (e.lebenPlus > 0 ? " +" + e.lebenPlus + " Leben." : ""));
         verlaufEintrag({ text: e.name, wert: "Stufe " + e.stufe });
-      });
-      return einreihen(function () {
         zeigeVerbesserungen(e.gesammelt, e.id);
         zeigeHerzen(e.leben, e.maxLeben);
       });
@@ -990,7 +1263,7 @@ const SudokuKampf = (function () {
 
     /** Kurze Nachricht: im Verlauf und für Screenreader. */
     function text(nachricht) {
-      spaeter(function () {
+      return einreihen(function () {
         meldung(nachricht);
         verlaufEintrag({ text: nachricht, wert: "" });
       });
@@ -998,7 +1271,11 @@ const SudokuKampf = (function () {
 
     /** Ein neues Abenteuer: Panel zurück auf den Hinweistext. */
     function neuesAbenteuer() {
-      spaeter(leerePanel);
+      beschleunige();
+      return einreihen(function () {
+        leerePanel();
+        wuerfel.zeige(null, "");
+      });
     }
 
     /** Wartet, bis alle Animationen in der Schlange abgespielt sind. */
@@ -1171,11 +1448,9 @@ const SudokuKampf = (function () {
      * @returns {Promise} – erfüllt, wenn "Erneut antreten" gedrückt wurde
      */
     function niederlage(rahmen, e) {
-      spaeter(function () {
+      return einreihen(function () {
         meldung("Niederlage gegen " + e.boss.name + ".");
         verlaufEintrag({ text: "Niederlage gegen " + e.boss.name, wert: "", art: "fehler", symbol: "kreuz" });
-      });
-      return einreihen(function () {
         zeigeHerzen(0);
         return animiere(el.heldFigur, "faellt", 500);
       }).then(function () {
@@ -1222,6 +1497,7 @@ const SudokuKampf = (function () {
       schliesseAuswahl: schliesseAuswahl,
       text: text,
       neuesAbenteuer: neuesAbenteuer,
+      beschleunige: beschleunige,
       fertig: fertig,
       losen: losen,
       niederlage: niederlage,
@@ -1229,6 +1505,9 @@ const SudokuKampf = (function () {
   }
 
   return {
+    WUERFEL: W,
+    wuerfelEinstellung: wuerfelEinstellung,
+    setzeWuerfelEinstellung: setzeWuerfelEinstellung,
     erstelle: erstelle,
     symbolSvg: symbolSvg,
   };

@@ -107,6 +107,8 @@ function initSudoku(container) {
       "</div>" +
       // Platz für das Kampffenster (nur im Abenteuer)
       '<div class="sudoku-kampf nur-abenteuer"></div>' +
+      // Eigene Fläche für den großen Würfel (nur Abenteuer, nur Desktop – siehe CSS)
+      '<div class="sudoku-wuerfel nur-abenteuer"></div>' +
       // Der Rahmen hält Gitter und Statusmeldung zusammen:
       // Die Meldung schwebt ÜBER dem Gitter und braucht so keinen eigenen Platz.
       '<div class="sudoku-brett-rahmen">' +
@@ -123,6 +125,7 @@ function initSudoku(container) {
   const neuKnopf = container.querySelector(".sudoku-neu");
   const abenteuerGrad = container.querySelector(".sudoku-abenteuer-grad");
   const kampfPlatz = container.querySelector(".sudoku-kampf");
+  const wuerfelPlatz = container.querySelector(".sudoku-wuerfel");
   const rahmen = container.querySelector(".sudoku-brett-rahmen");
   const status = container.querySelector(".sudoku-status");
   const brett = container.querySelector(".sudoku-brett");
@@ -525,7 +528,7 @@ function initSudoku(container) {
     const diesesAbenteuer = abenteuer;
 
     if (!kampf) {
-      kampf = SudokuKampf.erstelle(kampfPlatz, { beimZuruecksetzen: abenteuerZuruecksetzen });
+      kampf = SudokuKampf.erstelle(kampfPlatz, { beimZuruecksetzen: abenteuerZuruecksetzen, wuerfelPlatz: wuerfelPlatz });
     }
 
     // Auf die Regeln hören → Kampffenster und Gitter reagieren

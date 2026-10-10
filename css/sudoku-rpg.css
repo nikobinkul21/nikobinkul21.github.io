@@ -69,6 +69,13 @@
   --panel-daneben: #b8bec8;
   --panel-leben: #7be38f;
 
+  /* Großer Würfel (Desktop) */
+  --wuerfel-flaeche-hoehe: 200px;          /* feste Höhe der Würfelfläche rechts oben */
+  --wuerfel-groesse: 120px;                /* der Würfel selbst */
+  --wuerfel-farbe: #6c4bd8;                /* wie der kleine Würfel im Kampffenster */
+  --wuerfel-zahl-farbe: #ffffff;
+  --wuerfel-flaeche-hintergrund: var(--kampf-kasten);
+
   /* Elite-Bosse */
   --kampf-elite: #f5c542;                  /* Gold: Rahmen, Aura, "Elite" */
   --kampf-elite-dunkel: #8a5a00;
@@ -216,9 +223,22 @@
       var(--sudoku-kampf-breite)
       var(--sudoku-groesse)
       var(--sudoku-zahlenfeld-breite);
+    /* Rechts oben die Würfelfläche (feste Höhe), darunter das Zahlenfeld */
+    grid-template-rows: auto var(--wuerfel-flaeche-hoehe) 1fr;
     grid-template-areas:
       ".      steuerung  ."
+      "kampf  brett      wuerfel"
       "kampf  brett      zahlen";
+  }
+
+  .sudoku.ist-abenteuer .sudoku-wuerfel {
+    display: block;
+    grid-area: wuerfel;
+  }
+
+  /* Der kleine Würfel im Kampffenster entfällt hier */
+  .sudoku.ist-abenteuer .kampf-wuerfel {
+    display: none;
   }
 
   /* Die Kampfspalte reicht bis zur Unterkante des Gitters – das Panel füllt den Rest */
@@ -711,11 +731,6 @@
   -webkit-text-stroke: 3px var(--kampf-selten);
 }
 
-/* Wirkungsloser Wurf: Würfel ausgegraut */
-.kampf-wuerfel.ist-wirkungslos {
-  filter: grayscale(1);
-  opacity: 0.5;
-}
 
 /* Regeneration: der Boss heilt sich */
 .kampf-schwebezahl--heilung {
@@ -1358,7 +1373,6 @@
 .kampf-figur--boss.ist-besiegt { animation: kampf-besiegt 0.9s ease-in forwards; }
 .kampf-figur--boss.erscheint { animation: kampf-erscheinen 0.45s ease-out; }
 .kampf-herz.verschwindet { animation: kampf-herz-weg 0.4s ease-out; }
-.kampf-wuerfel.rollt { animation: kampf-rollen 0.38s linear; }
 .kampf-figur--boss.getroffen-stark { animation: kampf-getroffen-stark 0.42s steps(1, end); }
 .kampf-buehne.wackelt { animation: kampf-buehne-wackeln 0.36s linear; }
 .kampf-buehne.wackelt-stark { animation: kampf-buehne-wackeln-stark 0.56s linear; }
@@ -1475,11 +1489,6 @@
   100% { transform: scale(1); }
 }
 
-@keyframes kampf-rollen {
-  from { transform: rotate(0); }
-  to   { transform: rotate(360deg); }
-}
-
 @keyframes kampf-aufsteigen {
   0%   { opacity: 0; transform: translateY(6px) scale(0.8); }
   20%  { opacity: 1; transform: translateY(0) scale(1.15); }
@@ -1495,6 +1504,178 @@
 @keyframes sudoku-fehlversuch {
   0%, 50% { background-color: rgba(224, 72, 63, 0.28); }
   25%, 75% { background-color: transparent; }
+}
+
+
+/* ==========================================================================
+   GROSSER WÜRFEL (Desktop, rechts oben neben dem Sudoku)
+   sudoku-battle-ui.js steuert den Wurf; data-art am Rahmen zeigt, wie er
+   ausgegangen ist: "kritisch", "fehlschlag", "immun", "geblockt" oder leer.
+   ========================================================================== */
+
+.sudoku-wuerfel {
+  display: none;                            /* nur auf dem Desktop (siehe oben) */
+}
+
+.wuerfel-flaeche {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: var(--wuerfel-flaeche-hoehe);     /* feste Größe: beim Würfeln verschiebt sich nichts */
+  overflow: hidden;                         /* der Würfel fliegt von außen herein */
+  background:
+    radial-gradient(ellipse at 50% 85%, rgba(0, 0, 0, 0.12), transparent 60%),
+    var(--wuerfel-flaeche-hintergrund);
+  color: var(--kampf-kasten-text);
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: var(--kampf-radius);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.wuerfel-knopf {
+  display: block;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.wuerfel-koerper {
+  position: relative;
+  display: block;
+  width: var(--wuerfel-groesse);
+  height: var(--wuerfel-groesse);
+  transform-origin: 50% 55%;
+  transition: transform 0.6s ease-in, filter 0.3s;
+}
+
+.wuerfel-form {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Facetten: Grundfarbe, darüber hellere und dunklere Flächen */
+.wf-grund { fill: var(--wuerfel-farbe); }
+.wf-hell { fill: rgba(255, 255, 255, 0.22); }
+.wf-heller { fill: rgba(255, 255, 255, 0.38); }
+.wf-mittel { fill: rgba(0, 0, 0, 0.12); }
+.wf-dunkel { fill: rgba(0, 0, 0, 0.24); }
+.wf-dunkler { fill: rgba(0, 0, 0, 0.36); }
+.wf-front { fill: rgba(255, 255, 255, 0.1); stroke: rgba(0, 0, 0, 0.35); stroke-width: 1.5; stroke-linejoin: round; }
+.wf-rand { fill: none; stroke: var(--kampf-kasten-rand); stroke-width: 4; stroke-linejoin: round; }
+
+/* Die Zahl sitzt auf der vorderen Fläche */
+.wuerfel-zahl {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 41%;
+  text-align: center;
+  font-size: calc(var(--wuerfel-groesse) * 0.24);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--wuerfel-zahl-farbe);
+  -webkit-text-stroke: 3px rgba(0, 0, 0, 0.55);
+  paint-order: stroke fill;
+}
+
+.wuerfel-info {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  min-height: 1.3em;                        /* auch ohne Text gleich hoch */
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.wuerfel-seiten {
+  opacity: 0.55;
+}
+
+/* Während des Rollens: Zahl leicht durchsichtig, der Würfel ist "in Bewegung" */
+.wuerfel-flaeche.rollt .wuerfel-zahl {
+  opacity: 0.75;
+}
+
+/* Bewegung reduziert: kurz abgedunkelt warten */
+.wuerfel-flaeche.wartet .wuerfel-koerper {
+  filter: grayscale(0.6) brightness(0.85);
+}
+
+/* Kritisch: Aufleuchten in Magenta (wie die kritische Zahl im Kampffenster) */
+.wuerfel-flaeche[data-art="kritisch"] .wuerfel-koerper {
+  filter: drop-shadow(0 0 10px var(--kampf-kritisch)) drop-shadow(0 0 22px var(--kampf-kritisch));
+  animation: wuerfel-aufleuchten 0.5s ease-out;
+}
+
+.wuerfel-flaeche[data-art="kritisch"] .wuerfel-zahl,
+.wuerfel-flaeche[data-art="kritisch"] .wuerfel-art {
+  color: var(--kampf-kritisch);
+}
+
+.wuerfel-flaeche[data-art="kritisch"] .wuerfel-zahl {
+  color: #fff;
+  -webkit-text-stroke-color: var(--kampf-kritisch-rand);
+}
+
+/* Fehlschlag: grau, der Würfel kippt müde um */
+.wuerfel-flaeche[data-art="fehlschlag"] .wuerfel-koerper {
+  filter: grayscale(0.7);
+  transform: rotate(24deg) translate(10%, 8%);
+}
+
+.wuerfel-flaeche[data-art="fehlschlag"] .wuerfel-art {
+  color: var(--kampf-daneben-rand);
+}
+
+/* Immun/geblockt: ausgegraut, Hinweis in Violett (wie "Immun!" im Kampffenster) */
+.wuerfel-flaeche[data-art="immun"] .wuerfel-koerper,
+.wuerfel-flaeche[data-art="geblockt"] .wuerfel-koerper {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.wuerfel-flaeche[data-art="immun"] .wuerfel-art,
+.wuerfel-flaeche[data-art="geblockt"] .wuerfel-art {
+  color: var(--kampf-selten);
+}
+
+@keyframes wuerfel-aufleuchten {
+  0%   { filter: brightness(2.2) drop-shadow(0 0 26px var(--kampf-kritisch)); }
+  100% { filter: drop-shadow(0 0 10px var(--kampf-kritisch)) drop-shadow(0 0 22px var(--kampf-kritisch)); }
+}
+
+/* Kleiner Würfel (Smartphone): gleiche Bedeutungen als Farbe */
+.kampf-wuerfel {
+  cursor: pointer;
+}
+
+.kampf-wuerfel.wartet {
+  opacity: 0.6;
+}
+
+.kampf-wuerfel[data-art="kritisch"] {
+  background: var(--kampf-kritisch);
+  box-shadow: 0 0 10px var(--kampf-kritisch);
+}
+
+.kampf-wuerfel[data-art="fehlschlag"] {
+  background: #8b929e;
+}
+
+.kampf-wuerfel[data-art="immun"],
+.kampf-wuerfel[data-art="geblockt"] {
+  filter: grayscale(1);
+  opacity: 0.5;
 }
 
 
@@ -1829,6 +2010,16 @@
   .auswahl-karte {
     animation: none !important;
     transition: none !important;
+  }
+
+  /* Würfel: nichts dreht oder kippt – nur Zahl und Farbe */
+  .wuerfel-koerper {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .wuerfel-flaeche[data-art="fehlschlag"] .wuerfel-koerper {
+    transform: none;
   }
 
   /* Elite-Aura: leuchtet, pulsiert aber nicht */
