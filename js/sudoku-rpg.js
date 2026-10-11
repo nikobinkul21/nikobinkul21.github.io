@@ -234,7 +234,7 @@ const SUDOKU_RPG_KONFIG = {
   // Zeile, Spalte oder einen 3×3-Block, wehrt der Held den Angriff ab.
   // Paraden lassen sich nicht aufheben – es zählt nur dieser eine Zug.
   gegenangriff: {
-    eliteKuerzer: 2,        // bei Elite-Bossen kommt der Angriff so viele Züge früher
+    eliteKuerzer: 2,        // bei Elite-Bossen kommt der Angriff so viele Züge früher (5 − 2 = alle 3 Züge)
     warnungAb: 2,           // in den letzten so vielen Zügen pulsiert die Anzeige
   },
 
@@ -257,7 +257,7 @@ const SUDOKU_RPG_KONFIG = {
   angriffe: [
     {
       id: "schrei", name: "Schrei", symbol: "schrei", farbe: "#e98a15",
-      abstand: 10, dauer: 0, wert: 0.5,
+      abstand: 5, dauer: 0, wert: 0.5,
       beschreibung: "Halbiert deine Kombo.",
       wirkung: function (a) {
         const vorher = a.zustand.kombo;
@@ -267,7 +267,7 @@ const SUDOKU_RPG_KONFIG = {
     },
     {
       id: "siegel", name: "Siegel", symbol: "siegel", farbe: "#8b5cff",
-      abstand: 9, dauer: 4, wert: 0,
+      abstand: 5, dauer: 4, wert: 0,
       beschreibung: "Versiegelt für {dauer} Züge einen 3×3-Block mit leeren Feldern. Dort kannst du nichts setzen.",
       wirkung: function (a) {
         // Nur Blöcke mit leeren Feldern – und nur, wenn außerhalb noch ein
@@ -291,7 +291,7 @@ const SUDOKU_RPG_KONFIG = {
     },
     {
       id: "finsternis", name: "Finsternis", symbol: "finsternis", farbe: "#3b3561",
-      abstand: 9, dauer: 5, wert: 0,
+      abstand: 5, dauer: 5, wert: 0,
       beschreibung: "Verdeckt für {dauer} Züge alle Zahlen in einer Zeile und einer Spalte.",
       wirkung: function (a) {
         const zeile = Math.floor(a.zufall() * 9), spalte = Math.floor(a.zufall() * 9);
@@ -306,7 +306,7 @@ const SUDOKU_RPG_KONFIG = {
     },
     {
       id: "fluch", name: "Fluch", symbol: "fluch", farbe: "#2f9e5a",
-      abstand: 8, dauer: 5, wert: 0,
+      abstand: 5, dauer: 5, wert: 0,
       beschreibung: "Verflucht für {dauer} Züge eine Ziffer, die im Sudoku noch fehlt. Setzt du sie, macht sie keinen Schaden.",
       wirkung: function (a) {
         const fehlt = [];
@@ -322,7 +322,7 @@ const SUDOKU_RPG_KONFIG = {
     },
     {
       id: "hieb", name: "Hieb", symbol: "hieb", farbe: "#d63a3a",
-      abstand: 12, dauer: 0, wert: 1,
+      abstand: 5, dauer: 0, wert: 1,
       beschreibung: "Kostet dich {wert} Leben.",
       wirkung: function (a) {
         a.zustand.leben = Math.max(0, a.zustand.leben - a.wert);
@@ -1628,6 +1628,7 @@ const SudokuRPG = (function () {
       // 8. Gegenangriff: Der Zug zählt (nicht, wenn der Boss gerade besiegt wurde).
       //    Hat dieser Zug eine Einheit vervollständigt, pariert der Held.
       //    Wirkungen enden mit dem Sudoku. Ein Hieb kann das letzte Leben kosten.
+      const komboNachTreffer = zustand.kombo;      // ein Schrei verändert sie erst im Angriff
       const angriff = besiegt ? null : zugVorbei(bossVorher, doppelt);
       if (geloest) zustand.gegenangriff.wirkungen = [];
       const gegenangriff = besiegt ? null : angriffAnzeigeVorAngriff(angriff);
@@ -1649,7 +1650,7 @@ const SudokuRPG = (function () {
         kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, spruch: spruch,
         doppelt: doppelt, einheiten: einheiten,
         schaden: rechnung.schaden, gift: rechnung.gift,
-        kombo: zustand.kombo, komboBonus: rechnung.komboBonus,
+        kombo: komboNachTreffer, komboBonus: rechnung.komboBonus,
         eigenheit: rechnung.ausgeloest ? {
           id: bossVorher.eigenheit.id, name: bossVorher.eigenheit.name,
           farbe: bossVorher.eigenheit.farbe, text: rechnung.ausgeloest,
