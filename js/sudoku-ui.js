@@ -78,7 +78,7 @@ function initSudoku(container) {
   }
   /** Im Abenteuer ist gerade eine Verbesserungsauswahl offen → keine Eingabe. */
   function waehltVerbesserung() {
-    return modus === "abenteuer" && Boolean(abenteuer && abenteuer.zustand.auswahl);
+    return modus === "abenteuer" && Boolean(abenteuer && (abenteuer.zustand.auswahl || abenteuer.mussBehalten()));
   }
 
 
@@ -737,6 +737,12 @@ function initSudoku(container) {
       });
     });
     abenteuer.an("niederlage", function (e) { letzteNiederlage = e; });
+    // Verbesserungen behalten (älterer Stand): Plätze und Leben neu zeigen
+    abenteuer.an("behalten", function () {
+      if (abenteuer !== diesesAbenteuer) return;
+      kampf.zeigeStand(standFuerAnzeige());
+      if (spiel) zeichneZahlenfeld();
+    });
     abenteuer.an("sudokuGeloest", function () {
       if (abenteuer === diesesAbenteuer) kampf.text("Sudoku gelöst!");
     });
@@ -749,6 +755,15 @@ function initSudoku(container) {
     kampf.text(abenteuer.zustand.raetsel && !abenteuer.zustand.raetsel.geloest
       ? "Der Kampf geht weiter!"
       : "Ein Boss stellt sich dir in den Weg!");
+    // Älterer Spielstand mit mehr Verbesserungen als Plätzen → erst wählen, was bleibt
+    if (abenteuer.mussBehalten()) {
+      kampf.behalten(rahmen, abenteuer.gesammelt(), function (ids) {
+        if (abenteuer !== diesesAbenteuer) return;
+        abenteuer.behalteVerbesserungen(ids);       // → Ereignis "behalten"
+        setzeBeschaeftigtAnzeige();
+        if (spiel && !beschaeftigt.abenteuer && !waehltVerbesserung()) waehle(ausgewaehlt, true);
+      });
+    }
     // Beim letzten Mal wurde nicht mehr gewählt? → Auswahl gleich zeigen
     if (abenteuer.zustand.auswahl) zeigeAuswahl(abenteuer.auswahlInfo());
 
@@ -778,7 +793,7 @@ function initSudoku(container) {
     return {
       boss: abenteuer.boss(), hp: z.bossHp, leben: z.leben, maxLeben: werte.maxLeben,
       muenzen: z.muenzen, rekord: z.rekord,
-      kombo: z.kombo, komboBonus: Math.min(z.kombo * SudokuRPG.KONFIG.kombo.proStufe, werte.komboMax),
+      eingeschuechtert: z.eingeschuechtert,
       verbesserungen: abenteuer.gesammelt(),
       gegenangriff: abenteuer.gegenangriff(),
       buchBonus: abenteuer.buchBonus(),
@@ -997,7 +1012,7 @@ function initSudoku(container) {
 
   function abenteuerZuruecksetzen() {
     if (!window.confirm("Abenteuer wirklich zurücksetzen? Du beginnst wieder bei Boss 1 mit " + SudokuRPG.KONFIG.startLeben +
-      " Leben – Rekord, Münzen, Kombo und Verbesserungen werden gelöscht.")) {
+      " Leben – Rekord, Münzen und Verbesserungen werden gelöscht.")) {
       return;
     }
     abenteuer.zuruecksetzen();

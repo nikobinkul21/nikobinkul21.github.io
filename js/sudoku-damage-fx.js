@@ -1,11 +1,11 @@
 /* ==========================================================================
    sudoku-damage-fx.js – Schadensaufbau im Sudoku-Abenteuer
    Nur Darstellung: Die Schadensberechnung (js/sudoku-rpg.js) liefert die
-   einzelnen Schritte ("Wurf 14", "Kombo ×1,3" …) – hier werden sie nur
+   einzelnen Schritte ("Wurf 14", "Buch-Bonus +10 %" …) – hier werden sie nur
    abgespielt:
      1. Die gewürfelte Zahl löst sich vom Würfel und steht groß daneben.
      2. Jeder Bonus fliegt als Etikett von seiner Quelle auf die Zahl zu
-        (Kombo vom Kombo-Zähler, Doppelschaden von der fertigen Zeile …).
+        (Buch-Bonus vom Buch, Doppelschaden von der fertigen Zeile …).
      3. Bei jedem Einschlag zählt die Zahl auf den Zwischenwert hoch.
      4. Die Summe fliegt mit Leuchtspur ins Schwert des Helden.
      5. Das Schwert leuchtet (je nach Schaden in fünf Stufen), der Held
@@ -101,21 +101,19 @@ const SudokuSchadenFx = (function () {
 
   /**
    * Liest aus den Schritten der Schadensberechnung, was nacheinander passiert.
-   * "Kombo ×1,3" → { label: "Kombo ×1,3", quelle: "kombo", wert: Zwischenwert }
+   * "Doppelt ×2" → { label: "Doppelt ×2", quelle: "doppelt", wert: Zwischenwert }
    * Der letzte Zwischenwert ist immer genau der berechnete Schaden.
    * @returns {object[]} { art: "krit" | "bonus", label, quelle, wert }
    */
   function schritteAus(e) {
     const liste = [];
     let wert = startwert(e);
-    let vorKombo = null, komboFaktor = 1;                    // für den Buch-Bonus (zählt zur Kombo dazu)
     e.rechnung.schritte.forEach(function (schritt, i) {
       if (i === 0) return;                                   // "Wurf 14"
-      // Bücher: "Bücher +15 %" – erhöht den Kombo-Multiplikator um 0,15
-      const buch = /^Bücher \+(\d+) %$/.exec(schritt);
+      // Buch-Bonus: "Buch-Bonus +15 %" – eigener Schadensbonus (× 1,15)
+      const buch = /^Buch-Bonus \+(\d+) %$/.exec(schritt);
       if (buch) {
-        const basis = vorKombo === null ? wert : vorKombo;
-        wert = basis * (komboFaktor + Number(buch[1]) / 100);
+        wert *= 1 + Number(buch[1]) / 100;
         liste.push({ art: "bonus", label: schritt, quelle: "buecher", wert: aufrunden(wert), zeile: i - 1 });
         return;
       }
@@ -123,7 +121,6 @@ const SudokuSchadenFx = (function () {
       if (!teil) return;
       const name = teil[1], rechnung = teil[2], text = teil[3];
       const zahl = parseFloat(text.replace(",", "."));
-      if (name === "Kombo") { vorKombo = wert; komboFaktor = zahl; }
       // Reihenbrecher: ein Etikett JE fertiger Einheit, jedes fliegt von seiner
       // Zeile, Spalte oder seinem Block los ("einheit" = 0, 1, 2 in dieser Reihenfolge)
       if (name === "Reihenbrecher") {
@@ -147,8 +144,8 @@ const SudokuSchadenFx = (function () {
       } else if (name === "Zuschlag") {
         eintrag.label = "+" + text;
         eintrag.quelle = "klinge";
-      } else if (name === "Kombo") {
-        eintrag.quelle = "kombo";
+      } else if (name === "Eingeschüchtert") {
+        eintrag.quelle = "boss";                             // Angriff "Einschüchtern"
       } else if (name === "Mindestwurf") {
         eintrag.quelle = "buch";                             // Buch des Fünften
       } else if (name === "Doppelt") {
@@ -157,7 +154,7 @@ const SudokuSchadenFx = (function () {
         eintrag.label = name + " +" + Math.round((zahl - 1) * 100) + " %";
         eintrag.quelle = "grad";
       } else if (e.boss && e.boss.selten && name === e.boss.selten.name) {
-        eintrag.quelle = "selten";                           // z. B. "Kombofluch ×1"
+        eintrag.quelle = "selten";
       }
       liste.push(eintrag);
     });

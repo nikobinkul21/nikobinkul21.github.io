@@ -85,11 +85,6 @@
   --boss-figur-faktor: 1.18;               /* Boss-Sprites (Baukasten, 36 × 40) etwas größer als der Held */
   --weltboss-figur-faktor: 1.5;            /* der Weltboss: eigener, größerer Sprite */
 
-  /* Kombo-Zähler: Farben je Stufe (0 = keine Kombo … 4 = ab 10 in Folge) */
-  --kombo-1: #4f6ef7;
-  --kombo-2: #e9b52f;
-  --kombo-3: #f07a1a;
-  --kombo-4: #ff3df0;
 
   /* Power-up-Felder im Gitter (Farbe je Typ kommt aus SUDOKU_RPG_KONFIG) */
   --powerup-toenung: 26%;                  /* wie stark das Feld eingefärbt wird */
@@ -835,169 +830,204 @@
 
 
 /* ==========================================================================
-   LEISTE UNTER DER BÜHNE: Kombo-Zähler und gesammelte Verbesserungen
+   LEISTE UNTER DER BÜHNE: fünf Plätze für Verbesserungen und Bücher
+   Jeder Platz zeigt nur Symbol und Stufe; Name und Wirkung stehen im
+   Glas-Panel (Hovern, Tastaturfokus, Antippen). Freie Plätze: dezenter Umriss.
    ========================================================================== */
 
+:root {
+  --platz-groesse: 34px;        /* Kantenlänge eines Platzes */
+  --platz-luecke: 6px;
+}
+
 .kampf-leiste {
-  position: relative;          /* Bezug für die Erklärtexte der Symbole */
+  position: relative;          /* Bezug für das Glas-Panel */
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 32px;
+  gap: 10px;
+  min-height: var(--platz-groesse);
 }
 
-.kampf-kombo {
-  flex: none;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 3px 10px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--farbe-text-leise);
+.kampf-verbesserungen {
+  display: grid;
+  grid-template-columns: repeat(5, var(--platz-groesse));
+  gap: var(--platz-luecke);
+}
+
+.kampf-platz {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--platz-groesse);
+  height: var(--platz-groesse);
+  padding: 0;
+  font: inherit;
+  color: var(--farbe-text);
   background: var(--farbe-flaeche);
-  border: 2px solid var(--farbe-rand);
-  border-radius: 999px;
-  transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  border: 2px solid color-mix(in srgb, var(--chip-farbe, var(--farbe-rand)) 65%, transparent);
+  border-radius: 8px;
+  cursor: help;
 }
 
-.kampf-kombo-titel {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.kampf-platz svg {
+  display: block;
+  width: 60%;
+  height: 60%;
+  fill: var(--chip-farbe);
 }
 
-.kampf-kombo-zahl {
-  font-size: 1.05rem;
-  line-height: 1;
+/* Freier Platz: nur ein gestrichelter Umriss */
+.kampf-platz.ist-leer {
+  background: transparent;
+  border: 2px dashed color-mix(in srgb, var(--farbe-rand) 80%, transparent);
+  opacity: 0.55;
+  cursor: default;
 }
 
-.kampf-kombo-bonus {
-  font-size: 0.75rem;
-}
-
-/* Je höher die Stufe, desto kräftiger */
-.kampf-kombo[data-stufe="1"] {
-  color: var(--kombo-1);
-  border-color: var(--kombo-1);
-}
-
-.kampf-kombo[data-stufe="2"] {
-  color: #3a2a00;
-  background: var(--kombo-2);
-  border-color: #a77c0c;
-}
-
-.kampf-kombo[data-stufe="3"] {
-  color: #fff;
-  background: var(--kombo-3);
-  border-color: #9a4300;
-  box-shadow: 0 0 10px rgba(240, 122, 26, 0.6);
-}
-
-.kampf-kombo[data-stufe="4"] {
-  color: #fff;
-  background: linear-gradient(90deg, var(--kombo-3), var(--kombo-4));
-  border-color: #6d0062;
-  box-shadow: 0 0 14px rgba(255, 61, 240, 0.75);
-}
-
-.kampf-kombo[data-stufe="4"] .kampf-kombo-zahl {
-  font-size: 1.25rem;
-}
-
-.kampf-kombo.pulsiert {
-  animation: kombo-puls 0.3s ease-out;
-}
-
-/* Ein Fehler: kurz rot (nur Farbe – auch bei "Bewegung reduzieren") */
-.kampf-kombo.zerbrochen {
-  color: #fff;
-  background: var(--kampf-hp-knapp);
-  border-color: #7a1712;
-}
-
-/* Die beiden Hälften, die beim Zerbrechen auseinanderfallen */
-.kampf-kombo-scherbe {
+/* Stufe als kleine Zahl in der Ecke */
+.kampf-platz-stufe {
   position: absolute;
-  z-index: 3;
-  margin: 0;
-  pointer-events: none;
-  justify-content: center;
+  right: -4px;
+  bottom: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  font-size: 0.6rem;
+  font-weight: 900;
+  line-height: 15px;
+  text-align: center;
+  color: #fff;
+  background: color-mix(in srgb, var(--chip-farbe) 85%, #000);
+  border: 1px solid var(--farbe-flaeche);
+  border-radius: 999px;
 }
 
-.kampf-kombo-scherbe--links {
-  clip-path: polygon(0 0, 55% 0, 42% 50%, 50% 100%, 0 100%);
-  animation: kombo-scherbe-links 0.65s ease-in forwards;
+/* Buch: Einband mit Ziffer, Rahmen in der Farbe der Seltenheit */
+.kampf-platz--buch {
+  border-color: var(--chip-farbe);
 }
 
-.kampf-kombo-scherbe--rechts {
-  clip-path: polygon(55% 0, 100% 0, 100% 100%, 50% 100%, 42% 50%);
-  animation: kombo-scherbe-rechts 0.65s ease-in forwards;
+.kampf-platz--buch .kampf-buch-symbol {
+  width: 66%;
+  height: 66%;
 }
 
-@keyframes kombo-puls {
+.kampf-platz--buch .kampf-buch-symbol svg {
+  width: 100%;
+  height: 100%;
+  fill: var(--buch-farbe);
+}
+
+.kampf-platz--buch .kampf-buch-ziffer {
+  font-size: 0.6rem;
+}
+
+.kampf-platz--legendaer {
+  box-shadow: 0 0 0 1px var(--chip-farbe), 0 0 8px color-mix(in srgb, var(--chip-farbe) 70%, transparent);
+}
+
+.kampf-platz:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+
+/* Neu gewählt: kurzes Aufpoppen */
+.kampf-platz.ist-neu {
+  animation: platz-puls 0.6s ease-out;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--chip-farbe) 45%, transparent);
+}
+
+/* Hat bei einem Treffer gewirkt: leuchtet kurz auf */
+.kampf-platz.leuchtet {
+  animation: platz-leuchtet 0.7s ease-out;
+}
+
+@keyframes platz-puls {
   0%   { transform: scale(1); }
   40%  { transform: scale(1.22); }
   100% { transform: scale(1); }
 }
 
-@keyframes kombo-scherbe-links {
-  0%   { opacity: 1; transform: none; }
-  100% { opacity: 0; transform: translate(-14px, 18px) rotate(-24deg); }
+@keyframes platz-leuchtet {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--chip-farbe) 90%, transparent); filter: brightness(1); }
+  30%  { box-shadow: 0 0 0 4px color-mix(in srgb, var(--chip-farbe) 70%, transparent), 0 0 14px var(--chip-farbe); filter: brightness(1.35); }
+  100% { box-shadow: 0 0 0 0 transparent; filter: brightness(1); }
 }
 
-@keyframes kombo-scherbe-rechts {
-  0%   { opacity: 1; transform: none; }
-  100% { opacity: 0; transform: translate(14px, 22px) rotate(28deg); }
-}
-
-/* Gesammelte Verbesserungen */
-.kampf-verbesserungen {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  min-width: 0;
-}
-
-.kampf-verbesserungen-leer {
+/* Glas-Panel: Name, Stufe, Wirkung des gezeigten Platzes */
+.kampf-platz-info {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  width: min(280px, 100%);
+  padding: 7px 10px;
   font-size: 0.75rem;
-  color: var(--farbe-text-leise);
+  line-height: 1.35;
+  color: var(--farbe-text);
+  background: color-mix(in srgb, var(--farbe-flaeche) 82%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  backdrop-filter: blur(10px) saturate(1.3);
+  border: 1px solid color-mix(in srgb, var(--farbe-rand) 70%, transparent);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
 }
 
-.kampf-chip {
+.kampf-platz-info[hidden] {
+  display: none;
+}
+
+.kampf-platz-info-titel {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 800;
+}
+
+/* Buch-Bonus des laufenden Sudokus neben den Plätzen */
+.kampf-buchbonus {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: var(--buch-farbe);
+  white-space: nowrap;
+}
+
+.kampf-buchbonus[hidden] { display: none; }
+.kampf-buchbonus svg { width: 14px; height: 14px; fill: var(--buch-farbe); }
+.kampf-buchbonus.pulsiert { animation: platz-puls 0.3s ease-out; }
+:root[data-theme="dark"] .kampf-buchbonus { color: #e2a76f; }
+:root[data-theme="dark"] .kampf-buchbonus svg { fill: #e2a76f; }
+
+/* Eingeschüchtert (Angriff "Einschüchtern"): "½" beim Helden bis zum nächsten Treffer */
+.kampf-held-status {
+  position: absolute;
+  left: calc(6% + var(--kampf-figur-groesse) * 0.05);
+  bottom: calc(6% + var(--kampf-figur-groesse) * 0.92);
+  z-index: 4;
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  height: 28px;
-  padding: 0 5px 0 4px;
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--farbe-text);
-  background: var(--farbe-flaeche);
-  border: 2px solid color-mix(in srgb, var(--chip-farbe) 60%, transparent);
-  border-radius: 7px;
-  cursor: help;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #fff;
+  background: #e98a15;
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 999px;
 }
 
-.kampf-chip svg {
-  display: block;
-  width: 16px;
-  height: 16px;
-  fill: var(--chip-farbe);
-}
+.kampf-held-status[hidden] { display: none; }
+.kampf-held-status svg { width: 11px; height: 11px; fill: #fff; }
 
-.kampf-chip.ist-neu {
-  animation: kombo-puls 0.6s ease-out;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--chip-farbe) 45%, transparent);
-}
+/* Der Held duckt sich (Einschüchtern) */
+.kampf-figur--held.duckt-sich { animation: held-duckt-sich 0.65s ease-in-out; }
 
-/* Erklärung eines Symbols: über der Leiste, so breit wie sie */
-.kampf-leiste .kampf-tipp {
-  bottom: calc(100% + 4px);
-  left: 0;
-  right: 0;
+@keyframes held-duckt-sich {
+  0%, 100% { transform: none; }
+  30%      { transform: translateY(6%) scaleY(0.88); }
+  60%      { transform: translate(-3%, 4%) scaleY(0.92); }
 }
 
 /* Nur für Screenreader: unsichtbar, wird aber vorgelesen */
@@ -2305,7 +2335,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2px 8px;
+  padding: 2px 5px;            /* knapp, damit auch "Einschüchtern" nicht in den Infokasten ragt */
   font: inherit;
   font-size: 0.68rem;
   font-weight: 800;
@@ -2432,25 +2462,6 @@
   100% { transform: none; filter: none; }
 }
 
-/* Schrei: Schallwellen vom Boss */
-.kampf-buehne.schreit::after {
-  content: "";
-  position: absolute;
-  top: 20%;
-  right: 12%;
-  z-index: 5;
-  width: 60px;
-  height: 60px;
-  border: 4px solid var(--kampf-kombo-3, #f07a1a);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: schrei-welle 0.65s ease-out 2;
-}
-
-@keyframes schrei-welle {
-  from { opacity: 0.9; transform: scale(0.4); }
-  to   { opacity: 0; transform: scale(3.2); }
-}
 
 /* Finsternis: die Bühne wird dunkel */
 .kampf-buehne.verdunkelt::before {
@@ -2674,10 +2685,15 @@
     animation: none !important;
   }
 
-  .kampf-buehne.schreit::after {
+  .kampf-platz.leuchtet,
+  .kampf-platz.ist-neu,
+  .kampf-figur--held.duckt-sich {
     animation: none !important;
-    opacity: 0.6;
-    transform: scale(1.6);
+  }
+
+  /* Aufleuchten ohne Bewegung: nur ein kurzer, ruhiger Rahmen */
+  .kampf-platz.leuchtet {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--chip-farbe) 70%, transparent);
   }
 
   .kampf-buehne.verdunkelt::before {
@@ -2695,8 +2711,8 @@
 
 /* ==========================================================================
    BÜCHER (Teil der Verbesserungen)
-   Buch in der Leiste (Rahmen = Seltenheit), Karten der Auswahl, Buch-Spin,
-   Buch-Bonus an der Kombo, Buch-Symbol im Zahlenfeld, Nebenwürfel und der
+   Buch auf seinem Platz (siehe LEISTE), Karten der Auswahl, Buch-Spin,
+   Buch-Symbol im Zahlenfeld, Nebenwürfel und der
    Buchschlag (Felder leuchten, Ziffern fliegen zum Schwert).
    ========================================================================== */
 
@@ -2729,32 +2745,6 @@
   line-height: 1;
   color: #fff7e6;
 }
-
-/* Buch in der Leiste: Rahmen in der Farbe der Seltenheit */
-.kampf-chip.kampf-buch {
-  border-color: var(--chip-farbe);
-  border-width: 2px;
-}
-
-.kampf-chip.kampf-buch .kampf-buch-symbol svg { width: 18px; height: 18px; }
-.kampf-chip.kampf-buch--legendaer { box-shadow: 0 0 0 1px var(--chip-farbe), 0 0 8px color-mix(in srgb, var(--chip-farbe) 70%, transparent); }
-
-/* Buch-Bonus an der Kombo-Anzeige */
-.kampf-kombo-buch {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: 4px;
-  font-size: 0.72rem;
-  font-weight: 900;
-  color: var(--buch-farbe);
-}
-
-.kampf-kombo-buch[hidden] { display: none; }
-.kampf-kombo-buch svg { width: 12px; height: 12px; fill: var(--buch-farbe); }
-.kampf-kombo-buch.pulsiert { animation: kombo-puls 0.3s ease-out; }
-:root[data-theme="dark"] .kampf-kombo-buch { color: #e2a76f; }
-:root[data-theme="dark"] .kampf-kombo-buch svg { fill: #e2a76f; }
 
 /* Karten: Bücher mit Rahmen in der Seltenheitsfarbe */
 .auswahl-karte--buch {
@@ -2921,7 +2911,7 @@
 .panel-eintrag--buch { color: #e2a76f; font-weight: 700; }
 
 @media (prefers-reduced-motion: reduce) {
-  .kampf-kombo-buch.pulsiert,
+  .kampf-buchbonus.pulsiert,
   .wuerfel-neben.rollt,
   .auswahl-karte--legendaer.erscheint-legendaer,
   .auswahl-karte--legendaer.erscheint-legendaer::after { animation: none !important; }
@@ -3298,4 +3288,60 @@
 @keyframes welt-einblenden-ruhig {
   0%, 85% { opacity: 1; }
   100%    { opacity: 0; }
+}
+
+
+/* ==========================================================================
+   AUSWAHL: Münzbeutel und "Verbesserungen behalten" (älterer Spielstand)
+   ========================================================================== */
+
+.auswahl-karte--muenzbeutel {
+  --chip-farbe: #e0a43a;
+  border-color: #e0a43a;
+}
+
+.auswahl-karte--muenzbeutel .auswahl-symbol svg {
+  fill: #e0a43a;
+}
+
+/* Behalten: gewählte Karten deutlich markiert */
+.ist-behalten .auswahl-karte {
+  opacity: 0.7;
+}
+
+.ist-behalten .auswahl-karte.ist-gewaehlt {
+  opacity: 1;
+  box-shadow: 0 0 0 3px var(--farbe-akzent), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.ist-behalten .auswahl-karte.ist-gewaehlt::after {
+  content: "✓";
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-weight: 900;
+  color: var(--farbe-akzent);
+}
+
+.behalten-stand {
+  margin: 10px 0 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.behalten-knopf {
+  min-height: 40px;
+  padding: 0 22px;
+  font: inherit;
+  font-weight: 800;
+  color: #fff;
+  background: var(--farbe-akzent);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.behalten-knopf:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

@@ -110,7 +110,7 @@
 }
 
 /* Farbe je Quelle – wie die Herkunft im Kampffenster */
-.fx-etikett--kombo span { background: var(--kombo-3, #f07a1a); }
+.fx-etikett--boss span { background: #e98a15; }        /* Einschüchtern */
 .fx-etikett--klinge span { background: #5d7fa8; }
 .fx-etikett--grad span { background: #4f6ef7; }
 .fx-etikett--doppelt span { background: var(--kampf-doppelt, #29d3ff); color: #0b2a6b; }

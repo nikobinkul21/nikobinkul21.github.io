@@ -357,7 +357,7 @@
     gap: 0;
   }
 
-  .kampf.ist-handy > :not(.kampf-buehne):not(.kampf-blatt):not(.kampf-status) {
+  .kampf.ist-handy > :not(.kampf-buehne):not(.kampf-blatt):not(.kampf-status):not(.kampf-platz-info) {
     display: none;
   }
 
@@ -403,7 +403,7 @@
     height: min(98cqh, 176px);
   }
 
-  /* Mittlere Spalte zwischen Held und Boss: Infokasten, Kombo, letzter Zug */
+  /* Mittlere Spalte zwischen Held und Boss: Infokasten, Plätze, letzter Zug */
   .kampf.ist-handy .kampf-buehne .kampf-info--boss {
     top: 4px;
     left: calc(var(--streifen-held) + 4px);
@@ -514,22 +514,89 @@
     height: 9px;
   }
 
-  /* Kombo als kleine Pille unter dem Infokasten */
-  .kampf.ist-handy .kampf-buehne .kampf-kombo {
+  /* Die fünf Plätze als eine Reihe über der Zeile mit dem letzten Zug
+     (gleiches Aussehen wie am Computer, nur kleiner) */
+  .kampf.ist-handy .kampf-buehne .kampf-leiste {
+    --platz-groesse: 22px;
+    --platz-luecke: 3px;
     position: absolute;
     left: calc(var(--streifen-held) + 4px);
-    bottom: 22px;
+    bottom: 23px;
     z-index: 3;
-    gap: 3px;
-    padding: 0 7px;
+    gap: 5px;
+    min-height: 0;
+  }
+
+  .kampf.ist-handy .kampf-platz {
+    border-radius: 5px;
+    border-width: 1.5px;
+    background: var(--kampf-kasten);
+  }
+
+  .kampf.ist-handy .kampf-platz.ist-leer {
+    background: rgba(255, 255, 255, 0.25);
+    opacity: 0.8;
+  }
+
+  .kampf.ist-handy .kampf-platz-stufe {
+    right: -3px;
+    bottom: -3px;
+    min-width: 11px;
+    height: 11px;
+    padding: 0 2px;
+    font-size: 0.48rem;
+    line-height: 11px;
+  }
+
+  .kampf.ist-handy .kampf-platz--buch .kampf-buch-ziffer {
+    font-size: 0.45rem;
+  }
+
+  .kampf.ist-handy .kampf-buchbonus {
+    padding: 0 4px;
+    font-size: 0.58rem;
+    background: var(--kampf-kasten);
+    border-radius: 5px;
+  }
+
+  .kampf.ist-handy .kampf-buchbonus svg {
+    width: 9px;
+    height: 9px;
+  }
+
+  /* Glas-Panel: im Handy-Aufbau direkt UNTER dem Streifen (kurz über dem
+     oberen Rand des Gitters) – im Streifen selbst wäre zu wenig Platz */
+  .kampf.ist-handy {
+    position: relative;
+  }
+
+  .kampf.ist-handy > .kampf-platz-info {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0 !important;
+    right: 0;
+    bottom: auto;
+    z-index: 30;
+    width: auto;
+    font-size: 0.72rem;
+  }
+
+  /* Marke "Eingeschüchtert ½": klein, über dem Helden und bündig mit seiner
+     rechten Kante – so bleibt sie links vom Infokasten des Bosses
+     (die Desktop-Lage rechnet mit der großen Figur) */
+  .kampf.ist-handy .kampf-buehne .kampf-held-status {
+    left: auto;
+    right: calc(99% - var(--streifen-held));
+    bottom: calc(3% + var(--streifen-held) * 0.7);
+    padding: 0 4px;
+    font-size: 0.6rem;
     border-width: 1px;
   }
 
-  .kampf.ist-handy .kampf-kombo-titel { font-size: 0.5rem; }
-  .kampf.ist-handy .kampf-kombo-zahl { font-size: 0.8rem; }
-  .kampf.ist-handy .kampf-kombo-bonus,
-  .kampf.ist-handy .kampf-kombo-buch { font-size: 0.58rem; }
-  .kampf.ist-handy .kampf-kombo-buch svg { width: 8px; height: 8px; }
+  .kampf.ist-handy .kampf-buehne .kampf-held-status svg {
+    width: 9px;
+    height: 9px;
+  }
 
   /* Letzter Zug: eine Zeile am unteren Rand der mittleren Spalte */
   .kampf.ist-handy .kampf-buehne .panel-kurz {
@@ -716,43 +783,8 @@
     display: block;
   }
 
-  .kampf-blatt-titel {
-    margin: 0 0 -6px;
-  }
-
-  /* Verbesserungen und Bücher: als Liste mit ihrer Erklärung */
-  .kampf-blatt .kampf-verbesserungen {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .kampf-blatt .kampf-chip {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    column-gap: 8px;
-    width: 100%;
-    height: auto;
-    padding: 4px 6px;
-    text-align: left;
-  }
-
-  .kampf-blatt .kampf-chip .kampf-tipp {
-    position: static;
-    display: block !important;
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    width: auto;
-    margin: 0;
-    padding: 0;
-    font-size: 0.74rem;
-    color: inherit;
-    background: none;
-    border: none;
-    box-shadow: none;
-    transform: none;
-    white-space: normal;
+  .kampf-blatt-plaetze {
+    margin-top: 10px;
   }
 
   .kampf-blatt .kampf-fuss {
