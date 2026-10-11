@@ -444,6 +444,12 @@ function initSudoku(container) {
 
   /** Trägt eine Ziffer ins gewählte Feld ein (0 = löschen). */
   function setze(ziffer) {
+    if (spiel && wirdErzeugt() && modus === "abenteuer" && kampf && kampf.laeuft()) {
+      // Der Zug ist schon entschieden (Boss besiegt, Niederlage, Sudoku gelöst),
+      // die Animation läuft aber noch: Sie springt zum Ergebnis, die Eingabe verfällt.
+      kampf.beschleunige();
+      return;
+    }
     if (!spiel || wirdErzeugt() || spiel.geloest || spiel.vorgaben[ausgewaehlt] !== 0) {
       return;                   // vorgegebene Felder sind gesperrt
     }
@@ -496,8 +502,24 @@ function initSudoku(container) {
     status.dataset.art = art || "";
   }
 
-  /** Graut Gitter und Knöpfe aus, solange im aktuellen Modus ein Rätsel entsteht. */
+  /**
+   * Graut Gitter und Knöpfe aus, solange im aktuellen Modus ein Rätsel entsteht
+   * oder eine Verbesserung gewählt wird.
+   * Zentrale Regel für die Reihenfolge: Die Regeln kennen den Ausgang eines Zugs
+   * sofort, sichtbar wird er aber erst in der Abfolge des Kampffensters. Darum
+   * wird im Abenteuer das SPERREN als Schritt hinten angestellt (nach Würfel,
+   * Treffer, Sieg bzw. Angriff); ENTSPERREN wirkt sofort. Die Eingabe selbst ist
+   * trotzdem sofort gesperrt (wirdErzeugt) – siehe setze().
+   */
   function setzeBeschaeftigtAnzeige() {
+    if (modus === "abenteuer" && kampf && wirdErzeugt() && !regenbogenLaeuft) {
+      kampf.danach(zeigeBeschaeftigt);   // prüft beim Ausführen den dann gültigen Stand
+    } else {
+      zeigeBeschaeftigt();
+    }
+  }
+
+  function zeigeBeschaeftigt() {
     const an = wirdErzeugt();
     neuKnopf.disabled = an;
     auswahl.disabled = an;
@@ -580,7 +602,7 @@ function initSudoku(container) {
     abenteuer.an("bossBesiegt", function (e) { if (abenteuer === diesesAbenteuer) kampf.sieg(e); });
     abenteuer.an("auswahl", function (e) {
       if (abenteuer !== diesesAbenteuer) return;
-      setzeBeschaeftigtAnzeige();           // Gitter gesperrt, bis gewählt ist
+      setzeBeschaeftigtAnzeige();           // Gitter gesperrt, bis gewählt ist (erst nach der Siegesanimation)
       zeigeAuswahl(e);
     });
     abenteuer.an("verbesserung", function (e) { if (abenteuer === diesesAbenteuer) kampf.verbesserung(e); });
@@ -706,14 +728,20 @@ function initSudoku(container) {
       if (ergebnis.regenbogen) starteRegenbogenschlag(index);
       zeichne();
       if (ergebnis.geloest) {
-        // Große Welle über das Gitter, danach neue Schwierigkeit auslosen
+        // Große Welle über das Gitter – erst nach Wurf und Treffer (Warteschlange
+        // des Kampffensters), danach neue Schwierigkeit auslosen. Die Eingabe ist
+        // sofort gesperrt, ausgegraut wird erst für die Slot-Walze.
+        const diesesAbenteuer = abenteuer;
         beschaeftigt.abenteuer = true;
-        setzeBeschaeftigtAnzeige();
-        brett.classList.remove("wird-erzeugt");      // die Welle soll man sehen
-        SudokuEffekte.spieleSieg(felder, index).then(function () {
-          zeigeStatus("Sudoku gelöst!", "erfolg");
+        kampf.danach(function () {
+          brett.classList.remove("wird-erzeugt");    // die Welle soll man sehen
+          return SudokuEffekte.spieleSieg(felder, index).then(function () {
+            zeigeStatus("Sudoku gelöst!", "erfolg");
+          });
+        }).then(function () {
           return new Promise(function (ok) { setTimeout(ok, 900); });
         }).then(function () {
+          if (abenteuer !== diesesAbenteuer) return;
           zeigeStatus("");
           beschaeftigt.abenteuer = false;
           neuesAbenteuerRaetsel();

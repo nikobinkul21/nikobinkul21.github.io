@@ -531,6 +531,7 @@ const SudokuKampf = (function () {
     let kette = Promise.resolve();
     let schrittNummer = 0;       // zuletzt vergebene Nummer
     let laufend = 0;             // Nummer des gerade laufenden Schritts (0 = keiner)
+    let fertigBis = 0;           // Nummer des zuletzt beendeten Schritts
     let eiligBis = 0;            // alle Schritte bis zu dieser Nummer laufen ohne Wartezeit
     const wartende = new Set();  // laufende Wartezeiten – beschleunige() beendet sie sofort
 
@@ -539,8 +540,22 @@ const SudokuKampf = (function () {
       kette = kette
         .then(function () { laufend = nummer; return schritt(); })
         .catch(function (fehler) { console.error(fehler); })
-        .then(function () { if (laufend === nummer) laufend = 0; });
+        .then(function () { if (laufend === nummer) laufend = 0; fertigBis = nummer; });
       return kette;
+    }
+
+    /** Sind noch Schritte offen (laufend oder wartend)? */
+    function laeuft() {
+      return fertigBis < schrittNummer;
+    }
+
+    /**
+     * Eine sichtbare Folge des Zugs außerhalb des Kampffensters (z. B. das
+     * Gitter ausgrauen) – läuft erst, wenn alle vorher eingereihten
+     * Animationen fertig sind. So verrät nichts vorzeitig den Ausgang.
+     */
+    function danach(schritt) {
+      return einreihen(schritt);
     }
 
     let regenbogenLaeuft = false;   // Regenbogenschlag läuft → nichts wird abgekürzt
@@ -1742,6 +1757,8 @@ const SudokuKampf = (function () {
       text: text,
       neuesAbenteuer: neuesAbenteuer,
       beschleunige: beschleunige,
+      laeuft: laeuft,
+      danach: danach,
       fertig: fertig,
       losen: losen,
       niederlage: niederlage,
