@@ -2692,56 +2692,15 @@
 
 
 /* ==========================================================================
-   BÜCHER
-   Eigene Reihe im Kampffenster, Karten der Buchauswahl, Buch-Symbol im
-   Zahlenfeld und der Buchschlag (Felder leuchten, Ziffern fliegen zum Schwert).
+   BÜCHER (Teil der Verbesserungen)
+   Buch in der Leiste (Rahmen = Seltenheit), Karten der Auswahl, Buch-Spin,
+   Buch-Bonus an der Kombo, Buch-Symbol im Zahlenfeld, Nebenwürfel und der
+   Buchschlag (Felder leuchten, Ziffern fliegen zum Schwert).
    ========================================================================== */
 
 :root {
-  --buch-farbe: #9a5b2a;            /* Einband (gleich wie BUCH_FARBE in sudoku-battle-ui.js) */
+  --buch-farbe: #9a5b2a;            /* Einband */
   --buch-gold: #f2c14e;             /* Leuchten der Ziffern beim Buchschlag */
-}
-
-/* Reihe "Bücher" unter Kombo und Verbesserungen */
-.kampf-buecher {
-  position: relative;               /* Bezug für die Erklärtexte */
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 30px;
-  margin-top: 4px;
-}
-
-.kampf-buecher-titel {
-  flex: none;
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--buch-farbe);
-}
-
-.kampf-buecher-liste {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  min-width: 0;
-}
-
-.kampf-buecher-bonus {
-  flex: none;
-  margin-left: auto;
-  font-size: 0.8rem;
-  font-weight: 900;
-  color: var(--buch-farbe);
-}
-
-.kampf-buecher-bonus.pulsiert { animation: kombo-puls 0.3s ease-out; }
-
-.kampf-buecher .kampf-tipp {
-  bottom: calc(100% + 4px);
-  left: 0;
-  right: 0;
 }
 
 /* Buch-Symbol mit der Ziffer auf dem Einband */
@@ -2750,6 +2709,9 @@
   position: relative;
   display: inline-block;
 }
+
+.kampf-buch-symbol svg,
+.auswahl-symbol--buch svg { fill: var(--buch-farbe); }
 
 .kampf-buch-ziffer {
   position: absolute;
@@ -2766,14 +2728,98 @@
   color: #fff7e6;
 }
 
-.kampf-chip.kampf-buch svg { width: 18px; height: 18px; }
+/* Buch in der Leiste: Rahmen in der Farbe der Seltenheit */
+.kampf-chip.kampf-buch {
+  border-color: var(--chip-farbe);
+  border-width: 2px;
+}
+
+.kampf-chip.kampf-buch .kampf-buch-symbol svg { width: 18px; height: 18px; }
+.kampf-chip.kampf-buch--legendaer { box-shadow: 0 0 0 1px var(--chip-farbe), 0 0 8px color-mix(in srgb, var(--chip-farbe) 70%, transparent); }
+
+/* Buch-Bonus an der Kombo-Anzeige */
+.kampf-kombo-buch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: var(--buch-farbe);
+}
+
+.kampf-kombo-buch[hidden] { display: none; }
+.kampf-kombo-buch svg { width: 12px; height: 12px; fill: var(--buch-farbe); }
+.kampf-kombo-buch.pulsiert { animation: kombo-puls 0.3s ease-out; }
+:root[data-theme="dark"] .kampf-kombo-buch { color: #e2a76f; }
+:root[data-theme="dark"] .kampf-kombo-buch svg { fill: #e2a76f; }
+
+/* Karten: Bücher mit Rahmen in der Seltenheitsfarbe */
+.auswahl-karte--buch {
+  position: relative;
+  border-color: var(--chip-farbe);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), inset 0 0 0 1px color-mix(in srgb, var(--chip-farbe) 40%, transparent);
+}
+
+.auswahl-seltenheit {
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chip-farbe);
+}
+
 .auswahl-symbol--buch .kampf-buch-ziffer { font-size: 1.1rem; }
 
-/* Buchauswahl: Einband-Rahmen */
-.auswahl.ist-buch .auswahl-kasten {
-  border-color: var(--buch-farbe);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--buch-farbe) 45%, transparent), 4px 4px 0 rgba(0, 0, 0, 0.3);
+.auswahl-zusatz {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--chip-farbe) 75%, var(--kampf-kasten-text));
 }
+
+/* Legendäre Karte: Lichtschein läuft über die Karte, sie glüht kurz golden */
+.auswahl-karte--legendaer {
+  overflow: hidden;
+  background: linear-gradient(180deg, #fff8e1, #fff);
+}
+
+.auswahl-karte--legendaer.erscheint-legendaer {
+  animation: legendaer-erscheinen 0.9s ease-out;
+}
+
+.auswahl-karte--legendaer.erscheint-legendaer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 236, 170, 0.95) 48%, transparent 66%);
+  transform: translateX(-120%);
+  animation: legendaer-glanz 0.9s ease-out 0.15s forwards;
+}
+
+@keyframes legendaer-erscheinen {
+  0%   { transform: scale(0.8) rotate(-3deg); box-shadow: 0 0 0 0 var(--chip-farbe); }
+  45%  { transform: scale(1.08) rotate(1deg); box-shadow: 0 0 0 6px color-mix(in srgb, var(--chip-farbe) 55%, transparent), 0 0 26px var(--chip-farbe); }
+  100% { transform: none; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2); }
+}
+
+@keyframes legendaer-glanz {
+  to { transform: translateX(120%); }
+}
+
+/* Buch-Spin: Einträge mit Buch-Symbol, Rahmen am Ende in der Seltenheitsfarbe */
+.slot-eintrag--buch {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1rem;
+}
+
+.slot-eintrag--buch .kampf-buch-symbol svg { width: 22px; height: 22px; }
+.slot-eintrag--buch .kampf-buch-ziffer { font-size: 0.75rem; }
+.slot-eintrag--buch .slot-buch-name { color: var(--chip-farbe); filter: brightness(0.75); }
+.slot--buch.ist-fertig .slot-fenster { border-color: var(--chip-farbe); }
 
 /* Zahlenfeld: kleines Buch-Symbol und Fortschritt ("6/9") */
 .sudoku-taste.hat-buch {
@@ -2802,6 +2848,42 @@
 
 :root[data-theme="dark"] .sudoku-buch-marke { color: #e2a76f; }
 :root[data-theme="dark"] .sudoku-buch-marke svg { fill: #e2a76f; }
+
+/* Nebenwürfel (Bücher mit mehreren Würfeln): jeder Würfel als Kästchen */
+.wuerfel-mehr,
+.kampf-wuerfel-mehr {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.wuerfel-mehr { margin-top: 6px; }
+.kampf-wuerfel-mehr { gap: 2px; }
+.kampf-wuerfel-mehr:empty, .wuerfel-mehr:empty { display: none; }
+
+.wuerfel-neben {
+  min-width: 26px;
+  padding: 2px 5px;
+  font-size: 0.85rem;
+  font-weight: 900;
+  text-align: center;
+  color: #fff;
+  background: var(--kampf-wuerfel, #6c4bd8);
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 6px;
+}
+
+.kampf-wuerfel-mehr .wuerfel-neben { min-width: 18px; padding: 0 3px; font-size: 0.65rem; border-width: 1px; }
+.wuerfel-neben.rollt { animation: neben-rollt 0.25s linear infinite; }
+.wuerfel-neben.ist-kritisch { background: var(--kampf-kritisch); }
+.wuerfel-neben.ist-immun { background: #8a8f99; text-decoration: line-through; }
+.wuerfel-neben.ist-fehlschlag { background: #8a8f99; }
+.wuerfel-neben.zaehlt-nicht { opacity: 0.45; }
+
+@keyframes neben-rollt {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(8deg); }
+}
 
 /* Buchschlag: Felder der Ziffer leuchten golden auf (die Ziffer bleibt stehen) */
 .sudoku-feld.buch-leuchtet {
@@ -2837,5 +2919,8 @@
 .panel-eintrag--buch { color: #e2a76f; font-weight: 700; }
 
 @media (prefers-reduced-motion: reduce) {
-  .kampf-buecher-bonus.pulsiert { animation: none; }
+  .kampf-kombo-buch.pulsiert,
+  .wuerfel-neben.rollt,
+  .auswahl-karte--legendaer.erscheint-legendaer,
+  .auswahl-karte--legendaer.erscheint-legendaer::after { animation: none !important; }
 }

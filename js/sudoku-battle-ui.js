@@ -171,6 +171,8 @@ const SudokuKampf = (function () {
           '<button type="button" class="wuerfel-knopf" aria-label="Würfel, noch nicht gewürfelt">' +
             '<span class="wuerfel-koerper">' + wuerfelSvg() + '<span class="wuerfel-zahl">–</span></span>' +
           "</button>" +
+          // Bei mehreren Würfeln (Bücher): jeder einzelne Würfel als kleines Kästchen
+          '<div class="wuerfel-mehr" aria-hidden="true"></div>' +
           '<p class="wuerfel-info"><span class="wuerfel-seiten">W20</span><span class="wuerfel-art"></span></p>' +
         "</div>";
       g.flaeche = platz.querySelector(".wuerfel-flaeche");
@@ -179,10 +181,16 @@ const SudokuKampf = (function () {
       g.zahl = platz.querySelector(".wuerfel-zahl");
       g.seiten = platz.querySelector(".wuerfel-seiten");
       g.art = platz.querySelector(".wuerfel-art");
+      g.mehr = platz.querySelector(".wuerfel-mehr");
       // Ein Klick auf den Würfel überspringt die laufende Animation (Würfel UND Schadensaufbau)
       g.knopf.addEventListener("click", beimKlick);
     }
     klein.addEventListener("click", beimKlick);
+    // Nebenwürfel auch am kleinen Würfel (Smartphone)
+    const kleinMehr = document.createElement("span");
+    kleinMehr.className = "kampf-wuerfel-mehr";
+    kleinMehr.setAttribute("aria-hidden", "true");
+    klein.parentNode.insertBefore(kleinMehr, klein.nextSibling);   // neben dem Würfel (er ist sechseckig zugeschnitten)
 
     let lauf = null;    // der laufende Wurf: { e, art, animationen, zeit, fertig }
 
@@ -200,6 +208,50 @@ const SudokuKampf = (function () {
     /** Ist gerade der große Würfel zu sehen? */
     function grossSichtbar() {
       return Boolean(platz) && window.matchMedia(W.ab).matches;
+    }
+
+    /** Was der Würfel zeigt: bei mehreren Würfeln die Summe bzw. den höheren Wurf. */
+    function hauptwert(e) {
+      if (e.wuerfe && e.wuerfe.length > 1 && e.wuerfelModus === "summe") {
+        return e.wuerfe.reduce(function (a, b) { return a + b; }, 0);
+      }
+      return e.wurf;
+    }
+
+    /**
+     * Nebenwürfel: jeder Würfel einzeln (Augenzahl, kritisch, immun, Fehlschlag;
+     * beim "höheren Wurf" ist der zweite ausgegraut). rollend = noch unbekannt.
+     */
+    function zeigeMehr(e, rollend) {
+      const mehr = e && e.wuerfe && e.wuerfe.length > 1 ? e.wuerfe : [];
+      const hoechster = mehr.length ? mehr.indexOf(Math.max.apply(null, mehr)) : -1;
+      [g.mehr, kleinMehr].forEach(function (ziel) {
+        if (!ziel) return;
+        ziel.innerHTML = "";
+        mehr.forEach(function (w, k) {
+          const kasten = document.createElement("span");
+          kasten.className = "wuerfel-neben" + (rollend ? " rollt" : "");
+          kasten.textContent = rollend ? "?" : w;
+          if (!rollend) {
+            const teil = e.rechnung && e.rechnung.wuerfel ? e.rechnung.wuerfel[k] : null;
+            if (teil && teil.kritisch) kasten.classList.add("ist-kritisch");
+            if (teil && (teil.immun || teil.geblockt)) kasten.classList.add("ist-immun");
+            if (teil && teil.fehlschlag) kasten.classList.add("ist-fehlschlag");
+            if (e.wuerfelModus === "hoechster" && k !== hoechster) kasten.classList.add("zaehlt-nicht");
+          }
+          ziel.appendChild(kasten);
+        });
+      });
+      if (platz) g.flaeche.classList.toggle("hat-mehr", mehr.length > 0);
+    }
+
+    /** Ergebnis eines Wurfs zeigen (Hauptwürfel und Nebenwürfel). */
+    function zeigeErgebnis(e, art) {
+      zeige(hauptwert(e), art, e.wuerfelSeiten);
+      zeigeMehr(e, false);
+      if (e.wuerfe && e.wuerfe.length > 1 && platz) {
+        g.seiten.textContent = e.wuerfe.length + "×W" + e.wuerfelSeiten + (e.wuerfelModus === "hoechster" ? " · höherer" : " · Summe");
+      }
     }
 
     /** Ergebnis (oder null = noch keins) auf beiden Würfeln zeigen. */
@@ -286,9 +338,10 @@ const SudokuKampf = (function () {
         g.art.textContent = "";
       }
       if (dauer === 0) {
-        zeige(e.wurf, art, e.wuerfelSeiten);
+        zeigeErgebnis(e, art);
         return Promise.resolve();
       }
+      zeigeMehr(e, true);
       return new Promise(function (fertig) {
         lauf = { e: e, art: art, animationen: [], zeit: null, fertig: fertig, gross: gross };
         if (ohneBewegung()) {
@@ -316,7 +369,7 @@ const SudokuKampf = (function () {
     function aufprall(ms) {
       if (!lauf) return;
       clearTimeout(lauf.zeit);
-      zeige(lauf.e.wurf, lauf.art, lauf.e.wuerfelSeiten);
+      zeigeErgebnis(lauf.e, lauf.art);
       const ziel = lauf.gross ? g.koerper : klein;
       const stoss = ziel.animate([
         { transform: "scale(1.16, 0.84)" },
@@ -347,7 +400,7 @@ const SudokuKampf = (function () {
       lauf = null;
       clearTimeout(l.zeit);
       l.animationen.forEach(function (a) { a.onfinish = null; a.cancel(); });
-      zeige(l.e.wurf, l.art, l.e.wuerfelSeiten);
+      zeigeErgebnis(l.e, l.art);
       if (!mitAufprall && l.art === "kritisch" && l.gross && !ohneBewegung()) landeVariante(l.art, true);
       l.fertig();
     }
@@ -363,7 +416,13 @@ const SudokuKampf = (function () {
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     }
 
-    return { rolle: rolle, ueberspringe: ueberspringe, zeige: zeige, punkt: punkt, gross: grossSichtbar };
+    /** Würfel zurücksetzen (auch die Nebenwürfel). */
+    function zeigeLeer() {
+      zeige(null, "");
+      zeigeMehr(null, false);
+    }
+
+    return { rolle: rolle, ueberspringe: ueberspringe, zeige: zeige, zeigeLeer: zeigeLeer, punkt: punkt, gross: grossSichtbar };
   }
 
   /**
@@ -426,15 +485,12 @@ const SudokuKampf = (function () {
             '<span class="kampf-kombo-titel">Kombo</span>' +
             '<span class="kampf-kombo-zahl">0</span>' +
             '<span class="kampf-kombo-bonus"></span>' +
+            // Buch-Bonus des laufenden Sudokus (zählt zum Kombo-Multiplikator dazu)
+            '<span class="kampf-kombo-buch" hidden>' + symbolSvg("buch") + '<span class="kampf-kombo-buch-wert"></span></span>' +
           "</div>" +
           '<div class="kampf-verbesserungen" role="list" aria-label="Deine Verbesserungen"></div>' +
         "</div>" +
-        // Eigene Reihe für die Bücher, dazu der Buch-Bonus des laufenden Sudokus
-        '<div class="kampf-buecher">' +
-          '<span class="kampf-buecher-titel">Bücher</span>' +
-          '<div class="kampf-buecher-liste" role="list" aria-label="Deine Bücher"></div>' +
-          '<span class="kampf-buecher-bonus" role="img"></span>' +
-        "</div>" +
+
         // Kurze Meldungen für Screenreader (unsichtbar, wird vorgelesen)
         '<p class="kampf-status nur-vorlesen" role="status"></p>' +
         // Das Protokoll: letzter Treffer, Belohnung, Verlauf.
@@ -502,9 +558,8 @@ const SudokuKampf = (function () {
       komboZahl: container.querySelector(".kampf-kombo-zahl"),
       komboBonus: container.querySelector(".kampf-kombo-bonus"),
       verbesserungen: container.querySelector(".kampf-verbesserungen"),
-      buecher: container.querySelector(".kampf-buecher"),
-      buecherListe: container.querySelector(".kampf-buecher-liste"),
-      buecherBonus: container.querySelector(".kampf-buecher-bonus"),
+      komboBuch: container.querySelector(".kampf-kombo-buch"),
+      komboBuchWert: container.querySelector(".kampf-kombo-buch-wert"),
       status: container.querySelector(".kampf-status"),
       panel: container.querySelector(".kampf-panel"),
       kurz: container.querySelector(".panel-kurz"),
@@ -802,47 +857,13 @@ const SudokuKampf = (function () {
     }
 
     /** Gesammelte Verbesserungen als kleine Symbole mit Stufe. */
-    /**
-     * Bücher als eigene Reihe: Symbol mit Ziffer, Stufe; Tipp mit Beschreibung.
-     * Rechts der Buch-Bonus des laufenden Sudokus ("+15 %").
-     * @param {object} daten – { liste: [{ id, name, ziffer, stufe, maxStufe, beschreibung }], bonus }
-     */
-    function zeigeBuecher(daten, neueId) {
-      if (!daten) return;
-      if (daten.liste) {
-        anzeige.buecher = daten.liste;
-        el.buecherListe.innerHTML = "";
-        if (daten.liste.length === 0) {
-          const leer = document.createElement("span");
-          leer.className = "kampf-verbesserungen-leer";
-          leer.textContent = "Noch keine Bücher";
-          el.buecherListe.appendChild(leer);
-        }
-        daten.liste.forEach(function (b) {
-          const knopf = document.createElement("button");
-          knopf.type = "button";
-          knopf.className = "kampf-chip kampf-buch hat-tipp";
-          knopf.dataset.id = b.id;
-          knopf.dataset.ziffer = b.ziffer;
-          knopf.setAttribute("role", "listitem");
-          knopf.style.setProperty("--chip-farbe", BUCH_FARBE);
-          knopf.innerHTML = '<span class="kampf-buch-symbol">' + symbolSvg("buch") + '<span class="kampf-buch-ziffer"></span></span>' +
-            '<span class="kampf-chip-stufe"></span>' + tippHtml();
-          knopf.querySelector(".kampf-buch-ziffer").textContent = b.ziffer;
-          knopf.querySelector(".kampf-chip-stufe").textContent = b.stufe;
-          const text = b.name + " – Stufe " + b.stufe + "/" + b.maxStufe + ": " + b.beschreibung;
-          knopf.querySelector(".kampf-tipp").textContent = text;
-          knopf.setAttribute("aria-label", text);
-          knopf.setAttribute("aria-expanded", "false");
-          el.buecherListe.appendChild(knopf);
-          if (b.id === neueId) animiere(knopf, "ist-neu", 600);
-        });
-      }
-      if (typeof daten.bonus === "number") {
-        const prozent = Math.round(daten.bonus * 100);
-        el.buecherBonus.textContent = prozent > 0 ? "+" + prozent + " %" : "";
-        el.buecherBonus.setAttribute("aria-label", prozent > 0 ? "Buch-Bonus " + prozent + " Prozent" : "Kein Buch-Bonus");
-      }
+    /** Buch-Bonus des laufenden Sudokus an der Kombo ("+15 %", bei 0 ausgeblendet). */
+    function zeigeBuchBonus(bonus) {
+      if (typeof bonus !== "number") return;
+      const prozent = Math.round(bonus * 100);
+      el.komboBuch.hidden = prozent <= 0;
+      el.komboBuchWert.textContent = "+" + prozent + " %";
+      el.komboBuch.setAttribute("aria-label", "Buch-Bonus " + prozent + " Prozent");
     }
 
     function zeigeVerbesserungen(liste, neueId) {
@@ -861,11 +882,24 @@ const SudokuKampf = (function () {
         knopf.dataset.id = v.id;           // Herkunft fliegender Boni (sudoku-damage-fx.js)
         knopf.setAttribute("role", "listitem");
         knopf.style.setProperty("--chip-farbe", v.farbe);
-        knopf.innerHTML = symbolSvg(v.symbol) + '<span class="kampf-chip-stufe"></span>' + tippHtml();
+        let text, vorlesen;
+        if (v.art === "buch") {
+          // Buch: Einband mit Ziffer, Rahmen in der Farbe der Seltenheit
+          knopf.classList.add("kampf-buch", "kampf-buch--" + v.seltenheit);
+          knopf.dataset.ziffer = v.ziffer;
+          knopf.innerHTML = '<span class="kampf-buch-symbol">' + symbolSvg("buch") + '<span class="kampf-buch-ziffer"></span></span>' +
+            '<span class="kampf-chip-stufe"></span>' + tippHtml();
+          knopf.querySelector(".kampf-buch-ziffer").textContent = v.ziffer;
+          text = v.name + " (" + v.seltenheitName + ") – Stufe " + v.stufe + "/" + v.maxStufe + ": " + v.grundText + " Zusatz: " + v.zusatzText;
+          vorlesen = v.name + " (" + v.seltenheitName + "), Stufe " + v.stufe + " von " + v.maxStufe + ": " + v.grundText + " Zusatz: " + v.zusatzText;
+        } else {
+          knopf.innerHTML = symbolSvg(v.symbol) + '<span class="kampf-chip-stufe"></span>' + tippHtml();
+          text = v.name + " – Stufe " + v.stufe + "/" + v.maxStufe + ": " + v.beschreibung + " (je Stufe)";
+          vorlesen = v.name + ", Stufe " + v.stufe + " von " + v.maxStufe + ": " + v.beschreibung + " (je Stufe)";
+        }
         knopf.querySelector(".kampf-chip-stufe").textContent = v.stufe;
-        knopf.querySelector(".kampf-tipp").textContent =
-          v.name + " – Stufe " + v.stufe + "/" + v.maxStufe + ": " + v.beschreibung + " (je Stufe)";
-        knopf.setAttribute("aria-label", v.name + ", Stufe " + v.stufe + " von " + v.maxStufe + ": " + v.beschreibung + " (je Stufe)");
+        knopf.querySelector(".kampf-tipp").textContent = text;
+        knopf.setAttribute("aria-label", vorlesen);
         knopf.setAttribute("aria-expanded", "false");
         el.verbesserungen.appendChild(knopf);
         if (v.id === neueId) animiere(knopf, "ist-neu", 600);
@@ -991,24 +1025,39 @@ const SudokuKampf = (function () {
      * (auch solche aus Erweiterungen).
      */
     function rechnungsZeilen(e) {
+      // Jede Zeile weiß, zu welchem Schritt der Rechnung sie gehört (schritt) –
+      // so zeigt der Schadensaufbau sie im richtigen Moment (zeigeAufbau)
       const zeilen = [];
+      // kurz, damit die Zeile in die schmale Spalte passt ("Buch 8")
+      const buchName = e.buch ? "Buch " + e.buch.ziffer : "Buch";
       if (e.regenbogen) {
         // Kein Wurf, keine Rechnung: der Boss ist sofort besiegt
-        return [{ key: "regenbogen", label: "Regenbogen", wert: String(e.schaden), art: "regenbogen" }];
+        return [{ key: "regenbogen", label: "Regenbogen", wert: String(e.schaden), art: "regenbogen", schritt: 0 }];
       }
       if (e.immun) {
         // "Wurf 6 · gerade · immun" – sonst wurde nichts berechnet
-        return [
-          { key: "wurf", label: "Wurf", wert: String(e.wurf) },
-          { key: "immun", label: e.selten.grund, wert: e.selten.art, art: "selten", farbe: e.selten.farbe },
-          { key: "selten", label: e.selten.name, wert: "", art: "notiz" },
-        ];
+        const z = e.rechnung.wuerfel ? wuerfelZeilen(e) : [{ key: "wurf", label: "Wurf", wert: String(e.wurf), schritt: 0 }];
+        return z.concat([
+          { key: "immun", label: e.selten.grund, wert: e.selten.art, art: "selten", farbe: e.selten.farbe, schritt: 0 },
+          { key: "selten", label: e.selten.name, wert: "", art: "notiz", schritt: 0 },
+        ]);
       }
       e.rechnung.schritte.forEach(function (schritt, i) {
+        // Mehrere Würfel (Bücher): je Würfel eine Zeile
+        if (/^Würfel /.test(schritt)) {
+          wuerfelZeilen(e).forEach(function (z) { zeilen.push(z); });
+          // Buch des Achten/Neunten: alle Würfel zählen → Summe mit Herkunft
+          const summe = /= (\d+)$/.exec(schritt);
+          if (e.wuerfelModus === "summe" && summe) {
+            zeilen.push({ key: "wuerfelSumme", label: buchName,
+              wert: "Σ " + summe[1], art: "buch", schritt: i });
+          }
+          return;
+        }
         // Bücher: "Bücher +15 %" (zählt zum Kombo-Multiplikator dazu)
         const buch = /^Bücher \+(\d+) %$/.exec(schritt);
         if (buch) {
-          zeilen.push({ key: "buecher", label: "Bücher", wert: "+" + buch[1] + " %", art: "buch" });
+          zeilen.push({ key: "buecher", label: "Bücher", wert: "+" + buch[1] + " %", art: "buch", schritt: i });
           return;
         }
         const teil = /^(.*) (\S+)$/.exec(schritt);
@@ -1016,35 +1065,62 @@ const SudokuKampf = (function () {
         const wert = teil ? teil[2] : "";
         const grad = gradMitName(name);
         if (name === "Wurf") {
-          zeilen.push({ key: "wurf", label: "Wurf", wert: wert });
+          zeilen.push({ key: "wurf", label: "Wurf", wert: wert, schritt: i });
+          // Buch des Zweiten: zwei Würfel, der höhere zählt
+          if (e.wuerfelModus === "hoechster") {
+            zeilen.push({ key: "zweiWuerfel", label: buchName, wert: e.wuerfe.join(" / "), art: "buch", schritt: i });
+          }
+        } else if (name === "Mindestwurf") {
+          zeilen.push({ key: "mindestwurf", label: buchName, wert: "≥ 10 (" + wert + ")", art: "buch", schritt: i });
         } else if (name === "Kritisch") {
-          zeilen.push({ key: "kritisch", label: "Kritisch", wert: wert, art: "kritisch" });
+          const durchBuch = e.buch && e.buch.zusatz === "kritisch";
+          zeilen.push({ key: "kritisch", label: durchBuch ? "Krit. (" + buchName + ")" : "Kritisch", wert: wert, art: "kritisch", schritt: i });
         } else if (schritt === "Fehlschlag") {
-          zeilen.push({ key: "fehlschlag", label: "Fehlschlag", wert: "×0", art: "daneben" });
+          zeilen.push({ key: "fehlschlag", label: "Fehlschlag", wert: "×0", art: "daneben", schritt: i });
         } else if (name === "Zuschlag") {
-          zeilen.push({ key: "zuschlag", label: "Zuschlag", wert: wert });
+          zeilen.push({ key: "zuschlag", label: "Zuschlag", wert: wert, schritt: i });
         } else if (name === "Kombo") {
-          zeilen.push({ key: "kombo", label: "Kombo", wert: wert });
+          zeilen.push({ key: "kombo", label: "Kombo", wert: wert, schritt: i });
         } else if (grad) {
           zeilen.push({ key: "schwierigkeit", label: "Schwierigkeit",
-            wert: "+" + Math.round(SudokuRPG.belohnung(grad.id).schadensBonus * 100) + " %" });
+            wert: "+" + Math.round(SudokuRPG.belohnung(grad.id).schadensBonus * 100) + " %", schritt: i });
         } else if (name === "Doppelt") {
-          zeilen.push({ key: "doppelt", label: "Doppelschaden", wert: wert, art: "doppelt" });
+          zeilen.push({ key: "doppelt", label: "Doppelschaden", wert: wert, art: "doppelt", schritt: i });
         } else if (name === "Fluch") {
-          zeilen.push({ key: "fluch", label: "Fluch", wert: wert, art: "fluch" });
+          zeilen.push({ key: "fluch", label: "Fluch", wert: wert, art: "fluch", schritt: i });
         } else if (name === "Reihenbrecher") {
-          zeilen.push({ key: "reihen", label: "Reihenbrecher", wert: wert, art: "reihe" });
+          zeilen.push({ key: "reihen", label: "Reihenbrecher", wert: wert, art: "reihe", schritt: i });
         } else if (e.boss.selten && name === e.boss.selten.name) {
-          zeilen.push({ key: "selten", label: name, wert: wert, art: "selten", farbe: e.boss.selten.farbe });
+          zeilen.push({ key: "selten", label: name, wert: wert, art: "selten", farbe: e.boss.selten.farbe, schritt: i });
         } else if (e.eigenheit && name === e.eigenheit.name) {
-          zeilen.push({ key: "eigenheit", label: name, wert: wert, art: "eigenheit", farbe: e.eigenheit.farbe });
+          zeilen.push({ key: "eigenheit", label: name, wert: wert, art: "eigenheit", farbe: e.eigenheit.farbe, schritt: i });
         } else {
-          zeilen.push({ key: "schritt" + i, label: name, wert: wert });
+          zeilen.push({ key: "schritt" + i, label: name, wert: wert, schritt: i });
         }
       });
-      if (e.gift > 0) zeilen.push({ key: "gift", label: "Gift", wert: "+" + e.gift, art: "gift" });
-      if (e.fehlschlag && e.spruch) zeilen.push({ key: "spruch", label: e.spruch, wert: "", art: "notiz" });
+      const ende = e.rechnung.schritte.length;
+      if (e.gift > 0) {
+        const durchBuch = e.buch && e.buch.zusatz === "gift" && !(e.powerup && e.powerup.typ === "gift");
+        zeilen.push({ key: "gift", label: durchBuch ? "Gift (" + buchName + ")" : "Gift", wert: "+" + e.gift, art: "gift", schritt: ende });
+      }
+      // Buch des Vierten: Angriff des Bosses kommt einen Zug später
+      if (e.buchAngriff > 0) {
+        zeilen.push({ key: "buchAngriff", label: buchName, wert: "+" + e.buchAngriff + " Zug", art: "buch", schritt: ende });
+      }
+      if (e.fehlschlag && e.spruch) zeilen.push({ key: "spruch", label: e.spruch, wert: "", art: "notiz", schritt: ende });
       return zeilen;
+    }
+
+    /** Je Würfel eine Zeile: "Würfel 2 · 20 krit → 60", "Würfel 1 · 4 immun" … */
+    function wuerfelZeilen(e) {
+      return e.rechnung.wuerfel.map(function (w, k) {
+        let wert = String(w.wurf);
+        if (w.kritisch) wert += " ×" + SudokuRPG.zahlText(K.kritischFaktor) + " = " + w.wert;
+        else if (w.immun || w.geblockt) wert += " " + (w.abwehrArt || "geblockt");
+        else if (w.fehlschlag) wert += " Fehlschlag";
+        return { key: "wuerfel" + k, label: "Würfel " + (k + 1), wert: wert,
+          art: w.kritisch ? "kritisch" : w.immun || w.geblockt || w.fehlschlag ? "daneben" : "", schritt: 0 };
+      });
     }
 
     /** Münzen dieses Zugs mit Grund, dazu ein gewonnenes Leben. */
@@ -1060,6 +1136,9 @@ const SudokuKampf = (function () {
       }
       if (e.muenzFaktor !== 1) {
         zeilen.push({ key: "faktor", label: "Schwierigkeit", wert: "×" + SudokuRPG.zahlText(e.muenzFaktor) });
+      }
+      if (e.buchMuenzen > 0) {
+        zeilen.push({ key: "buchMuenzen", label: e.buch ? "Buch " + e.buch.ziffer : "Buch", wert: "+" + e.buchMuenzen, art: "gold" });
       }
       if (e.eliteBonus > 0) zeilen.push({ key: "elite", label: "Elite-Bonus", wert: "+" + e.eliteBonus, art: "gold" });
       if (e.lebenPlus > 0) {
@@ -1345,7 +1424,7 @@ const SudokuKampf = (function () {
         zeigeMuenzen(stand.muenzen, false);
         zeigeKombo(stand.kombo, stand.komboBonus, false);
         zeigeVerbesserungen(stand.verbesserungen);
-        zeigeBuecher(stand.buecher);
+        zeigeBuchBonus(stand.buchBonus);
         zeigeRekord(stand.boss, stand.rekord);
         zeigeGegenangriff(stand.gegenangriff);
         el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite", "loest-sich-auf", "ist-ruhig");
@@ -1414,7 +1493,10 @@ const SudokuKampf = (function () {
         quelle: function (name, schritt) {
           if (name === "kombo") return mitte(el.kombo);
           if (name === "klinge") return mitte(el.verbesserungen.querySelector('[data-id="klinge"]'));
-          if (name === "buecher") return mitte(el.buecherBonus) || mitte(el.buecher);
+          // Bücher: vom Buch der gesetzten Ziffer in der Leiste (sonst von der Kombo)
+          if (name === "buecher" || name === "buch") {
+            return (e.buch && mitte(el.verbesserungen.querySelector('[data-id="' + e.buch.id + '"]'))) || mitte(el.kombo);
+          }
           if (name === "selten") return el.selten.hidden ? null : mitte(el.selten);
           if (name === "grad") return mitte(optionen && optionen.gradAnzeige);
           if (name === "doppelt") return einheitMitte(e);
@@ -1455,8 +1537,9 @@ const SudokuKampf = (function () {
      */
     function zeigeAufbau(e, n, zwischenwert) {
       el.panel.classList.remove("ist-leer");
-      const zeilen = rechnungsZeilen(e).filter(function (z) { return z.key !== "gift" && z.key !== "spruch"; });
-      setzeZeilen(el.trefferZeilen, zeilen.slice(0, n));
+      // Zeilen der ersten n Schritte (eine Zeile kann mehrere Würfel umfassen, siehe rechnungsZeilen)
+      const zeilen = rechnungsZeilen(e).filter(function (z) { return z.key !== "gift" && z.key !== "spruch" && z.key !== "buchAngriff"; });
+      setzeZeilen(el.trefferZeilen, zeilen.filter(function (z) { return z.schritt < n; }));
       setzeZeile(el.trefferSumme, { label: "Gesamt", wert: String(zwischenwert) }, true);
       if (n === 1) {
         setzeZeilen(el.belohnungZeilen, []);
@@ -1526,8 +1609,8 @@ const SudokuKampf = (function () {
           zeigeGegenangriff(e.gegenangriff);
           // Buch-Bonus des laufenden Sudokus
           if (typeof e.buchBonus === "number") {
-            zeigeBuecher({ bonus: e.buchBonus });
-            if (e.buchBonusPlus > 0) animiere(el.buecherBonus, "pulsiert", 300);
+            zeigeBuchBonus(e.buchBonus);
+            if (e.buchBonusPlus > 0) animiere(el.komboBuch, "pulsiert", 300);
           }
           return zeigeMuenzen(e.muenzen, true);
         });
@@ -1551,7 +1634,7 @@ const SudokuKampf = (function () {
       const regenbogenStufe = SudokuSchadenFx.stufeFuer(Infinity);
       meldung(trefferText(e));
       zeigeKombo(e.kombo, e.komboBonus, true);
-      wuerfel.zeige(null, "");
+      wuerfel.zeigeLeer();
       banner("Regenbogenschlag!", null, "regenbogen");
       zeigeAufbau(e, 1, "…");
 
@@ -1774,18 +1857,11 @@ const SudokuKampf = (function () {
     function verbesserung(e) {
       return einreihen(function () {
         meldung(e.name + ", Stufe " + e.stufe + "." + (e.lebenPlus > 0 ? " +" + e.lebenPlus + " Leben." : ""));
-        verlaufEintrag({ text: e.name, wert: "Stufe " + e.stufe });
+        verlaufEintrag(e.art === "buch"
+          ? { text: e.name, wert: "Stufe " + e.stufe, art: "buch", symbol: "buch" }
+          : { text: e.name, wert: "Stufe " + e.stufe });
         zeigeVerbesserungen(e.gesammelt, e.id);
         zeigeHerzen(e.leben, e.maxLeben);
-      });
-    }
-
-    /** Ein Buch wurde gewählt: Reihe aktualisieren, Verlauf. */
-    function buchGewaehlt(e) {
-      return einreihen(function () {
-        meldung(e.name + (e.stufe > 1 ? ", Stufe " + e.stufe : "") + ".");
-        verlaufEintrag({ text: e.name, wert: "Stufe " + e.stufe, art: "buch", symbol: "buch" });
-        zeigeBuecher(e.buecher, e.id);
       });
     }
 
@@ -1874,7 +1950,7 @@ const SudokuKampf = (function () {
       beschleunige();
       return einreihen(function () {
         leerePanel();
-        wuerfel.zeige(null, "");
+        wuerfel.zeigeLeer();
       });
     }
 
@@ -2012,20 +2088,41 @@ const SudokuKampf = (function () {
             karte.className = "auswahl-karte";
             karte.dataset.id = v.id;
             karte.style.setProperty("--chip-farbe", v.farbe);
-            karte.innerHTML =
-              '<span class="auswahl-symbol">' + symbolSvg(v.symbol) + "</span>" +
-              '<span class="auswahl-name"></span>' +
-              '<span class="auswahl-text"></span>' +
-              '<span class="auswahl-stufe"></span>';
-            karte.querySelector(".auswahl-name").textContent = v.name;
-            karte.querySelector(".auswahl-text").textContent = v.beschreibung;
-            // Was die nächste Stufe bringt (z. B. "Stufe 3 auf 4: 30 auf 40 Extra-Schaden"),
-            // sonst nur der Stufensprung
-            karte.querySelector(".auswahl-stufe").textContent = v.naechste
-              ? v.naechste + " (max. Stufe " + v.maxStufe + ")"
-              : v.stufe === 0
-              ? "Neu · max. Stufe " + v.maxStufe
-              : "Stufe " + v.stufe + " → " + (v.stufe + 1) + " (max. " + v.maxStufe + ")";
+            if (v.art === "buch") {
+              // Buch: Rahmen in der Farbe der Seltenheit; neu → Grund- und
+              // Zusatzwirkung, sonst die Änderung der nächsten Stufe
+              karte.classList.add("auswahl-karte--buch", "auswahl-karte--" + v.seltenheit);
+              karte.innerHTML =
+                '<span class="auswahl-seltenheit"></span>' +
+                '<span class="auswahl-symbol auswahl-symbol--buch">' + symbolSvg("buch") + '<span class="kampf-buch-ziffer"></span></span>' +
+                '<span class="auswahl-name"></span>' +
+                '<span class="auswahl-text"></span>' +
+                '<span class="auswahl-zusatz"></span>' +
+                '<span class="auswahl-stufe"></span>';
+              karte.querySelector(".auswahl-seltenheit").textContent = v.seltenheitName;
+              karte.querySelector(".kampf-buch-ziffer").textContent = v.ziffer;
+              karte.querySelector(".auswahl-name").textContent = v.name;
+              karte.querySelector(".auswahl-text").textContent = v.stufe === 0 ? v.grundText : v.naechste;
+              karte.querySelector(".auswahl-zusatz").textContent = v.stufe === 0 ? "Zusatz: " + v.zusatzText : "";
+              karte.querySelector(".auswahl-stufe").textContent = v.stufe === 0
+                ? "Neues Buch · max. Stufe " + v.maxStufe
+                : "Stufe " + v.stufe + " → " + (v.stufe + 1) + " (max. " + v.maxStufe + ")";
+            } else {
+              karte.innerHTML =
+                '<span class="auswahl-symbol">' + symbolSvg(v.symbol) + "</span>" +
+                '<span class="auswahl-name"></span>' +
+                '<span class="auswahl-text"></span>' +
+                '<span class="auswahl-stufe"></span>';
+              karte.querySelector(".auswahl-name").textContent = v.name;
+              karte.querySelector(".auswahl-text").textContent = v.beschreibung;
+              // Was die nächste Stufe bringt (z. B. "Stufe 3 auf 4: 30 auf 40 Extra-Schaden"),
+              // sonst nur der Stufensprung
+              karte.querySelector(".auswahl-stufe").textContent = v.naechste
+                ? v.naechste + " (max. Stufe " + v.maxStufe + ")"
+                : v.stufe === 0
+                ? "Neu · max. Stufe " + v.maxStufe
+                : "Stufe " + v.stufe + " → " + (v.stufe + 1) + " (max. " + v.maxStufe + ")";
+            }
             karte.addEventListener("click", function () {
               overlay.remove();
               offeneAuswahl = null;
@@ -2035,6 +2132,8 @@ const SudokuKampf = (function () {
             karten.appendChild(karte);
           });
           rahmen.appendChild(overlay);
+          // Legendäre Karte: eigene kurze Animation beim Erscheinen
+          if (!ohneBewegung()) overlay.querySelectorAll(".auswahl-karte--legendaer").forEach(function (k) { k.classList.add("erscheint-legendaer"); });
           offeneAuswahl = { overlay: overlay, weiter: weiter };
           karten.firstChild.focus();
         });
@@ -2049,76 +2148,76 @@ const SudokuKampf = (function () {
         offeneAuswahl.weiter();
         offeneAuswahl = null;
       }
-      schliesseBuchAuswahl();
     }
 
     /**
-     * Buchauswahl: Karten wie bei den Verbesserungen, eigene Überschrift.
-     * Hält die Warteschlange an, bis ein Buch gewählt ist.
-     * @param {object[]} angebote – { id, name, ziffer, stufe, maxStufe, naechste }
-     * @param {object} info – { grund: "start" | "sudoku" }
+     * Buch-Spin zu Beginn eines Abenteuers: Slot-Walze im Stil der
+     * Schwierigkeits-Auslosung, sie bleibt auf dem ausgelosten Buch stehen.
+     * Danach steht das Buch in der Leiste.
+     * @param {object[]} buecher – alle Bücher für die Walze { id, name, ziffer, seltenheit, farbe }
+     * @param {object} ergebnis  – von den Regeln: { buch, gesammelt }
+     * @returns {Promise} – erfüllt, wenn die Walze steht und die Pause vorbei ist
      */
-    let buchAuswahlNummer = 0;
-    let offeneBuchAuswahl = null;
+    function buchSpin(rahmen, buecher, ergebnis) {
+      const ziel = ergebnis.buch;
+      const overlay = document.createElement("div");
+      overlay.className = "slot slot--buch";
+      overlay.innerHTML =
+        '<div class="slot-kasten">' +
+          '<p class="slot-titel">Buch-Spin …</p>' +
+          '<div class="slot-fenster"><div class="slot-walze"></div></div>' +
+          '<p class="slot-belohnung"></p>' +
+        "</div>";
+      const walze = overlay.querySelector(".slot-walze");
+      const titel = overlay.querySelector(".slot-titel");
+      rahmen.appendChild(overlay);
+      const legendaer = ziel.seltenheit === "legendaer";
 
-    function buchAuswahl(rahmen, angebote, beimWaehlen, info) {
-      const titel = info && info.grund === "sudoku" ? "Sudoku gelöst! Wähle ein Buch:" : "Wähle ein Buch für dein Abenteuer:";
-      schliesseBuchAuswahl();
-      const nummer = ++buchAuswahlNummer;
-      return einreihen(function () {
-        if (nummer !== buchAuswahlNummer) return null;
-        meldung("Wähle ein Buch!");
-        return new Promise(function (weiter) {
-          const overlay = document.createElement("div");
-          overlay.className = "auswahl ist-buch";
-          overlay.setAttribute("role", "dialog");
-          overlay.setAttribute("aria-label", "Buch wählen");
-          overlay.innerHTML =
-            '<div class="auswahl-kasten">' +
-              '<p class="auswahl-titel"></p>' +
-              '<div class="auswahl-karten"></div>' +
-            "</div>";
-          overlay.querySelector(".auswahl-titel").textContent = titel;
-          const karten = overlay.querySelector(".auswahl-karten");
-          angebote.forEach(function (b) {
-            const karte = document.createElement("button");
-            karte.type = "button";
-            karte.className = "auswahl-karte auswahl-karte--buch";
-            karte.dataset.id = b.id;
-            karte.style.setProperty("--chip-farbe", BUCH_FARBE);
-            karte.innerHTML =
-              '<span class="auswahl-symbol auswahl-symbol--buch">' + symbolSvg("buch") + '<span class="kampf-buch-ziffer"></span></span>' +
-              '<span class="auswahl-name"></span>' +
-              '<span class="auswahl-text"></span>' +
-              '<span class="auswahl-stufe"></span>';
-            karte.querySelector(".kampf-buch-ziffer").textContent = b.ziffer;
-            karte.querySelector(".auswahl-name").textContent = b.name;
-            karte.querySelector(".auswahl-text").textContent = b.naechste;   // was das Buch auf der nächsten Stufe kann
-            karte.querySelector(".auswahl-stufe").textContent = b.stufe === 0
-              ? "Neu · max. Stufe " + b.maxStufe
-              : "Stufe " + b.stufe + " → " + (b.stufe + 1) + " (max. " + b.maxStufe + ")";
-            karte.addEventListener("click", function () {
-              overlay.remove();
-              offeneBuchAuswahl = null;
-              beimWaehlen(b.id);       // Regeln: Buch anwenden → Ereignis "buch"
-              weiter();
-            });
-            karten.appendChild(karte);
-          });
-          rahmen.appendChild(overlay);
-          offeneBuchAuswahl = { overlay: overlay, weiter: weiter };
-          karten.firstChild.focus();
-        });
-      });
-    }
-
-    function schliesseBuchAuswahl() {
-      buchAuswahlNummer++;
-      if (offeneBuchAuswahl) {
-        offeneBuchAuswahl.overlay.remove();
-        offeneBuchAuswahl.weiter();
-        offeneBuchAuswahl = null;
+      const zielIndex = buecher.findIndex(function (b) { return b.id === ziel.id; });
+      const eintraege = [];
+      if (ohneBewegung()) {
+        eintraege.push(ziel);
+      } else {
+        for (let r = 0; r < 3; r++) buecher.forEach(function (b) { eintraege.push(b); });
+        eintraege.push.apply(eintraege, buecher.slice(0, zielIndex + 1));
       }
+      eintraege.forEach(function (b) {
+        const zeile = document.createElement("div");
+        zeile.className = "slot-eintrag slot-eintrag--buch";
+        zeile.style.setProperty("--chip-farbe", b.farbe);
+        zeile.innerHTML = '<span class="kampf-buch-symbol">' + symbolSvg("buch") + '<span class="kampf-buch-ziffer"></span></span><span class="slot-buch-name"></span>';
+        zeile.querySelector(".kampf-buch-ziffer").textContent = b.ziffer;
+        zeile.querySelector(".slot-buch-name").textContent = b.name;
+        walze.appendChild(zeile);
+      });
+
+      const fertig = function () {
+        titel.textContent = (legendaer ? "★ " : "") + ziel.name + (legendaer ? " ★" : "");
+        overlay.querySelector(".slot-belohnung").textContent = ziel.seltenheitName + " · " + ziel.zusatzText;
+        overlay.classList.add("ist-fertig");
+        overlay.style.setProperty("--chip-farbe", ziel.farbe);
+        if (legendaer) overlay.classList.add("ist-special");
+        meldung("Buch-Spin: " + ziel.name + ", " + ziel.seltenheitName + ".");
+        verlaufEintrag({ text: "Buch-Spin: " + ziel.name, wert: ziel.seltenheitName, art: "buch", symbol: "buch" });
+        zeigeVerbesserungen(ergebnis.gesammelt, ziel.id);
+      };
+      const pause = DAUER.walzePause + (legendaer ? DAUER.walzeSpecial : 0) + 500;
+
+      if (ohneBewegung()) {
+        fertig();
+        return new Promise(function (ok) { setTimeout(ok, 1200); }).then(function () { overlay.remove(); });
+      }
+      const hoehe = walze.firstChild.getBoundingClientRect().height;
+      walze.style.transform = "translateY(0)";
+      void walze.offsetWidth;
+      walze.style.transitionDuration = DAUER.walze + "ms";
+      walze.style.transform = "translateY(" + (-(eintraege.length - 1) * hoehe) + "px)";
+      return warte(DAUER.walze).then(function () {
+        fertig();
+        return warte(pause);
+      }).then(function () {
+        overlay.remove();
+      });
     }
 
     /**
@@ -2171,9 +2270,8 @@ const SudokuKampf = (function () {
       angriff: angriff,
       zeigeGegenangriff: zeigeGegenangriff,
       buchschlag: buchschlag,
-      buchGewaehlt: buchGewaehlt,
-      buchAuswahl: buchAuswahl,
-      zeigeBuecher: zeigeBuecher,
+      buchSpin: buchSpin,
+      zeigeBuchBonus: zeigeBuchBonus,
       sieg: sieg,
       neuerBoss: neuerBoss,
       verbesserung: verbesserung,

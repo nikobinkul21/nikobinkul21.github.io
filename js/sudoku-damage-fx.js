@@ -107,7 +107,7 @@ const SudokuSchadenFx = (function () {
    */
   function schritteAus(e) {
     const liste = [];
-    let wert = e.wurf;
+    let wert = startwert(e);
     let vorKombo = null, komboFaktor = 1;                    // für den Buch-Bonus (zählt zur Kombo dazu)
     e.rechnung.schritte.forEach(function (schritt, i) {
       if (i === 0) return;                                   // "Wurf 14"
@@ -149,6 +149,8 @@ const SudokuSchadenFx = (function () {
         eintrag.quelle = "klinge";
       } else if (name === "Kombo") {
         eintrag.quelle = "kombo";
+      } else if (name === "Mindestwurf") {
+        eintrag.quelle = "buch";                             // Buch des Fünften
       } else if (name === "Doppelt") {
         eintrag.quelle = "doppelt";
       } else if (grad) {
@@ -161,6 +163,11 @@ const SudokuSchadenFx = (function () {
     });
     if (liste.length > 0) liste[liste.length - 1].wert = e.schaden;
     return liste;
+  }
+
+  /** Womit der Aufbau beginnt: der Wurf – bei mehreren Würfeln ihre Summe (nach Krit/Immunität). */
+  function startwert(e) {
+    return e.rechnung && e.rechnung.wuerfel ? e.rechnung.basis : e.wurf;
   }
 
   /** Die Einheiten, die diese Zahl vervollständigt hat: ["zeile", "spalte", "block"] (Auswahl). */
@@ -355,7 +362,7 @@ const SudokuSchadenFx = (function () {
     if (u.eilig()) return Promise.resolve(stufe);
     const t = zeitenMal(u.faktor);
     const zahl = element("fx-zahl", u.reduziert ? u.daneben : u.start, '<span class="fx-wert"></span>');
-    zeigeWert(zahl, e.wurf);
+    zeigeWert(zahl, startwert(e));
 
     // "Bewegung reduzieren": nichts fliegt – die Zahl zählt an Ort und Stelle
     if (u.reduziert) {
@@ -373,7 +380,7 @@ const SudokuSchadenFx = (function () {
       }).then(function () { return stufe; });
     }
 
-    let wert = e.wurf;
+    let wert = startwert(e);
     let index = 0;
     // 1. Ablösen: die Zahl springt vom Würfel und steht groß daneben
     fliege(zahl, u.start, u.daneben, t.abloesen, "cubic-bezier(0.2, 0.9, 0.3, 1.3)");
