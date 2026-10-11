@@ -103,6 +103,24 @@ function initSudoku(container) {
     "</div>" +
     // Das Spiel
     '<div class="sudoku" hidden>' +
+      // Kopfzeile nur auf dem Smartphone (siehe css/sudoku-mobil.css): eine
+      // Zeile mit Welt und Level (bzw. "Sudoku"), Schwierigkeit, Leben und
+      // Münzen und einem Menü. Welt, Leben und Münzen hängt das Kampffenster
+      // selbst hier ein (SudokuKampf, Handy-Aufbau).
+      '<div class="sudoku-kopfzeile">' +
+        '<div class="kopf-ort"><span class="kopf-titel nur-frei">Sudoku</span></div>' +
+        '<span class="kopf-grad"></span>' +
+        '<div class="kopf-stand nur-abenteuer"></div>' +
+        '<button type="button" class="kopf-menue-knopf" aria-label="Menü" aria-expanded="false" aria-haspopup="true">' +
+          '<span></span><span></span><span></span></button>' +
+        '<div class="kopf-menue" role="menu" hidden>' +
+          '<a class="kopf-eintrag" role="menuitem" href="#games">← Zurück zu Games</a>' +
+          '<label class="kopf-eintrag kopf-eintrag--grad nur-frei">Schwierigkeit <select class="kopf-grad-auswahl"></select></label>' +
+          '<button type="button" class="kopf-eintrag" role="menuitem" data-aktion="neu">Neues Spiel</button>' +
+          '<a class="kopf-eintrag" role="menuitem" href="#einstellungen">Einstellungen</a>' +
+          '<button type="button" class="kopf-eintrag kopf-eintrag--warnung nur-abenteuer" role="menuitem" data-aktion="zuruecksetzen">Abenteuer zurücksetzen</button>' +
+        "</div>" +
+      "</div>" +
       '<div class="sudoku-steuerung">' +
         '<a class="sudoku-moduslink" href="#games/sudoku">↺ Modus</a>' +
         '<label class="sudoku-label nur-frei">' +
@@ -138,6 +156,12 @@ function initSudoku(container) {
   const status = container.querySelector(".sudoku-status");
   const brett = container.querySelector(".sudoku-brett");
   const zahlenfeld = container.querySelector(".sudoku-zahlenfeld");
+  const kopfOrt = container.querySelector(".kopf-ort");
+  const kopfStand = container.querySelector(".kopf-stand");
+  const kopfGrad = container.querySelector(".kopf-grad");
+  const kopfMenueKnopf = container.querySelector(".kopf-menue-knopf");
+  const kopfMenue = container.querySelector(".kopf-menue");
+  const kopfGradAuswahl = container.querySelector(".kopf-grad-auswahl");
 
   // Auswahl der Schwierigkeitsgrade aus der Liste in der Engine erzeugen
   SudokuEngine.SCHWIERIGKEITSGRADE.forEach(function (grad) {
@@ -145,6 +169,7 @@ function initSudoku(container) {
     option.value = grad.id;
     option.textContent = grad.name;
     auswahl.appendChild(option);
+    kopfGradAuswahl.appendChild(option.cloneNode(true));
   });
 
   // Das Gitter: 9 Blöcke mit je 9 Feldern.
@@ -272,6 +297,9 @@ function initSudoku(container) {
 
   function zeichne() {
     if (!spiel) return;
+    // Kopfzeile (Smartphone): Schwierigkeit als kleines Etikett
+    const grad = SudokuEngine.gradMitId(spiel.grad);
+    kopfGrad.textContent = grad ? grad.name : "";
     const zeileA = Math.floor(ausgewaehlt / 9);
     const spalteA = ausgewaehlt % 9;
     const blockA = SudokuEngine.blockVon(ausgewaehlt);
@@ -660,6 +688,8 @@ function initSudoku(container) {
 
     if (!kampf) {
       kampf = SudokuKampf.erstelle(kampfPlatz, {
+        // Smartphone: Welt/Level sowie Leben und Münzen wandern in die Kopfzeile
+        kopf: { ort: kopfOrt, stand: kopfStand },
         beimZuruecksetzen: abenteuerZuruecksetzen,
         wuerfelPlatz: wuerfelPlatz,
         // Herkunft fliegender Boni beim Schadensaufbau (Doppelschaden, Schwierigkeit)
@@ -1040,6 +1070,40 @@ function initSudoku(container) {
   });
 
   neuKnopf.addEventListener("click", neuesFreiesSpiel);
+
+  /* ---------- Menü der Kopfzeile (Smartphone) ---------- */
+  function menueZeigen(an) {
+    kopfMenue.hidden = !an;
+    kopfMenueKnopf.setAttribute("aria-expanded", String(an));
+    if (an) kopfGradAuswahl.value = auswahl.value;
+  }
+  kopfMenueKnopf.addEventListener("click", function (event) {
+    event.stopPropagation();
+    menueZeigen(kopfMenue.hidden);
+  });
+  kopfMenue.addEventListener("click", function (event) {
+    const eintrag = event.target.closest("[data-aktion], a");
+    if (!eintrag) return;
+    menueZeigen(false);
+    if (eintrag.dataset.aktion === "neu") {
+      // Freies Spiel: neues Rätsel; Abenteuer: zurück zur Moduswahl
+      if (modus === "frei") neuesFreiesSpiel();
+      else location.hash = "#games/sudoku";
+    } else if (eintrag.dataset.aktion === "zuruecksetzen") {
+      abenteuerZuruecksetzen();
+    }
+  });
+  // Schwierigkeit im Menü = die Auswahl des freien Spiels
+  kopfGradAuswahl.addEventListener("change", function () {
+    auswahl.value = kopfGradAuswahl.value;
+    auswahl.dispatchEvent(new Event("change"));
+  });
+  document.addEventListener("click", function (event) {
+    if (!kopfMenue.hidden && !kopfMenue.contains(event.target)) menueZeigen(false);
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !kopfMenue.hidden) { menueZeigen(false); kopfMenueKnopf.focus(); }
+  });
 
   return {
     zeige: zeige,

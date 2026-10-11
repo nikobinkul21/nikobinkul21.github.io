@@ -89,6 +89,12 @@ const SudokuKampf = (function () {
   /** Farbe der Bücher (Karten, Reihe im Kampffenster, Zahlenfeld). */
   const BUCH_FARBE = "#9a5b2a";
 
+  /**
+   * Wann gilt der Handy-Aufbau? Schmal im Hochformat oder flach im Querformat
+   * auf einem Touch-Gerät. Dieselbe Bedingung steht in css/sudoku-mobil.css.
+   */
+  const HANDY_MEDIEN = "(max-width: 767px), (orientation: landscape) and (max-height: 500px) and (hover: none)";
+
   /** Bei "Bewegung reduzieren" fallen alle Animationen weg. */
   function ohneBewegung() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -615,11 +621,155 @@ const SudokuKampf = (function () {
       if (optionen && optionen.beimZuruecksetzen) optionen.beimZuruecksetzen();
     });
 
-    // Smartphone: Antippen der kompakten Zeile klappt die drei Blöcke auf
+    // Schmales Fenster (alter Aufbau ohne Handy-Modus): Antippen der kompakten Zeile klappt die drei Blöcke auf
     el.kurz.addEventListener("click", function () {
+      if (handy.an) return;                 // im Handy-Aufbau öffnet der Streifen das Blatt
       const offen = el.panel.classList.toggle("offen");
       el.kurz.setAttribute("aria-expanded", String(offen));
     });
+
+    /* ---------- Handy-Aufbau ----------
+       Auf dem Smartphone (HANDY_MEDIEN, gleiche Bedingung wie in
+       css/sudoku-mobil.css) wird das Kampffenster zu einem flachen Streifen:
+       Boss, Held, Kombo, Würfel und eine Zeile mit dem letzten Zug. Welt und
+       Level sowie Leben und Münzen wandern in die Kopfzeile des Sudokus,
+       alles Weitere (letzter Treffer, Belohnung, Verlauf, Verbesserungen,
+       Erklärungen zum Boss) in ein Blatt, das von unten einfährt.
+       Verschoben werden die Elemente selbst – alle Verweise in "el" bleiben
+       gültig, die Anzeige wird also genauso aktualisiert wie sonst. */
+    const handy = { an: false, plaetze: [] };
+    const blatt = document.createElement("div");
+    blatt.className = "kampf-blatt";
+    blatt.hidden = true;
+    blatt.innerHTML =
+      '<div class="kampf-blatt-hintergrund"></div>' +
+      '<section class="kampf-blatt-inhalt" role="dialog" aria-modal="true" aria-label="Kampf-Details">' +
+        '<div class="kampf-blatt-griff" aria-hidden="true"></div>' +
+        '<button type="button" class="kampf-blatt-zu" aria-label="Schließen">×</button>' +
+        '<section class="kampf-blatt-boss" aria-label="Der Boss"></section>' +
+        '<div class="kampf-blatt-teile"></div>' +
+      "</section>";
+    container.querySelector(".kampf").appendChild(blatt);
+    const blattInhalt = blatt.querySelector(".kampf-blatt-inhalt");
+    const blattTeile = blatt.querySelector(".kampf-blatt-teile");
+    const blattBoss = blatt.querySelector(".kampf-blatt-boss");
+    const panelOben = container.querySelector(".panel-oben");
+    const panelVerlauf = container.querySelector(".panel-verlauf");
+    const fuss = container.querySelector(".kampf-fuss");
+
+    /** Merkt sich die Stelle eines Elements und hängt es woanders ein. */
+    function verschiebe(element, ziel, vorne) {
+      if (!element || !ziel) return;
+      const marke = document.createComment("platz");
+      element.parentNode.insertBefore(marke, element);
+      handy.plaetze.push({ element: element, marke: marke });
+      if (vorne) ziel.insertBefore(element, ziel.firstChild); else ziel.appendChild(element);
+    }
+
+    function setzeHandy(an) {
+      if (an === handy.an) return;
+      handy.an = an;
+      el.kampf.classList.toggle("ist-handy", an);
+      if (an) {
+        const kopf = optionen && optionen.kopf;
+        if (kopf) {
+          verschiebe(el.welt, kopf.ort);
+          verschiebe(el.herzen, kopf.stand);
+          verschiebe(el.muenzen, kopf.stand);
+        }
+        verschiebe(el.kombo, el.buehne);
+        verschiebe(el.kurz, el.buehne);
+        verschiebe(panelOben, blattTeile);
+        // Verbesserungen und Bücher mit Überschrift
+        const titel = document.createElement("h3");
+        titel.className = "panel-titel kampf-blatt-titel";
+        titel.textContent = "Verbesserungen und Bücher";
+        blattTeile.appendChild(titel);
+        handy.titel = titel;
+        verschiebe(el.verbesserungen, blattTeile);
+        verschiebe(panelVerlauf, blattTeile);
+        verschiebe(fuss, blattTeile);
+      } else {
+        schliesseBlatt();
+        if (handy.titel) handy.titel.remove();
+        // in umgekehrter Reihenfolge zurück an die gemerkten Stellen
+        handy.plaetze.reverse().forEach(function (p) {
+          p.marke.parentNode.insertBefore(p.element, p.marke);
+          p.marke.remove();
+        });
+        handy.plaetze = [];
+      }
+    }
+
+    /** Erklärungen zum aktuellen Boss (Eigenheit, seltene Eigenschaft, Angriff) für das Blatt. */
+    function fuelleBlattBoss() {
+      blattBoss.innerHTML = "";
+      const kopf = document.createElement("h3");
+      kopf.className = "panel-titel";
+      kopf.textContent = el.bossName.textContent;
+      blattBoss.appendChild(kopf);
+      [
+        !el.eigenheit.disabled && el.eigenheitTipp.textContent,
+        !el.selten.hidden && el.seltenTipp.textContent,
+        !el.absicht.hidden && el.absichtTipp.textContent,
+        el.eliteHinweis.textContent,
+      ].filter(Boolean).forEach(function (text) {
+        const p = document.createElement("p");
+        p.className = "kampf-blatt-erklaerung";
+        p.textContent = text;
+        blattBoss.appendChild(p);
+      });
+    }
+
+    function oeffneBlatt() {
+      if (!handy.an || !blatt.hidden) return;
+      fuelleBlattBoss();
+      blatt.hidden = false;
+      blattInhalt.style.transform = "";
+      void blatt.offsetWidth;
+      blatt.classList.add("offen");
+      blatt.querySelector(".kampf-blatt-zu").focus();
+    }
+
+    function schliesseBlatt() {
+      if (blatt.hidden) return;
+      blatt.classList.remove("offen");
+      blattInhalt.style.transform = "";
+      setTimeout(function () { if (!blatt.classList.contains("offen")) blatt.hidden = true; }, ohneBewegung() ? 0 : 220);
+    }
+
+    // Antippen des Streifens öffnet das Blatt (der Würfel kürzt weiter die Animationen ab)
+    el.buehne.addEventListener("click", function (event) {
+      if (!handy.an || event.target.closest(".wuerfel-knopf, .kampf-wuerfel")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      oeffneBlatt();
+    }, true);
+    blatt.querySelector(".kampf-blatt-hintergrund").addEventListener("click", schliesseBlatt);
+    blatt.querySelector(".kampf-blatt-zu").addEventListener("click", schliesseBlatt);
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !blatt.hidden) schliesseBlatt();
+    });
+    // Wischen nach unten schließt das Blatt (nur, wenn es nicht gerade selbst scrollt)
+    let wischStart = null;
+    blattInhalt.addEventListener("touchstart", function (event) {
+      wischStart = blattInhalt.scrollTop <= 0 ? event.touches[0].clientY : null;
+    }, { passive: true });
+    blattInhalt.addEventListener("touchmove", function (event) {
+      if (wischStart === null) return;
+      const dy = event.touches[0].clientY - wischStart;
+      blattInhalt.style.transform = dy > 0 ? "translateY(" + dy + "px)" : "";
+    }, { passive: true });
+    blattInhalt.addEventListener("touchend", function (event) {
+      if (wischStart === null) return;
+      const dy = event.changedTouches[0].clientY - wischStart;
+      wischStart = null;
+      if (dy > 70) schliesseBlatt(); else blattInhalt.style.transform = "";
+    });
+
+    const handyMedien = window.matchMedia(HANDY_MEDIEN);
+    setzeHandy(handyMedien.matches);
+    handyMedien.addEventListener("change", function () { setzeHandy(handyMedien.matches); });
 
     // Erklärtexte: Darüberfahren zeigt sie (CSS), Antippen/Klicken klappt sie
     // auf und wieder zu. Ein Klick woanders schließt sie.
@@ -2324,7 +2474,7 @@ const SudokuKampf = (function () {
           // Legendäre Karte: eigene kurze Animation beim Erscheinen
           if (!ohneBewegung()) overlay.querySelectorAll(".auswahl-karte--legendaer").forEach(function (k) { k.classList.add("erscheint-legendaer"); });
           offeneAuswahl = { overlay: overlay, weiter: weiter };
-          karten.firstChild.focus();
+          karten.firstChild.focus({ preventScroll: true });   // die Überlagerung bleibt oben (Titel sichtbar)
         });
       });
     }
@@ -2451,6 +2601,8 @@ const SudokuKampf = (function () {
     }
 
     return {
+      oeffneBlatt: oeffneBlatt,
+      schliesseBlatt: schliesseBlatt,
       zeigeStand: zeigeStand,
       zeigeMuenzen: zeigeMuenzen,
       zeigeWurf: zeigeWurf,
@@ -2479,6 +2631,7 @@ const SudokuKampf = (function () {
   }
 
   return {
+    HANDY_MEDIEN: HANDY_MEDIEN,
     WUERFEL: W,
     wuerfelEinstellung: wuerfelEinstellung,
     setzeWuerfelEinstellung: setzeWuerfelEinstellung,

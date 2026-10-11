@@ -1,0 +1,860 @@
+/* ==========================================================================
+   sudoku-mobil.css – Sudoku auf dem Smartphone
+   Ziel: Im Spiel ist alles Wichtige gleichzeitig sichtbar, ohne zu scrollen.
+   Die Spielansicht füllt genau die sichtbare Höhe (dvh = mit eingeblendeten
+   Browserleisten) und lässt Platz für Notch und Home-Leiste.
+
+     Hochformat:  Kopfzeile · Kampfstreifen · Gitter · Zahlenfeld
+     Querformat:  Kopfzeile oben, Gitter links, rechts Kampfstreifen und Zahlenfeld
+     Freies Spiel: derselbe Aufbau ohne Kampfstreifen
+
+   Platz-Rangfolge: Das Zahlenfeld behält gut tippbare Tasten, das Gitter wird
+   so groß wie möglich (quadratisch), der Kampfstreifen bekommt den Rest –
+   er schrumpft zuerst, bis auf --m-streifen-min.
+
+   Die Bedingung "Smartphone" steht zweimal: in den @media-Regeln unten und
+   in js/sudoku-battle-ui.js (HANDY_MEDIEN) – bei Änderungen beide anpassen.
+   Diese Datei wird als letzte geladen und überstimmt die Handy-Regeln aus
+   sudoku.css und sudoku-rpg.css. Der Computer ist davon nicht betroffen.
+   ========================================================================== */
+
+:root {
+  --m-kopf: 40px;               /* Höhe der Kopfzeile */
+  --m-luecke: 6px;              /* Abstand zwischen den Bereichen */
+  --m-taste: 44px;              /* Höhe einer Taste im Zahlenfeld (einreihig) */
+  --m-taste-zweireihig: 48px;   /* … wenn genug Höhe für zwei Reihen da ist */
+  --m-streifen-min: 88px;       /* Kampfstreifen: so flach darf er höchstens werden */
+  --m-streifen-max: 230px;      /* … und so hoch höchstens */
+  --m-blatt-hoehe: 78dvh;       /* Blatt mit den Details: höchstens so hoch */
+}
+
+/* Die Kopfzeile gibt es nur auf dem Smartphone */
+.sudoku-kopfzeile {
+  display: none;
+}
+
+/* Hochformat: Smartphone-Breite. Querformat: flach und ohne Maus. */
+@media (max-width: 767px), (orientation: landscape) and (max-height: 500px) and (hover: none) {
+
+  /* --- Abstände für Notch und Home-Leiste, verfügbare Fläche --- */
+  :root {
+    --m-oben: max(6px, env(safe-area-inset-top));
+    --m-unten: max(6px, env(safe-area-inset-bottom));
+    --m-links: max(8px, env(safe-area-inset-left));
+    --m-rechts: max(8px, env(safe-area-inset-right));
+    --m-hoehe: calc(100dvh - var(--m-oben) - var(--m-unten));
+    --m-breite: calc(100vw - var(--m-links) - var(--m-rechts));
+    --m-zahlen: var(--m-taste);
+  }
+
+  /* --- Nur solange ein Sudoku offen ist: Vollbild ohne Hub-Navigation --- */
+  html:has(#view-games:not([hidden]) #spiel-sudoku:not([hidden]) .sudoku:not([hidden])) {
+    overflow: hidden;
+  }
+
+  html:has(#view-games:not([hidden]) #spiel-sudoku:not([hidden]) .sudoku:not([hidden])) body {
+    overflow: hidden;
+  }
+
+  html:has(#view-games:not([hidden]) #spiel-sudoku:not([hidden]) .sudoku:not([hidden])) .leiste {
+    display: none;
+  }
+
+  #spiel-sudoku:has(.sudoku:not([hidden])) {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    box-sizing: border-box;
+    height: 100dvh;
+    padding: var(--m-oben) var(--m-rechts) var(--m-unten) var(--m-links);
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 0% 0%, var(--verlauf-1), transparent 60%),
+      radial-gradient(ellipse at 100% 100%, var(--verlauf-2), transparent 60%),
+      var(--farbe-hintergrund);
+  }
+
+  #spiel-sudoku:has(.sudoku:not([hidden])) .unterseite-kopf {
+    display: none;
+  }
+
+  #spiel-sudoku .spiel-inhalt {
+    height: 100%;
+  }
+
+  /* --- Das Raster der Spielansicht --- */
+  #spiel-sudoku .sudoku {
+    /* Gitter: so breit wie möglich, aber nur so hoch, dass Kopfzeile,
+       ein flacher Kampfstreifen und das Zahlenfeld darüber/darunter passen */
+    --brett: min(var(--m-breite),
+      var(--m-hoehe) - var(--m-kopf) - var(--m-zahlen) - var(--m-streifen-min) - 3 * var(--m-luecke));
+    height: 100%;
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--m-kopf) minmax(var(--m-streifen-min), var(--m-streifen-max)) var(--brett) var(--m-zahlen);
+    grid-template-areas:
+      "kopf"
+      "kampf"
+      "brett"
+      "zahlen";
+    align-content: center;
+    gap: var(--m-luecke);
+  }
+
+  /* Freies Spiel: ohne Kampfstreifen */
+  #spiel-sudoku .sudoku:not(.ist-abenteuer) {
+    --brett: min(var(--m-breite), var(--m-hoehe) - var(--m-kopf) - var(--m-zahlen) - 2 * var(--m-luecke));
+    grid-template-rows: var(--m-kopf) var(--brett) var(--m-zahlen);
+    grid-template-areas:
+      "kopf"
+      "brett"
+      "zahlen";
+  }
+
+  /* Die alte Steuerzeile (Modus, Schwierigkeit) ersetzt die Kopfzeile */
+  #spiel-sudoku .sudoku-steuerung,
+  #spiel-sudoku .sudoku-wuerfel {
+    display: none !important;
+  }
+
+  #spiel-sudoku .sudoku-brett-rahmen {
+    grid-area: brett;
+    justify-self: center;
+    width: var(--brett);
+    height: var(--brett);
+  }
+
+  #spiel-sudoku .sudoku-kampf {
+    grid-area: kampf;
+    min-height: 0;
+  }
+
+  /* --- Kopfzeile: Welt und Level, Schwierigkeit, Leben, Münzen, Menü --- */
+  .sudoku-kopfzeile {
+    grid-area: kopf;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 0 2px 0 10px;
+    font-size: 0.78rem;
+    background: var(--farbe-flaeche);
+    border: 1px solid var(--farbe-rand);
+    border-radius: 10px;
+  }
+
+  .kopf-ort {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kopf-titel {
+    font-weight: 800;
+  }
+
+  /* Welt und Level aus dem Kampffenster: eine Zeile, die Leiste als dünner Strich darunter */
+  .kopf-ort .kampf-welt {
+    gap: 2px;
+  }
+
+  .kopf-ort .kampf-welt-text {
+    display: flex;
+    min-width: 0;
+    font-size: 0.74rem;
+  }
+
+  .kopf-ort .kampf-welt-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .kopf-ort .kampf-welt-level,
+  .kopf-ort .kampf-welt-durchlauf {
+    flex: none;
+  }
+
+  .kopf-ort .kampf-welt-leiste {
+    gap: 1px;
+  }
+
+  .kopf-ort .kampf-welt-abschnitt {
+    height: 3px;
+  }
+
+  .kopf-ort .kampf-welt-abschnitt.ist-elite::after,
+  .kopf-ort .kampf-welt-abschnitt.ist-weltboss::after {
+    width: 4px;
+    height: 4px;
+  }
+
+  .kopf-grad {
+    flex: none;
+    padding: 1px 7px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    color: var(--farbe-text-leise);
+    border: 1px solid var(--farbe-rand);
+    border-radius: 999px;
+  }
+
+  .kopf-grad:empty {
+    display: none;
+  }
+
+  .kopf-stand {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .kopf-stand .kampf-herzen {
+    gap: 1px;
+  }
+
+  .kopf-stand .kampf-herz svg {
+    width: 13px;
+    height: 12px;
+  }
+
+  .kopf-stand .kampf-muenzen {
+    gap: 2px;
+    font-size: 0.8rem;
+  }
+
+  .kopf-stand .kampf-muenzen svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .kopf-menue-knopf {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    width: 36px;
+    height: 36px;
+    padding: 0 9px;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .kopf-menue-knopf span {
+    display: block;
+    height: 2px;
+    background: var(--farbe-text);
+    border-radius: 2px;
+  }
+
+  .kopf-menue {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    min-width: 220px;
+    padding: 6px;
+    background: var(--farbe-flaeche);
+    border: 1px solid var(--farbe-rand);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .kopf-menue[hidden] {
+    display: none;
+  }
+
+  .kopf-eintrag {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 12px;
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--farbe-text);
+    text-align: left;
+    text-decoration: none;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .kopf-eintrag:hover,
+  .kopf-eintrag:focus-visible {
+    background: var(--farbe-hintergrund);
+  }
+
+  .kopf-eintrag--warnung {
+    color: #d1242f;
+  }
+
+  :root[data-theme="dark"] .kopf-eintrag--warnung {
+    color: #ff7b72;
+  }
+
+  .kopf-grad-auswahl {
+    font: inherit;
+    color: var(--farbe-text);
+    background: var(--farbe-hintergrund);
+    border: 1px solid var(--farbe-rand);
+    border-radius: 6px;
+    padding: 4px 6px;
+  }
+
+  /* --- Zahlenfeld: eine Reihe (flache Bildschirme) oder zwei Reihen --- */
+  #spiel-sudoku .sudoku-zahlenfeld {
+    grid-area: zahlen;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 4px;
+    margin: 0;
+  }
+
+  #spiel-sudoku .sudoku.ist-abenteuer .sudoku-zahlenfeld {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+
+  /* Im Abenteuer gibt es kein Löschen – hier auch keinen leeren Platz */
+  #spiel-sudoku .sudoku.ist-abenteuer .sudoku-taste--loeschen {
+    display: none;
+  }
+
+  #spiel-sudoku .sudoku-taste {
+    height: 100%;
+    min-height: 40px;
+    padding: 0;
+    font-size: 1.15rem;
+  }
+
+  /* Buch-Symbol mit Fortschritt: klein in der Ecke, die Taste wird nicht höher */
+  #spiel-sudoku .sudoku-buch-marke {
+    left: 2px;
+    bottom: 1px;
+    font-size: 0.5rem;
+  }
+
+  #spiel-sudoku .sudoku-buch-marke svg {
+    width: 7px;
+    height: 7px;
+  }
+
+
+  /* --- Kampfstreifen ---
+     Das Kampffenster (SudokuKampf) bekommt im Handy-Aufbau die Klasse
+     "ist-handy": Nur die Bühne bleibt sichtbar, als flacher Streifen.
+     Größen richten sich nach der Streifenhöhe (Container-Einheiten cqh). */
+  .kampf.ist-handy {
+    height: 100%;
+    gap: 0;
+  }
+
+  .kampf.ist-handy > :not(.kampf-buehne):not(.kampf-blatt):not(.kampf-status) {
+    display: none;
+  }
+
+  .kampf.ist-handy .kampf-buehne,
+  .kampf.ist-handy .kampf-buehne.ist-elite {
+    --streifen-held: min(78cqh, 104px);
+    --streifen-boss: min(86cqh, 120px);
+    height: 100%;
+    aspect-ratio: auto;
+    container-type: size;
+    cursor: pointer;
+  }
+
+  /* Erklärungen gibt es im Blatt – im Streifen keine Tooltips */
+  .kampf.ist-handy .kampf-buehne .kampf-tipp {
+    display: none !important;
+  }
+
+  /* Held links unten, Boss rechts unten */
+  .kampf.ist-handy .kampf-buehne .kampf-figur--held {
+    left: 1%;
+    bottom: 3%;
+    width: var(--streifen-held);
+    height: var(--streifen-held);
+  }
+
+  .kampf.ist-handy .kampf-buehne .kampf-figur--boss {
+    top: auto;
+    right: 1%;
+    bottom: 3%;
+    width: var(--streifen-boss);
+    height: var(--streifen-boss);
+  }
+
+  .kampf.ist-handy .kampf-buehne.ist-elite .kampf-figur--boss {
+    width: min(94cqh, 156px);
+    height: min(94cqh, 156px);
+  }
+
+  .kampf.ist-handy .kampf-buehne.ist-weltboss .kampf-figur--boss {
+    top: auto;
+    width: min(98cqh, 176px);
+    height: min(98cqh, 176px);
+  }
+
+  /* Mittlere Spalte zwischen Held und Boss: Infokasten, Kombo, letzter Zug */
+  .kampf.ist-handy .kampf-buehne .kampf-info--boss {
+    top: 4px;
+    left: calc(var(--streifen-held) + 4px);
+    right: var(--info-rechts, calc(var(--streifen-boss) + 2px));
+    width: auto;
+    padding: 3px 6px 4px;
+    font-size: 0.66rem;
+  }
+
+  /* Name mit HP-Zahl rechts daneben; das Level steht schon in der Kopfzeile */
+  .kampf.ist-handy .kampf-name {
+    padding-right: 52px;
+    font-size: 0.7rem;
+  }
+
+  .kampf.ist-handy .kampf-boss-nr {
+    display: none;
+  }
+
+  .kampf.ist-handy .kampf-hp-zeile {
+    position: absolute;
+    top: 3px;
+    right: 6px;
+  }
+
+  /* Eigenheit und seltene Eigenschaft: nur als kleine Marken in einer Zeile */
+  .kampf.ist-handy .kampf-eigenheit,
+  .kampf.ist-handy .kampf-selten {
+    display: inline-flex;
+    margin: 1px 3px 0 0;
+    padding: 0 4px;
+    font-size: 0.56rem;
+    pointer-events: none;
+  }
+
+  .kampf.ist-handy .kampf-eigenheit.ist-leer,
+  .kampf.ist-handy .kampf-elite-hinweis {
+    display: none;
+  }
+
+  .kampf.ist-handy .kampf-selten-marke {
+    display: none;
+  }
+
+  .kampf.ist-handy .kampf-hp-balken {
+    height: 6px;
+  }
+
+  .kampf.ist-handy .kampf-hp-zeile {
+    margin-top: 0;
+    font-size: 0.62rem;
+  }
+
+  .kampf.ist-handy .kampf-hp {
+    margin-top: 2px;
+  }
+
+  /* Hoher Streifen: Der Boss steht unten, der Infokasten darf über ihn reichen
+     (bis unter die Angriffsanzeige) */
+  @container (min-height: 150px) {
+    .kampf.ist-handy .kampf-info--boss {
+      --info-rechts: 100px;
+    }
+  }
+
+  /* Sehr flacher Streifen: Eigenheit nur im Blatt, HP-Balken direkt unter dem Namen */
+  @container (max-height: 110px) {
+    .kampf.ist-handy .kampf-eigenheit,
+    .kampf.ist-handy .kampf-selten {
+      display: none;
+    }
+  }
+
+  /* Absicht und Angriffszähler: kleines Schild oben rechts über dem Boss */
+  .kampf.ist-handy .kampf-absicht {
+    top: 3px;
+    right: 3px;
+    padding: 0 5px;
+    font-size: 0.56rem;
+    transform: none;
+    flex-direction: row;
+    gap: 4px;
+    border-top-width: 3px;
+  }
+
+  /* Warnung kurz vor dem Angriff: pulsiert an Ort und Stelle (ohne die Verschiebung des großen Fensters) */
+  .kampf.ist-handy .kampf-absicht.warnt {
+    animation-name: absicht-warnt-streifen;
+    transform-origin: top right;
+  }
+
+  @keyframes absicht-warnt-streifen {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.1); box-shadow: 0 0 0 2px color-mix(in srgb, var(--angriff-farbe) 45%, transparent), 0 0 10px var(--angriff-farbe); }
+  }
+
+  /* Nur Symbol und Zähler – der Name des Angriffs steht im Blatt */
+  .kampf.ist-handy .kampf-absicht-name {
+    display: none;
+  }
+
+  .kampf.ist-handy .kampf-absicht-text {
+    font-size: 0.56rem;
+  }
+
+  .kampf.ist-handy .kampf-absicht-symbol svg {
+    width: 9px;
+    height: 9px;
+  }
+
+  /* Kombo als kleine Pille unter dem Infokasten */
+  .kampf.ist-handy .kampf-buehne .kampf-kombo {
+    position: absolute;
+    left: calc(var(--streifen-held) + 4px);
+    bottom: 22px;
+    z-index: 3;
+    gap: 3px;
+    padding: 0 7px;
+    border-width: 1px;
+  }
+
+  .kampf.ist-handy .kampf-kombo-titel { font-size: 0.5rem; }
+  .kampf.ist-handy .kampf-kombo-zahl { font-size: 0.8rem; }
+  .kampf.ist-handy .kampf-kombo-bonus,
+  .kampf.ist-handy .kampf-kombo-buch { font-size: 0.58rem; }
+  .kampf.ist-handy .kampf-kombo-buch svg { width: 8px; height: 8px; }
+
+  /* Letzter Zug: eine Zeile am unteren Rand der mittleren Spalte */
+  .kampf.ist-handy .kampf-buehne .panel-kurz {
+    position: absolute;
+    left: calc(var(--streifen-held) + 4px);
+    right: calc(var(--streifen-boss) + 2px);
+    bottom: 3px;
+    z-index: 3;
+    display: flex;
+    gap: 5px;
+    width: auto;
+    height: 17px;
+    padding: 0 6px;
+    font-size: 0.62rem;
+    color: var(--kampf-kasten-text);
+    background: var(--kampf-kasten);
+    border: 1px solid var(--kampf-kasten-rand);
+    border-radius: 6px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .kampf.ist-handy .panel-kurz-titel {
+    font-size: 0.5rem;
+    color: inherit;
+    opacity: 0.7;
+  }
+
+  .kampf.ist-handy .panel-kurz-pfeil {
+    display: none;
+  }
+
+  /* Held: Würfel und Parade neben ihm */
+  .kampf.ist-handy .kampf-buehne .kampf-info--held {
+    right: auto;
+    left: 3px;
+    bottom: auto;
+    top: 3px;
+    padding: 2px;
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+
+  .kampf.ist-handy .kampf-wuerfel {
+    width: 26px;
+    height: 28px;
+    font-size: 0.72rem;
+  }
+
+  .kampf.ist-handy .kampf-buehne .kampf-parade {
+    left: calc(var(--streifen-held) * 0.62);
+    bottom: calc(var(--streifen-held) * 0.45);
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Sprechblasen, Banner, Einblendungen: kleiner, bleiben im Streifen */
+  .kampf.ist-handy .kampf-sprechblase {
+    top: 3px;
+    right: calc(var(--streifen-boss) * 0.55);
+    width: min(64%, calc(var(--blase-laenge, 30) * 0.4em + 1.6em));
+    min-height: 0;
+    padding: 2px 6px 3px;
+    font-size: 0.62rem;
+  }
+
+  .kampf.ist-handy .kampf-sprechblase-name {
+    font-size: 0.52rem;
+  }
+
+  .kampf.ist-handy .kampf-sprechblase::after {
+    right: -9px;
+    bottom: 40%;
+    transform: rotate(-90deg);
+  }
+
+  .kampf.ist-handy .kampf-banner {
+    font-size: 0.8rem;
+    padding: 2px 8px;
+  }
+
+  .kampf.ist-handy .kampf-banner--elite,
+  .kampf.ist-handy .kampf-banner--elite-sieg,
+  .kampf.ist-handy .kampf-banner--weltboss {
+    font-size: 0.9rem;
+  }
+
+  .kampf.ist-handy .kampf-welt-einblendung {
+    padding: 4px 12px;
+  }
+
+  .kampf.ist-handy .kampf-welt-einblendung-name {
+    font-size: 0.95rem;
+  }
+
+  /* --- Blatt mit den Details: fährt von unten ein --- */
+  .kampf-blatt {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+  }
+
+  .kampf-blatt[hidden] {
+    display: none;
+  }
+
+  .kampf-blatt-hintergrund {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 12, 18, 0.45);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .kampf-blatt.offen .kampf-blatt-hintergrund {
+    opacity: 1;
+  }
+
+  .kampf-blatt-inhalt {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: var(--m-blatt-hoehe);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 6px 14px calc(14px + var(--m-unten));
+    color: var(--panel-text, var(--farbe-text));
+    background: var(--panel-hintergrund, var(--farbe-flaeche));
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.35);
+    transform: translateY(100%);
+    transition: transform 0.22s ease-out;
+  }
+
+  .kampf-blatt.offen .kampf-blatt-inhalt {
+    transform: translateY(0);
+  }
+
+  .kampf-blatt-griff {
+    width: 40px;
+    height: 4px;
+    margin: 2px auto 8px;
+    background: currentColor;
+    border-radius: 2px;
+    opacity: 0.35;
+  }
+
+  .kampf-blatt-zu {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .kampf-blatt-erklaerung {
+    margin: 0 0 6px;
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+
+  .kampf-blatt-teile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .kampf-blatt .panel-oben {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .kampf-blatt .panel-block {
+    display: block;
+  }
+
+  .kampf-blatt-titel {
+    margin: 0 0 -6px;
+  }
+
+  /* Verbesserungen und Bücher: als Liste mit ihrer Erklärung */
+  .kampf-blatt .kampf-verbesserungen {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .kampf-blatt .kampf-chip {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: 8px;
+    width: 100%;
+    height: auto;
+    padding: 4px 6px;
+    text-align: left;
+  }
+
+  .kampf-blatt .kampf-chip .kampf-tipp {
+    position: static;
+    display: block !important;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    font-size: 0.74rem;
+    color: inherit;
+    background: none;
+    border: none;
+    box-shadow: none;
+    transform: none;
+    white-space: normal;
+  }
+
+  .kampf-blatt .kampf-fuss {
+    display: flex;
+  }
+
+  .kampf-blatt .panel-verlauf-liste {
+    max-height: none;
+  }
+
+
+  /* --- Überlagerungen über dem Gitter: passen hinein, sonst scrollen sie in sich --- */
+  #spiel-sudoku .slot,
+  #spiel-sudoku .auswahl,
+  #spiel-sudoku .niederlage {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    align-items: start;
+    align-content: start;
+  }
+
+  /* Mittig, solange es passt – sonst oben beginnen (nichts wird oben abgeschnitten) */
+  #spiel-sudoku .slot > *,
+  #spiel-sudoku .auswahl > *,
+  #spiel-sudoku .niederlage > * {
+    margin-block: auto;
+  }
+
+  #spiel-sudoku .auswahl-text,
+  #spiel-sudoku .auswahl-zusatz {
+    font-size: 0.64rem;
+    line-height: 1.25;
+  }
+
+  #spiel-sudoku .auswahl-stufe {
+    font-size: 0.6rem;
+  }
+
+  #spiel-sudoku .auswahl-karten {
+    gap: 4px;
+  }
+
+  #spiel-sudoku .auswahl-karte {
+    padding: 6px 4px;
+  }
+
+  #spiel-sudoku .auswahl-titel {
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+  }
+}
+
+/* --- Zwei Reihen im Zahlenfeld, wenn das Hochformat genug Höhe hat --- */
+@media (max-width: 767px) and (min-height: 700px) {
+  :root {
+    --m-zahlen: calc(2 * var(--m-taste-zweireihig) + 6px);
+  }
+
+  #spiel-sudoku .sudoku-zahlenfeld,
+  #spiel-sudoku .sudoku.ist-abenteuer .sudoku-zahlenfeld {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #spiel-sudoku .sudoku-taste {
+    font-size: 1.3rem;
+  }
+}
+
+/* --- Querformat: Gitter links, Kampfstreifen und Zahlenfeld rechts --- */
+@media (orientation: landscape) and (max-height: 500px) and (hover: none) {
+  :root {
+    --m-zahlen: calc(2 * var(--m-taste) + 4px);
+  }
+
+  #spiel-sudoku .sudoku,
+  #spiel-sudoku .sudoku:not(.ist-abenteuer) {
+    --brett: min(var(--m-hoehe) - var(--m-kopf) - var(--m-luecke), 0.58 * var(--m-breite));
+    grid-template-columns: var(--brett) minmax(0, 1fr);
+    grid-template-rows: var(--m-kopf) minmax(0, 1fr) var(--m-zahlen);
+    grid-template-areas:
+      "kopf  kopf"
+      "brett kampf"
+      "brett zahlen";
+    align-content: start;
+    column-gap: 10px;
+  }
+
+  #spiel-sudoku .sudoku:not(.ist-abenteuer) {
+    grid-template-rows: var(--m-kopf) minmax(0, 1fr) var(--m-zahlen);
+    grid-template-areas:
+      "kopf  kopf"
+      "brett ."
+      "brett zahlen";
+  }
+
+  #spiel-sudoku .sudoku-brett-rahmen {
+    align-self: start;
+  }
+
+  #spiel-sudoku .sudoku-zahlenfeld,
+  #spiel-sudoku .sudoku.ist-abenteuer .sudoku-zahlenfeld {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
