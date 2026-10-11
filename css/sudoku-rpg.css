@@ -2689,3 +2689,153 @@
     100% { opacity: 0; }
   }
 }
+
+
+/* ==========================================================================
+   BÜCHER
+   Eigene Reihe im Kampffenster, Karten der Buchauswahl, Buch-Symbol im
+   Zahlenfeld und der Buchschlag (Felder leuchten, Ziffern fliegen zum Schwert).
+   ========================================================================== */
+
+:root {
+  --buch-farbe: #9a5b2a;            /* Einband (gleich wie BUCH_FARBE in sudoku-battle-ui.js) */
+  --buch-gold: #f2c14e;             /* Leuchten der Ziffern beim Buchschlag */
+}
+
+/* Reihe "Bücher" unter Kombo und Verbesserungen */
+.kampf-buecher {
+  position: relative;               /* Bezug für die Erklärtexte */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  margin-top: 4px;
+}
+
+.kampf-buecher-titel {
+  flex: none;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--buch-farbe);
+}
+
+.kampf-buecher-liste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kampf-buecher-bonus {
+  flex: none;
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: var(--buch-farbe);
+}
+
+.kampf-buecher-bonus.pulsiert { animation: kombo-puls 0.3s ease-out; }
+
+.kampf-buecher .kampf-tipp {
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+}
+
+/* Buch-Symbol mit der Ziffer auf dem Einband */
+.kampf-buch-symbol,
+.auswahl-symbol--buch {
+  position: relative;
+  display: inline-block;
+}
+
+.kampf-buch-ziffer {
+  position: absolute;
+  left: 8%;
+  right: 22%;
+  top: 4%;
+  bottom: 22%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff7e6;
+}
+
+.kampf-chip.kampf-buch svg { width: 18px; height: 18px; }
+.auswahl-symbol--buch .kampf-buch-ziffer { font-size: 1.1rem; }
+
+/* Buchauswahl: Einband-Rahmen */
+.auswahl.ist-buch .auswahl-kasten {
+  border-color: var(--buch-farbe);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--buch-farbe) 45%, transparent), 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Zahlenfeld: kleines Buch-Symbol und Fortschritt ("6/9") */
+.sudoku-taste.hat-buch {
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--buch-farbe) 55%, transparent);
+}
+
+.sudoku-buch-marke {
+  position: absolute;
+  left: 3px;
+  bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--buch-farbe);
+  pointer-events: none;
+}
+
+.sudoku-buch-marke svg {
+  width: 9px;
+  height: 9px;
+  fill: var(--buch-farbe);
+}
+
+:root[data-theme="dark"] .sudoku-buch-marke { color: #e2a76f; }
+:root[data-theme="dark"] .sudoku-buch-marke svg { fill: #e2a76f; }
+
+/* Buchschlag: Felder der Ziffer leuchten golden auf (die Ziffer bleibt stehen) */
+.sudoku-feld.buch-leuchtet {
+  box-shadow: inset 0 0 0 3px var(--buch-gold), 0 0 14px var(--buch-gold);
+  background-image: radial-gradient(circle, rgba(242, 193, 78, 0.55), rgba(242, 193, 78, 0.15) 70%);
+}
+
+.sudoku-feld.buch-leuchtet .sudoku-ziffer {
+  color: #8a4f12;
+  text-shadow: 0 0 8px var(--buch-gold);
+}
+
+/* Schadenszahl und Name des Buchs */
+.kampf-schwebezahl--buch {
+  top: 10%;
+  right: 6%;
+  font-size: 2.6rem;
+  color: #fff3d6;
+  -webkit-text-stroke: 3px var(--buch-farbe);
+  text-shadow: 0 0 12px var(--buch-gold);
+  animation-duration: 1.2s;
+}
+
+.kampf-banner--buch {
+  top: 56%;
+  font-size: 1.05rem;
+  color: #fff7e6;
+  box-shadow: 0 0 16px rgba(242, 193, 78, 0.8), 3px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Panel und Verlauf */
+.panel-zeile--buch,
+.panel-eintrag--buch { color: #e2a76f; font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kampf-buecher-bonus.pulsiert { animation: none; }
+}

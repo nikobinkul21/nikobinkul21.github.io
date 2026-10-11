@@ -69,6 +69,7 @@ function initSudoku(container) {
   // die Regeln kennen den neuen Stand schon früher.
   let angezeigterGegenangriff = null;
   let statusZeit = 0;           // Zeitgeber für kurze Hinweise über dem Gitter
+  let buchAuswahlLaeuft = null; // Promise, solange die Buchauswahl gezeigt wird bzw. darauf wartet
 
   // Wird gerade ein Rätsel erzeugt/ausgelost? (je Modus getrennt)
   const beschaeftigt = { frei: false, abenteuer: false };
@@ -77,7 +78,7 @@ function initSudoku(container) {
   }
   /** Im Abenteuer ist gerade eine Verbesserungsauswahl offen → keine Eingabe. */
   function waehltVerbesserung() {
-    return modus === "abenteuer" && Boolean(abenteuer && abenteuer.zustand.auswahl);
+    return modus === "abenteuer" && Boolean(abenteuer && (abenteuer.zustand.auswahl || abenteuer.zustand.buchAuswahl));
   }
 
 
@@ -462,6 +463,26 @@ function initSudoku(container) {
       taste.setAttribute("aria-label", fertig
         ? "Ziffer " + ziffer + ": alle gesetzt"
         : "Ziffer " + ziffer + " eintragen");
+      // Buch für diese Ziffer: kleines Buch-Symbol und Fortschritt ("6/9")
+      const buch = modus === "abenteuer" && abenteuer && SudokuRPG.KONFIG.buecher.find(function (b) {
+        return b.ziffer === ziffer && abenteuer.zustand.buecher[b.id] > 0;
+      });
+      let buchMarke = taste.querySelector(".sudoku-buch-marke");
+      if (buch) {
+        if (!buchMarke) {
+          buchMarke = document.createElement("span");
+          buchMarke.className = "sudoku-buch-marke";
+          buchMarke.setAttribute("aria-hidden", "true");
+          buchMarke.innerHTML = SudokuKampf.symbolSvg("buch") + "<span></span>";
+          taste.appendChild(buchMarke);
+        }
+        buchMarke.lastChild.textContent = richtig[ziffer] + "/9";
+        taste.classList.add("hat-buch");
+        taste.setAttribute("aria-label", taste.getAttribute("aria-label") + ", " + buch.name + ": " + richtig[ziffer] + " von 9 gesetzt");
+      } else {
+        if (buchMarke) buchMarke.remove();
+        taste.classList.remove("hat-buch");
+      }
       // Fluch des Bosses: diese Ziffer macht gerade keinen Schaden
       const fluch = laufendeWirkungen().find(function (w) { return SudokuRPG.zifferWirkung([w], ziffer) === "verflucht"; });
       taste.classList.toggle("ist-verflucht", Boolean(fluch) && !fertig);
@@ -672,6 +693,13 @@ function initSudoku(container) {
       zeigeAuswahl(e);
     });
     abenteuer.an("verbesserung", function (e) { if (abenteuer === diesesAbenteuer) kampf.verbesserung(e); });
+    // Bücher: Buchschlag (nach dem Treffer bzw. wenn der nächste Boss erschienen ist), gewähltes Buch
+    abenteuer.an("buchschlag", function (e) { if (abenteuer === diesesAbenteuer) kampf.buchschlag(e); });
+    abenteuer.an("buch", function (e) {
+      if (abenteuer !== diesesAbenteuer) return;
+      kampf.buchGewaehlt(e);
+      if (spiel) zeichneZahlenfeld();       // Buch-Symbol im Zahlenfeld
+    });
     abenteuer.an("neuerBoss", function (e) {
       if (abenteuer !== diesesAbenteuer) return;
       // Nach dem Erscheinen neu zeichnen: Ein Boss mit "Nebel" versteckt die Power-ups
@@ -693,11 +721,13 @@ function initSudoku(container) {
 
     if (beschaeftigt.abenteuer) return;      // es wird schon ausgelost
     if (abenteuer.brauchtRaetsel()) {
-      neuesAbenteuerRaetsel();
+      neuesAbenteuerRaetsel();               // zeigt vorher eine offene Buchauswahl
     } else {
       spiel = abenteuer.zustand.raetsel;
       zeigeAbenteuerGrad();
       waehle(ersteLeereZelle(), false);
+      // Laufendes Sudoku, aber noch keine Bücher gewählt (älterer Spielstand)
+      if (abenteuer.zustand.buchAuswahl) buchAuswahlAbwarten();
     }
   }
 
@@ -710,6 +740,7 @@ function initSudoku(container) {
       kombo: z.kombo, komboBonus: Math.min(z.kombo * SudokuRPG.KONFIG.kombo.proStufe, werte.komboMax),
       verbesserungen: abenteuer.gesammelt(),
       gegenangriff: abenteuer.gegenangriff(),
+      buecher: abenteuer.buecher(),
     };
   }
 
@@ -726,6 +757,34 @@ function initSudoku(container) {
       setzeBeschaeftigtAnzeige();
       if (spiel && !beschaeftigt.abenteuer && !waehltVerbesserung()) waehle(ausgewaehlt, true);
     }, info);
+  }
+
+  /**
+   * Buchauswahl zeigen, sobald alles davor durch ist: Animationen des Zugs
+   * und eine offene Verbesserungsauswahl (die kommt immer zuerst).
+   * @returns {Promise} – erfüllt, wenn keine Buchauswahl mehr offen ist
+   */
+  function buchAuswahlAbwarten() {
+    if (buchAuswahlLaeuft) return buchAuswahlLaeuft;
+    const diesesAbenteuer = abenteuer;
+    const warten = function () {
+      return kampf.fertig().then(function () {
+        if (abenteuer !== diesesAbenteuer || modus !== "abenteuer") return null;
+        if (abenteuer.zustand.auswahl) return warten();           // erst die Verbesserung(en)
+        if (!abenteuer.zustand.buchAuswahl) return null;
+        const info = abenteuer.buchAuswahlInfo();
+        return kampf.buchAuswahl(rahmen, info.angebote, function (id) {
+          if (abenteuer !== diesesAbenteuer) return;
+          abenteuer.waehleBuch(id);                // → Ereignis "buch"
+          setzeBeschaeftigtAnzeige();
+          if (spiel && !beschaeftigt.abenteuer && !waehltVerbesserung()) waehle(ausgewaehlt, true);
+        }, info).then(function () {
+          return abenteuer.zustand.buchAuswahl ? warten() : null;  // zurückgesetzt o. Ä.
+        });
+      });
+    };
+    buchAuswahlLaeuft = warten().then(function () { buchAuswahlLaeuft = null; }, function () { buchAuswahlLaeuft = null; });
+    return buchAuswahlLaeuft;
   }
 
   /** Schwierigkeit über dem Gitter – mit dem, was sie bringt. */
@@ -754,7 +813,8 @@ function initSudoku(container) {
     setzeBeschaeftigtAnzeige();
 
     // Erst die laufenden Kampf-Animationen abwarten, dann die Walze zeigen
-    const walze = kampf.fertig().then(function () {
+    // Erst die Buchauswahl (Beginn des Abenteuers, gelöstes Sudoku), dann die Walze
+    const walze = buchAuswahlAbwarten().then(function () { return kampf.fertig(); }).then(function () {
       return modus === "abenteuer" ? kampf.losen(rahmen, SudokuEngine.SCHWIERIGKEITSGRADE, grad, SudokuRPG.belohnung(grad.id)) : null;
     });
     const raetsel = SudokuEngine.erzeugeRaetsel(grad.vorgaben);
@@ -767,6 +827,7 @@ function initSudoku(container) {
       if (modus !== "abenteuer") return;
       spiel = abenteuer.zustand.raetsel;
       kampf.zeigeGegenangriff(abenteuer.gegenangriff());   // Wirkungen enden mit dem alten Sudoku
+      kampf.zeigeBuecher(abenteuer.buecher());              // Buch-Bonus beginnt bei 0
       setzeBeschaeftigtAnzeige();
       zeigeStatus("");
       zeigeAbenteuerGrad();
@@ -909,6 +970,7 @@ function initSudoku(container) {
     kampf.neuesAbenteuer();
     kampf.text("Ein neues Abenteuer beginnt!");
     if (!beschaeftigt.abenteuer) neuesAbenteuerRaetsel();
+    else buchAuswahlAbwarten();               // Startauswahl der Bücher nach der laufenden Walze
   }
 
 

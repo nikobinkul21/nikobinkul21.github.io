@@ -307,3 +307,21 @@
   background: radial-gradient(circle at 60% 40%, #fff 0%, rgba(255, 255, 255, 0.6) 25%, transparent 70%),
     linear-gradient(120deg, #ff3d3d, #ffb800, #3ddc5a, #29d3ff, #8b5cff, #ff3df0);
 }
+
+
+/* ---------- Bücher ---------- */
+
+/* Etikett "Bücher +15 %" im Schadensaufbau */
+.fx-etikett--buecher span { background: #9a5b2a; color: #fff7e6; }
+
+/* Buchschlag: leuchtende Kopie der Ziffer auf dem Weg zum Schwert */
+.fx-buchziffer-wert {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff7e6;
+  -webkit-text-stroke: 3px #9a5b2a;
+  paint-order: stroke fill;
+  text-shadow: 0 0 10px #f2c14e, 0 0 18px #f2c14e;
+}

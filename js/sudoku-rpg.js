@@ -29,6 +29,8 @@
      "bossBesiegt"    – HP auf 0
      "auswahl"        – Verbesserungen stehen zur Wahl (bis gewählt ist, zählt keine Zahl)
      "verbesserung"   – eine Verbesserung wurde gewählt
+     "buchschlag"     – ein Buch löst aus (alle neun Felder seiner Ziffer gefüllt)
+     "buch"           – ein Buch wurde gewählt (Buchauswahl: zustand.buchAuswahl)
      "neuerBoss"      – der nächste Boss steht bereit
      "sudokuGeloest"  – alle Felder richtig
      "niederlage"     – keine Leben mehr
@@ -132,6 +134,54 @@ const SUDOKU_RPG_KONFIG = {
 
   // Verbesserungen: Nach jedem besiegten Boss werden so viele zur Wahl gestellt
   verbesserungAngebot: 3,
+
+  // BÜCHER – eine eigene Kategorie neben den Verbesserungen. Zu Beginn eines
+  // Abenteuers und nach jedem gelösten Sudoku wählt man eins aus "angebot"
+  // zufälligen. Ein Buch, das man schon hat, steigt eine Stufe.
+  buchAuswahl: {
+    angebot: 3,             // so viele Bücher stehen zur Wahl
+  },
+
+  // Die Arten, wie ein Buch wirkt. Ein Buch verweist mit "wirkung" auf eine davon.
+  // Jede Art kann diese Stellen haben (a = { buch, stufe, ziffer }):
+  //   kombo(a)  – bei jeder richtig gesetzten Zahl: so viel steigt der
+  //               Buch-Bonus (0.05 = 5 Prozentpunkte). Er zählt zusätzlich zur
+  //               Kombo, ohne deren Obergrenze, bleibt bei Fehlern und beginnt
+  //               mit jedem Sudoku bei 0.
+  //   schlag(a) – wenn eine Ziffer im Sudoku komplett ist (die letzte selbst
+  //               gesetzt): so viel Schaden macht der Buchschlag (0 = keiner).
+  //               Einmal pro Buch und Sudoku; nichts verändert diesen Wert.
+  //   text(buch, stufe) – Beschreibung für Karten und Tipps
+  buchWirkungen: {
+    ziffer: {
+      kombo: function (a) { return a.ziffer === a.buch.ziffer ? a.buch.bonus * a.stufe : 0; },
+      schlag: function (a) { return a.ziffer === a.buch.ziffer ? a.buch.schaden * a.stufe : 0; },
+      text: function (buch, stufe) {
+        return "Jede richtig gesetzte " + buch.ziffer + ": Kombo +" + Math.round(buch.bonus * stufe * 100) +
+          " %-Punkte (im laufenden Sudoku). Alle neun " + buch.ziffer + "en gesetzt (die letzte von dir): Buchschlag mit " +
+          (buch.schaden * stufe) + " Schaden.";
+      },
+    },
+  },
+
+  // Die Bücher. Neues Buch? Ein weiterer Eintrag:
+  //   id, name, ziffer, symbol – Kennung und Anzeige
+  //   maxStufe – so oft kann man es höchstens wählen
+  //   bonus    – Buch-Bonus je Stufe (Anteil, 0.05 = 5 Prozentpunkte)
+  //   schaden  – Schaden des Buchschlags je Stufe
+  //   wirkung  – Art der Wirkung (Eintrag in buchWirkungen)
+  //   beschreibung – kurzer Text (die Werte je Stufe ergänzt die Wirkung)
+  buecher: [
+    { id: "buch1", name: "Das Buch des Ersten", ziffer: 1, symbol: "buch", maxStufe: 5, bonus: 0.05, schaden: 200, wirkung: "ziffer", beschreibung: "Stärkt jede 1." },
+    { id: "buch2", name: "Das Buch des Zweiten", ziffer: 2, symbol: "buch", maxStufe: 5, bonus: 0.05, schaden: 200, wirkung: "ziffer", beschreibung: "Stärkt jede 2." },
+    { id: "buch3", name: "Das Buch des Dritten", ziffer: 3, symbol: "buch", maxStufe: 5, bonus: 0.05, schaden: 200, wirkung: "ziffer", beschreibung: "Stärkt jede 3." },
+    { id: "buch4", name: "Das Buch des Vierten", ziffer: 4, symbol: "buch", maxStufe: 5, bonus: 0.05, schaden: 200, wirkung: "ziffer", beschreibung: "Stärkt jede 4." },
+    { id: "buch5", name: "Das Buch des Fünften", ziffer: 5, symbol: "buch", maxStufe: 5, bonus: 0.05, schaden: 200, wirkung: "ziffer", beschreibung: "Stärkt jede 5." },
+    { id: "buch6", name: "Das Buch des Sechsten", ziffer: 6, symbol: "buch", maxStufe: 5, bonus: 0.05, schaden: 200, wirkung: "ziffer", beschreibung: "Stärkt jede 6." },
+    { id: "buch7", name: "Das Buch des Siebten", ziffer: 7, symbol: "buch", maxStufe: 5, bonus: 0.05, schaden: 200, wirkung: "ziffer", beschreibung: "Stärkt jede 7." },
+    { id: "buch8", name: "Das Buch des Achten", ziffer: 8, symbol: "buch", maxStufe: 5, bonus: 0.05, schaden: 200, wirkung: "ziffer", beschreibung: "Stärkt jede 8." },
+    { id: "buch9", name: "Das Buch des Neunten", ziffer: 9, symbol: "buch", maxStufe: 5, bonus: 0.05, schaden: 200, wirkung: "ziffer", beschreibung: "Stärkt jede 9." },
+  ],
 
   // Die Verbesserungen. Neue? Einfach einen weiteren Eintrag:
   //   id, name, symbol, farbe – Kennung und Aussehen (Symbole: SYMBOLE in sudoku-battle-ui.js)
@@ -493,7 +543,7 @@ const SudokuRPG = (function () {
   // Version 4: dazu Elite-Bosse (seltene Eigenschaft, Treffer-Zähler) und
   //            mehrere Wahlen bei einer Auswahl.
   // Version 5: dazu freie Ersatzwahl (entfernte Verbesserungen) und Regenbogenfeld.
-  const VERSION = 6;
+  const VERSION = 7;
 
 
   /* ------------------------------------------------------------------------
@@ -646,6 +696,49 @@ const SudokuRPG = (function () {
       if (art) return art;
     }
     return null;
+  }
+
+  /** Buch über seine id (oder null). */
+  function buchInfo(id) {
+    return K.buecher.find(function (b) { return b.id === id; }) || null;
+  }
+
+  /** Beschreibung eines Buchs auf einer Stufe (mindestens Stufe 1). */
+  function buchText(b, stufe) {
+    const w = K.buchWirkungen[b.wirkung];
+    return w && w.text ? w.text(b, Math.max(1, stufe)) : b.beschreibung;
+  }
+
+  /**
+   * Bücher für die Anzeige (Karten, Reihe im Kampffenster).
+   * @param {string[]} ids – welche
+   * @param {object} stufen – { id: Stufe }
+   */
+  function buecherFuerAnzeige(ids, stufen) {
+    return ids.map(function (id) {
+      const b = buchInfo(id);
+      const stufe = (stufen && stufen[id]) || 0;
+      return {
+        id: b.id, name: b.name, ziffer: b.ziffer, symbol: b.symbol, stufe: stufe, maxStufe: b.maxStufe,
+        beschreibung: buchText(b, stufe),
+        // Was die nächste Stufe bringt (für die Karte)
+        naechste: stufe < b.maxStufe ? buchText(b, stufe + 1) : null,
+      };
+    });
+  }
+
+  /** Alle Bücher mit Stufe > 0 (in der Reihenfolge der Liste). */
+  function gesammelteBuecher(stufen) {
+    return buecherFuerAnzeige(K.buecher.filter(function (b) { return stufen && stufen[b.id] > 0; })
+      .map(function (b) { return b.id; }), stufen);
+  }
+
+  /** Lost bis zu buchAuswahl.angebot Bücher aus, die noch nicht ausgereizt sind (null = keins). */
+  function loseBuchAngebot(stufen, zufall) {
+    const moeglich = K.buecher.filter(function (b) { return ((stufen && stufen[b.id]) || 0) < b.maxStufe; })
+      .map(function (b) { return b.id; });
+    const angebot = mische(moeglich, zufall).slice(0, K.buchAuswahl.angebot);
+    return angebot.length > 0 ? angebot : null;
   }
 
   /**
@@ -802,9 +895,13 @@ const SudokuRPG = (function () {
     },
     kombo: function (r, k) {
       r.komboBonus = Math.min((k.kombo || 0) * K.kombo.proStufe, k.werte.komboMax);
-      if (r.komboBonus > 0) {
-        r.wert *= 1 + r.komboBonus;
-        r.schritte.push("Kombo ×" + zahlText(1 + r.komboBonus));
+      // Buch-Bonus: zählt ZUSÄTZLICH zum Kombo-Bonus (gleicher Multiplikator),
+      // ohne die Obergrenze der Kombo
+      r.buchBonus = k.buchBonus || 0;
+      if (r.komboBonus > 0 || r.buchBonus > 0) {
+        r.wert *= 1 + r.komboBonus + r.buchBonus;
+        if (r.komboBonus > 0) r.schritte.push("Kombo ×" + zahlText(1 + r.komboBonus));
+        if (r.buchBonus > 0) r.schritte.push("Bücher +" + Math.round(r.buchBonus * 100) + " %");
       }
     },
     schwierigkeit: function (r, k) {
@@ -840,6 +937,7 @@ const SudokuRPG = (function () {
    *   wurf          – gewürfelte Augenzahl
    *   werte         – Spielwerte (werteVon), Standard: ohne Verbesserungen
    *   kombo         – Kombo-Stufe INKLUSIVE dieser Zahl
+   *   buchBonus     – Buch-Bonus des laufenden Sudokus INKLUSIVE dieser Zahl (0.15 = +15 %)
    *   grad          – id des Schwierigkeitsgrads (oder null)
    *   doppelt       – true, wenn eine Zeile/Spalte/Block fertig wurde
    *   einheiten     – WIE VIELE Einheiten fertig wurden (0–3, für den Reihenbrecher)
@@ -912,6 +1010,13 @@ const SudokuRPG = (function () {
          zaehler,          ← so viele Züge noch bis zum Angriff
          wirkungen: [ { id, rest, daten } ]  ← laufende Wirkungen (rest = Züge)
        },
+       buecher,            ← { id: Stufe } der Bücher (neu in Version 7)
+       buchAuswahl,        ← null oder ids der angebotenen Bücher
+       buchAuswahlGrund,   ← "start" (Beginn des Abenteuers) oder "sudoku" (nach einem gelösten Sudoku)
+       buchBonus,          ← Buch-Bonus des laufenden Sudokus (0.15 = +15 %)
+       buchSchlaege,       ← ids der Bücher, die in diesem Sudoku schon ausgelöst haben
+       buchSchlagOffen,    ← [ { id, schaden, felder } ]: Buchschläge für den nächsten Boss
+                             (der normale Treffer hat den Boss schon besiegt)
        raetsel: null | { grad, vorgaben, loesung, eingaben, geloest,
                          powerups: [ { index, typ } ],
                          regenbogen: null | Index des Regenbogenfelds },
@@ -937,7 +1042,13 @@ const SudokuRPG = (function () {
       freieWahl: 0,
       elite: null,          // Boss 1 ist nie ein Elite-Boss (abstand ≥ 2)
       vorigeSelten: null,
-      gegenangriff: neuerGegenangriff(1, 0),
+      gegenangriff: neuerGegenangriff(1),
+      buecher: {},
+      buchAuswahl: null,      // wird in erstelle/zuruecksetzen ausgelost (Startauswahl)
+      buchAuswahlGrund: "start",
+      buchBonus: 0,
+      buchSchlaege: [],
+      buchSchlagOffen: [],
       raetsel: null,
       extras: {},
     };
@@ -1000,6 +1111,7 @@ const SudokuRPG = (function () {
     const vorV4 = roh.version < 4;
     const vorV5 = roh.version < 5;
     const vorV6 = roh.version < 6;
+    const vorV7 = roh.version < 7;
     const entfernt = function (id) { return K.entfernteVerbesserungen.indexOf(id) !== -1; };
     // Freie Ersatzwahlen (neu in Version 5)
     let freieWahl = !vorV5 && istGanzzahl(roh.freieWahl, 0, 100) ? roh.freieWahl : 0;
@@ -1137,9 +1249,39 @@ const SudokuRPG = (function () {
         }).map(function (w) { return { id: w.id, rest: w.rest, daten: Object.assign({}, w.daten) }; });
       }
     }
+    // Bücher (neu in Version 7). Ein älterer Stand bekommt einmalig die Startauswahl.
+    const buecher = {};
+    let buchAuswahl = null;
+    let buchAuswahlGrund = !vorV7 && roh.buchAuswahlGrund === "sudoku" ? "sudoku" : "start";
+    let buchBonus = 0, buchSchlaege = [], buchSchlagOffen = [];
+    if (vorV7) {
+      buchAuswahl = loseBuchAngebot({}, zufall || Math.random);
+    } else {
+      if (roh.buecher && typeof roh.buecher === "object") {
+        for (const id in roh.buecher) {
+          const b = buchInfo(id);
+          if (b && istGanzzahl(roh.buecher[id], 1, b.maxStufe)) buecher[id] = roh.buecher[id];
+        }
+      }
+      if (Array.isArray(roh.buchAuswahl)) {
+        const angebot = roh.buchAuswahl.filter(function (id, i) {
+          const b = buchInfo(id);
+          return b && (buecher[id] || 0) < b.maxStufe && roh.buchAuswahl.indexOf(id) === i;
+        });
+        buchAuswahl = angebot.length > 0 ? angebot : null;
+      }
+      if (typeof roh.buchBonus === "number" && roh.buchBonus >= 0 && roh.buchBonus < 100 && raetsel) buchBonus = roh.buchBonus;
+      if (Array.isArray(roh.buchSchlaege) && raetsel) buchSchlaege = roh.buchSchlaege.filter(function (id) { return buchInfo(id); });
+      if (Array.isArray(roh.buchSchlagOffen)) {
+        buchSchlagOffen = roh.buchSchlagOffen.filter(function (o) {
+          return o && buchInfo(o.id) && istGanzzahl(o.schaden, 1, 1e7) && Array.isArray(o.felder);
+        }).map(function (o) { return { id: o.id, schaden: o.schaden, felder: o.felder.filter(function (i) { return istGanzzahl(i, 0, 80); }) }; });
+      }
+    }
+
     return {
       ok: true,
-      ergaenzt: vorV6,
+      ergaenzt: vorV7,
       daten: {
         version: VERSION,
         bossNummer: roh.bossNummer,
@@ -1157,6 +1299,12 @@ const SudokuRPG = (function () {
         elite: elite,
         vorigeSelten: vorigeSelten,
         gegenangriff: gegenangriff,
+        buecher: buecher,
+        buchAuswahl: buchAuswahl,
+        buchAuswahlGrund: buchAuswahlGrund,
+        buchBonus: buchBonus,
+        buchSchlaege: buchSchlaege,
+        buchSchlagOffen: buchSchlagOffen,
         raetsel: raetsel,
         extras: roh.extras && typeof roh.extras === "object" ? roh.extras : {},
       },
@@ -1201,11 +1349,15 @@ const SudokuRPG = (function () {
     // Ein älterer Stand wird dabei ergänzt (Leben, Münzen, Power-ups, Kombo …)
     const geladen = pruefeDaten(speicher.laden(), zufall);
     let zustand = geladen.ok ? geladen.daten : neuerZustand();
+    if (!geladen.ok) zustand.buchAuswahl = loseBuchAngebot({}, zufall);   // neues Abenteuer: Startauswahl
     if (!zustand.elite && istElite(zustand.bossNummer)) eliteAuslosen();   // nur bei elite.abstand = 1
     freieWahlStarten();      // z. B. Ersatz für "Starkes Gift" (falls gerade keine andere Wahl offen ist)
-    if (geladen.ok) {
-      speicher.speichern(zustand);          // ergänzte Werte gleich festhalten
-    }
+    // Offene Buchschläge (Neuladen, nachdem der nächste Boss schon erschienen ist)
+    // treffen ihn jetzt – die Oberfläche hört hier noch nicht zu, sie zeigt den Stand
+    offeneBuchschlaegeAusfuehren();
+    // Ergänzte Werte gleich festhalten – bei einem neuen Abenteuer die Startauswahl
+    // der Bücher (sonst würde sie beim Neuladen neu ausgelost)
+    speicher.speichern(zustand);
 
     const hoerer = {};          // Ereignisname → Liste von Funktionen
     const erweiterungen = [];   // eingehängte Zusatzregeln (Modifikatoren)
@@ -1280,6 +1432,9 @@ const SudokuRPG = (function () {
       zustand.raetsel.regenbogen = loseRegenbogen(zustand.raetsel, zufall);
       // Wirkungen enden mit dem Sudoku, der Angriffszähler läuft weiter
       zustand.gegenangriff.wirkungen = [];
+      // Buch-Bonus und Buchschläge gelten je Sudoku
+      zustand.buchBonus = 0;
+      zustand.buchSchlaege = [];
       speichern();
     }
 
@@ -1306,6 +1461,132 @@ const SudokuRPG = (function () {
       const boss = bossMitStand(zustand.bossNummer);
       return { boss: boss, hp: zustand.bossHp, leben: zustand.leben, maxLeben: werte().maxLeben, rekord: zustand.rekord,
         gegenangriff: gegenangriffAnzeige() };
+    }
+
+    /* ---------- Bücher ---------- */
+
+    /** Bücher für die Anzeige: { liste, bonus } */
+    function buecherAnzeige() {
+      return { liste: gesammelteBuecher(zustand.buecher), bonus: zustand.buchBonus };
+    }
+
+    /** Die offene Buchauswahl: { angebote, grund } (angebote leer, wenn keine offen ist). */
+    function buchAuswahlInfo() {
+      return {
+        angebote: zustand.buchAuswahl ? buecherFuerAnzeige(zustand.buchAuswahl, zustand.buecher) : [],
+        grund: zustand.buchAuswahlGrund,
+      };
+    }
+
+    /**
+     * Ein angebotenes Buch wählen: neu (Stufe 1) oder eine Stufe höher.
+     * @returns {boolean} – false, wenn keine Buchauswahl offen ist oder die id nicht angeboten wurde
+     */
+    function waehleBuch(id) {
+      if (!zustand.buchAuswahl || zustand.buchAuswahl.indexOf(id) === -1) return false;
+      const b = buchInfo(id);
+      zustand.buecher[id] = Math.min(b.maxStufe, (zustand.buecher[id] || 0) + 1);
+      zustand.buchAuswahl = null;
+      speichern();
+      melde("buch", { id: id, name: b.name, ziffer: b.ziffer, stufe: zustand.buecher[id], maxStufe: b.maxStufe, buecher: buecherAnzeige() });
+      return true;
+    }
+
+    /**
+     * Buch-Wirkungen einer richtig gesetzten Ziffer: Wie stark steigt der
+     * Buch-Bonus, und welche Bücher lösen den Buchschlag aus?
+     * @returns {{ bonus: number, schlaege: {id, schaden, felder}[] }}
+     */
+    function buchWirkungenFuer(r, ziffer) {
+      let komplett = true;
+      const felder = [];
+      for (let i = 0; i < 81; i++) {
+        if (r.loesung[i] === ziffer) {
+          felder.push(i);
+          if ((r.vorgaben[i] || r.eingaben[i]) !== ziffer) komplett = false;
+        }
+      }
+      let bonus = 0;
+      const schlaege = [];
+      K.buecher.forEach(function (b) {
+        const stufe = zustand.buecher[b.id] || 0;
+        const art = K.buchWirkungen[b.wirkung];
+        if (stufe === 0 || !art) return;
+        const a = { buch: b, stufe: stufe, ziffer: ziffer };
+        if (art.kombo) bonus += art.kombo(a);
+        // Buchschlag: diese Zahl hat die Ziffer komplett gemacht (also selbst gesetzt) – einmal je Sudoku
+        if (komplett && art.schlag && zustand.buchSchlaege.indexOf(b.id) === -1) {
+          const schaden = art.schlag(a);
+          if (schaden > 0) schlaege.push({ id: b.id, schaden: Math.round(schaden), felder: felder.slice() });
+        }
+      });
+      return { bonus: bonus, schlaege: schlaege };
+    }
+
+    /** Daten für das Ereignis "buchschlag". */
+    function buchschlagEreignis(s, boss, hpVorher, naechsterBoss) {
+      const b = buchInfo(s.id);
+      return {
+        buch: { id: b.id, name: b.name, ziffer: b.ziffer, symbol: b.symbol, stufe: zustand.buecher[b.id] || 1 },
+        schaden: s.schaden, felder: s.felder, boss: boss,
+        hpVorher: hpVorher, hpNachher: zustand.bossHp,
+        besiegt: zustand.bossHp === 0, naechsterBoss: Boolean(naechsterBoss),
+        eliteBonus: 0, muenzen: zustand.muenzen, leben: zustand.leben, maxLeben: werte().maxLeben,
+      };
+    }
+
+    /**
+     * Boss besiegt: Rekord, nächster Boss, Leben auffüllen, Verbesserungen
+     * anbieten, neuer Angriffszähler. Elite-Boss: Extra-Münzen, mehr Wahlen.
+     * @returns {number} – Elite-Bonus (Münzen)
+     */
+    function bossBesiegtAnwenden(bossVorher) {
+      let eliteBonus = 0;
+      if (bossVorher.elite) {
+        eliteBonus = K.elite.muenzen;
+        zustand.muenzen += eliteBonus;
+        if (zustand.elite) zustand.vorigeSelten = zustand.elite.selten;
+      }
+      zustand.rekord = Math.max(zustand.rekord, bossVorher.nummer);
+      zustand.bossNummer++;
+      eliteAuslosen();
+      zustand.bossHp = maxHp(zustand.bossNummer);
+      zustand.leben = Math.max(zustand.leben, K.lebenNachBoss);
+      zustand.auswahl = loseAngebot();
+      zustand.auswahlAnzahl = zustand.auswahl
+        ? Math.min(zustand.auswahl.length, bossVorher.elite ? Math.max(1, K.elite.verbesserungenWaehlen) : 1)
+        : 0;
+      // Der neue Boss beginnt seinen Angriffszähler von vorn; laufende
+      // Wirkungen verfallen mit dem besiegten Boss
+      zustand.gegenangriff = neuerGegenangriff(zustand.bossNummer);
+      return eliteBonus;
+    }
+
+    /**
+     * Buchschläge, die auf den nächsten Boss warten, treffen ihn – sobald er
+     * erschienen ist (also keine Verbesserungsauswahl mehr offen ist). Besiegt
+     * ein Buchschlag auch ihn, geht es mit dem normalen Ablauf weiter.
+     */
+    function offeneBuchschlaegeAusfuehren() {
+      while (zustand.buchSchlagOffen.length > 0 && !zustand.auswahl) {
+        const s = zustand.buchSchlagOffen.shift();
+        const boss = bossMitStand(zustand.bossNummer);
+        const hpVorher = zustand.bossHp;
+        zustand.bossHp = Math.max(0, hpVorher - s.schaden);
+        const ereignis = buchschlagEreignis(s, boss, hpVorher, true);
+        if (ereignis.besiegt) {
+          ereignis.eliteBonus = bossBesiegtAnwenden(boss);
+          ereignis.muenzen = zustand.muenzen;
+          ereignis.leben = zustand.leben;
+        }
+        speichern();
+        melde("buchschlag", ereignis);
+        if (ereignis.besiegt) {
+          melde("bossBesiegt", { boss: boss, rekord: zustand.rekord, elite: boss.elite, eliteBonus: ereignis.eliteBonus });
+          if (zustand.auswahl) melde("auswahl", auswahlInfo());
+          else melde("neuerBoss", neuerBossDaten());
+        }
+      }
     }
 
     /* ---------- Gegenangriff ---------- */
@@ -1505,7 +1786,7 @@ const SudokuRPG = (function () {
      */
     function setzeZahl(index, ziffer) {
       const r = zustand.raetsel;
-      if (zustand.auswahl) return { art: "auswahl-offen" };     // erst eine Verbesserung wählen
+      if (zustand.auswahl || zustand.buchAuswahl) return { art: "auswahl-offen" };   // erst eine Verbesserung bzw. ein Buch wählen
       if (!r || r.geloest) return { art: "kein-raetsel" };
       // Vorgaben und schon richtig gesetzte Zahlen sind gesperrt
       if (r.vorgaben[index] !== 0 || r.eingaben[index] !== 0) return { art: "gesperrt" };
@@ -1539,6 +1820,11 @@ const SudokuRPG = (function () {
         powerup = { index: index, typ: typ.id, name: typ.name };
       }
 
+      // 2b. Bücher: Buch-Bonus steigt (gilt schon für diese Zahl), Buchschlag?
+      const buchWirkung = buchWirkungenFuer(r, ziffer);
+      zustand.buchBonus = Math.round((zustand.buchBonus + buchWirkung.bonus) * 1e6) / 1e6;
+      zustand.buchSchlaege = zustand.buchSchlaege.concat(buchWirkung.schlaege.map(function (sch) { return sch.id; }));
+
       // 3. Schaden – alles in der zentralen Berechnung.
       //    Regenbogenfeld: kein Wurf – der Boss ist sofort besiegt, egal wie
       //    viele HP er hat und welche Eigenheiten er besitzt (auch Elite).
@@ -1562,7 +1848,7 @@ const SudokuRPG = (function () {
         kritisch: false, fehlschlag: false, geblockt: false, immun: false, ausgeloest: null,
         schritte: ["Regenbogenschlag"], text: "Regenbogenschlag = " + hpVorher,
       } : berechneSchaden({
-        wurf: wurf, werte: w, kombo: zustand.kombo, grad: r.grad, doppelt: doppelt,
+        wurf: wurf, werte: w, kombo: zustand.kombo, buchBonus: zustand.buchBonus, grad: r.grad, doppelt: doppelt,
         einheiten: (einheiten.zeile ? 1 : 0) + (einheiten.spalte ? 1 : 0) + (einheiten.block ? 1 : 0),
         giftAnteil: effekt.giftAnteil,
         modifikatoren: mods, eigenheit: bossVorher.eigenheit,
@@ -1595,37 +1881,41 @@ const SudokuRPG = (function () {
       zustand.leben = Math.min(w.maxLeben, zustand.leben + effekt.leben);
       const lebenPlus = zustand.leben - lebenVorher;
 
-      // 6. Boss besiegt? → Rekord, nächster Boss, Leben auffüllen, Verbesserungen anbieten.
-      //    Elite-Boss: Extra-Münzen und mehrere Verbesserungen zur Wahl.
-      const besiegt = hpNachher === 0;
-      let eliteBonus = 0;
-      if (besiegt) {
-        if (bossVorher.elite) {
-          eliteBonus = K.elite.muenzen;
-          zustand.muenzen += eliteBonus;
-          if (zustand.elite) zustand.vorigeSelten = zustand.elite.selten;
+      // 6. Buchschlag – nach dem normalen Treffer, durch nichts verändert.
+      //    Hat schon der Treffer den Boss besiegt, trifft er den nächsten Boss,
+      //    sobald dieser erschienen ist (buchSchlagOffen).
+      const buchschlaege = [];
+      buchWirkung.schlaege.forEach(function (sch) {
+        if (zustand.bossHp > 0) {
+          const hpVorBuch = zustand.bossHp;
+          zustand.bossHp = Math.max(0, hpVorBuch - sch.schaden);
+          buchschlaege.push(buchschlagEreignis(sch, bossVorher, hpVorBuch, false));
+        } else {
+          zustand.buchSchlagOffen.push(sch);
         }
-        zustand.rekord = Math.max(zustand.rekord, bossVorher.nummer);
-        zustand.bossNummer++;
-        eliteAuslosen();
-        zustand.bossHp = maxHp(zustand.bossNummer);
-        zustand.leben = Math.max(zustand.leben, K.lebenNachBoss);
-        zustand.auswahl = loseAngebot();
-        zustand.auswahlAnzahl = zustand.auswahl
-          ? Math.min(zustand.auswahl.length, bossVorher.elite ? Math.max(1, K.elite.verbesserungenWaehlen) : 1)
-          : 0;
-        // Der neue Boss beginnt seinen Angriffszähler von vorn; laufende
-        // Wirkungen verfallen mit dem besiegten Boss
-        zustand.gegenangriff = neuerGegenangriff(zustand.bossNummer);
+      });
+
+      // 7. Boss besiegt? → Rekord, nächster Boss, Leben auffüllen, Verbesserungen anbieten.
+      //    Elite-Boss: Extra-Münzen und mehrere Verbesserungen zur Wahl.
+      const besiegt = zustand.bossHp === 0;
+      const durchBuch = besiegt && hpNachher > 0;       // erst der Buchschlag hat ihn besiegt
+      let eliteBonus = 0;
+      if (besiegt) eliteBonus = bossBesiegtAnwenden(bossVorher);
+      if (durchBuch) {
+        // Elite-Bonus und aufgefüllte Leben zeigt dann der Buchschlag
+        const letzter = buchschlaege[buchschlaege.length - 1];
+        letzter.eliteBonus = eliteBonus;
+        letzter.muenzen = zustand.muenzen;
+        letzter.leben = zustand.leben;
       }
 
-      // 7. Sudoku komplett?
+      // 8. Sudoku komplett? Dann gibt es danach ein neues Buch zur Wahl.
       const geloest = r.vorgaben.every(function (v, i) { return (v || r.eingaben[i]) === r.loesung[i]; });
       if (geloest) {
         r.geloest = true;
       }
 
-      // 8. Gegenangriff: Der Zug zählt (nicht, wenn der Boss gerade besiegt wurde).
+      // 9. Gegenangriff: Der Zug zählt (nicht, wenn der Boss gerade besiegt wurde).
       //    Hat dieser Zug eine Einheit vervollständigt, pariert der Held.
       //    Wirkungen enden mit dem Sudoku. Ein Hieb kann das letzte Leben kosten.
       const komboNachTreffer = zustand.kombo;      // ein Schrei verändert sie erst im Angriff
@@ -1640,6 +1930,10 @@ const SudokuRPG = (function () {
           niederlage = niederlageAnwenden(bossVorher);
           angriff.stand = gegenangriffAnzeige();
         }
+      }
+      if (geloest && !niederlage) {
+        zustand.buchAuswahl = loseBuchAngebot(zustand.buecher, zufall);
+        zustand.buchAuswahlGrund = "sudoku";
       }
       speichern();
 
@@ -1661,20 +1955,24 @@ const SudokuRPG = (function () {
           id: bossVorher.selten.id, name: bossVorher.selten.name, farbe: bossVorher.selten.farbe,
           grund: rechnung.abwehrGrund, art: rechnung.abwehrArt,
         } : null,
-        eliteBonus: eliteBonus,
+        // Elite-Bonus nur, wenn der Treffer selbst den Boss besiegt hat (sonst beim Buchschlag)
+        eliteBonus: durchBuch ? 0 : eliteBonus,
         hpVorher: hpVorher, hpNachSchaden: hpNachSchaden, hpNachher: hpNachher,
         powerup: powerup,
-        muenzenPlus: muenzenPlus, muenzen: zustand.muenzen, muenzFaktor: muenzFaktor,   // muenzen inkl. eliteBonus
+        muenzenPlus: muenzenPlus, muenzen: zustand.muenzen - (durchBuch ? eliteBonus : 0), muenzFaktor: muenzFaktor,   // muenzen inkl. eliteBonus
         lebenGewuenscht: effekt.leben, lebenPlus: lebenPlus,
         leben: lebenVorher + lebenPlus, maxLeben: w.maxLeben,
         verflucht: rechnung.verflucht,
         // Gegenangriff-Stand nach diesem Zug (vor einem Angriff); null, wenn der Boss besiegt ist
         gegenangriff: gegenangriff,
+        // Bücher: Bonus nach diesem Zug, Anstieg durch diese Zahl
+        buchBonus: zustand.buchBonus, buchBonusPlus: buchWirkung.bonus,
       };
       melde("richtig", treffer);
       if (powerup) {
         melde("powerup", { index: index, typ: powerup.typ, effekt: effekt, treffer: treffer });
       }
+      buchschlaege.forEach(function (ereignis) { melde("buchschlag", ereignis); });
       if (angriff) melde("angriff", angriff);
       if (niederlage) melde("niederlage", niederlage);
       if (besiegt) {
@@ -1684,6 +1982,7 @@ const SudokuRPG = (function () {
           melde("auswahl", auswahlInfo());
         } else {
           melde("neuerBoss", neuerBossDaten());
+          offeneBuchschlaegeAusfuehren();          // Buchschlag trifft den neuen Boss
         }
       }
       if (geloest && !niederlage) {
@@ -1698,6 +1997,8 @@ const SudokuRPG = (function () {
         powerup: powerup, muenzenPlus: muenzenPlus, lebenPlus: lebenPlus,
         besiegt: besiegt, geloest: geloest && !niederlage, auswahl: Boolean(zustand.auswahl),
         verflucht: rechnung.verflucht, angriff: angriff, niederlage: Boolean(niederlage),
+        buchschlag: buchWirkung.schlaege.length > 0,
+        buchAuswahl: Boolean(zustand.buchAuswahl),
       };
     }
 
@@ -1755,7 +2056,11 @@ const SudokuRPG = (function () {
       }
       // Nach einem Sieg erscheint jetzt der nächste Boss (eine freie Ersatzwahl
       // ändert am Boss nichts). Steht noch eine freie Wahl aus, kommt sie danach.
-      if (grund === "boss") melde("neuerBoss", neuerBossDaten());
+      if (grund === "boss") {
+        melde("neuerBoss", neuerBossDaten());
+        offeneBuchschlaegeAusfuehren();          // ein Buchschlag aus dem letzten Zug trifft den neuen Boss
+        if (zustand.auswahl) return true;        // … und hat ihn gleich besiegt → neue Auswahl
+      }
       if (freieWahlStarten()) {
         speichern();
         melde("auswahl", auswahlInfo());
@@ -1771,6 +2076,7 @@ const SudokuRPG = (function () {
     /** Alles auf Anfang: Boss 1, Startleben, 0 Münzen, keine Kombo, keine Verbesserungen, kein Rekord. */
     function zuruecksetzen() {
       zustand = neuerZustand();
+      zustand.buchAuswahl = loseBuchAngebot({}, zufall);   // Startauswahl der Bücher
       if (istElite(1)) eliteAuslosen();       // nur bei elite.abstand = 1
       speichern();
       melde("zurueckgesetzt", { boss: bossInfo(1) });
@@ -1783,6 +2089,9 @@ const SudokuRPG = (function () {
       werte: werte,
       gesammelt: function () { return gesammelteVerbesserungen(zustand.verbesserungen); },
       gegenangriff: gegenangriffAnzeige,
+      buecher: buecherAnzeige,
+      buchAuswahlInfo: buchAuswahlInfo,
+      waehleBuch: waehleBuch,
       angebote: angebote,
       auswahlInfo: auswahlInfo,
       an: function (name, fn) { (hoerer[name] = hoerer[name] || []).push(fn); },
@@ -1825,6 +2134,7 @@ const SudokuRPG = (function () {
     istElite: istElite,
     seltenFuerAnzeige: seltenFuerAnzeige,
     angriffsAbstand: angriffsAbstand,
+    buchInfo: buchInfo,
     feldWirkung: feldWirkung,
     zifferWirkung: zifferWirkung,
     belohnung: belohnung,

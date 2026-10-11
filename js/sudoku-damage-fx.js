@@ -108,12 +108,22 @@ const SudokuSchadenFx = (function () {
   function schritteAus(e) {
     const liste = [];
     let wert = e.wurf;
+    let vorKombo = null, komboFaktor = 1;                    // für den Buch-Bonus (zählt zur Kombo dazu)
     e.rechnung.schritte.forEach(function (schritt, i) {
       if (i === 0) return;                                   // "Wurf 14"
+      // Bücher: "Bücher +15 %" – erhöht den Kombo-Multiplikator um 0,15
+      const buch = /^Bücher \+(\d+) %$/.exec(schritt);
+      if (buch) {
+        const basis = vorKombo === null ? wert : vorKombo;
+        wert = basis * (komboFaktor + Number(buch[1]) / 100);
+        liste.push({ art: "bonus", label: schritt, quelle: "buecher", wert: aufrunden(wert), zeile: i - 1 });
+        return;
+      }
       const teil = /^(.*) ([×+])([\d,]+)$/.exec(schritt);
       if (!teil) return;
       const name = teil[1], rechnung = teil[2], text = teil[3];
       const zahl = parseFloat(text.replace(",", "."));
+      if (name === "Kombo") { vorKombo = wert; komboFaktor = zahl; }
       // Reihenbrecher: ein Etikett JE fertiger Einheit, jedes fliegt von seiner
       // Zeile, Spalte oder seinem Block los ("einheit" = 0, 1, 2 in dieser Reihenfolge)
       if (name === "Reihenbrecher") {
@@ -539,6 +549,22 @@ const SudokuSchadenFx = (function () {
     setTimeout(function () { strahl.remove(); }, ms + 50);
   }
 
+  /**
+   * Buchschlag: eine leuchtende Kopie der Ziffer fliegt von ihrem Feld zum
+   * Schwert und verschwindet dort (nur transform/opacity).
+   */
+  function zifferFlug(von, nach, ziffer, ms) {
+    const z = element("fx-buchziffer", von, '<span class="fx-buchziffer-wert"></span>');
+    z.querySelector(".fx-buchziffer-wert").textContent = ziffer;
+    fliege(z, von, nach, ms, "cubic-bezier(0.45, 0, 0.7, 0.4)");
+    z.querySelector(".fx-inhalt").animate([
+      { transform: "scale(1.3)", opacity: 1 },
+      { transform: "scale(1)", opacity: 1, offset: 0.75 },
+      { transform: "scale(0.3)", opacity: 0 },
+    ], { duration: Math.max(1, ms), fill: "forwards" });
+    setTimeout(function () { z.remove(); }, ms + 50);
+  }
+
   /** Der ganze Bildschirm blitzt in Regenbogenfarben auf. */
   function bildschirmBlitz(ms) {
     const blitz = document.createElement("div");
@@ -561,6 +587,7 @@ const SudokuSchadenFx = (function () {
     zerspringen: zerspringen,
     regenbogenStrahl: regenbogenStrahl,
     bildschirmBlitz: bildschirmBlitz,
+    zifferFlug: zifferFlug,
     aufloesen: aufloesen,
     stufeFuer: stufeFuer,
     schritteAus: schritteAus,
