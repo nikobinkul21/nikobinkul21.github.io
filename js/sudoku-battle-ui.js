@@ -69,6 +69,9 @@ const SudokuKampf = (function () {
     walze: 1900,       // Slot-Walze bis zum Stillstand
     walzePause: 550,   // kurz stehen lassen, bevor das Sudoku startet
     walzeSpecial: 900, // bei Special Grade etwas länger
+    angriffAnsage: 450,  // Boss holt aus, der Name des Angriffs erscheint
+    angriffWirkung: 650, // eigene Animation des Angriffs
+    parade: 700,         // Held pariert mit dem Schwert
   };
 
   /** Bei "Bewegung reduzieren" fallen alle Animationen weg. */
@@ -97,6 +100,13 @@ const SudokuKampf = (function () {
     kreuz: '<path d="M0 0h2v1H0zM5 0h2v1H5zM1 1h2v1H1zM4 1h2v1H4zM2 2h3v1H2zM3 3h1v1H3zM2 4h3v1H2zM1 5h2v1H1zM4 5h2v1H4zM0 6h2v1H0zM5 6h2v1H5z"/>',
     warnung: '<path d="M3 0h1v1h1v2h1v2h1v2H0V5h1V3h1V1h1z"/><path fill="#fff" d="M3 2h1v2H3zM3 5h1v1H3z"/>',
     krone: '<path d="M0 1h1v2h1V2h1V0h1v2h1v1h1V1h1v6H0z"/>',
+    // Gegenangriffe der Bosse und die Parade
+    schrei: '<path d="M0 2h1v3H0zM1 1h1v5H1z"/><path d="M3 2h1v1H3zM3 4h1v1H3zM4 3h1v1H4zM4 1h1v1H4zM4 5h1v1H4zM5 0h1v1H5zM5 6h1v1H5zM6 2h1v3H6z"/>',
+    siegel: '<path d="M2 0h3v1h1v2H5V1H2v2H1V1h1z"/><path d="M0 3h7v4H0z"/><path fill="rgba(0,0,0,.5)" d="M3 4h1v2H3z"/>',
+    finsternis: '<path d="M2 0h3v1H3v1H2v3h1v1h2v1H2V6H1V5H0V2h1V1h1z"/><path d="M5 2h1v1H5zM6 4h1v1H6z"/>',
+    fluch: '<path d="M1 0h5v1h1v3H6v1H5v2H2V5H1V4H0V1h1z"/><path fill="rgba(0,0,0,.6)" d="M2 2h1v1H2zM4 2h1v1H4zM3 4h1v1H3z"/>',
+    hieb: '<path d="M5 0h1v1H5zM4 1h1v1H4zM3 2h1v1H3zM2 3h1v1H2zM1 4h1v1H1zM6 2h1v1H6zM5 3h1v1H5zM4 4h1v1H4zM3 5h1v1H3zM2 6h1v1H2z"/>',
+    schild: '<path d="M0 0h7v4H6v1H5v1H4v1H3V6H2V5H1V4H0z"/><path fill="rgba(255,255,255,.6)" d="M1 1h2v1H1zM1 2h1v1H1z"/>',
     // Reihenbrecher: eine Reihe Blöcke, in der Mitte zerbrochen
     reihe: '<path d="M0 2h2v3H0zM5 2h2v3H5z"/><path d="M3 1h1v2H3zM2 4h1v2H2zM4 3h1v1H4z"/><path fill="rgba(255,255,255,.55)" d="M0 2h1v1H0zM5 2h1v1H5z"/>',
   };
@@ -377,8 +387,15 @@ const SudokuKampf = (function () {
             '<div class="kampf-hp-zeile"><span class="kampf-elite-hinweis"></span><span class="kampf-hp-zahl"></span></div>' +
           "</div>" +
           '<div class="kampf-figur kampf-figur--boss"><canvas class="kampf-boss"></canvas></div>' +
+          // Über dem Boss: sein angekündigter Angriff mit Zähler ("Siegel in 8 Zügen")
+          '<button type="button" class="kampf-absicht hat-tipp" hidden>' +
+            '<span class="kampf-absicht-kopf"><span class="kampf-absicht-symbol"></span><span class="kampf-absicht-name"></span></span>' +
+            '<span class="kampf-absicht-text"></span>' + tippHtml() +
+          "</button>" +
           // Held unten: Figur links, Herzen, Münzen und Würfel rechts
           '<div class="kampf-figur kampf-figur--held"><canvas class="kampf-held"></canvas></div>' +
+          // Schild beim Helden: Steht eine Parade bereit?
+          '<button type="button" class="kampf-parade hat-tipp">' + symbolSvg("schild") + tippHtml() + "</button>" +
           '<div class="kampf-info kampf-info--held">' +
             '<div class="kampf-herzen" role="img"></div>' +
             '<div class="kampf-info-zeile">' +
@@ -480,6 +497,13 @@ const SudokuKampf = (function () {
       belohnungSumme: container.querySelector(".panel-belohnung .panel-summe"),
       verlauf: container.querySelector(".panel-verlauf-liste"),
       rekord: container.querySelector(".kampf-rekord"),
+      absicht: container.querySelector(".kampf-absicht"),
+      absichtSymbol: container.querySelector(".kampf-absicht-symbol"),
+      absichtName: container.querySelector(".kampf-absicht-name"),
+      absichtText: container.querySelector(".kampf-absicht-text"),
+      absichtTipp: container.querySelector(".kampf-absicht .kampf-tipp"),
+      parade: container.querySelector(".kampf-parade"),
+      paradeTipp: container.querySelector(".kampf-parade .kampf-tipp"),
     };
 
     SudokuSprites.zeichne(el.heldCanvas, "held", 0);
@@ -938,6 +962,8 @@ const SudokuKampf = (function () {
             wert: "+" + Math.round(SudokuRPG.belohnung(grad.id).schadensBonus * 100) + " %" });
         } else if (name === "Doppelt") {
           zeilen.push({ key: "doppelt", label: "Doppelschaden", wert: wert, art: "doppelt" });
+        } else if (name === "Fluch") {
+          zeilen.push({ key: "fluch", label: "Fluch", wert: wert, art: "fluch" });
         } else if (name === "Reihenbrecher") {
           zeilen.push({ key: "reihen", label: "Reihenbrecher", wert: wert, art: "reihe" });
         } else if (e.boss.selten && name === e.boss.selten.name) {
@@ -984,11 +1010,12 @@ const SudokuKampf = (function () {
     function protokolliereTreffer(e) {
       const gesamt = e.schaden + e.gift;
       const muenzen = e.muenzenPlus + e.eliteBonus;
-      const art = e.regenbogen ? "regenbogen" : e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
+      const art = e.regenbogen ? "regenbogen" : e.verflucht ? "fluch" : e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
         e.eigenheit ? "eigenheit" : e.doppelt ? "doppelt" : "";
       const farbe = e.immun ? e.selten.farbe : e.eigenheit ? e.eigenheit.farbe : null;
       let kurz = gesamt + " Schaden";
       if (e.regenbogen) kurz = "Regenbogenschlag";
+      else if (e.verflucht) kurz = "Verflucht";
       else if (e.immun) kurz = e.selten.art === "geblockt" ? "Geblockt" : "Immun";
       else if (e.fehlschlag) kurz = "Fehlschlag";
       else if (e.eigenheit) kurz = "Geblockt";
@@ -1001,6 +1028,8 @@ const SudokuKampf = (function () {
       });
       if (e.regenbogen) {
         verlaufEintrag({ text: "Regenbogenschlag!", wert: "−" + gesamt, art: "regenbogen", symbol: "stern" });
+      } else if (e.verflucht) {
+        verlaufEintrag({ text: "Fluch: " + e.ziffer + " macht keinen Schaden", wert: "0", art: "fluch", symbol: "fluch" });
       } else if (e.immun) {
         verlaufEintrag({ text: e.selten.name + ": Wurf " + e.wurf + " " + e.selten.art, wert: "0", art: "selten", symbol: "stern", farbe: e.selten.farbe });
       } else if (e.kritisch) {
@@ -1082,6 +1111,156 @@ const SudokuKampf = (function () {
     }
 
 
+    /* ---------- Gegenangriff: Absicht des Bosses und Parade ---------- */
+
+    /** "in 8 Zügen", "in 1 Zug", "jetzt!" (die zweite Zeile der Absicht) */
+    function zaehlerText(zaehler) {
+      return zaehler <= 0 ? "jetzt!" : "in " + zaehler + (zaehler === 1 ? " Zug" : " Zügen");
+    }
+
+    /** "Siegel in 8 Zügen" bzw. "Siegel jetzt!" (für Screenreader) */
+    function absichtText(a, zaehler) {
+      return a.name + " " + zaehlerText(zaehler);
+    }
+
+    /**
+     * Zeigt den Gegenangriff-Stand SOFORT: Absicht über dem Boss (Warnung in
+     * den letzten Zügen), Schild beim Helden. Gibt den Stand auch an das
+     * Spielfeld weiter (optionen.beimGegenangriff), das daraus Siegel,
+     * Finsternis und Fluch zeichnet. Wird nur aus Schritten der Warteschlange
+     * aufgerufen – so passt alles zur Reihenfolge der Animationen.
+     * @param {object} stand – { angriff, zaehler, warnung, paraden, paradenMax, wirkungen }
+     */
+    function zeigeGegenangriff(stand) {
+      if (!stand) return;
+      const a = stand.angriff;
+      el.absicht.hidden = !a;
+      if (a) {
+        el.absicht.style.setProperty("--angriff-farbe", a.farbe);
+        el.absichtSymbol.innerHTML = symbolSvg(a.symbol);
+        el.absichtName.textContent = a.name;
+        el.absichtText.textContent = zaehlerText(stand.zaehler);
+        el.absicht.classList.toggle("warnt", Boolean(stand.warnung));
+        const erklaerung = a.name + ": " + a.beschreibung + " Kommt alle " + a.abstand +
+          " Züge – jede gesetzte Zahl zählt. Eine Parade wehrt ihn ab.";
+        el.absichtTipp.textContent = erklaerung;
+        el.absicht.setAttribute("aria-label", absichtText(a, stand.zaehler) + ". " + erklaerung);
+      }
+      const bereit = stand.paraden > 0;
+      el.parade.classList.toggle("ist-bereit", bereit);
+      const paradeText = bereit
+        ? "Parade bereit: Der nächste Angriff des Bosses wird abgewehrt."
+        : "Keine Parade. Vervollständige eine Zeile, Spalte oder einen 3×3-Block – dann wehrt der Held den nächsten Angriff ab.";
+      el.paradeTipp.textContent = paradeText;
+      el.parade.setAttribute("aria-label", paradeText);
+      if (optionen && optionen.beimGegenangriff) optionen.beimGegenangriff(stand);
+    }
+
+    /** Ein Symbol mitten auf der Bühne (oder am Boss), das kurz auftaucht und verschwindet. */
+    function angriffSymbol(e, ort, zusatz) {
+      const s = document.createElement("div");
+      s.className = "kampf-angriff-symbol kampf-angriff-symbol--" + ort;
+      s.style.setProperty("--angriff-farbe", e.angriff.farbe);
+      s.innerHTML = symbolSvg(e.angriff.symbol) + (zusatz ? '<span class="kampf-angriff-zusatz"></span>' : "");
+      if (zusatz) s.querySelector(".kampf-angriff-zusatz").textContent = zusatz;
+      el.effekte.appendChild(s);
+      setTimeout(function () { s.remove(); }, DAUER.angriffWirkung + 400);
+      return s;
+    }
+
+    /**
+     * Die eigene Animation jedes Angriffs (nach der Ansage). Neuer Angriff ohne
+     * Eintrag hier? Dann erscheint nur sein Symbol (siehe angriff()).
+     */
+    const ANGRIFF_ANIMATION = {
+      // Schrei: Schallwellen vom Boss, die Kombo zerspringt in zwei Hälften
+      schrei: function (e) {
+        angriffSymbol(e, "boss");
+        faerbe(el.buehne, "schreit", DAUER.angriffWirkung);
+        if (e.komboVorher !== e.kombo) zerbrichKombo();
+        zeigeKombo(e.kombo, e.komboBonus, false);
+        return pause(DAUER.angriffWirkung);
+      },
+      // Siegel: ein Schloss dreht sich in der Bühnenmitte, Ketten erscheinen im Sudoku
+      siegel: function (e) {
+        angriffSymbol(e, "mitte", "Block " + (e.wirkung.daten.block + 1));
+        return pause(DAUER.angriffWirkung);
+      },
+      // Finsternis: die Bühne verdunkelt sich kurz
+      finsternis: function (e) {
+        angriffSymbol(e, "mitte");
+        faerbe(el.buehne, "verdunkelt", DAUER.angriffWirkung + 200);
+        return pause(DAUER.angriffWirkung);
+      },
+      // Fluch: ein Totenkopf mit der verfluchten Ziffer steigt über dem Boss auf
+      fluch: function (e) {
+        angriffSymbol(e, "boss", String(e.wirkung.daten.ziffer));
+        return pause(DAUER.angriffWirkung);
+      },
+      // Hieb: der Boss springt vor, der Held wird getroffen, ein Herz geht verloren
+      hieb: function (e) {
+        angriffSymbol(e, "held");
+        animiere(el.bossFigur, "greift-an", DAUER.angriff);
+        return warte(DAUER.angriff / 2).then(function () {
+          zeigeHerzen(e.leben, e.maxLeben);
+          const herz = el.herzen.children[e.leben];
+          if (herz) animiere(herz, "verschwindet", 400);
+          animiere(el.heldFigur, "wird-getroffen", 300);
+          faerbe(el.blitz, "an-hieb", 300);
+          schwebeZahl("−" + (e.lebenVorher - e.leben) + " ♥", "hieb");
+          return pause(DAUER.angriffWirkung - DAUER.angriff / 2);
+        });
+      },
+    };
+
+    /** Text für Meldung und Verlauf. */
+    function angriffMeldung(e) {
+      if (e.pariert) return e.boss.name + " greift an – " + e.angriff.name + "! Pariert!";
+      if (e.verpufft) return e.boss.name + " greift an – " + e.angriff.name + " verpufft.";
+      const dauer = e.wirkung ? " für " + e.wirkung.rest + " Züge" : "";
+      return e.boss.name + " greift an – " + e.angriff.name + "! " + e.text + dauer + ".";
+    }
+
+    /**
+     * Der Boss greift an (Schritt der Warteschlange, nach Würfel, Schaden und
+     * Treffer dieses Zugs): Ansage → Parade, Verpuffen oder die Wirkung →
+     * neuer Stand (Zähler von vorn, Schild, Spielfeld).
+     */
+    function angriff(e) {
+      return einreihen(function () {
+        meldung(angriffMeldung(e));
+        const ansage = banner(e.angriff.name + "!", e.angriff.farbe, "angriff");
+        faerbe(el.absicht, "loest-aus", DAUER.angriffAnsage);
+        animiere(el.bossFigur, "holt-aus", DAUER.angriffAnsage);
+        return pause(DAUER.angriffAnsage).then(function () {
+          if (e.pariert) {
+            // Der Held reißt das Schwert hoch, der Angriff prallt ab
+            ansage.remove();               // Platz für das große "Pariert!"
+            animiere(el.heldFigur, "pariert", DAUER.parade);
+            faerbe(el.parade, "pariert", DAUER.parade);
+            banner("Pariert!", null, "pariert");
+            verlaufEintrag({ text: "Pariert: " + e.angriff.name, wert: "", art: "parade", symbol: "schild" });
+            return pause(DAUER.parade);
+          }
+          if (e.verpufft) {
+            schwebeZahl("Verpufft", "daneben");
+            verlaufEintrag({ text: e.angriff.name + " verpufft", wert: "", art: "daneben", symbol: e.angriff.symbol });
+            return pause(DAUER.angriffWirkung / 2);
+          }
+          verlaufEintrag({ text: e.angriff.name + ": " + e.text, wert: e.wirkung ? e.wirkung.rest + " Züge" : "",
+            art: "angriff", symbol: e.angriff.symbol, farbe: e.angriff.farbe });
+          const animation = ANGRIFF_ANIMATION[e.angriff.id] || function () {
+            angriffSymbol(e, "mitte");
+            return pause(DAUER.angriffWirkung);
+          };
+          return animation(e);
+        }).then(function () {
+          zeigeGegenangriff(e.stand);     // Zähler von vorn, Schild, Siegel/Finsternis/Fluch im Sudoku
+        });
+      });
+    }
+
+
     /* ---------- Öffentliche Schritte (laufen über die Warteschlange) ---------- */
 
     /**
@@ -1098,6 +1277,7 @@ const SudokuKampf = (function () {
         zeigeKombo(stand.kombo, stand.komboBonus, false);
         zeigeVerbesserungen(stand.verbesserungen);
         zeigeRekord(stand.boss, stand.rekord);
+        zeigeGegenangriff(stand.gegenangriff);
         el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite", "loest-sich-auf", "ist-ruhig");
       });
     }
@@ -1107,6 +1287,8 @@ const SudokuKampf = (function () {
       const teile = [];
       if (e.regenbogen) {
         teile.push("Regenbogenschlag! " + e.boss.name + " ist mit einem Schlag besiegt.");
+      } else if (e.verflucht) {
+        teile.push("Fluch! Die " + e.ziffer + " ist verflucht und macht keinen Schaden.");
       } else if (e.immun) {
         teile.push(e.selten.name + "! Wurf " + e.wurf + ", " + e.selten.grund + ", " + e.selten.art + ": kein Schaden.");
       } else if (e.fehlschlag) {
@@ -1250,7 +1432,7 @@ const SudokuKampf = (function () {
           meldung(trefferText(e));
           zeigeKombo(e.kombo, e.komboBonus, true);
           const u = fxUmgebung(e);
-          if (e.fehlschlag || e.immun || e.eigenheit) return keinAufbau(e, u);
+          if (e.fehlschlag || e.immun || e.eigenheit || e.verflucht) return keinAufbau(e, u);
           return mitAufbau(e, u);
         }).then(function () {
           // Gift (grünes Power-up): wie bisher eigene grüne Zahl nach dem Treffer
@@ -1268,6 +1450,12 @@ const SudokuKampf = (function () {
             zeigeHerzen(e.leben, e.maxLeben);
             const neuesHerz = el.herzen.children[e.leben - 1];
             if (neuesHerz) animiere(neuesHerz, "verschwindet", 400);   // kurzes "Aufpoppen"
+          }
+          // Gegenangriff: Zähler eins weiter, Wirkungen laufen ab, ggf. neue Parade
+          zeigeGegenangriff(e.gegenangriff);
+          if (e.paradeNeu) {
+            verlaufEintrag({ text: "Parade bereit", wert: "", art: "parade", symbol: "schild" });
+            animiere(el.parade, "laedt", 500);
           }
           return zeigeMuenzen(e.muenzen, true);
         });
@@ -1382,6 +1570,12 @@ const SudokuKampf = (function () {
         schwebeZahl("Daneben!", "daneben");
         return zahl;
       }
+      if (e.verflucht) {
+        // Fluch des Bosses: Die Zahl prallt ab, der Totenkopf blitzt auf
+        schwebeZahl("Verflucht!", "fluch");
+        animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
+        return zahl;
+      }
       if (e.immun) {
         // Seltene Eigenschaft: Wurf wirkungslos – Würfel grau (siehe Würfel), Boss wehrt ab
         schwebeZahl(e.selten.art === "geblockt" ? "Geblockt!" : "Immun!", "immun");
@@ -1429,6 +1623,7 @@ const SudokuKampf = (function () {
           const kombo = e.komboVorher > 0 ? zerbrichKombo() : null;
           return Promise.all([angriff, kombo]);
         }).then(function () {
+          zeigeGegenangriff(e.gegenangriff);    // auch eine falsche Zahl zählt als Zug
           if (!e.eigenheit) return null;
           // Regeneration: HP steigen. Dieb: Münzen sinken.
           if (e.hp !== e.hpVorher) {
@@ -1489,6 +1684,7 @@ const SudokuKampf = (function () {
         zeigeHp(e.hp, e.boss.maxHp);
         zeigeHerzen(e.leben, e.maxLeben);
         zeigeRekord(e.boss, rekord);
+        zeigeGegenangriff(e.gegenangriff);      // neuer Angriff, Parade verfallen
         if (e.boss.elite) {
           // Eigene Einblendung (entfällt bei "Bewegung reduzieren" – die Kennzeichnungen bleiben)
           if (!ohneBewegung() && !eilig()) {
@@ -1749,6 +1945,8 @@ const SudokuKampf = (function () {
       zeigeWurf: zeigeWurf,
       treffer: treffer,
       fehler: fehler,
+      angriff: angriff,
+      zeigeGegenangriff: zeigeGegenangriff,
       sieg: sieg,
       neuerBoss: neuerBoss,
       verbesserung: verbesserung,

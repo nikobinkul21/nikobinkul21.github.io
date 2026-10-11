@@ -2277,3 +2277,413 @@
     animation: regenbogen-ausblenden 0.8s ease-out forwards !important;
   }
 }
+
+
+/* ==========================================================================
+   GEGENANGRIFF DER BOSSE
+   Absicht über dem Boss, Schild (Parade) beim Helden, die Animationen der
+   Angriffe – und ihre Wirkungen im Sudoku (Siegel, Finsternis, Fluch).
+   sudoku-battle-ui.js und sudoku-ui.js setzen die Klassen.
+   ========================================================================== */
+
+:root {
+  --parade-farbe: #3d9bff;          /* Schild, wenn eine Parade bereitsteht */
+  --siegel-kette: rgba(139, 92, 255, 0.55);
+  --finsternis-schatten: rgba(20, 16, 40, 0.62);
+  --fluch-farbe: #2f9e5a;
+}
+
+/* Absicht über dem Boss: oben Symbol und Name, darunter der Zähler.
+   Mittig über der Figur (gleiche Breite, gleicher Abstand nach rechts). */
+.kampf-absicht {
+  position: absolute;
+  top: 3%;
+  right: calc(6% + var(--kampf-figur-groesse) / 2);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--kampf-kasten-text);
+  background: var(--kampf-kasten);
+  border: 2px solid var(--kampf-kasten-rand);
+  border-top: 4px solid var(--angriff-farbe);
+  border-radius: 8px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  transform: translateX(50%);
+  cursor: help;
+}
+
+.kampf-absicht-kopf {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.kampf-absicht-text {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.kampf-absicht-symbol svg {
+  display: block;
+  width: 13px;
+  height: 13px;
+  fill: var(--angriff-farbe);
+}
+
+/* Die Erklärung klappt nach unten links auf (die Bühne endet rechts) */
+.kampf-absicht .kampf-tipp {
+  top: calc(100% + 4px);
+  right: -2px;
+  width: min(260px, 70vw);
+}
+
+/* Letzte Züge vor dem Angriff: Warnung pulsiert */
+.kampf-absicht.warnt {
+  color: #fff;
+  background: var(--angriff-farbe);
+  animation: absicht-warnt 0.9s ease-in-out infinite;
+}
+
+.kampf-absicht.warnt .kampf-absicht-symbol svg { fill: #fff; }
+
+.kampf-absicht.loest-aus {
+  box-shadow: 0 0 0 4px var(--angriff-farbe), 0 0 18px var(--angriff-farbe);
+}
+
+@keyframes absicht-warnt {
+  0%, 100% { transform: translateX(50%) scale(1); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25); }
+  50%      { transform: translateX(50%) scale(1.1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--angriff-farbe) 45%, transparent), 0 0 14px var(--angriff-farbe); }
+}
+
+/* Platz für die Absicht: der Boss steht etwas tiefer */
+.kampf-figur--boss { top: 19%; }
+.kampf-buehne.ist-elite .kampf-figur--boss { top: 14%; }
+
+/* Schild beim Helden: matt = keine Parade, blau leuchtend = Parade bereit */
+.kampf-parade {
+  position: absolute;
+  left: calc(6% + var(--kampf-figur-groesse) * 0.82);
+  bottom: calc(6% + var(--kampf-figur-groesse) * 0.62);
+  z-index: 4;
+  width: 26px;
+  height: 26px;
+  padding: 3px;
+  background: var(--kampf-kasten);
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 50%;
+  cursor: help;
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.kampf-parade svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: #8a93a6;
+}
+
+.kampf-parade.ist-bereit {
+  opacity: 1;
+  filter: none;
+  box-shadow: 0 0 0 2px var(--parade-farbe), 0 0 12px var(--parade-farbe);
+}
+
+.kampf-parade.ist-bereit svg { fill: var(--parade-farbe); }
+.kampf-parade.laedt { animation: parade-laedt 0.5s ease-out; }
+.kampf-parade.pariert { box-shadow: 0 0 0 4px #fff, 0 0 22px var(--parade-farbe); }
+
+.kampf-parade .kampf-tipp {
+  bottom: calc(100% + 4px);
+  left: -10px;
+  width: min(230px, 60vw);
+}
+
+@keyframes parade-laedt {
+  0%   { transform: scale(0.6); }
+  60%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* Boss holt aus, Held pariert mit hochgerissenem Schwert */
+.kampf-figur--boss.holt-aus { animation: boss-holt-aus 0.45s ease-in-out; }
+.kampf-figur--held.pariert { animation: held-pariert 0.7s ease-out; }
+
+@keyframes boss-holt-aus {
+  0%, 100% { transform: none; }
+  50%      { transform: translate(10px, -6px) rotate(6deg) scale(1.06); }
+}
+
+@keyframes held-pariert {
+  0%   { transform: none; filter: none; }
+  25%  { transform: translate(10px, -10px) rotate(-12deg); filter: drop-shadow(0 0 8px var(--parade-farbe)) brightness(1.4); }
+  60%  { transform: translate(4px, -4px) rotate(-4deg); filter: drop-shadow(0 0 4px var(--parade-farbe)); }
+  100% { transform: none; filter: none; }
+}
+
+/* Schrei: Schallwellen vom Boss */
+.kampf-buehne.schreit::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  right: 12%;
+  z-index: 5;
+  width: 60px;
+  height: 60px;
+  border: 4px solid var(--kampf-kombo-3, #f07a1a);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: schrei-welle 0.65s ease-out 2;
+}
+
+@keyframes schrei-welle {
+  from { opacity: 0.9; transform: scale(0.4); }
+  to   { opacity: 0; transform: scale(3.2); }
+}
+
+/* Finsternis: die Bühne wird dunkel */
+.kampf-buehne.verdunkelt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(circle at 75% 30%, rgba(59, 53, 97, 0.4), rgba(10, 8, 24, 0.85));
+  animation: finsternis-ein 0.85s ease-in-out;
+}
+
+@keyframes finsternis-ein {
+  0%, 100% { opacity: 0; }
+  35%, 70% { opacity: 1; }
+}
+
+/* Hieb: roter Blitz */
+.kampf-blitz.an-hieb {
+  background: radial-gradient(circle at 20% 70%, #fff 0%, #d63a3a 45%, transparent 85%);
+  animation: kampf-blitz 0.3s ease-out;
+}
+
+/* Symbol des Angriffs: taucht auf, wächst und verblasst */
+.kampf-angriff-symbol {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: angriff-symbol 1s ease-out forwards;
+}
+
+.kampf-angriff-symbol svg {
+  width: 44px;
+  height: 44px;
+  fill: var(--angriff-farbe);
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 10px var(--angriff-farbe));
+}
+
+.kampf-angriff-symbol--mitte { top: 48%; left: 50%; }
+.kampf-angriff-symbol--boss { top: 26%; left: 78%; }
+.kampf-angriff-symbol--held { top: 68%; left: 22%; }
+.kampf-angriff-symbol--mitte svg { animation: angriff-drehen 1s ease-out; }
+
+.kampf-angriff-zusatz {
+  padding: 1px 6px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #fff;
+  background: var(--angriff-farbe);
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 6px;
+}
+
+@keyframes angriff-symbol {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  35%  { transform: translate(-50%, -50%) scale(1); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
+}
+
+@keyframes angriff-drehen {
+  from { transform: rotate(-90deg); }
+  to   { transform: rotate(0); }
+}
+
+/* Banner: Name des Angriffs in seiner Farbe, "Pariert!" groß in Blau */
+.kampf-banner--angriff {
+  top: 40%;
+  font-size: 1.15rem;
+}
+
+.kampf-banner--pariert {
+  top: 54%;
+  padding: 0;
+  font-size: 1.8rem;
+  text-transform: uppercase;
+  color: #fff;
+  background: none;
+  border: none;
+  box-shadow: none;
+  -webkit-text-stroke: 3px var(--parade-farbe);
+  paint-order: stroke fill;
+  text-shadow: 0 0 14px var(--parade-farbe);
+}
+
+/* Schwebende Wörter: "Verflucht!" und das verlorene Leben */
+.kampf-schwebezahl--fluch {
+  top: 22%;
+  right: 8%;
+  font-size: 1.4rem;
+  color: #fff;
+  -webkit-text-stroke: 3px var(--fluch-farbe);
+}
+
+.kampf-schwebezahl--hieb {
+  top: 48%;
+  left: 18%;
+  font-size: 1.4rem;
+  color: #ff6b6b;
+  -webkit-text-stroke: 2px #5a0d0d;
+}
+
+/* Panel und Verlauf */
+.panel-zeile--fluch,
+.panel-summe--fluch .panel-wert,
+.panel-kurz-schaden[data-art="fluch"],
+.panel-eintrag--fluch { color: #5fd88f; font-weight: 700; }
+.panel-eintrag--angriff { color: color-mix(in srgb, var(--zeilen-farbe) 50%, #fff); font-weight: 700; }
+.panel-eintrag--parade { color: #7cc0ff; font-weight: 800; }
+
+
+/* ---------- Wirkungen im Sudoku ---------- */
+
+/* Siegel: Ketten über dem Block (gekreuzte Kettenglieder), Felder gesperrt */
+.sudoku-feld.ist-versiegelt {
+  cursor: not-allowed;
+  background-image:
+    repeating-linear-gradient(45deg, transparent 0 7px, var(--siegel-kette) 7px 10px, transparent 10px 14px),
+    repeating-linear-gradient(-45deg, transparent 0 7px, var(--siegel-kette) 7px 10px, transparent 10px 14px);
+  box-shadow: inset 0 0 0 2px rgba(139, 92, 255, 0.55);
+}
+
+/* Finsternis: Schatten über den Feldern, Zahlen als "?" */
+.sudoku-feld.ist-verdeckt {
+  background-image: linear-gradient(var(--finsternis-schatten), var(--finsternis-schatten));
+}
+
+.sudoku-feld.ist-verdeckt .sudoku-ziffer {
+  color: #d8d2ff;
+}
+
+/* Zähler einer Wirkung (am ersten betroffenen Feld) */
+.sudoku-wirkung-marke {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 4px 0 2px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1.35;
+  color: #fff;
+  background: var(--angriff-farbe);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1.5px #fff, 1px 1px 0 1.5px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.sudoku-wirkung-marke svg {
+  width: 11px;
+  height: 11px;
+  fill: #fff;
+}
+
+/* Fluch: die verfluchte Ziffer im Zahlenfeld, mit verbleibenden Zügen */
+.sudoku-taste.ist-verflucht {
+  color: var(--fluch-farbe);
+  border-color: var(--fluch-farbe);
+  background: color-mix(in srgb, var(--fluch-farbe) 16%, var(--sudoku-feld, #fff));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--fluch-farbe) 55%, transparent);
+}
+
+.sudoku-fluch-marke {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  padding: 0 4px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  line-height: 1.4;
+  color: #fff;
+  background: var(--fluch-farbe);
+  border-radius: 999px;
+}
+
+.sudoku-fluch-marke::before {
+  content: "☠ ";
+}
+
+@media (max-width: 767px) {
+  .kampf-absicht {
+    top: 3%;
+    right: calc(6% + var(--kampf-figur-groesse-klein) / 2);
+    font-size: 0.62rem;
+  }
+
+  /* Etwas höhere Bühne, damit Absicht, Boss und Held übereinander Platz haben */
+  .kampf-buehne { height: 198px; }
+  .kampf-buehne.ist-elite { height: 222px; }
+  .kampf-figur--boss { top: 22%; }
+  .kampf-buehne.ist-elite .kampf-figur--boss { top: 18%; }
+
+  .kampf-parade {
+    left: calc(6% + var(--kampf-figur-groesse-klein) * 0.82);
+    bottom: calc(6% + var(--kampf-figur-groesse-klein) * 0.6);
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* "Bewegung reduzieren": nur Einblendungen, nichts bewegt sich */
+@media (prefers-reduced-motion: reduce) {
+  .kampf-absicht.warnt {
+    animation: none !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--angriff-farbe) 45%, transparent), 0 0 12px var(--angriff-farbe);
+  }
+
+  .kampf-angriff-symbol {
+    animation: angriff-einblenden 1s ease-out forwards !important;
+  }
+
+  .kampf-angriff-symbol svg {
+    animation: none !important;
+  }
+
+  .kampf-buehne.schreit::after {
+    animation: none !important;
+    opacity: 0.6;
+    transform: scale(1.6);
+  }
+
+  .kampf-buehne.verdunkelt::before {
+    animation: none !important;
+    opacity: 0.8;
+  }
+
+  @keyframes angriff-einblenden {
+    0%   { opacity: 0; }
+    20%, 80% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+}

@@ -64,6 +64,11 @@ function initSudoku(container) {
   let ausgewaehlt = 0;          // Nummer des gewählten Felds (0–80)
   let regenbogenLaeuft = false; // Regenbogenschlag läuft → Eingabe gesperrt (nicht abkürzbar)
   let letzterTreffer = null;    // Promise: Animation des letzten Treffers ist fertig
+  // Gegenangriff, wie er gerade ANGEZEIGT wird (Siegel, Finsternis, Fluch im
+  // Gitter). Kommt aus dem Kampffenster, sobald die Animation so weit ist –
+  // die Regeln kennen den neuen Stand schon früher.
+  let angezeigterGegenangriff = null;
+  let statusZeit = 0;           // Zeitgeber für kurze Hinweise über dem Gitter
 
   // Wird gerade ein Rätsel erzeugt/ausgelost? (je Modus getrennt)
   const beschaeftigt = { frei: false, abenteuer: false };
@@ -269,7 +274,9 @@ function initSudoku(container) {
     const zeileA = Math.floor(ausgewaehlt / 9);
     const spalteA = ausgewaehlt % 9;
     const blockA = SudokuEngine.blockVon(ausgewaehlt);
-    const wertA = wertVon(ausgewaehlt);
+    const wirkungen = laufendeWirkungen();
+    // Verdeckte Zahlen dürfen sich auch nicht über "gleiche Zahl" verraten
+    const wertA = SudokuRPG.feldWirkung(wirkungen, ausgewaehlt) === "verdeckt" ? 0 : wertVon(ausgewaehlt);
 
     for (let i = 0; i < 81; i++) {
       const feld = felder[i];
@@ -279,7 +286,12 @@ function initSudoku(container) {
       const istVorgabe = spiel.vorgaben[i] !== 0;
       const istFalsch = !istVorgabe && wert !== 0 && wert !== spiel.loesung[i];
 
-      feld.firstChild.textContent = wert === 0 ? "" : wert;
+      // Wirkung eines Boss-Angriffs: "versiegelt" oder "verdeckt" (Zahl als "?")
+      const wirkung = SudokuRPG.feldWirkung(wirkungen, i);
+      const verdeckt = wirkung === "verdeckt" && wert !== 0;
+      feld.firstChild.textContent = wert === 0 ? "" : verdeckt ? "?" : wert;
+      feld.classList.toggle("ist-versiegelt", wirkung === "versiegelt");
+      feld.classList.toggle("ist-verdeckt", wirkung === "verdeckt");
 
       // CSS-Klassen für die Optik (Farben stehen in css/sudoku.css)
       feld.classList.toggle("ist-vorgabe", istVorgabe);
@@ -289,7 +301,7 @@ function initSudoku(container) {
       feld.classList.toggle("ist-verwandt",
         i !== ausgewaehlt &&
         (zeile === zeileA || spalte === spalteA || SudokuEngine.blockVon(i) === blockA));
-      feld.classList.toggle("ist-gleich", i !== ausgewaehlt && wertA !== 0 && wert === wertA);
+      feld.classList.toggle("ist-gleich", i !== ausgewaehlt && wertA !== 0 && wert === wertA && !verdeckt);
       feld.classList.remove("ist-fehlversuch");
 
       // "Roving Tabindex": nur das gewählte Feld ist per Tab erreichbar,
@@ -298,7 +310,8 @@ function initSudoku(container) {
 
       // Beschreibung für Screenreader, z. B. "Zeile 3, Spalte 5: 7, falsch"
       let beschreibung = "Zeile " + (zeile + 1) + ", Spalte " + (spalte + 1) + ": ";
-      beschreibung += wert === 0 ? "leer" : wert;
+      beschreibung += wert === 0 ? "leer" : verdeckt ? "verdeckt" : wert;
+      if (wirkung === "versiegelt") beschreibung += ", versiegelt";
       if (istVorgabe) beschreibung += ", vorgegeben";
       if (istFalsch) beschreibung += ", falsch";
       const powerup = powerupTypAuf(i);
@@ -310,10 +323,39 @@ function initSudoku(container) {
       zeichnePowerup(feld, powerup);
       zeichneRegenbogen(feld, regenbogen);
     }
+    zeichneWirkungsMarken(wirkungen);
 
     brett.classList.toggle("ist-geloest", spiel.geloest);
 
     zeichneZahlenfeld();
+  }
+
+  /** Laufende Wirkungen der Boss-Angriffe, wie sie gerade angezeigt werden (nur Abenteuer). */
+  function laufendeWirkungen() {
+    return modus === "abenteuer" && angezeigterGegenangriff ? angezeigterGegenangriff.wirkungen : [];
+  }
+
+  /**
+   * Zähler der Wirkungen im Gitter: am ersten betroffenen Feld jeder Wirkung
+   * eine kleine Marke mit Symbol und verbleibenden Zügen (z. B. Siegel · 3).
+   */
+  function zeichneWirkungsMarken(wirkungen) {
+    brett.querySelectorAll(".sudoku-wirkung-marke").forEach(function (m) { m.remove(); });
+    wirkungen.forEach(function (w) {
+      const erstes = felder.findIndex(function (f, i) { return SudokuRPG.feldWirkung([w], i) !== null; });
+      if (erstes === -1) return;
+      const marke = document.createElement("span");
+      marke.className = "sudoku-wirkung-marke sudoku-wirkung-marke--" + w.id;
+      marke.style.setProperty("--angriff-farbe", w.farbe);
+      marke.setAttribute("aria-hidden", "true");
+      marke.innerHTML = SudokuKampf.symbolSvg(w.symbol) + "<span></span>";
+      marke.lastChild.textContent = w.rest;
+      marke.title = w.name + ": noch " + w.rest + (w.rest === 1 ? " Zug" : " Züge");
+      felder[erstes].appendChild(marke);
+    });
+    brett.setAttribute("aria-description", wirkungen.length === 0 ? "" : wirkungen.map(function (w) {
+      return w.name + " noch " + w.rest + (w.rest === 1 ? " Zug" : " Züge");
+    }).join(", "));
   }
 
   /**
@@ -420,6 +462,23 @@ function initSudoku(container) {
       taste.setAttribute("aria-label", fertig
         ? "Ziffer " + ziffer + ": alle gesetzt"
         : "Ziffer " + ziffer + " eintragen");
+      // Fluch des Bosses: diese Ziffer macht gerade keinen Schaden
+      const fluch = laufendeWirkungen().find(function (w) { return SudokuRPG.zifferWirkung([w], ziffer) === "verflucht"; });
+      taste.classList.toggle("ist-verflucht", Boolean(fluch) && !fertig);
+      let marke = taste.querySelector(".sudoku-fluch-marke");
+      if (fluch && !fertig) {
+        if (!marke) {
+          marke = document.createElement("span");
+          marke.className = "sudoku-fluch-marke";
+          marke.setAttribute("aria-hidden", "true");
+          taste.appendChild(marke);
+        }
+        marke.textContent = fluch.rest;
+        taste.setAttribute("aria-label", "Ziffer " + ziffer + " eintragen – verflucht, macht noch " + fluch.rest +
+          (fluch.rest === 1 ? " Zug" : " Züge") + " keinen Schaden");
+      } else if (marke) {
+        marke.remove();
+      }
     }
   }
 
@@ -585,6 +644,11 @@ function initSudoku(container) {
         // Herkunft fliegender Boni beim Schadensaufbau (Doppelschaden, Schwierigkeit)
         gitterFeld: function (i) { return felder[i]; },
         gradAnzeige: abenteuerGrad,
+        // Gegenangriff-Stand, sobald das Kampffenster ihn zeigt → Wirkungen im Gitter
+        beimGegenangriff: function (stand) {
+          angezeigterGegenangriff = stand;
+          if (spiel && modus === "abenteuer") zeichne();
+        },
       });
     }
 
@@ -599,6 +663,8 @@ function initSudoku(container) {
     // (z. B. +10 Münzen) gehört zum selben Treffer
     abenteuer.an("powerup", function (e) { e.treffer.powerupEffekt = e.effekt; });
     abenteuer.an("fehler", function (e) { if (abenteuer === diesesAbenteuer) kampf.fehler(e); });
+    // Gegenangriff des Bosses – läuft nach Würfel, Schaden und Treffer dieses Zugs
+    abenteuer.an("angriff", function (e) { if (abenteuer === diesesAbenteuer) kampf.angriff(e); });
     abenteuer.an("bossBesiegt", function (e) { if (abenteuer === diesesAbenteuer) kampf.sieg(e); });
     abenteuer.an("auswahl", function (e) {
       if (abenteuer !== diesesAbenteuer) return;
@@ -643,6 +709,7 @@ function initSudoku(container) {
       muenzen: z.muenzen, rekord: z.rekord,
       kombo: z.kombo, komboBonus: Math.min(z.kombo * SudokuRPG.KONFIG.kombo.proStufe, werte.komboMax),
       verbesserungen: abenteuer.gesammelt(),
+      gegenangriff: abenteuer.gegenangriff(),
     };
   }
 
@@ -699,6 +766,7 @@ function initSudoku(container) {
       abenteuer.starteRaetsel(grad.id, r.raetsel, r.loesung);
       if (modus !== "abenteuer") return;
       spiel = abenteuer.zustand.raetsel;
+      kampf.zeigeGegenangriff(abenteuer.gegenangriff());   // Wirkungen enden mit dem alten Sudoku
       setzeBeschaeftigtAnzeige();
       zeigeStatus("");
       zeigeAbenteuerGrad();
@@ -721,6 +789,22 @@ function initSudoku(container) {
 
     const vorher = aktuellesGitter();
     const ergebnis = abenteuer.setzeZahl(index, ziffer);   // Regeln → Ereignisse → Kampffenster
+
+    if (ergebnis.art === "versiegelt") {
+      // Siegel des Bosses: Hier geht gerade nichts. Läuft noch eine Animation,
+      // springt sie zum Ende – dann sieht man auch das Siegel.
+      if (kampf.laeuft()) kampf.beschleunige();
+      zeigeKurzHinweis("Dieser Block ist versiegelt");
+      return;
+    }
+
+    if (ergebnis.niederlage) {
+      // Niederlage – durch die falsche Zahl oder den Hieb des Bosses
+      if (ergebnis.art === "fehler") zeigeFehlversuch(index, ziffer);
+      else zeichne();
+      starteNiederlage();
+      return;
+    }
 
     if (ergebnis.art === "richtig") {
       const nachher = aktuellesGitter();
@@ -755,20 +839,28 @@ function initSudoku(container) {
 
     if (ergebnis.art === "fehler") {
       zeigeFehlversuch(index, ziffer);
-      if (ergebnis.niederlage) {
-        // Eingabe sperren, Niederlage-Bildschirm zeigen, dann neu antreten
-        const diesesAbenteuer = abenteuer;
-        beschaeftigt.abenteuer = true;
-        setzeBeschaeftigtAnzeige();
-        kampf.niederlage(rahmen, letzteNiederlage).then(function () {
-          if (abenteuer !== diesesAbenteuer) return;
-          kampf.zeigeStand(standFuerAnzeige());
-          kampf.text("Neuer Versuch gegen " + abenteuer.boss().name + "!");
-          beschaeftigt.abenteuer = false;
-          neuesAbenteuerRaetsel();
-        });
-      }
     }
+  }
+
+  /** Eingabe sperren, Niederlage-Bildschirm zeigen (nach den Animationen), dann neu antreten. */
+  function starteNiederlage() {
+    const diesesAbenteuer = abenteuer;
+    beschaeftigt.abenteuer = true;
+    setzeBeschaeftigtAnzeige();
+    kampf.niederlage(rahmen, letzteNiederlage).then(function () {
+      if (abenteuer !== diesesAbenteuer) return;
+      kampf.zeigeStand(standFuerAnzeige());
+      kampf.text("Neuer Versuch gegen " + abenteuer.boss().name + "!");
+      beschaeftigt.abenteuer = false;
+      neuesAbenteuerRaetsel();
+    });
+  }
+
+  /** Kurzer Hinweis über dem Gitter, der nach gut einer Sekunde verschwindet. */
+  function zeigeKurzHinweis(text) {
+    zeigeStatus(text, "hinweis");
+    clearTimeout(statusZeit);
+    statusZeit = setTimeout(function () { if (status.textContent === text) zeigeStatus(""); }, 1400);
   }
 
   /**
