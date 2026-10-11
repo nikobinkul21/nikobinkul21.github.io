@@ -2287,7 +2287,7 @@
    ========================================================================== */
 
 :root {
-  --parade-farbe: #3d9bff;          /* Schild, wenn eine Parade bereitsteht */
+  --parade-farbe: #3d9bff;          /* Schild, wenn im nächsten Zug pariert werden kann */
   --siegel-kette: rgba(139, 92, 255, 0.55);
   --finsternis-schatten: rgba(20, 16, 40, 0.62);
   --fluch-farbe: #2f9e5a;
@@ -2366,7 +2366,9 @@
 .kampf-figur--boss { top: 19%; }
 .kampf-buehne.ist-elite .kampf-figur--boss { top: 14%; }
 
-/* Schild beim Helden: matt = keine Parade, blau leuchtend = Parade bereit */
+/* Schild beim Helden: matt = gerade keine Parade möglich,
+   blau leuchtend = der nächste Zug löst den Angriff aus – eine fertige
+   Zeile, Spalte oder ein fertiger Block in diesem Zug pariert */
 .kampf-parade {
   position: absolute;
   left: calc(6% + var(--kampf-figur-groesse) * 0.82);
@@ -2390,14 +2392,14 @@
   fill: #8a93a6;
 }
 
-.kampf-parade.ist-bereit {
+.kampf-parade.ist-moeglich {
   opacity: 1;
   filter: none;
   box-shadow: 0 0 0 2px var(--parade-farbe), 0 0 12px var(--parade-farbe);
+  animation: parade-laedt 0.5s ease-out;
 }
 
-.kampf-parade.ist-bereit svg { fill: var(--parade-farbe); }
-.kampf-parade.laedt { animation: parade-laedt 0.5s ease-out; }
+.kampf-parade.ist-moeglich svg { fill: var(--parade-farbe); }
 .kampf-parade.pariert { box-shadow: 0 0 0 4px #fff, 0 0 22px var(--parade-farbe); }
 
 .kampf-parade .kampf-tipp {

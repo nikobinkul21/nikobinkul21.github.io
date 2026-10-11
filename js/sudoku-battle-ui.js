@@ -394,7 +394,7 @@ const SudokuKampf = (function () {
           "</button>" +
           // Held unten: Figur links, Herzen, Münzen und Würfel rechts
           '<div class="kampf-figur kampf-figur--held"><canvas class="kampf-held"></canvas></div>' +
-          // Schild beim Helden: Steht eine Parade bereit?
+          // Schild beim Helden: leuchtet im Zug des Angriffs (dann pariert eine fertige Einheit)
           '<button type="button" class="kampf-parade hat-tipp">' + symbolSvg("schild") + tippHtml() + "</button>" +
           '<div class="kampf-info kampf-info--held">' +
             '<div class="kampf-herzen" role="img"></div>' +
@@ -1129,7 +1129,7 @@ const SudokuKampf = (function () {
      * Spielfeld weiter (optionen.beimGegenangriff), das daraus Siegel,
      * Finsternis und Fluch zeichnet. Wird nur aus Schritten der Warteschlange
      * aufgerufen – so passt alles zur Reihenfolge der Animationen.
-     * @param {object} stand – { angriff, zaehler, warnung, paraden, paradenMax, wirkungen }
+     * @param {object} stand – { angriff, zaehler, warnung, paradeMoeglich, wirkungen }
      */
     function zeigeGegenangriff(stand) {
       if (!stand) return;
@@ -1142,15 +1142,16 @@ const SudokuKampf = (function () {
         el.absichtText.textContent = zaehlerText(stand.zaehler);
         el.absicht.classList.toggle("warnt", Boolean(stand.warnung));
         const erklaerung = a.name + ": " + a.beschreibung + " Kommt alle " + a.abstand +
-          " Züge – jede gesetzte Zahl zählt. Eine Parade wehrt ihn ab.";
+          " Züge – jede gesetzte Zahl zählt. Vervollständigst du im Zug des Angriffs eine Zeile, Spalte oder einen Block, pariert der Held.";
         el.absichtTipp.textContent = erklaerung;
         el.absicht.setAttribute("aria-label", absichtText(a, stand.zaehler) + ". " + erklaerung);
       }
-      const bereit = stand.paraden > 0;
-      el.parade.classList.toggle("ist-bereit", bereit);
-      const paradeText = bereit
-        ? "Parade bereit: Der nächste Angriff des Bosses wird abgewehrt."
-        : "Keine Parade. Vervollständige eine Zeile, Spalte oder einen 3×3-Block – dann wehrt der Held den nächsten Angriff ab.";
+      // Mit dem nächsten Zug greift der Boss an: Jetzt zählt die Parade
+      const moeglich = Boolean(stand.paradeMoeglich && a);
+      el.parade.classList.toggle("ist-moeglich", moeglich);
+      const paradeText = moeglich
+        ? "Parade jetzt möglich: Der Boss greift mit deinem nächsten Zug an. Vervollständigst du damit eine Zeile, Spalte oder einen 3×3-Block, wehrt der Held ab."
+        : "Parade: Vervollständige im Zug des Angriffs eine Zeile, Spalte oder einen 3×3-Block – dann wehrt der Held ab.";
       el.paradeTipp.textContent = paradeText;
       el.parade.setAttribute("aria-label", paradeText);
       if (optionen && optionen.beimGegenangriff) optionen.beimGegenangriff(stand);
@@ -1239,7 +1240,7 @@ const SudokuKampf = (function () {
             animiere(el.heldFigur, "pariert", DAUER.parade);
             faerbe(el.parade, "pariert", DAUER.parade);
             banner("Pariert!", null, "pariert");
-            verlaufEintrag({ text: "Pariert: " + e.angriff.name, wert: "", art: "parade", symbol: "schild" });
+            verlaufEintrag({ text: "Pariert: " + e.angriff.name, wert: "Einheit fertig", art: "parade", symbol: "schild" });
             return pause(DAUER.parade);
           }
           if (e.verpufft) {
@@ -1451,12 +1452,8 @@ const SudokuKampf = (function () {
             const neuesHerz = el.herzen.children[e.leben - 1];
             if (neuesHerz) animiere(neuesHerz, "verschwindet", 400);   // kurzes "Aufpoppen"
           }
-          // Gegenangriff: Zähler eins weiter, Wirkungen laufen ab, ggf. neue Parade
+          // Gegenangriff: Zähler eins weiter, Wirkungen laufen ab
           zeigeGegenangriff(e.gegenangriff);
-          if (e.paradeNeu) {
-            verlaufEintrag({ text: "Parade bereit", wert: "", art: "parade", symbol: "schild" });
-            animiere(el.parade, "laedt", 500);
-          }
           return zeigeMuenzen(e.muenzen, true);
         });
       });
@@ -1684,7 +1681,7 @@ const SudokuKampf = (function () {
         zeigeHp(e.hp, e.boss.maxHp);
         zeigeHerzen(e.leben, e.maxLeben);
         zeigeRekord(e.boss, rekord);
-        zeigeGegenangriff(e.gegenangriff);      // neuer Angriff, Parade verfallen
+        zeigeGegenangriff(e.gegenangriff);      // neuer Angriff, neuer Zähler
         if (e.boss.elite) {
           // Eigene Einblendung (entfällt bei "Bewegung reduzieren" – die Kennzeichnungen bleiben)
           if (!ohneBewegung() && !eilig()) {

@@ -229,13 +229,15 @@ const SUDOKU_RPG_KONFIG = {
 
   // Gegenangriffe: Jeder Boss kündigt seinen Angriff an. Jede gesetzte Zahl
   // (richtig oder falsch) zählt den Zähler um 1 herunter, bei 0 greift der
-  // Boss an und der Zähler beginnt von vorn. Eine Parade (fertige Zeile,
-  // Spalte oder fertiger Block) wehrt den nächsten Angriff ganz ab.
+  // Boss an und der Zähler beginnt von vorn.
+  // Parade: Vervollständigt GENAU der Zug, in dem der Boss angreift, eine
+  // Zeile, Spalte oder einen 3×3-Block, wehrt der Held den Angriff ab.
+  // Paraden lassen sich nicht aufheben – es zählt nur dieser eine Zug.
   gegenangriff: {
     eliteKuerzer: 2,        // bei Elite-Bossen kommt der Angriff so viele Züge früher
     warnungAb: 2,           // in den letzten so vielen Zügen pulsiert die Anzeige
-    paradenMax: 1,          // so viele Paraden kann man höchstens vorrätig haben
   },
+
 
   // Die Angriffe. Neuer Angriff? Einfach ein weiterer Eintrag:
   //   id, name, symbol, farbe – Kennung und Anzeige (Symbole: SYMBOLE in js/sudoku-battle-ui.js)
@@ -619,8 +621,8 @@ const SudokuRPG = (function () {
   }
 
   /** Gegenangriff-Stand für einen frischen Kampf gegen diesen Boss. */
-  function neuerGegenangriff(nummer, paraden) {
-    return { zaehler: angriffsAbstand(nummer), paraden: paraden || 0, wirkungen: [] };
+  function neuerGegenangriff(nummer) {
+    return { zaehler: angriffsAbstand(nummer), wirkungen: [] };
   }
 
   /**
@@ -908,7 +910,6 @@ const SudokuRPG = (function () {
                              (der nächste bekommt eine andere)
        gegenangriff: {     ← Angriff des aktuellen Bosses (neu in Version 6)
          zaehler,          ← so viele Züge noch bis zum Angriff
-         paraden,          ← vorrätige Paraden (0 bis paradenMax)
          wirkungen: [ { id, rest, daten } ]  ← laufende Wirkungen (rest = Züge)
        },
        raetsel: null | { grad, vorgaben, loesung, eingaben, geloest,
@@ -1122,12 +1123,12 @@ const SudokuRPG = (function () {
 
     // Gegenangriff (neu in Version 6). Fehlt er oder passt er nicht, beginnt
     // der Zähler von vorn. Wirkungen gibt es nur in einem laufenden Sudoku.
-    const gegenangriff = neuerGegenangriff(roh.bossNummer, 0);
+    const gegenangriff = neuerGegenangriff(roh.bossNummer);
     const ga = vorV6 ? null : roh.gegenangriff;
     if (ga && typeof ga === "object") {
       const abstand = angriffsAbstand(roh.bossNummer);
       if (istGanzzahl(ga.zaehler, 1, Math.max(1, abstand))) gegenangriff.zaehler = ga.zaehler;
-      if (istGanzzahl(ga.paraden, 0, K.gegenangriff.paradenMax)) gegenangriff.paraden = ga.paraden;
+      // (Ein früherer Stand mit vorrätigen "paraden" verliert sie – Paraden gibt es nur noch im Zug des Angriffs)
       if (Array.isArray(ga.wirkungen) && raetsel && !raetsel.geloest) {
         gegenangriff.wirkungen = ga.wirkungen.filter(function (w) {
           const a = w && angriffInfo(w.id);
@@ -1316,8 +1317,8 @@ const SudokuRPG = (function () {
         angriff: angriffFuerAnzeige(angriffVonBoss(zustand.bossNummer), zustand.bossNummer),
         zaehler: ga.zaehler,
         warnung: ga.zaehler <= K.gegenangriff.warnungAb,
-        paraden: ga.paraden,
-        paradenMax: K.gegenangriff.paradenMax,
+        // Der nächste Zug löst den Angriff aus: Eine fertige Einheit in diesem Zug pariert
+        paradeMoeglich: ga.zaehler === 1,
         wirkungen: ga.wirkungen.map(function (w) {
           const a = angriffInfo(w.id);
           return { id: w.id, name: a.name, symbol: a.symbol, farbe: a.farbe, rest: w.rest, daten: Object.assign({}, w.daten) };
@@ -1333,9 +1334,10 @@ const SudokuRPG = (function () {
     /**
      * Ein Zug ist vorbei (richtige oder falsche Zahl): Wirkungen laufen ab,
      * der Zähler sinkt. Bei 0 greift der Boss an.
+     * @param {boolean} einheitFertig – hat dieser Zug eine Zeile, Spalte oder einen Block vervollständigt?
      * @returns {object|null} – Daten für das Ereignis "angriff" (oder null)
      */
-    function zugVorbei(boss) {
+    function zugVorbei(boss, einheitFertig) {
       const ga = zustand.gegenangriff;
       const r = zustand.raetsel;
       ga.wirkungen.forEach(function (w) { w.rest--; });
@@ -1354,11 +1356,14 @@ const SudokuRPG = (function () {
       if (!angriff) return null;
       ga.zaehler--;
       if (ga.zaehler > 0) return null;
-      return angreifen(angriff, boss);
+      return angreifen(angriff, boss, einheitFertig);
     }
 
-    /** Der Boss greift an: Parade wehrt ab, sonst wirkt der Angriff (oder verpufft). */
-    function angreifen(angriff, boss) {
+    /**
+     * Der Boss greift an. Hat derselbe Zug eine Einheit vervollständigt, pariert
+     * der Held – sonst wirkt der Angriff (oder verpufft).
+     */
+    function angreifen(angriff, boss, pariert) {
       const ga = zustand.gegenangriff;
       const r = zustand.raetsel;
       ga.zaehler = angriffsAbstand(zustand.bossNummer);
@@ -1368,8 +1373,7 @@ const SudokuRPG = (function () {
         pariert: false, verpufft: false, text: "", wirkung: null, niederlage: false,
         lebenVorher: vorher.leben, komboVorher: vorher.kombo,
       };
-      if (ga.paraden > 0) {
-        ga.paraden--;
+      if (pariert) {
         ereignis.pariert = true;
         ereignis.text = "Pariert!";
       } else if (angriff.dauer > 0 && (!r || r.geloest)) {
@@ -1408,8 +1412,8 @@ const SudokuRPG = (function () {
 
     /**
      * Niederlage: gleicher Boss mit vollen HP, Leben wieder auf Start, neues
-     * Sudoku nötig. Münzen, Verbesserungen und Paraden bleiben, der Zähler
-     * des Gegenangriffs beginnt von vorn.
+     * Sudoku nötig. Münzen und Verbesserungen bleiben, der Zähler des
+     * Gegenangriffs beginnt von vorn.
      * @returns {object} – Daten für das Ereignis "niederlage"
      */
     function niederlageAnwenden(boss) {
@@ -1421,7 +1425,7 @@ const SudokuRPG = (function () {
       zustand.leben = K.startLeben;
       zustand.raetsel = null;
       if (zustand.elite) zustand.elite.treffer = 0;   // seltene Eigenschaft bleibt, der Zähler beginnt neu
-      zustand.gegenangriff = neuerGegenangriff(zustand.bossNummer, zustand.gegenangriff.paraden);
+      zustand.gegenangriff = neuerGegenangriff(zustand.bossNummer);
       return niederlage;
     }
 
@@ -1460,7 +1464,7 @@ const SudokuRPG = (function () {
         return { art: "fehler", niederlage: true, eigenheit: eigenheit, angriff: null };
       }
       // Gegenangriff: Der Zug zählt. Ein Hieb kann das letzte Leben kosten.
-      const angriff = zugVorbei(boss);
+      const angriff = zugVorbei(boss, false);      // eine falsche Zahl vervollständigt nichts
       ereignis.gegenangriff = angriffAnzeigeVorAngriff(angriff);
       let niederlage = null;
       if (angriff) {
@@ -1487,7 +1491,6 @@ const SudokuRPG = (function () {
       if (angriff) {
         stand.zaehler = 0;
         stand.warnung = true;
-        stand.paraden = angriff.pariert ? stand.paraden + 1 : stand.paraden;
         // Die neue Wirkung erscheint erst mit dem Angriff
         if (angriff.wirkung) stand.wirkungen = stand.wirkungen.filter(function (w) { return w.id !== angriff.wirkung.id; });
       }
@@ -1592,12 +1595,6 @@ const SudokuRPG = (function () {
       zustand.leben = Math.min(w.maxLeben, zustand.leben + effekt.leben);
       const lebenPlus = zustand.leben - lebenVorher;
 
-      // 5b. Parade: Eine fertige Zeile, Spalte oder ein fertiger Block lädt eine
-      //     Parade auf (höchstens paradenMax vorrätig)
-      const ga = zustand.gegenangriff;
-      const paradeNeu = doppelt && ga.paraden < K.gegenangriff.paradenMax;
-      if (paradeNeu) ga.paraden++;
-
       // 6. Boss besiegt? → Rekord, nächster Boss, Leben auffüllen, Verbesserungen anbieten.
       //    Elite-Boss: Extra-Münzen und mehrere Verbesserungen zur Wahl.
       const besiegt = hpNachher === 0;
@@ -1617,9 +1614,9 @@ const SudokuRPG = (function () {
         zustand.auswahlAnzahl = zustand.auswahl
           ? Math.min(zustand.auswahl.length, bossVorher.elite ? Math.max(1, K.elite.verbesserungenWaehlen) : 1)
           : 0;
-        // Der neue Boss beginnt seinen Angriffszähler von vorn; Paraden
-        // und laufende Wirkungen verfallen mit dem besiegten Boss
-        zustand.gegenangriff = neuerGegenangriff(zustand.bossNummer, 0);
+        // Der neue Boss beginnt seinen Angriffszähler von vorn; laufende
+        // Wirkungen verfallen mit dem besiegten Boss
+        zustand.gegenangriff = neuerGegenangriff(zustand.bossNummer);
       }
 
       // 7. Sudoku komplett?
@@ -1629,8 +1626,9 @@ const SudokuRPG = (function () {
       }
 
       // 8. Gegenangriff: Der Zug zählt (nicht, wenn der Boss gerade besiegt wurde).
+      //    Hat dieser Zug eine Einheit vervollständigt, pariert der Held.
       //    Wirkungen enden mit dem Sudoku. Ein Hieb kann das letzte Leben kosten.
-      const angriff = besiegt ? null : zugVorbei(bossVorher);
+      const angriff = besiegt ? null : zugVorbei(bossVorher, doppelt);
       if (geloest) zustand.gegenangriff.wirkungen = [];
       const gegenangriff = besiegt ? null : angriffAnzeigeVorAngriff(angriff);
       let niederlage = null;
@@ -1669,7 +1667,6 @@ const SudokuRPG = (function () {
         lebenGewuenscht: effekt.leben, lebenPlus: lebenPlus,
         leben: lebenVorher + lebenPlus, maxLeben: w.maxLeben,
         verflucht: rechnung.verflucht,
-        paradeNeu: paradeNeu,
         // Gegenangriff-Stand nach diesem Zug (vor einem Angriff); null, wenn der Boss besiegt ist
         gegenangriff: gegenangriff,
       };
@@ -1699,7 +1696,7 @@ const SudokuRPG = (function () {
         eliteBonus: eliteBonus, regenbogen: regenbogen,
         powerup: powerup, muenzenPlus: muenzenPlus, lebenPlus: lebenPlus,
         besiegt: besiegt, geloest: geloest && !niederlage, auswahl: Boolean(zustand.auswahl),
-        verflucht: rechnung.verflucht, paradeNeu: paradeNeu, angriff: angriff, niederlage: Boolean(niederlage),
+        verflucht: rechnung.verflucht, angriff: angriff, niederlage: Boolean(niederlage),
       };
     }
 
