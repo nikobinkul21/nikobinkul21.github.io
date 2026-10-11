@@ -45,6 +45,20 @@ const SUDOKU_FX_KONFIG = {
     reduziertSchritt: 160,  // "Bewegung reduzieren": Pause je Zählschritt
   },
 
+  // Regenbogenschlag (Regenbogenfeld): feste Abschnitte, zusammen etwa 3 Sekunden.
+  // Läuft immer in voller Länge – auch bei "Schnell" und auf dem Smartphone,
+  // und er lässt sich nicht abkürzen.
+  regenbogenSchlag: {
+    zerspringen: 450,       // Feld zerspringt in buntes Licht
+    strahl: 500,            // Regenbogenstrahl fliegt zum Schwert
+    aufladen: 750,          // Schwert lädt sich in allen Farben auf
+    ausholen: 300,          // Held holt zum Riesenschlag aus
+    aufloesen: 1000,        // Blitz, HP auf null, Boss zerfällt in bunte Funken
+    ruhig: 1400,            // ruhige Fassung ("Aus" / "Bewegung reduzieren"): Einblenden
+    funkenFeld: 16,         // Funken beim Zerspringen des Felds
+    funkenBoss: 36,         // Funken beim Zerfallen des Bosses
+  },
+
   // Auf dem Smartphone sind die Wege kürzer – der Ablauf ist etwa halb so lang
   faktorHandy: 0.5,
 
@@ -100,9 +114,23 @@ const SudokuSchadenFx = (function () {
       if (!teil) return;
       const name = teil[1], rechnung = teil[2], text = teil[3];
       const zahl = parseFloat(text.replace(",", "."));
+      // Reihenbrecher: ein Etikett JE fertiger Einheit, jedes fliegt von seiner
+      // Zeile, Spalte oder seinem Block los ("einheit" = 0, 1, 2 in dieser Reihenfolge)
+      if (name === "Reihenbrecher") {
+        const einheiten = einheitenListe(e);
+        const anzahl = Math.max(1, einheiten.length);
+        const jeEinheit = zahl / anzahl;
+        for (let k = 0; k < anzahl; k++) {
+          wert += jeEinheit;
+          liste.push({ art: "bonus", label: "Reihenbrecher +" + SudokuRPG.zahlText(jeEinheit), quelle: "reihe",
+            einheit: einheiten[k] || null, wert: aufrunden(wert), zeile: i - 1 });
+        }
+        return;
+      }
       wert = rechnung === "×" ? wert * zahl : wert + zahl;
       const grad = gradMitName(name);
-      const eintrag = { art: "bonus", label: name + " " + rechnung + text, quelle: "wuerfel", wert: aufrunden(wert) };
+      // zeile: zu welcher Zeile in "Letzter Treffer" der Schritt gehört
+      const eintrag = { art: "bonus", label: name + " " + rechnung + text, quelle: "wuerfel", wert: aufrunden(wert), zeile: i - 1 };
       if (name === "Kritisch") {
         eintrag.art = "krit";
         eintrag.label = "Krit " + rechnung + text;
@@ -123,6 +151,12 @@ const SudokuSchadenFx = (function () {
     });
     if (liste.length > 0) liste[liste.length - 1].wert = e.schaden;
     return liste;
+  }
+
+  /** Die Einheiten, die diese Zahl vervollständigt hat: ["zeile", "spalte", "block"] (Auswahl). */
+  function einheitenListe(e) {
+    const ein = e.einheiten || {};
+    return ["zeile", "spalte", "block"].filter(function (n) { return ein[n]; });
   }
 
   /** Alle Zeiten mal Faktor (Schnell, Smartphone …). */
@@ -319,7 +353,7 @@ const SudokuSchadenFx = (function () {
       schritte.forEach(function (s, i) {
         kette = kette.then(function () { return u.pause(t.reduziertSchritt); }).then(function () {
           zeigeWert(zahl, s.wert);
-          u.beimSchritt(i, s.wert);
+          u.beimSchritt(s.zeile, s.wert);
         });
       });
       return kette.then(function () { return u.pause(t.reduziertSchritt); }).then(function () {
@@ -347,7 +381,7 @@ const SudokuSchadenFx = (function () {
         return zaehle(zahl, wert, krit.wert, t.krit * 0.7, u);
       }).then(function () {
         wert = krit.wert;
-        u.beimSchritt(0, wert);
+        u.beimSchritt(krit.zeile, wert);
         return u.warte(t.krit * 0.3);
       });
     }
@@ -367,7 +401,7 @@ const SudokuSchadenFx = (function () {
         // Flug startet nach i × abstand …
         const angekommen = u.warte(i * abstand).then(function () {
           if (u.eilig()) return null;
-          const von = u.quelle(s.quelle) || u.start;
+          const von = u.quelle(s.quelle, s) || u.start;
           const etikett = element("fx-etikett fx-etikett--" + s.quelle, von, "<span>" + s.label + "</span>");
           etikett.querySelector(".fx-inhalt").animate([
             { transform: "scale(0.6)", opacity: 0.4 }, { transform: "scale(1)", opacity: 1 },
@@ -383,7 +417,7 @@ const SudokuSchadenFx = (function () {
           return zaehle(zahl, wert, s.wert, abstand * 0.8, u);
         }).then(function () {
           wert = s.wert;
-          u.beimSchritt(index + i, wert);
+          u.beimSchritt(s.zeile, wert);
         });
       });
       return folge.then(function () { return u.warte(Math.min(120, abstand)); });
@@ -472,8 +506,62 @@ const SudokuSchadenFx = (function () {
     }).then(function () { zahl.remove(); });
   }
 
+  /* ------------------------------------------------------------------------
+     REGENBOGENSCHLAG (Regenbogenfeld) – einzelne Bausteine, den Ablauf
+     steuert sudoku-battle-ui.js
+     ------------------------------------------------------------------------ */
+
+  /** Das Feld zerspringt in buntes Licht: bunte Funken und ein Regenbogenring. */
+  function zerspringen(p, ms) {
+    ring(p, "fx-ring--regenbogen", ms * 1.2, 1.4);
+    funken(p, K.regenbogenSchlag.funkenFeld, true, ms);
+  }
+
+  /**
+   * Regenbogenstrahl von a nach b: ein bunter Lichtstreifen, der sich vom
+   * Feld bis zum Schwert ausdehnt und dann verblasst (nur transform/opacity).
+   */
+  function regenbogenStrahl(a, b, ms) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const laenge = Math.sqrt(dx * dx + dy * dy);
+    const winkel = Math.atan2(dy, dx) * 180 / Math.PI;
+    const strahl = element("fx-strahl", a, '<span class="fx-strahl-licht"></span>');
+    const innen = strahl.querySelector(".fx-inhalt");
+    // fx-strahl beginnt am Punkt a (nicht zentriert) und zeigt Richtung b
+    strahl.querySelector(".fx-mitte").style.transform = "rotate(" + winkel + "deg)";
+    innen.style.width = laenge + "px";
+    innen.animate([
+      { transform: "scaleX(0)", opacity: 1 },
+      { transform: "scaleX(1)", opacity: 1, offset: 0.55 },
+      { transform: "scaleX(1)", opacity: 0 },
+    ], { duration: Math.max(1, ms), easing: "ease-out", fill: "forwards" });
+    leuchtspur(a, b, ms * 0.6, stufeFuer(Infinity));
+    setTimeout(function () { strahl.remove(); }, ms + 50);
+  }
+
+  /** Der ganze Bildschirm blitzt in Regenbogenfarben auf. */
+  function bildschirmBlitz(ms) {
+    const blitz = document.createElement("div");
+    blitz.className = "fx-bildschirm-blitz";
+    ebeneHolen().appendChild(blitz);
+    blitz.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.15 }, { opacity: 0 }],
+      { duration: Math.max(1, ms), easing: "ease-out", fill: "forwards" });
+    setTimeout(function () { blitz.remove(); }, ms + 50);
+  }
+
+  /** Der Boss zerfällt in bunte Funken (viele, weit gestreut). */
+  function aufloesen(p, ms) {
+    ring(p, "fx-ring--regenbogen", ms * 0.6, 3);
+    funken(p, K.regenbogenSchlag.funkenBoss, true, ms * 0.7);
+    setTimeout(function () { funken(p, Math.round(K.regenbogenSchlag.funkenBoss / 2), true, ms * 0.5); }, ms * 0.3);
+  }
+
   return {
     KONFIG: K,
+    zerspringen: zerspringen,
+    regenbogenStrahl: regenbogenStrahl,
+    bildschirmBlitz: bildschirmBlitz,
+    aufloesen: aufloesen,
     stufeFuer: stufeFuer,
     schritteAus: schritteAus,
     aufbau: aufbau,

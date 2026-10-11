@@ -271,3 +271,39 @@
     opacity: 0.35;
   }
 }
+
+
+/* ---------- Reihenbrecher und Regenbogenschlag ---------- */
+
+/* Reihenbrecher: Etikett in der Farbe der Verbesserung (fliegt von der fertigen Reihe los) */
+.fx-etikett--reihe span { background: #1f9e89; }
+
+/* Regenbogenstrahl: bunter Lichtstreifen vom Feld zum Schwert.
+   fx-mitte wird im JavaScript gedreht (Ursprung links = Startpunkt). */
+.fx-strahl .fx-mitte {
+  transform-origin: 0 50%;
+}
+
+.fx-strahl .fx-inhalt {
+  height: 12px;
+  margin-top: -6px;
+  transform-origin: 0 50%;
+}
+
+.fx-strahl-licht {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff3d3d, #ffb800, #3ddc5a, #29d3ff, #8b5cff, #ff3df0);
+  box-shadow: 0 0 12px #fff, 0 0 22px #ff3df0;
+}
+
+/* Der ganze Bildschirm blitzt bunt auf */
+.fx-bildschirm-blitz {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(circle at 60% 40%, #fff 0%, rgba(255, 255, 255, 0.6) 25%, transparent 70%),
+    linear-gradient(120deg, #ff3d3d, #ffb800, #3ddc5a, #29d3ff, #8b5cff, #ff3df0);
+}

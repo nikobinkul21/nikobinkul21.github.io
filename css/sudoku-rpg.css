@@ -2059,3 +2059,221 @@
     filter: brightness(1.8);
   }
 }
+
+
+/* ==========================================================================
+   REGENBOGENFELD IM GITTER (nur im Abenteuer)
+   sudoku-ui.js hängt in das Feld eine Ebene .sudoku-regenbogen mit zwei
+   Schichten: laufende Regenbogenfarben und ein heller Glanz, der in
+   Abständen über das Feld streicht. Bunt – klar anders als die einfarbigen
+   Power-up-Felder (rot, grün, gold). Immer sichtbar, auch gegen "Nebel".
+   ========================================================================== */
+
+:root {
+  --regenbogen-farben: conic-gradient(#ff3d3d, #ffb800, #3ddc5a, #29d3ff, #8b5cff, #ff3df0, #ff3d3d);
+  --regenbogen-tempo: 3s;         /* eine Runde der laufenden Farben */
+  --regenbogen-glanz-tempo: 2.4s; /* Abstand der Lichtreflexe */
+}
+
+.sudoku-regenbogen {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85), inset 0 0 0 3px rgba(0, 0, 0, 0.25);
+}
+
+/* Die Farben: ein großer, gedrehter Farbkreis (es dreht sich nur transform) */
+.regenbogen-farben {
+  position: absolute;
+  left: -50%;
+  top: -50%;
+  width: 200%;
+  height: 200%;
+  background: var(--regenbogen-farben);
+  opacity: 0.8;
+  animation: regenbogen-drehen var(--regenbogen-tempo) linear infinite;
+}
+
+/* Lichtreflex: ein heller Streifen, der periodisch quer über das Feld huscht */
+.regenbogen-glanz {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.95) 48%, transparent 66%);
+  transform: translateX(-120%);
+  animation: regenbogen-glanz var(--regenbogen-glanz-tempo) ease-in-out infinite;
+}
+
+/* Die Zahl bleibt lesbar: weiß mit dunklem Umriss über den Farben */
+.sudoku-feld.ist-regenbogen .sudoku-ziffer {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  -webkit-text-stroke: 3px #1b1b24;
+  paint-order: stroke fill;
+}
+
+/* Das Feld zerspringt (Regenbogenschlag): leuchtet auf und zerfällt */
+.sudoku-regenbogen.zerspringt {
+  animation: regenbogen-zerspringen 0.7s ease-out forwards;
+}
+
+@keyframes regenbogen-drehen {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes regenbogen-glanz {
+  0%, 55% { transform: translateX(-120%); }
+  100%    { transform: translateX(120%); }
+}
+
+@keyframes regenbogen-zerspringen {
+  0%   { opacity: 1; transform: scale(1); filter: brightness(1); }
+  30%  { opacity: 1; transform: scale(1.25); filter: brightness(2.2); }
+  100% { opacity: 0; transform: scale(1.6); filter: brightness(3); }
+}
+
+/* Während des Regenbogenschlags: Eingabe gesperrt, aber nicht abgedunkelt */
+.sudoku-brett.ist-gesperrt {
+  pointer-events: none;
+}
+
+
+/* ==========================================================================
+   REGENBOGENSCHLAG IM KAMPFFENSTER
+   ========================================================================== */
+
+/* Held lädt sich in allen Farben auf, dann der Riesenschlag */
+.kampf-figur--held.laedt-regenbogen { animation: regenbogen-aufladen 0.75s ease-in-out; }
+.kampf-figur--held.riesenschlag { animation: regenbogen-riesenschlag 0.5s ease-out; }
+
+/* Der Boss zerfällt in buntes Licht (bleibt danach unsichtbar bis zum nächsten Boss) */
+.kampf-figur--boss.loest-sich-auf { animation: regenbogen-aufloesen 1s ease-in forwards; }
+
+@keyframes regenbogen-aufladen {
+  0%   { transform: none; filter: none; }
+  60%  { transform: translate(-10px, 4px) scale(1.05); filter: drop-shadow(0 0 10px #ff3df0) drop-shadow(0 0 16px #29d3ff) brightness(1.3); }
+  100% { transform: translate(-14px, 6px) scale(1.08); filter: drop-shadow(0 0 14px #ffb800) drop-shadow(0 0 22px #8b5cff) brightness(1.5); }
+}
+
+@keyframes regenbogen-riesenschlag {
+  0%   { transform: translate(-14px, 6px) scale(1.08); }
+  40%  { transform: translate(60px, -34px) rotate(-22deg) scale(1.3); filter: drop-shadow(0 0 18px #fff) brightness(1.8); }
+  100% { transform: none; filter: none; }
+}
+
+@keyframes regenbogen-aufloesen {
+  0%   { opacity: 1; transform: none; filter: brightness(1); }
+  20%  { opacity: 1; transform: scale(1.1); filter: brightness(4) drop-shadow(0 0 14px #ff3df0) drop-shadow(0 0 20px #29d3ff); }
+  55%  { opacity: 0.7; transform: scale(1.18) rotate(4deg); filter: hue-rotate(180deg) brightness(3) drop-shadow(0 0 22px #ffb800); }
+  100% { opacity: 0; transform: scale(1.4) rotate(-6deg); filter: hue-rotate(360deg) brightness(5) blur(3px); }
+}
+
+/* Ruhige Fassung ("Aus" / "Bewegung reduzieren"): Bühne färbt sich sanft
+   bunt, der Boss blendet einfach aus */
+.kampf-buehne.regenbogen-ruhig::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--regenbogen-farben);
+  opacity: 0.3;
+  animation: regenbogen-einblenden 0.5s ease-out;
+}
+
+.kampf-figur--boss.loest-sich-auf.ist-ruhig {
+  animation: regenbogen-ausblenden 0.8s ease-out forwards;
+}
+
+@keyframes regenbogen-einblenden {
+  from { opacity: 0; }
+  to   { opacity: 0.3; }
+}
+
+@keyframes regenbogen-ausblenden {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* HP-Balken läuft in einem Zug auf null */
+.kampf-hp-fuellung.faellt-auf-null {
+  transition: width 0.35s ease-in;
+}
+
+/* "Regenbogenschlag!" als großer bunter Hinweis */
+.kampf-banner--regenbogen {
+  top: 50%;
+  padding: 6px 14px;
+  font-size: 1.3rem;
+  color: #fff;
+  background: linear-gradient(90deg, #ff3d3d, #ffb800, #3ddc5a, #29d3ff, #8b5cff, #ff3df0);
+  -webkit-text-stroke: 3px #1b1b24;
+  paint-order: stroke fill;
+  box-shadow: 0 0 22px rgba(255, 61, 240, 0.8), 3px 3px 0 rgba(0, 0, 0, 0.3);
+  animation-duration: 2.6s;
+}
+
+/* Große bunte Schadenszahl */
+.kampf-schwebezahl--regenbogen {
+  top: 10%;
+  right: 6%;
+  font-size: 3rem;
+  color: #fff;
+  -webkit-text-stroke: 3px #8b5cff;
+  text-shadow: 0 0 10px #ff3df0, 0 0 18px #29d3ff;
+  animation-duration: 1.2s;
+}
+
+/* Panel: Zeile "Regenbogenschlag", Verlauf, Reihenbrecher */
+.panel-zeile--regenbogen,
+.panel-summe--regenbogen .panel-wert,
+.panel-kurz-schaden[data-art="regenbogen"] {
+  color: #ff7ef5;
+  font-weight: 800;
+}
+.panel-eintrag--regenbogen { color: #ff7ef5; font-weight: 800; }
+.panel-zeile--reihe { color: #5fd8c3; }
+
+
+/* Freie Wahl (Ausgleich für eine entfernte Verbesserung): alle Karten im Raster */
+.auswahl.ist-frei .auswahl-kasten {
+  width: min(640px, 96%);
+  max-height: 92%;
+  overflow-y: auto;
+}
+
+.auswahl.ist-frei .auswahl-karten {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  /* Regenbogenfeld: Farben stehen still, kein Glanz – bleibt bunt */
+  .regenbogen-farben,
+  .regenbogen-glanz,
+  .sudoku-regenbogen.zerspringt {
+    animation: none !important;
+  }
+
+  .regenbogen-glanz {
+    opacity: 0;
+  }
+
+  .sudoku-regenbogen.zerspringt {
+    opacity: 0;
+    transition: opacity 0.6s ease-out;
+  }
+
+  /* Ruhige Fassung: nur Ein- und Ausblenden (opacity) bleibt */
+  .kampf-buehne.regenbogen-ruhig::after {
+    animation: regenbogen-einblenden 0.5s ease-out !important;
+  }
+
+  .kampf-figur--boss.loest-sich-auf,
+  .kampf-figur--boss.loest-sich-auf.ist-ruhig {
+    animation: regenbogen-ausblenden 0.8s ease-out forwards !important;
+  }
+}

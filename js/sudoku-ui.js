@@ -62,11 +62,13 @@ function initSudoku(container) {
   let kampf = null;             // das Kampffenster (SudokuKampf)
   let letzteNiederlage = null;  // Daten der letzten Niederlage (für den Niederlage-Bildschirm)
   let ausgewaehlt = 0;          // Nummer des gewählten Felds (0–80)
+  let regenbogenLaeuft = false; // Regenbogenschlag läuft → Eingabe gesperrt (nicht abkürzbar)
+  let letzterTreffer = null;    // Promise: Animation des letzten Treffers ist fertig
 
   // Wird gerade ein Rätsel erzeugt/ausgelost? (je Modus getrennt)
   const beschaeftigt = { frei: false, abenteuer: false };
   function wirdErzeugt() {
-    return Boolean(modus && beschaeftigt[modus]) || waehltVerbesserung();
+    return Boolean(modus && beschaeftigt[modus]) || waehltVerbesserung() || regenbogenLaeuft;
   }
   /** Im Abenteuer ist gerade eine Verbesserungsauswahl offen → keine Eingabe. */
   function waehltVerbesserung() {
@@ -301,8 +303,12 @@ function initSudoku(container) {
       if (istFalsch) beschreibung += ", falsch";
       const powerup = powerupTypAuf(i);
       if (powerup) beschreibung += ", Power-up: " + powerup.name;
+      // Regenbogenfeld: immer sichtbar – auch gegen den Boss mit "Nebel"
+      const regenbogen = modus === "abenteuer" && spiel.regenbogen === i;
+      if (regenbogen) beschreibung += ", Regenbogenfeld: besiegt den Boss sofort";
       feld.setAttribute("aria-label", beschreibung);
       zeichnePowerup(feld, powerup);
+      zeichneRegenbogen(feld, regenbogen);
     }
 
     brett.classList.toggle("ist-geloest", spiel.geloest);
@@ -342,6 +348,27 @@ function initSudoku(container) {
       ebene.dataset.typ = typ.id;
       ebene.style.setProperty("--powerup-farbe", typ.farbe);
       ebene.innerHTML = SudokuKampf.symbolSvg(typ.symbol);
+    }
+  }
+
+  /**
+   * Regenbogenfeld: bunte, glänzende Ebene im Feld (Aussehen: css/sudoku-rpg.css).
+   * Eine Ebene, die gerade zerspringt, bleibt bis zum Ende ihrer Animation.
+   */
+  function zeichneRegenbogen(feld, an) {
+    let ebene = feld.querySelector(".sudoku-regenbogen");
+    if (ebene && ebene.classList.contains("zerspringt")) return;
+    feld.classList.toggle("ist-regenbogen", an);
+    if (!an) {
+      if (ebene) ebene.remove();
+      return;
+    }
+    if (!ebene) {
+      ebene = document.createElement("span");
+      ebene.className = "sudoku-regenbogen";
+      ebene.setAttribute("aria-hidden", "true");
+      ebene.innerHTML = '<span class="regenbogen-farben"></span><span class="regenbogen-glanz"></span>';
+      feld.appendChild(ebene);
     }
   }
 
@@ -474,7 +501,9 @@ function initSudoku(container) {
     const an = wirdErzeugt();
     neuKnopf.disabled = an;
     auswahl.disabled = an;
-    brett.classList.toggle("wird-erzeugt", an);
+    // Beim Regenbogenschlag wird nur gesperrt, nicht abgedunkelt – man soll ihn sehen
+    brett.classList.toggle("wird-erzeugt", an && !regenbogenLaeuft);
+    brett.classList.toggle("ist-gesperrt", regenbogenLaeuft);
   }
 
   /** Erzeugt ein neues freies Rätsel im gewählten Schwierigkeitsgrad. */
@@ -542,7 +571,7 @@ function initSudoku(container) {
       if (abenteuer !== diesesAbenteuer) return;
       // Für die Belohnungszeilen im Panel: Werte zum Zeitpunkt des Treffers
       e.werte = diesesAbenteuer.werte();
-      kampf.treffer(e);
+      letzterTreffer = kampf.treffer(e);
     });
     // Das Power-up-Ereignis kommt direkt nach "richtig" – seine Wirkung
     // (z. B. +10 Münzen) gehört zum selben Treffer
@@ -674,6 +703,7 @@ function initSudoku(container) {
     if (ergebnis.art === "richtig") {
       const nachher = aktuellesGitter();
       if (ergebnis.powerup) loesePowerupAus(index, ergebnis.powerup.typ);   // vor zeichne(): Ebene bleibt für die Animation
+      if (ergebnis.regenbogen) starteRegenbogenschlag(index);
       zeichne();
       if (ergebnis.geloest) {
         // Große Welle über das Gitter, danach neue Schwierigkeit auslosen
@@ -711,6 +741,27 @@ function initSudoku(container) {
         });
       }
     }
+  }
+
+  /**
+   * Regenbogenschlag: Das Feld zerspringt, die Eingabe ist gesperrt, bis die
+   * Animation im Kampffenster vorbei ist (sie lässt sich nicht abkürzen).
+   */
+  function starteRegenbogenschlag(index) {
+    const ebene = felder[index].querySelector(".sudoku-regenbogen");
+    if (ebene) {
+      ebene.classList.add("zerspringt");
+      setTimeout(function () {
+        ebene.remove();
+        felder[index].classList.remove("ist-regenbogen");
+      }, 700);
+    }
+    regenbogenLaeuft = true;
+    setzeBeschaeftigtAnzeige();
+    Promise.resolve(letzterTreffer).then(function () {
+      regenbogenLaeuft = false;
+      setzeBeschaeftigtAnzeige();
+    });
   }
 
   /** Die falsche Zahl blinkt kurz rot im Feld und verschwindet wieder. */

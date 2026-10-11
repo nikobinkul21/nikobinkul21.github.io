@@ -139,9 +139,11 @@ const SUDOKU_RPG_KONFIG = {
   //   wert         – Stärke pro Stufe; in "beschreibung" steht {wert} bzw.
   //                  {prozent} (= wert × 100) für diese Zahl
   //   wirkung(w, stufe, wert) – verändert die Spielwerte w (siehe werteVon):
-  //       w.wuerfelSeiten, w.kritischeAugen, w.festerSchaden, w.giftBonus,
+  //       w.wuerfelSeiten, w.kritischeAugen, w.festerSchaden, w.reihenSchaden,
   //       w.komboMax, w.muenzenProZahl, w.powerupAnzahl, w.maxLeben
   //   beimWaehlen(zustand, w, wert) – optional: passiert einmal beim Wählen
+  //   naechsteStufe(stufe, wert) – optional: Text für die Karte in der Auswahl,
+  //                  was die nächste Stufe bringt (sonst "Stufe 1 → 2")
   verbesserungen: [
     {
       id: "wuerfel", name: "Größerer Würfel", symbol: "wuerfel", farbe: "#6c4bd8",
@@ -171,10 +173,15 @@ const SUDOKU_RPG_KONFIG = {
       wirkung: function (w, stufe, wert) { w.powerupAnzahl += wert * stufe; },
     },
     {
-      id: "gift", name: "Starkes Gift", symbol: "tropfen", farbe: "#2fb35a",
-      maxStufe: 4, wert: 0.25,
-      beschreibung: "Grüne Felder: Giftanteil +{prozent} Prozentpunkte.",
-      wirkung: function (w, stufe, wert) { w.giftBonus += wert * stufe; },
+      id: "reihenbrecher", name: "Reihenbrecher", symbol: "reihe", farbe: "#1f9e89",
+      maxStufe: 10, wert: 10,
+      beschreibung: "Jede fertige Zeile, Spalte und jeder fertige Block: {wert} Extra-Schaden.",
+      wirkung: function (w, stufe, wert) { w.reihenSchaden += wert * stufe; },
+      naechsteStufe: function (stufe, wert) {
+        return stufe === 0
+          ? "Neu: " + wert + " Extra-Schaden"
+          : "Stufe " + stufe + " auf " + (stufe + 1) + ": " + (stufe * wert) + " auf " + ((stufe + 1) * wert) + " Extra-Schaden";
+      },
     },
     {
       id: "kombo", name: "Kombo-Meister", symbol: "blitz", farbe: "#e98a15",
@@ -195,6 +202,17 @@ const SUDOKU_RPG_KONFIG = {
       wirkung: function (w, stufe, wert) { w.muenzenProZahl += wert * stufe; },
     },
   ],
+
+  // Verbesserungen, die es nicht mehr gibt. Steht eine davon in einem
+  // gespeicherten Spielstand, fällt sie weg – dafür darf man beim nächsten
+  // Laden einmalig eine Verbesserung frei wählen.
+  entfernteVerbesserungen: ["gift"],   // "Starkes Gift"
+
+  // Regenbogenfeld: sehr selten, besiegt den aktuellen Boss sofort
+  regenbogenfeld: {
+    chance: 0.01,           // Wahrscheinlichkeit pro neuem Sudoku (0.01 = 1 %)
+    testErzwingen: false,   // true: in JEDEM Sudoku ein Regenbogenfeld (zum Ausprobieren)
+  },
 
   // Die Bosse in ihrer Reihenfolge. Nach dem letzten geht es mit dem
   // ersten weiter – mit anderer Farbpalette, höherer Nummer und derselben
@@ -369,7 +387,8 @@ const SudokuRPG = (function () {
   // Version 3: dazu Kombo, Münz-Rest, Verbesserungen und offene Auswahl.
   // Version 4: dazu Elite-Bosse (seltene Eigenschaft, Treffer-Zähler) und
   //            mehrere Wahlen bei einer Auswahl.
-  const VERSION = 4;
+  // Version 5: dazu freie Ersatzwahl (entfernte Verbesserungen) und Regenbogenfeld.
+  const VERSION = 5;
 
 
   /* ------------------------------------------------------------------------
@@ -513,7 +532,7 @@ const SudokuRPG = (function () {
       wuerfelSeiten: K.wuerfelSeiten,
       kritischeAugen: 1,          // wie viele der höchsten Augenzahlen kritisch sind
       festerSchaden: 0,
-      giftBonus: 0,               // kommt zum Giftanteil grüner Felder dazu
+      reihenSchaden: 0,           // Extra-Schaden je fertiger Zeile, Spalte, Block
       komboMax: K.kombo.maxBonus,
       muenzenProZahl: K.muenzen.proZahl,
       powerupAnzahl: K.powerupAnzahl,
@@ -538,6 +557,8 @@ const SudokuRPG = (function () {
         id: v.id, name: v.name, symbol: v.symbol, farbe: v.farbe,
         stufe: (stufen && stufen[id]) || 0, maxStufe: v.maxStufe,
         beschreibung: beschreibungVon(v),
+        // Was bringt die nächste Stufe? (nur wenn die Verbesserung es beschreibt)
+        naechste: v.naechsteStufe ? v.naechsteStufe((stufen && stufen[id]) || 0, v.wert) : null,
       };
     });
   }
@@ -578,7 +599,9 @@ const SudokuRPG = (function () {
        4. kombo         × (1 + Kombo-Bonus)
        5. schwierigkeit × (1 + Schadensbonus des Grads)
        6. doppelt       × doppelschadenFaktor, wenn eine Einheit fertig wurde
-       7. gift          Giftanteil des bis hierher berechneten Schadens
+       7. reihen        + Extra-Schaden je fertiger Einheit (Reihenbrecher) –
+                        kommt NACH der Verdopplung und wird nicht mitverdoppelt
+       8. gift          Giftanteil des bis hierher berechneten Schadens
        Am Ende wird aufgerundet (Schaden und Gift getrennt).
 
      Verbesserungen wirken über die Spielwerte (werteVon). Boss-Eigenheiten
@@ -588,7 +611,7 @@ const SudokuRPG = (function () {
      rechnung.ende = true, bleibt es beim aktuellen Wert (z. B. 0).
      ------------------------------------------------------------------------ */
 
-  const SCHADEN_STUFEN = ["wurf", "kritisch", "zuschlag", "kombo", "schwierigkeit", "doppelt", "gift"];
+  const SCHADEN_STUFEN = ["wurf", "kritisch", "zuschlag", "kombo", "schwierigkeit", "doppelt", "reihen", "gift"];
 
   const GRUNDREGELN = {
     wurf: function (r) {
@@ -633,6 +656,14 @@ const SudokuRPG = (function () {
         r.schritte.push("Doppelt ×" + zahlText(K.doppelschadenFaktor));
       }
     },
+    reihen: function (r, k) {
+      // Jede fertige Einheit zählt einzeln (Zeile + Block = 2 × Extra-Schaden)
+      const bonus = k.werte.reihenSchaden * (k.einheiten || 0);
+      if (bonus > 0) {
+        r.wert += bonus;
+        r.schritte.push("Reihenbrecher +" + bonus);
+      }
+    },
     gift: function (r, k) {
       if (k.giftAnteil > 0) r.giftWert = r.wert * k.giftAnteil;
     },
@@ -647,6 +678,7 @@ const SudokuRPG = (function () {
    *   kombo         – Kombo-Stufe INKLUSIVE dieser Zahl
    *   grad          – id des Schwierigkeitsgrads (oder null)
    *   doppelt       – true, wenn eine Zeile/Spalte/Block fertig wurde
+   *   einheiten     – WIE VIELE Einheiten fertig wurden (0–3, für den Reihenbrecher)
    *   giftAnteil    – 0.5 = die Hälfte als Gift (0 = kein Gift)
    *   modifikatoren – Liste { <stufe>: function (rechnung, kontext) }
    *   eigenheit     – die Eigenheit des Bosses (für ihre Modifikatoren)
@@ -656,7 +688,7 @@ const SudokuRPG = (function () {
    *   geblockt, immun, abwehrGrund, abwehrArt, komboBonus, schritte, text, ausgeloest }
    */
   function berechneSchaden(kontext) {
-    kontext = Object.assign({ werte: werteVon({}), kombo: 0, grad: null, doppelt: false,
+    kontext = Object.assign({ werte: werteVon({}), kombo: 0, grad: null, doppelt: false, einheiten: 0,
       giftAnteil: 0, modifikatoren: [], selten: null, eliteTreffer: 0 }, kontext);
     const w = kontext.werte;
     const r = {
@@ -704,13 +736,17 @@ const SudokuRPG = (function () {
        auswahl,            ← null oder ids der angebotenen Verbesserungen
                              (dann muss erst gewählt werden)
        auswahlAnzahl,      ← wie viele davon noch gewählt werden dürfen (0 = keine Auswahl)
+       auswahlGrund,       ← "boss" (nach einem Sieg) oder "frei" (Ersatz für eine
+                             entfernte Verbesserung, alle stehen zur Wahl)
+       freieWahl,          ← so viele freie Ersatzwahlen stehen noch aus
        elite,              ← null oder { nummer, selten, treffer } für den
                              aktuellen Elite-Boss: seine seltene Eigenschaft
                              und wie oft er schon getroffen wurde
        vorigeSelten,       ← seltene Eigenschaft des letzten Elite-Bosses
                              (der nächste bekommt eine andere)
        raetsel: null | { grad, vorgaben, loesung, eingaben, geloest,
-                         powerups: [ { index, typ } ] },
+                         powerups: [ { index, typ } ],
+                         regenbogen: null | Index des Regenbogenfelds },
        extras: {}          ← frei für spätere Erweiterungen
      }
      raetsel = null bedeutet: Es muss ein neues Sudoku ausgelost werden.
@@ -729,6 +765,8 @@ const SudokuRPG = (function () {
       verbesserungen: {},
       auswahl: null,
       auswahlAnzahl: 0,
+      auswahlGrund: "boss",
+      freieWahl: 0,
       elite: null,          // Boss 1 ist nie ein Elite-Boss (abstand ≥ 2)
       vorigeSelten: null,
       raetsel: null,
@@ -758,6 +796,26 @@ const SudokuRPG = (function () {
   }
 
   /**
+   * Regenbogenfeld: mit Wahrscheinlichkeit regenbogenfeld.chance (oder immer,
+   * wenn der Testschalter an ist) ein zufälliges leeres Feld – möglichst
+   * keins, auf dem schon ein Power-up liegt.
+   * @returns {number|null} – Index des Felds oder null
+   */
+  function loseRegenbogen(r, zufall) {
+    const rb = K.regenbogenfeld;
+    if (!rb.testErzwingen && !(zufall() < rb.chance)) return null;
+    const belegt = (r.powerups || []).map(function (p) { return p.index; });
+    let leer = [];
+    for (let i = 0; i < 81; i++) {
+      if (r.vorgaben[i] === 0 && r.eingaben[i] === 0 && belegt.indexOf(i) === -1) leer.push(i);
+    }
+    if (leer.length === 0) {
+      for (let i = 0; i < 81; i++) if (r.vorgaben[i] === 0 && r.eingaben[i] === 0) leer.push(i);
+    }
+    return leer.length > 0 ? leer[Math.floor(zufall() * leer.length)] : null;
+  }
+
+  /**
    * Prüft einen Spielstand (beim Laden und beim Import) und ergänzt ältere
    * Stände: Version 1 ("fehler" statt Leben, keine Münzen/Power-ups),
    * Version 2 (ohne Kombo und Verbesserungen) und Version 3 (ohne Elite-Bosse).
@@ -771,6 +829,10 @@ const SudokuRPG = (function () {
     const v1 = roh.version === 1;
     const vorV3 = roh.version < 3;
     const vorV4 = roh.version < 4;
+    const vorV5 = roh.version < 5;
+    const entfernt = function (id) { return K.entfernteVerbesserungen.indexOf(id) !== -1; };
+    // Freie Ersatzwahlen (neu in Version 5)
+    let freieWahl = !vorV5 && istGanzzahl(roh.freieWahl, 0, 100) ? roh.freieWahl : 0;
 
     // Leben: in Version 1 aus den Fehlern berechnen (3 − Fehler)
     let leben = roh.leben;
@@ -790,7 +852,12 @@ const SudokuRPG = (function () {
       }
       for (const id in roh.verbesserungen) {
         const v = verbesserungInfo(id);
-        if (!v) continue;                    // nicht mehr in der Liste → weglassen
+        if (!v) {
+          // Nicht mehr in der Liste → weglassen. War es eine entfernte
+          // Verbesserung (z. B. "Starkes Gift"), gibt es einmalig eine freie Wahl.
+          if (entfernt(id) && roh.verbesserungen[id] > 0) freieWahl = Math.max(freieWahl, 1);
+          continue;
+        }
         if (!istGanzzahl(roh.verbesserungen[id], 0, v.maxStufe)) {
           return { ok: false, fehler: "Abenteuer: ungültige Stufe bei „" + v.name + "“." };
         }
@@ -798,15 +865,22 @@ const SudokuRPG = (function () {
       }
     }
     let auswahl = null;
+    const auswahlGrund = !vorV5 && roh.auswahlGrund === "frei" ? "frei" : "boss";
     if (!vorV3 && roh.auswahl !== null && roh.auswahl !== undefined) {
-      const gueltig = Array.isArray(roh.auswahl) && roh.auswahl.length >= 1 &&
-        roh.auswahl.length <= K.verbesserungAngebot &&
-        roh.auswahl.every(function (id, i) {
+      // Entfernte Verbesserungen fallen aus einem gespeicherten Angebot heraus
+      const angebot = Array.isArray(roh.auswahl) ? roh.auswahl.filter(function (id) { return !entfernt(id); }) : roh.auswahl;
+      const hoechstens = auswahlGrund === "frei" ? K.verbesserungen.length : K.verbesserungAngebot;
+      const gueltig = Array.isArray(angebot) && angebot.length <= hoechstens &&
+        angebot.every(function (id, i) {
           const v = verbesserungInfo(id);
-          return v && (stufen[id] || 0) < v.maxStufe && roh.auswahl.indexOf(id) === i;
+          return v && (stufen[id] || 0) < v.maxStufe && angebot.indexOf(id) === i;
         });
       if (!gueltig) return { ok: false, fehler: "Abenteuer: ungültige Auswahl an Verbesserungen." };
-      auswahl = roh.auswahl.slice();
+      if (angebot.length > 0) {
+        auswahl = angebot.slice();
+      } else if (roh.auswahl.length > 0) {
+        freieWahl = Math.max(freieWahl, 1);   // das ganze Angebot ist weggefallen → freie Wahl
+      }
     }
     // Neu in Version 4: wie viele Verbesserungen noch gewählt werden dürfen
     let auswahlAnzahl = auswahl ? 1 : 0;
@@ -866,8 +940,11 @@ const SudokuRPG = (function () {
       } else {
         ohnePowerups = true;        // älterer Stand → Power-ups werden gleich ergänzt
       }
+      // Regenbogenfeld (neu in Version 5): nur auf einem noch leeren Feld
+      const regenbogen = istGanzzahl(r.regenbogen, 0, 80) && r.vorgaben[r.regenbogen] === 0 &&
+        r.eingaben[r.regenbogen] === 0 ? r.regenbogen : null;
       raetsel = { grad: r.grad, vorgaben: r.vorgaben.slice(), loesung: r.loesung.slice(),
-        eingaben: r.eingaben.slice(), geloest: r.geloest === true, powerups: powerups };
+        eingaben: r.eingaben.slice(), geloest: r.geloest === true, powerups: powerups, regenbogen: regenbogen };
       // Gilt auch beim Import einer alten Sicherung (settings.js)
       if (ohnePowerups && !raetsel.geloest) {
         raetsel.powerups = lostPowerups(raetsel, zufall || Math.random, werte.powerupAnzahl);
@@ -875,7 +952,7 @@ const SudokuRPG = (function () {
     }
     return {
       ok: true,
-      ergaenzt: vorV4,
+      ergaenzt: vorV5,
       daten: {
         version: VERSION,
         bossNummer: roh.bossNummer,
@@ -888,6 +965,8 @@ const SudokuRPG = (function () {
         verbesserungen: stufen,
         auswahl: auswahl,
         auswahlAnzahl: auswahlAnzahl,
+        auswahlGrund: auswahl ? auswahlGrund : "boss",
+        freieWahl: freieWahl,
         elite: elite,
         vorigeSelten: vorigeSelten,
         raetsel: raetsel,
@@ -935,6 +1014,7 @@ const SudokuRPG = (function () {
     const geladen = pruefeDaten(speicher.laden(), zufall);
     let zustand = geladen.ok ? geladen.daten : neuerZustand();
     if (!zustand.elite && istElite(zustand.bossNummer)) eliteAuslosen();   // nur bei elite.abstand = 1
+    freieWahlStarten();      // z. B. Ersatz für "Starkes Gift" (falls gerade keine andere Wahl offen ist)
     if (geladen.ok) {
       speicher.speichern(zustand);          // ergänzte Werte gleich festhalten
     }
@@ -1006,9 +1086,29 @@ const SudokuRPG = (function () {
         eingaben: new Array(81).fill(0),
         geloest: false,
         powerups: [],
+        regenbogen: null,
       };
       zustand.raetsel.powerups = lostPowerups(zustand.raetsel, zufall, werte().powerupAnzahl);
+      zustand.raetsel.regenbogen = loseRegenbogen(zustand.raetsel, zufall);
       speichern();
+    }
+
+    /**
+     * Freie Ersatzwahl: Steht eine aus und ist gerade keine andere Auswahl
+     * offen, stehen ALLE Verbesserungen zur Wahl, die noch nicht voll sind.
+     * @returns {boolean} – true, wenn jetzt eine freie Wahl offen ist
+     */
+    function freieWahlStarten() {
+      if (!(zustand.freieWahl > 0) || zustand.auswahl) return false;
+      zustand.freieWahl--;
+      const moeglich = K.verbesserungen.filter(function (v) {
+        return (zustand.verbesserungen[v.id] || 0) < v.maxStufe;
+      }).map(function (v) { return v.id; });
+      if (moeglich.length === 0) return false;
+      zustand.auswahl = moeglich;
+      zustand.auswahlAnzahl = 1;
+      zustand.auswahlGrund = "frei";
+      return true;
     }
 
     /** Daten für das Ereignis "neuerBoss" (auch nach dem Wählen einer Verbesserung). */
@@ -1103,14 +1203,24 @@ const SudokuRPG = (function () {
         powerup = { index: index, typ: typ.id, name: typ.name };
       }
 
-      // 3. Schaden – alles in der zentralen Berechnung
-      const wurf = 1 + Math.floor(zufall() * w.wuerfelSeiten);
-      const rechnung = berechneSchaden({
+      // 3. Schaden – alles in der zentralen Berechnung.
+      //    Regenbogenfeld: kein Wurf – der Boss ist sofort besiegt, egal wie
+      //    viele HP er hat und welche Eigenheiten er besitzt (auch Elite).
+      const regenbogen = r.regenbogen === index;
+      if (regenbogen) r.regenbogen = null;
+      const wurf = regenbogen ? null : 1 + Math.floor(zufall() * w.wuerfelSeiten);
+      const rechnung = regenbogen ? {
+        regenbogen: true, wurf: null, schaden: hpVorher, gift: 0, komboBonus: 0,
+        kritisch: false, fehlschlag: false, geblockt: false, immun: false, ausgeloest: null,
+        schritte: ["Regenbogenschlag"], text: "Regenbogenschlag = " + hpVorher,
+      } : berechneSchaden({
         wurf: wurf, werte: w, kombo: zustand.kombo, grad: r.grad, doppelt: doppelt,
-        giftAnteil: effekt.giftAnteil > 0 ? effekt.giftAnteil + w.giftBonus : 0,
+        einheiten: (einheiten.zeile ? 1 : 0) + (einheiten.spalte ? 1 : 0) + (einheiten.block ? 1 : 0),
+        giftAnteil: effekt.giftAnteil,
         modifikatoren: modifikatoren(bossVorher), eigenheit: bossVorher.eigenheit,
         selten: bossVorher.selten, eliteTreffer: eliteTreffer,
       });
+      if (!regenbogen) rechnung.regenbogen = false;
       const spruch = rechnung.fehlschlag
         ? K.fehlschlagSprueche[Math.floor(zufall() * K.fehlschlagSprueche.length)]
         : null;
@@ -1167,7 +1277,7 @@ const SudokuRPG = (function () {
       // Alles, was diese Zahl bewirkt hat, in EINEM Ereignis
       const treffer = {
         index: index, ziffer: ziffer, boss: bossVorher,
-        wurf: wurf, wuerfelSeiten: w.wuerfelSeiten, rechnung: rechnung,
+        wurf: wurf, wuerfelSeiten: w.wuerfelSeiten, rechnung: rechnung, regenbogen: regenbogen,
         kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, spruch: spruch,
         doppelt: doppelt, einheiten: einheiten,
         schaden: rechnung.schaden, gift: rechnung.gift,
@@ -1210,7 +1320,7 @@ const SudokuRPG = (function () {
       return {
         art: "richtig", wurf: wurf, schaden: rechnung.schaden, gift: rechnung.gift,
         kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, doppelt: doppelt, immun: rechnung.immun,
-        eliteBonus: eliteBonus,
+        eliteBonus: eliteBonus, regenbogen: regenbogen,
         powerup: powerup, muenzenPlus: muenzenPlus, lebenPlus: lebenPlus,
         besiegt: besiegt, geloest: geloest, auswahl: Boolean(zustand.auswahl),
       };
@@ -1228,7 +1338,8 @@ const SudokuRPG = (function () {
       return {
         angebote: angebote(),
         rest: zustand.auswahlAnzahl,
-        elite: zustand.bossNummer > 1 && istElite(zustand.bossNummer - 1),
+        grund: zustand.auswahlGrund,       // "boss" oder "frei"
+        elite: zustand.auswahlGrund === "boss" && zustand.bossNummer > 1 && istElite(zustand.bossNummer - 1),
       };
     }
 
@@ -1246,11 +1357,13 @@ const SudokuRPG = (function () {
       const uebrig = zustand.auswahl.filter(function (a) {
         return a !== id && (zustand.verbesserungen[a] || 0) < verbesserungInfo(a).maxStufe;
       });
+      const grund = zustand.auswahlGrund;
       if (zustand.auswahlAnzahl > 0 && uebrig.length > 0) {
         zustand.auswahl = uebrig;
       } else {
         zustand.auswahl = null;
         zustand.auswahlAnzahl = 0;
+        zustand.auswahlGrund = "boss";
       }
       const w = werte();
       const lebenVorher = zustand.leben;
@@ -1263,8 +1376,14 @@ const SudokuRPG = (function () {
       });
       if (zustand.auswahl) {
         melde("auswahl", auswahlInfo());      // die nächste Wahl
-      } else {
-        melde("neuerBoss", neuerBossDaten());
+        return true;
+      }
+      // Nach einem Sieg erscheint jetzt der nächste Boss (eine freie Ersatzwahl
+      // ändert am Boss nichts). Steht noch eine freie Wahl aus, kommt sie danach.
+      if (grund === "boss") melde("neuerBoss", neuerBossDaten());
+      if (freieWahlStarten()) {
+        speichern();
+        melde("auswahl", auswahlInfo());
       }
       return true;
     }

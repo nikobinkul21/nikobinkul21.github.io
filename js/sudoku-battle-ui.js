@@ -97,6 +97,8 @@ const SudokuKampf = (function () {
     kreuz: '<path d="M0 0h2v1H0zM5 0h2v1H5zM1 1h2v1H1zM4 1h2v1H4zM2 2h3v1H2zM3 3h1v1H3zM2 4h3v1H2zM1 5h2v1H1zM4 5h2v1H4zM0 6h2v1H0zM5 6h2v1H5z"/>',
     warnung: '<path d="M3 0h1v1h1v2h1v2h1v2H0V5h1V3h1V1h1z"/><path fill="#fff" d="M3 2h1v2H3zM3 5h1v1H3z"/>',
     krone: '<path d="M0 1h1v2h1V2h1V0h1v2h1v1h1V1h1v6H0z"/>',
+    // Reihenbrecher: eine Reihe Blöcke, in der Mitte zerbrochen
+    reihe: '<path d="M0 2h2v3H0zM5 2h2v3H5z"/><path d="M3 1h1v2H3zM2 4h1v2H2zM4 3h1v1H4z"/><path fill="rgba(255,255,255,.55)" d="M0 2h1v1H0zM5 2h1v1H5z"/>',
   };
 
   /** Ein Symbol als fertiges SVG (Farbe kommt über CSS: fill). */
@@ -541,6 +543,8 @@ const SudokuKampf = (function () {
       return kette;
     }
 
+    let regenbogenLaeuft = false;   // Regenbogenschlag läuft → nichts wird abgekürzt
+
     /** Läuft gerade ein Schritt, der übersprungen werden soll? */
     function eilig() {
       return laufend !== 0 && laufend <= eiligBis;
@@ -548,6 +552,7 @@ const SudokuKampf = (function () {
 
     /** Alle bisher eingereihten Schritte sofort zu Ende bringen (der Würfel landet sofort). */
     function beschleunige() {
+      if (regenbogenLaeuft) return;        // der Regenbogenschlag lässt sich nicht abkürzen
       eiligBis = schrittNummer;
       wartende.forEach(function (sofort) { sofort(); });
       wuerfel.ueberspringe();
@@ -886,6 +891,10 @@ const SudokuKampf = (function () {
      */
     function rechnungsZeilen(e) {
       const zeilen = [];
+      if (e.regenbogen) {
+        // Kein Wurf, keine Rechnung: der Boss ist sofort besiegt
+        return [{ key: "regenbogen", label: "Regenbogen", wert: String(e.schaden), art: "regenbogen" }];
+      }
       if (e.immun) {
         // "Wurf 6 · gerade · immun" – sonst wurde nichts berechnet
         return [
@@ -914,6 +923,8 @@ const SudokuKampf = (function () {
             wert: "+" + Math.round(SudokuRPG.belohnung(grad.id).schadensBonus * 100) + " %" });
         } else if (name === "Doppelt") {
           zeilen.push({ key: "doppelt", label: "Doppelschaden", wert: wert, art: "doppelt" });
+        } else if (name === "Reihenbrecher") {
+          zeilen.push({ key: "reihen", label: "Reihenbrecher", wert: wert, art: "reihe" });
         } else if (e.boss.selten && name === e.boss.selten.name) {
           zeilen.push({ key: "selten", label: name, wert: wert, art: "selten", farbe: e.boss.selten.farbe });
         } else if (e.eigenheit && name === e.eigenheit.name) {
@@ -958,11 +969,12 @@ const SudokuKampf = (function () {
     function protokolliereTreffer(e) {
       const gesamt = e.schaden + e.gift;
       const muenzen = e.muenzenPlus + e.eliteBonus;
-      const art = e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
+      const art = e.regenbogen ? "regenbogen" : e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
         e.eigenheit ? "eigenheit" : e.doppelt ? "doppelt" : "";
       const farbe = e.immun ? e.selten.farbe : e.eigenheit ? e.eigenheit.farbe : null;
       let kurz = gesamt + " Schaden";
-      if (e.immun) kurz = e.selten.art === "geblockt" ? "Geblockt" : "Immun";
+      if (e.regenbogen) kurz = "Regenbogenschlag";
+      else if (e.immun) kurz = e.selten.art === "geblockt" ? "Geblockt" : "Immun";
       else if (e.fehlschlag) kurz = "Fehlschlag";
       else if (e.eigenheit) kurz = "Geblockt";
       zeigeZug({
@@ -972,7 +984,9 @@ const SudokuKampf = (function () {
         muenzen: { label: "Summe", wert: muenzenText(muenzen), art: "gold" },
         kurz: { schaden: kurz, schadenArt: art, muenzen: muenzenText(muenzen) + " Münzen" },
       });
-      if (e.immun) {
+      if (e.regenbogen) {
+        verlaufEintrag({ text: "Regenbogenschlag!", wert: "−" + gesamt, art: "regenbogen", symbol: "stern" });
+      } else if (e.immun) {
         verlaufEintrag({ text: e.selten.name + ": Wurf " + e.wurf + " " + e.selten.art, wert: "0", art: "selten", symbol: "stern", farbe: e.selten.farbe });
       } else if (e.kritisch) {
         verlaufEintrag({ text: e.doppelt ? "Kritisch und doppelt!" : "Kritischer Treffer", wert: "−" + gesamt, art: "kritisch", symbol: "blitz" });
@@ -1069,14 +1083,16 @@ const SudokuKampf = (function () {
         zeigeKombo(stand.kombo, stand.komboBonus, false);
         zeigeVerbesserungen(stand.verbesserungen);
         zeigeRekord(stand.boss, stand.rekord);
-        el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite");
+        el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite", "loest-sich-auf", "ist-ruhig");
       });
     }
 
     /** Fasst zusammen, was eine richtige Zahl bewirkt hat – mit der Rechnung. */
     function trefferText(e) {
       const teile = [];
-      if (e.immun) {
+      if (e.regenbogen) {
+        teile.push("Regenbogenschlag! " + e.boss.name + " ist mit einem Schlag besiegt.");
+      } else if (e.immun) {
         teile.push(e.selten.name + "! Wurf " + e.wurf + ", " + e.selten.grund + ", " + e.selten.art + ": kein Schaden.");
       } else if (e.fehlschlag) {
         teile.push(e.spruch);
@@ -1128,29 +1144,35 @@ const SudokuKampf = (function () {
         boss: mitte(el.bossFigur),
         held: el.heldFigur,
         // Woher ein Bonus kommt
-        quelle: function (name) {
+        quelle: function (name, schritt) {
           if (name === "kombo") return mitte(el.kombo);
           if (name === "klinge") return mitte(el.verbesserungen.querySelector('[data-id="klinge"]'));
           if (name === "selten") return el.selten.hidden ? null : mitte(el.selten);
           if (name === "grad") return mitte(optionen && optionen.gradAnzeige);
           if (name === "doppelt") return einheitMitte(e);
+          if (name === "reihe") return einheitMitte(e, schritt && schritt.einheit);
           return null;
         },
         warte: warte,
         pause: pause,
         eilig: eilig,
+        // i = Index des Schritts in rechnung.schritte, ohne den Wurf
         beimSchritt: function (i, wert) { zeigeAufbau(e, i + 2, wert); },
       };
     }
 
-    /** Mitte der Zeile, Spalte oder des Blocks, die diese Zahl vervollständigt hat. */
-    function einheitMitte(e) {
+    /**
+     * Mitte der Zeile, Spalte oder des Blocks, die diese Zahl vervollständigt hat.
+     * @param {string} [welche] – "zeile", "spalte" oder "block"; sonst die erste fertige
+     */
+    function einheitMitte(e, welche) {
       if (!optionen || !optionen.gitterFeld) return null;
       const z = Math.floor(e.index / 9), sp = e.index % 9;
+      const ein = welche ? { zeile: welche === "zeile", spalte: welche === "spalte", block: welche === "block" } : e.einheiten;
       let ecken;
-      if (e.einheiten.zeile) ecken = [z * 9, z * 9 + 8];
-      else if (e.einheiten.spalte) ecken = [sp, 72 + sp];
-      else if (e.einheiten.block) {
+      if (ein.zeile) ecken = [z * 9, z * 9 + 8];
+      else if (ein.spalte) ecken = [sp, 72 + sp];
+      else if (ein.block) {
         const z0 = z - (z % 3), s0 = sp - (sp % 3);
         ecken = [z0 * 9 + s0, (z0 + 2) * 9 + s0 + 2];
       } else return null;
@@ -1196,8 +1218,18 @@ const SudokuKampf = (function () {
      */
     function treffer(e) {
       beschleunige();       // ein noch laufender Zug springt sofort zu seinem Ende
+      if (e.regenbogen) regenbogenLaeuft = true;   // ab jetzt kürzt nichts mehr ab
       return einreihen(function () {
         zeigeBoss(e.boss);
+        // Regenbogenfeld: kein Würfel – der Boss wird mit einem Schlag besiegt
+        if (e.regenbogen) {
+          return regenbogenSchlag(e).then(function () {
+            protokolliereTreffer(e);
+            schwebeZahl("+" + (e.muenzenPlus + e.eliteBonus), "muenzen");
+            return zeigeMuenzen(e.muenzen, true);
+          }).then(function () { regenbogenLaeuft = false; },
+            function (fehler) { regenbogenLaeuft = false; throw fehler; });
+        }
         // 1. Würfel rollt – erst wenn er gelandet ist, wird der Treffer sichtbar
         return wuerfel.rolle(e, eilig()).then(function () {
           meldung(trefferText(e));
@@ -1224,6 +1256,78 @@ const SudokuKampf = (function () {
           }
           return zeigeMuenzen(e.muenzen, true);
         });
+      });
+    }
+
+    /** Wartezeit, die NICHT abgebrochen werden kann (für den Regenbogenschlag). */
+    function fest(ms) {
+      return new Promise(function (fertig) { setTimeout(fertig, Math.max(0, ms)); });
+    }
+
+    /**
+     * Regenbogenschlag (etwa 3 Sekunden, nicht abkürzbar):
+     * Feld zerspringt → Regenbogenstrahl zum Schwert → Schwert lädt sich in
+     * allen Farben auf → Riesenschlag → Bildschirm blitzt, HP in einem Zug auf
+     * null → Boss zerfällt in bunte Funken. Ruhige Fassung bei "Bewegung
+     * reduzieren" oder Kampfanimationen "Aus": sanftes Einblenden, gleiches Ergebnis.
+     */
+    function regenbogenSchlag(e) {
+      const T = SudokuSchadenFx.KONFIG.regenbogenSchlag;
+      const regenbogenStufe = SudokuSchadenFx.stufeFuer(Infinity);
+      meldung(trefferText(e));
+      zeigeKombo(e.kombo, e.komboBonus, true);
+      wuerfel.zeige(null, "");
+      banner("Regenbogenschlag!", null, "regenbogen");
+      zeigeAufbau(e, 1, "…");
+
+      if (ohneBewegung() || wuerfelEinstellung().fx === 0) {
+        el.buehne.classList.add("regenbogen-ruhig");
+        return fest(T.ruhig * 0.4).then(function () {
+          zeigeAufbau(e, Infinity, e.schaden);
+          zeigeHp(0, e.boss.maxHp);
+          el.bossFigur.classList.add("loest-sich-auf", "ist-ruhig");
+          return fest(T.ruhig * 0.6);
+        }).then(function () {
+          el.buehne.classList.remove("regenbogen-ruhig");
+        });
+      }
+
+      const u = fxUmgebung(e);
+      const feld = optionen && optionen.gitterFeld ? optionen.gitterFeld(e.index) : null;
+      const r = feld ? feld.getBoundingClientRect() : null;
+      const feldMitte = r && r.width > 0 ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : u.start;
+      // 1. Das Feld zerspringt in buntes Licht
+      SudokuSchadenFx.zerspringen(feldMitte, T.zerspringen);
+      return fest(T.zerspringen * 0.6).then(function () {
+        // 2. Ein Regenbogenstrahl fliegt zum Schwert
+        SudokuSchadenFx.regenbogenStrahl(feldMitte, u.schwert, T.strahl);
+        return fest(T.strahl * 0.8 + T.zerspringen * 0.4);
+      }).then(function () {
+        // 3. Das Schwert lädt sich in allen Farben auf
+        SudokuSchadenFx.schwertLeuchten(el.heldFigur, regenbogenStufe);
+        el.heldFigur.classList.add("laedt-regenbogen");
+        return fest(T.aufladen);
+      }).then(function () {
+        // 4. Riesenschlag
+        el.heldFigur.classList.remove("laedt-regenbogen");
+        el.heldFigur.classList.add("riesenschlag");
+        return fest(T.ausholen + T.strahl * 0.2);
+      }).then(function () {
+        // 5. Bildschirm blitzt, HP in einem Zug auf null, Boss zerfällt
+        SudokuSchadenFx.schwertAus(el.heldFigur);
+        SudokuSchadenFx.bildschirmBlitz(T.aufloesen * 0.6);
+        el.buehne.classList.add("wackelt-max");
+        el.hpFuellung.classList.add("faellt-auf-null");
+        zeigeAufbau(e, Infinity, e.schaden);
+        zeigeHp(0, e.boss.maxHp);
+        schwebeZahl("−" + e.schaden, "regenbogen");
+        el.bossFigur.classList.add("loest-sich-auf");
+        if (u.boss) SudokuSchadenFx.aufloesen(u.boss, T.aufloesen);
+        return fest(T.aufloesen);
+      }).then(function () {
+        el.heldFigur.classList.remove("riesenschlag");
+        el.buehne.classList.remove("wackelt-max");
+        el.hpFuellung.classList.remove("faellt-auf-null");
       });
     }
 
@@ -1333,7 +1437,8 @@ const SudokuKampf = (function () {
           ? { text: "Elite " + e.boss.name + " besiegt!", wert: "+" + e.eliteBonus, art: "elite", symbol: "krone" }
           : { text: e.boss.name + " besiegt!", wert: "", art: "besiegt", symbol: "krone" });
         zeigeHp(0, e.boss.maxHp);
-        if (ohneBewegung() || eilig()) {
+        // Nach dem Regenbogenschlag ist der Boss schon in Funken zerfallen
+        if (ohneBewegung() || eilig() || el.bossFigur.classList.contains("loest-sich-auf")) {
           return Promise.resolve();
         }
         if (e.elite) {
@@ -1364,7 +1469,7 @@ const SudokuKampf = (function () {
           ? { text: "Boss " + e.boss.nummer + ": " + e.boss.name + " · " + e.boss.eigenheit.name, wert: "",
               art: "eigenheit", symbol: "warnung", farbe: e.boss.eigenheit.farbe }
           : { text: "Boss " + e.boss.nummer + ": " + e.boss.name, wert: e.boss.maxHp + " HP" });
-        el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite");
+        el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite", "loest-sich-auf", "ist-ruhig");
         zeigeBoss(e.boss);
         zeigeHp(e.hp, e.boss.maxHp);
         zeigeHerzen(e.leben, e.maxLeben);
@@ -1508,7 +1613,10 @@ const SudokuKampf = (function () {
       const gesamt = info.elite ? Math.max(1, K.elite.verbesserungenWaehlen) : 1;
       const zahlwort = { 1: "eine", 2: "zwei", 3: "drei" };
       let titel;
-      if (info.rest > 1) {
+      if (info.grund === "frei") {
+        // Ausgleich für eine entfernte Verbesserung (z. B. "Starkes Gift"): freie Wahl aus allen
+        titel = "Eine deiner Verbesserungen gibt es nicht mehr – wähle frei eine neue:";
+      } else if (info.rest > 1) {
         titel = "Elite besiegt! Wähle " + (zahlwort[info.rest] || info.rest) + " Verbesserungen:";
       } else if (info.elite && gesamt > 1) {
         titel = "Wähle noch eine Verbesserung:";
@@ -1532,6 +1640,7 @@ const SudokuKampf = (function () {
             "</div>";
           overlay.querySelector(".auswahl-titel").textContent = titel;
           if (info.elite) overlay.classList.add("ist-elite");
+          if (info.grund === "frei") overlay.classList.add("ist-frei");   // viele Karten → Raster, scrollbar
           const karten = overlay.querySelector(".auswahl-karten");
           angebote.forEach(function (v) {
             const karte = document.createElement("button");
@@ -1546,7 +1655,11 @@ const SudokuKampf = (function () {
               '<span class="auswahl-stufe"></span>';
             karte.querySelector(".auswahl-name").textContent = v.name;
             karte.querySelector(".auswahl-text").textContent = v.beschreibung;
-            karte.querySelector(".auswahl-stufe").textContent = v.stufe === 0
+            // Was die nächste Stufe bringt (z. B. "Stufe 3 auf 4: 30 auf 40 Extra-Schaden"),
+            // sonst nur der Stufensprung
+            karte.querySelector(".auswahl-stufe").textContent = v.naechste
+              ? v.naechste + " (max. Stufe " + v.maxStufe + ")"
+              : v.stufe === 0
               ? "Neu · max. Stufe " + v.maxStufe
               : "Stufe " + v.stufe + " → " + (v.stufe + 1) + " (max. " + v.maxStufe + ")";
             karte.addEventListener("click", function () {
