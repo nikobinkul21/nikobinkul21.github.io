@@ -712,6 +712,10 @@ function initSudoku(container) {
     });
 
     kampf.zeigeStand(standFuerAnzeige());
+    // Ganz neues Abenteuer: Einblendung der ersten Welt, der erste Boss spricht
+    if (abenteuer.zustand.bossNummer === 1 && abenteuer.zustand.rekord === 0 && abenteuer.brauchtRaetsel()) {
+      kampf.auftritt(abenteuer.boss());
+    }
     kampf.text(abenteuer.zustand.raetsel && !abenteuer.zustand.raetsel.geloest
       ? "Der Kampf geht weiter!"
       : "Ein Boss stellt sich dir in den Weg!");
@@ -972,6 +976,7 @@ function initSudoku(container) {
     kampf.zeigeStand(standFuerAnzeige());
     kampf.zeigeWurf(null);
     kampf.neuesAbenteuer();
+    kampf.auftritt(abenteuer.boss());
     kampf.text("Ein neues Abenteuer beginnt!");
     if (!beschaeftigt.abenteuer) neuesAbenteuerRaetsel();
     else buchSpinAbwarten();                  // Buch-Spin nach der laufenden Walze

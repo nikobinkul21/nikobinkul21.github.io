@@ -51,9 +51,17 @@
    KONFIGURATION – alle Zahlenwerte an EINER Stelle
    -------------------------------------------------------------------------- */
 const SUDOKU_RPG_KONFIG = {
-  // Bosse
-  startHp: 80,          // HP des ersten Bosses
-  hpZuwachs: 20,        // jeder weitere Boss hat so viel mehr
+  // HP der Bosse – eine Formel je Level:
+  //   HP = (start + (Level − 1) × proLevel) × (1 + (Durchlauf − 1) × durchlaufZuschlag)
+  //        × eliteFaktor (Level 5, 10, 15 jeder Welt) bzw. × weltbossFaktor (Level 20)
+  // "Level" zählt über alle Welten (Welt 2 beginnt mit Level 21).
+  hp: {
+    start: 80,              // Level 1
+    proLevel: 20,           // jedes weitere Level so viel mehr
+    durchlaufZuschlag: 1,   // je weiterem Durchlauf +100 % (Durchlauf 2: doppelte HP)
+    eliteFaktor: 2,         // Elite-Bosse
+    weltbossFaktor: 3,      // Weltboss (Level 20 jeder Welt)
+  },
 
   // Würfel und Schaden
   wuerfelSeiten: 20,    // Würfel bei richtiger Zahl: 1 bis 20
@@ -290,18 +298,15 @@ const SUDOKU_RPG_KONFIG = {
     testErzwingen: false,   // true: in JEDEM Sudoku ein Regenbogenfeld (zum Ausprobieren)
   },
 
-  // Die Bosse in ihrer Reihenfolge. Nach dem letzten geht es mit dem
-  // ersten weiter – mit anderer Farbpalette, höherer Nummer, derselben
-  // Eigenheit und demselben Angriff. "sprite" verweist auf eine Figur in
-  // js/sudoku-sprites.js, "eigenheit" auf einen Eintrag in eigenheiten
-  // (null = keine), "angriff" auf einen Eintrag in angriffe (null = keiner).
-  bosse: [
-    { name: "Schleimkönig", sprite: "schleim", eigenheit: null, angriff: "schrei" },
-    { name: "Knochenfürst", sprite: "knochen", eigenheit: "regeneration", angriff: "siegel" },
-    { name: "Giftpilz", sprite: "pilz", eigenheit: "ruestung", angriff: "finsternis" },
-    { name: "Steingolem", sprite: "golem", eigenheit: "nebel", angriff: "fluch" },
-    { name: "Schattendrache", sprite: "drache", eigenheit: "dieb", angriff: "hieb" },
-  ],
+  // Welten und Level: Jeder Boss ist ein Level. Die Welten liegen in
+  // js/worlds/welt1.js … welt4.js (Name, Hintergrund, Farbstimmung, Bosse).
+  // Eine Welt ohne Bosse wird übersprungen; nach der letzten gebauten Welt
+  // beginnt der nächste Durchlauf bei Welt 1 (mit höheren HP, siehe hp).
+  welten: {
+    levelProWelt: 20,       // so viele Level (Bosse) hat jede Welt
+    eliteLevel: [5, 10, 15], // Elite-Bosse (Level innerhalb der Welt)
+    weltbossLevel: 20,      // der Weltboss: Elite-Regeln, aber weltbossFaktor statt eliteFaktor
+  },
 
   // Gegenangriffe: Jeder Boss kündigt seinen Angriff an. Jede gesetzte Zahl
   // (richtig oder falsch) zählt den Zähler um 1 herunter, bei 0 greift der
@@ -465,10 +470,8 @@ const SUDOKU_RPG_KONFIG = {
     },
   ],
 
-  // Elite-Bosse: jeder "abstand"-te Boss (5, 10, 15 …)
+  // Elite-Bosse (welche Level: welten.eliteLevel, HP: hp.eliteFaktor) – auch der Weltboss folgt diesen Regeln
   elite: {
-    abstand: 5,             // 0 = keine Elite-Bosse
-    hpFaktor: 2,            // so viel mehr HP als ein normaler Boss an dieser Stelle
     muenzen: 50,            // Extra-Münzen für den Sieg (ohne Münzfaktor)
     verbesserungenWaehlen: 2, // so viele der angebotenen Verbesserungen darf man wählen
   },
@@ -563,13 +566,22 @@ const SudokuRPG = (function () {
   const Engine = typeof SudokuEngine !== "undefined" ? SudokuEngine : require("./sudoku-engine.js");
 
   const K = SUDOKU_RPG_KONFIG;
+
+  // Die Welten (js/worlds/welt1.js …): im Browser schon geladen, in Node.js hier nachgeladen
+  const WELTEN = typeof window !== "undefined" && window.SUDOKU_WELTEN
+    ? window.SUDOKU_WELTEN
+    : [1, 2, 3, 4].map(function (n) { return require("./worlds/welt" + n + ".js"); });
+  if (!WELTEN.some(function (w) { return w && w.bosse && w.bosse.length > 0; })) {
+    throw new Error("Sudoku-Abenteuer: Keine Welt mit Bossen gefunden (js/worlds/welt1.js).");
+  }
   const SPEICHER_SCHLUESSEL = "ntb-sudoku-abenteuer";
   // Version 1: noch "fehler" statt Leben. Version 2: Leben, Münzen, Power-ups.
   // Version 3: dazu Kombo, Münz-Rest, Verbesserungen und offene Auswahl.
   // Version 4: dazu Elite-Bosse (seltene Eigenschaft, Treffer-Zähler) und
   //            mehrere Wahlen bei einer Auswahl.
   // Version 5: dazu freie Ersatzwahl (entfernte Verbesserungen) und Regenbogenfeld.
-  const VERSION = 8;
+  // Version 9: Welten und Level – bossNummer bleibt, die HP folgen der neuen Formel.
+  const VERSION = 9;
 
 
   /* ------------------------------------------------------------------------
@@ -627,21 +639,81 @@ const SudokuRPG = (function () {
      BOSSE, EIGENHEITEN, SCHWIERIGKEIT, POWER-UPS, VERBESSERUNGEN
      ------------------------------------------------------------------------ */
 
-  /** Ist der Boss mit dieser Nummer ein Elite-Boss (jeder elite.abstand-te)? */
+  /* ---------- Welten und Level ----------
+     zustand.bossNummer zählt alle Bosse eines Abenteuers fortlaufend (1, 2, 3 …).
+     Daraus ergeben sich Durchlauf, Welt und Level: Die gebauten Welten
+     (mit Bossen) folgen aufeinander, danach beginnt der nächste Durchlauf. */
+
+  /** Die gebauten Welten (mit Bossen) in ihrer Reihenfolge. */
+  function gebauteWelten() {
+    return WELTEN.filter(function (w) { return w && Array.isArray(w.bosse) && w.bosse.length > 0; });
+  }
+
+  /**
+   * Wo steht der Boss mit dieser fortlaufenden Nummer?
+   * @returns {{ durchlauf, welt, weltLevel (1–20), level (über alle Welten, 1–80), weltboss, elite }}
+   */
+  function position(nummer) {
+    const pro = K.welten.levelProWelt;
+    const welten = gebauteWelten();
+    const proDurchlauf = welten.length * pro;
+    const i = (nummer - 1) % proDurchlauf;
+    const welt = welten[Math.floor(i / pro)];
+    const weltLevel = (i % pro) + 1;
+    const weltboss = weltLevel === K.welten.weltbossLevel;
+    return {
+      durchlauf: Math.floor((nummer - 1) / proDurchlauf) + 1,
+      welt: welt,
+      weltLevel: weltLevel,
+      level: (welt.nummer - 1) * pro + weltLevel,
+      weltboss: weltboss,
+      elite: weltboss || K.welten.eliteLevel.indexOf(weltLevel) !== -1,
+    };
+  }
+
+  /** Ist der Boss mit dieser Nummer ein Elite-Boss (Level 5, 10, 15 – und der Weltboss)? */
   function istElite(nummer) {
-    return K.elite.abstand > 0 && nummer % K.elite.abstand === 0;
+    return position(nummer).elite;
+  }
+
+  /** Ist der Boss mit dieser Nummer ein Weltboss? */
+  function istWeltboss(nummer) {
+    return position(nummer).weltboss;
   }
 
   /** In wie vielen Bossen kommt der nächste Elite-Boss? (0 = dieser ist einer, null = gar keiner) */
   function bisElite(nummer) {
-    if (!(K.elite.abstand > 0)) return null;
-    return (K.elite.abstand - (nummer % K.elite.abstand)) % K.elite.abstand;
+    const pro = K.welten.levelProWelt;
+    for (let k = 0; k <= pro; k++) {
+      if (istElite(nummer + k)) return k;
+    }
+    return null;
   }
 
-  /** Höchste HP des Bosses mit dieser Nummer (1, 2, 3 …) – bei Elite-Bossen × hpFaktor. */
+  /** HP-Formel (siehe KONFIG.hp) für ein Level in einem Durchlauf. */
+  function hpFuer(level, durchlauf, art) {
+    const h = K.hp;
+    const normal = (h.start + (level - 1) * h.proLevel) * (1 + (durchlauf - 1) * h.durchlaufZuschlag);
+    const faktor = art === "weltboss" ? h.weltbossFaktor : art === "elite" ? h.eliteFaktor : 1;
+    return Math.round(normal * faktor);
+  }
+
+  /** Höchste HP des Bosses mit dieser Nummer (1, 2, 3 …). */
   function maxHp(nummer) {
-    const normal = K.startHp + (nummer - 1) * K.hpZuwachs;
-    return istElite(nummer) ? Math.round(normal * K.elite.hpFaktor) : normal;
+    const p = position(nummer);
+    return hpFuer(p.level, p.durchlauf, p.weltboss ? "weltboss" : p.elite ? "elite" : "normal");
+  }
+
+  /** HP nach der alten Formel (bis Spielstand-Version 8) – nur zum Übernehmen alter Stände. */
+  function alteMaxHp(nummer) {
+    const normal = 80 + (nummer - 1) * 20;
+    return nummer % 5 === 0 ? normal * 2 : normal;
+  }
+
+  /** Der Boss-Eintrag der Weltdatei (Name, Sprite, Eigenheit, Angriff, Sätze). */
+  function bossEintrag(nummer) {
+    const p = position(nummer);
+    return p.welt.bosse[p.weltLevel - 1];
   }
 
   /** Seltene Eigenschaft über ihre id (oder null). */
@@ -674,7 +746,7 @@ const SudokuRPG = (function () {
 
   /** Der Angriff des Bosses mit dieser Nummer (Bosse kehren mit ihrem Angriff zurück). */
   function angriffVonBoss(nummer) {
-    return angriffInfo(K.bosse[(nummer - 1) % K.bosse.length].angriff);
+    return angriffInfo(bossEintrag(nummer).angriff);
   }
 
   /** Alle so vielen Züge greift dieser Boss an (Elite-Bosse früher, mindestens 1). */
@@ -815,21 +887,38 @@ const SudokuRPG = (function () {
     return kandidaten[Math.floor(zufall() * kandidaten.length)];
   }
 
+  /** Welt für die Anzeige (ohne Bossliste). */
+  function weltFuerAnzeige(welt) {
+    return { nummer: welt.nummer, id: welt.id, name: welt.name, hintergrund: welt.hintergrund,
+      farben: Object.assign({}, welt.farben) };
+  }
+
   /**
-   * Alles über den Boss mit dieser Nummer.
-   * Nach dem 5. Boss beginnt eine neue "Runde": gleiche Figuren und
-   * Eigenheiten, andere Farbe (runde = 1, 2 … → die Oberfläche färbt um).
+   * Alles über den Boss mit dieser Nummer: Welt, Level, Name, Sprite,
+   * Sätze, Eigenheit und Angriff. Im 2., 3. … Durchlauf kommen dieselben
+   * Bosse wieder – mit mehr HP und anderer Farbe (runde = Durchlauf − 1).
    */
   function bossInfo(nummer) {
-    const index = (nummer - 1) % K.bosse.length;
-    const eigenheit = eigenheitInfo(K.bosse[index].eigenheit);
+    const p = position(nummer);
+    const b = p.welt.bosse[p.weltLevel - 1];
+    const eigenheit = eigenheitInfo(b.eigenheit);
     return {
       nummer: nummer,
-      name: K.bosse[index].name,
-      sprite: K.bosse[index].sprite,
-      runde: Math.floor((nummer - 1) / K.bosse.length),
+      name: b.name,
+      sprite: b.sprite,
+      runde: p.durchlauf - 1,
+      durchlauf: p.durchlauf,
+      welt: weltFuerAnzeige(p.welt),
+      level: p.level,                       // über alle Welten (Welt 2 beginnt bei 21)
+      weltLevel: p.weltLevel,               // innerhalb der Welt: 1 bis levelProWelt
+      levelProWelt: K.welten.levelProWelt,
+      eliteLevel: K.welten.eliteLevel.slice(),
+      weltbossLevel: K.welten.weltbossLevel,
+      erscheinen: b.erscheinen || "",
+      niederlage: b.niederlage || "",
       maxHp: maxHp(nummer),
-      elite: istElite(nummer),
+      elite: p.elite,
+      weltboss: p.weltboss,
       bisElite: bisElite(nummer),
       selten: null,          // seltene Eigenschaft – kommt aus dem Spielstand (siehe bossMitStand)
       // Für die Anzeige: { id, name, farbe, wert, beschreibung (fertiger Text), wirkung }
@@ -1251,6 +1340,7 @@ const SudokuRPG = (function () {
     const vorV6 = roh.version < 6;
     const vorV7 = roh.version < 7;
     const vorV8 = roh.version < 8;
+    const vorV9 = roh.version < 9;
 
     // Bücher (Version 7: eigene Kategorie bis Stufe 5, Version 8: Teil der
     // Verbesserungen bis Stufe 10). Mehr als maxBuecher → die mit der höchsten
@@ -1334,7 +1424,8 @@ const SudokuRPG = (function () {
     const werte = werteVon(stufen);
 
     if (!istGanzzahl(roh.bossNummer, 1, 1e6) ||
-        !istGanzzahl(roh.bossHp, 1, maxHp(roh.bossNummer)) ||
+        // bis Version 8 galt eine andere HP-Formel (die Bossnummer wird jetzt zum Level)
+        !istGanzzahl(roh.bossHp, 1, vorV9 ? alteMaxHp(roh.bossNummer) : maxHp(roh.bossNummer)) ||
         !istGanzzahl(leben, 1, werte.maxLeben) ||
         !istGanzzahl(muenzen, 0, 1e9) ||
         !istGanzzahl(roh.rekord, 0, 1e6) ||
@@ -1348,6 +1439,14 @@ const SudokuRPG = (function () {
     const vorigeSelten = !vorV4 && seltenInfo(roh.vorigeSelten) ? roh.vorigeSelten : null;
     let elite = null;
     let bossHp = roh.bossHp;
+    if (vorV9) {
+      // Alter Stand: HP anteilig auf die neue Formel umrechnen – ein voller
+      // Boss (auch ein Elite-Boss aus Version 3 mit normalen HP) bleibt voll
+      const alt = alteMaxHp(roh.bossNummer);
+      const voll = bossHp === alt || (vorV4 && istElite(roh.bossNummer) && bossHp === 80 + (roh.bossNummer - 1) * 20);
+      bossHp = voll ? maxHp(roh.bossNummer)
+        : Math.max(1, Math.min(maxHp(roh.bossNummer), Math.round(bossHp / alt * maxHp(roh.bossNummer))));
+    }
     if (istElite(roh.bossNummer)) {
       const e = vorV4 ? null : roh.elite;
       if (e && e.nummer === roh.bossNummer && seltenInfo(e.selten) && istGanzzahl(e.treffer, 0, 1e6)) {
@@ -1355,9 +1454,6 @@ const SudokuRPG = (function () {
       } else {
         elite = { nummer: roh.bossNummer, selten: loseSelten(vorigeSelten, zufall || Math.random), treffer: 0 };
       }
-      // Älterer Stand, Kampf noch nicht begonnen: gleich mit den vollen Elite-HP
-      const normal = K.startHp + (roh.bossNummer - 1) * K.hpZuwachs;
-      if (vorV4 && bossHp === normal) bossHp = maxHp(roh.bossNummer);
     }
 
     let raetsel = null;
@@ -1422,7 +1518,7 @@ const SudokuRPG = (function () {
 
     return {
       ok: true,
-      ergaenzt: vorV8,
+      ergaenzt: vorV9,
       daten: {
         version: VERSION,
         bossNummer: roh.bossNummer,
@@ -1488,7 +1584,7 @@ const SudokuRPG = (function () {
     // Ein älterer Stand wird dabei ergänzt (Leben, Münzen, Power-ups, Kombo …)
     const geladen = pruefeDaten(speicher.laden(), zufall);
     let zustand = geladen.ok ? geladen.daten : neuerZustand();
-    if (!zustand.elite && istElite(zustand.bossNummer)) eliteAuslosen();   // nur bei elite.abstand = 1
+    if (!zustand.elite && istElite(zustand.bossNummer)) eliteAuslosen();   // nur wenn Level 1 ein Elite-Level wäre
     freieWahlStarten();      // z. B. Ersatz für "Starkes Gift" (falls gerade keine andere Wahl offen ist)
     // Offene Buchschläge (Neuladen, nachdem der nächste Boss schon erschienen ist)
     // treffen ihn jetzt – die Oberfläche hört hier noch nicht zu, sie zeigt den Stand
@@ -2257,7 +2353,7 @@ const SudokuRPG = (function () {
     /** Alles auf Anfang: Boss 1, Startleben, 0 Münzen, keine Kombo, keine Verbesserungen, kein Rekord. */
     function zuruecksetzen() {
       zustand = neuerZustand();                // ohne Bücher → die Oberfläche startet den Buch-Spin
-      if (istElite(1)) eliteAuslosen();       // nur bei elite.abstand = 1
+      if (istElite(1)) eliteAuslosen();       // nur wenn Level 1 ein Elite-Level wäre
       speichern();
       melde("zurueckgesetzt", { boss: bossInfo(1) });
     }
@@ -2312,6 +2408,10 @@ const SudokuRPG = (function () {
     bossInfo: bossInfo,
     maxHp: maxHp,
     istElite: istElite,
+    istWeltboss: istWeltboss,
+    position: position,
+    hpFuer: hpFuer,
+    welten: function () { return WELTEN.filter(Boolean).map(function (w) { return Object.assign(weltFuerAnzeige(w), { gebaut: w.bosse.length > 0 }); }); },
     seltenFuerAnzeige: seltenFuerAnzeige,
     angriffsAbstand: angriffsAbstand,
     buchInfo: buchInfo,

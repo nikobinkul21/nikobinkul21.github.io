@@ -65,6 +65,13 @@ const SudokuKampf = (function () {
     stolpern: 520,
     banner: 1100,      // Hinweis, wenn eine Boss-Eigenheit auslöst
     eliteAuftritt: 1500, // Einblendung "Ein Elite-Boss erscheint"
+    weltbossAuftritt: 2200, // eigener Auftritt des Weltbosses (Bühne dunkel, großes Banner)
+    weltEinblendung: 1900,  // Name der Welt beim Betreten (blockiert nichts)
+    // Sprechblasen der Bosse (blockieren nichts, laufen neben der Warteschlange)
+    blaseZeichen: 32,       // je Buchstabe
+    blaseHalten: 2600,      // danach stehen lassen
+    blaseKurz: 1000,        // … nur so lange, wenn schon die nächste wartet
+    blaseAus: 250,          // Ausblenden
     eliteSieg: 1500,   // größere Siegesanimation nach einem Elite-Boss
     walze: 1900,       // Slot-Walze bis zum Stillstand
     walzePause: 550,   // kurz stehen lassen, bevor das Sudoku startet
@@ -108,6 +115,7 @@ const SudokuKampf = (function () {
     kreuz: '<path d="M0 0h2v1H0zM5 0h2v1H5zM1 1h2v1H1zM4 1h2v1H4zM2 2h3v1H2zM3 3h1v1H3zM2 4h3v1H2zM1 5h2v1H1zM4 5h2v1H4zM0 6h2v1H0zM5 6h2v1H5z"/>',
     warnung: '<path d="M3 0h1v1h1v2h1v2h1v2H0V5h1V3h1V1h1z"/><path fill="#fff" d="M3 2h1v2H3zM3 5h1v1H3z"/>',
     krone: '<path d="M0 1h1v2h1V2h1V0h1v2h1v1h1V1h1v6H0z"/>',
+    sprechblase: '<path d="M0 0h7v5H3v1H2v1H1V5H0z"/><path fill="rgba(255,255,255,.6)" d="M1 2h1v1H1zM3 2h1v1H3zM5 2h1v1H5z"/>',
     // Gegenangriffe der Bosse und die Parade
     schrei: '<path d="M0 2h1v3H0zM1 1h1v5H1z"/><path d="M3 2h1v1H3zM3 4h1v1H3zM4 3h1v1H4zM4 1h1v1H4zM4 5h1v1H4zM5 0h1v1H5zM5 6h1v1H5zM6 2h1v3H6z"/>',
     siegel: '<path d="M2 0h3v1h1v2H5V1H2v2H1V1h1z"/><path d="M0 3h7v4H0z"/><path fill="rgba(0,0,0,.5)" d="M3 4h1v2H3z"/>',
@@ -438,7 +446,15 @@ const SudokuKampf = (function () {
   function erstelle(container, optionen) {
     container.innerHTML =
       '<section class="kampf" aria-label="Kampf">' +
+        // Welt und Level mit Fortschrittsleiste (Elite-Bosse und Weltboss markiert)
+        '<div class="kampf-welt">' +
+          '<p class="kampf-welt-text"><span class="kampf-welt-name"></span>' +
+            '<span class="kampf-welt-level"></span><span class="kampf-welt-durchlauf" hidden></span></p>' +
+          '<ol class="kampf-welt-leiste" aria-hidden="true"></ol>' +
+        "</div>" +
         '<div class="kampf-buehne">' +
+          // Pixel-Hintergrund der Welt (hinter allem)
+          '<canvas class="kampf-hintergrund" aria-hidden="true"></canvas>' +
           // Boss oben: Infokasten links (mit Eigenheit), Figur rechts
           '<div class="kampf-info kampf-info--boss">' +
             '<div class="kampf-name"><span class="kampf-boss-name"></span> <span class="kampf-boss-nr"></span></div>' +
@@ -478,6 +494,8 @@ const SudokuKampf = (function () {
           '<div class="kampf-blitz" aria-hidden="true"></div>' +
           // Ebene für aufsteigende Zahlen und Hinweise
           '<div class="kampf-effekte" aria-hidden="true"></div>' +
+          // Sprechblase des Bosses (vorgelesen wird der Satz über die Statuszeile)
+          '<div class="kampf-sprechblase-platz" aria-hidden="true"></div>' +
         "</div>" +
         // Leiste unter der Bühne: Kombo und gesammelte Verbesserungen
         '<div class="kampf-leiste">' +
@@ -529,6 +547,14 @@ const SudokuKampf = (function () {
       "</section>";
 
     const el = {
+      kampf: container.querySelector(".kampf"),
+      welt: container.querySelector(".kampf-welt"),
+      weltName: container.querySelector(".kampf-welt-name"),
+      weltLevel: container.querySelector(".kampf-welt-level"),
+      weltDurchlauf: container.querySelector(".kampf-welt-durchlauf"),
+      weltLeiste: container.querySelector(".kampf-welt-leiste"),
+      hintergrund: container.querySelector(".kampf-hintergrund"),
+      blasenPlatz: container.querySelector(".kampf-sprechblase-platz"),
       bossName: container.querySelector(".kampf-boss-name"),
       bossNr: container.querySelector(".kampf-boss-nr"),
       eigenheit: container.querySelector(".kampf-eigenheit"),
@@ -618,7 +644,7 @@ const SudokuKampf = (function () {
 
     // Was gerade ANGEZEIGT wird (kann wegen der Warteschlange kurz hinter
     // dem echten Spielstand liegen)
-    const anzeige = { bossNummer: 0, muenzen: 0, kombo: 0, maxLeben: SudokuRPG.KONFIG.maxLeben };
+    const anzeige = { bossNummer: 0, weltId: null, muenzen: 0, kombo: 0, maxLeben: SudokuRPG.KONFIG.maxLeben };
     const K = SudokuRPG.KONFIG;
 
     /* ---------- Warteschlange ----------
@@ -710,11 +736,14 @@ const SudokuKampf = (function () {
         SudokuSprites.zeichne(el.bossCanvas, boss.sprite, boss.runde);
         anzeige.bossNummer = boss.nummer;
       }
+      zeigeWelt(boss);
       el.bossName.textContent = boss.name;
-      // Elite-Boss: Zusatz "Elite" am Namen, größere Figur mit Aura, eigener HP-Rahmen (CSS)
-      el.bossNr.textContent = boss.elite ? "★ Elite" : "Nr. " + boss.nummer;
+      // Elite-Boss: Zusatz "Elite" am Namen, größere Figur mit Aura, eigener HP-Rahmen (CSS).
+      // Der Weltboss: noch größer, eigene Kennzeichnung.
+      el.bossNr.textContent = boss.weltboss ? "♛ Weltboss" : boss.elite ? "★ Elite" : "Lv. " + boss.weltLevel;
       el.bossNr.title = "Boss Nr. " + boss.nummer;
       el.buehne.classList.toggle("ist-elite", boss.elite);
+      el.buehne.classList.toggle("ist-weltboss", Boolean(boss.weltboss));
       zeigeEigenheit(boss.eigenheit);
       zeigeSelten(boss.elite ? boss.selten : null);
       // Klein links unter dem HP-Balken: Zähler der seltenen Eigenschaft bzw.
@@ -723,10 +752,151 @@ const SudokuKampf = (function () {
       if (boss.elite) {
         hinweis = boss.selten && boss.selten.zaehlerText ? "🛡 " + boss.selten.zaehlerText : "";
       } else if (boss.bisElite !== null) {
-        hinweis = boss.bisElite === 1 ? "Nächster: Elite!" : "Elite in " + boss.bisElite;
+        const art = boss.weltLevel + boss.bisElite === boss.weltbossLevel ? "Weltboss" : "Elite";
+        hinweis = boss.bisElite === 1 ? "Nächster: " + art + "!" : art + " in " + boss.bisElite;
       }
       el.eliteHinweis.textContent = hinweis;
       el.eliteHinweis.title = boss.elite ? "" : "So viele Bosse bis zum nächsten Elite-Boss";
+    }
+
+    /**
+     * Welt und Level über der Bühne ("Felder und Tavernen · Level 7/20"),
+     * Fortschrittsleiste, Pixel-Hintergrund und Farbstimmung der Welt.
+     */
+    function zeigeWelt(boss) {
+      const w = boss.welt;
+      el.weltName.textContent = w.name;
+      el.weltLevel.textContent = " · Level " + boss.weltLevel + "/" + boss.levelProWelt;
+      el.weltDurchlauf.hidden = boss.durchlauf <= 1;
+      el.weltDurchlauf.textContent = " · Durchlauf " + boss.durchlauf;
+      el.welt.setAttribute("aria-label", w.name + ", Level " + boss.weltLevel + " von " + boss.levelProWelt +
+        (boss.durchlauf > 1 ? ", Durchlauf " + boss.durchlauf : ""));
+      // Leiste: ein Abschnitt je Level – geschafft, aktuell, Elite, Weltboss
+      if (el.weltLeiste.children.length !== boss.levelProWelt) {
+        el.weltLeiste.innerHTML = "";
+        for (let i = 1; i <= boss.levelProWelt; i++) el.weltLeiste.appendChild(document.createElement("li"));
+      }
+      Array.prototype.forEach.call(el.weltLeiste.children, function (li, k) {
+        const level = k + 1;
+        li.className = "kampf-welt-abschnitt" +
+          (level === boss.weltbossLevel ? " ist-weltboss" : boss.eliteLevel.indexOf(level) !== -1 ? " ist-elite" : "") +
+          (level < boss.weltLevel ? " ist-geschafft" : level === boss.weltLevel ? " ist-aktuell" : "");
+      });
+      // Hintergrund und Farbstimmung nur beim Wechsel der Welt neu
+      if (anzeige.weltId !== w.id) {
+        anzeige.weltId = w.id;
+        el.kampf.dataset.welt = w.id;
+        el.kampf.style.setProperty("--welt-akzent", w.farben.akzent);
+        el.kampf.style.setProperty("--welt-himmel", w.farben.himmelOben);
+        el.kampf.style.setProperty("--welt-boden", w.farben.bodenDunkel);
+        SudokuSprites.zeichneHintergrund(el.hintergrund, w);
+      }
+    }
+
+    /**
+     * Kurze Einblendung beim Betreten einer Welt (Name, Nummer, ggf. Durchlauf).
+     * Blockiert nichts; bei "Bewegung reduzieren" ohne Bewegung, nur Ein-/Ausblenden.
+     */
+    function weltEinblendung(boss) {
+      el.buehne.querySelectorAll(".kampf-welt-einblendung").forEach(function (alt) { alt.remove(); });
+      const e = document.createElement("div");
+      e.className = "kampf-welt-einblendung";
+      e.setAttribute("aria-hidden", "true");
+      e.innerHTML = '<span class="kampf-welt-einblendung-nr"></span><span class="kampf-welt-einblendung-name"></span>';
+      e.querySelector(".kampf-welt-einblendung-nr").textContent = "Welt " + boss.welt.nummer +
+        (boss.durchlauf > 1 ? " · Durchlauf " + boss.durchlauf : "");
+      e.querySelector(".kampf-welt-einblendung-name").textContent = boss.welt.name;
+      el.buehne.appendChild(e);
+      meldung("Welt " + boss.welt.nummer + ": " + boss.welt.name + (boss.durchlauf > 1 ? ", Durchlauf " + boss.durchlauf : "") + ".");
+      setTimeout(function () { e.remove(); }, DAUER.weltEinblendung);
+    }
+
+    /* ---------- Sprechblasen ----------
+       Laufen neben der Warteschlange her: Ein Satz erscheint Buchstabe für
+       Buchstabe über dem Boss und verschwindet nach ein paar Sekunden. Kommt
+       ein weiterer Satz, steht der laufende sofort ganz da und geht früher.
+       Abkürzen (beschleunige) überspringt keine Sprechblase. */
+    const blasen = [];          // wartende Sätze { name, text }
+    let blase = null;           // die gerade sichtbare { div, textEl, voll, zeit }
+
+    /** Ein Satz des Bosses: als Sprechblase, im Verlauf und für Screenreader. */
+    function sprechblase(name, text, art) {
+      if (!text) return;
+      verlaufEintrag({ text: name + ": „" + text + "“", wert: "", art: "satz", symbol: "sprechblase" });
+      // an die Meldung dieses Schritts anhängen (z. B. "… ist besiegt!")
+      meldung((el.status.textContent ? el.status.textContent + " " : "") + name + ": " + text);
+      blasen.push({ name: name, text: text, art: art || "" });
+      if (blase) {
+        zeigeGanz(blase);                    // die laufende macht Platz
+      } else {
+        naechsteBlase();
+      }
+    }
+
+    function zeigeGanz(b) {
+      if (b.voll) return;
+      clearInterval(b.tippen);
+      b.textEl.textContent = b.text;
+      b.voll = true;
+      halten(b);
+    }
+
+    function halten(b) {
+      clearTimeout(b.zeit);
+      b.zeit = setTimeout(function () {
+        b.div.classList.add("geht");
+        b.zeit = setTimeout(function () {
+          b.div.remove();
+          blase = null;
+          naechsteBlase();
+        }, DAUER.blaseAus);
+      }, blasen.length > 0 ? DAUER.blaseKurz : DAUER.blaseHalten);
+    }
+
+    function naechsteBlase() {
+      const n = blasen.shift();
+      if (!n) return;
+      const div = document.createElement("div");
+      div.className = "kampf-sprechblase" + (n.art ? " kampf-sprechblase--" + n.art : "");
+      div.innerHTML = '<span class="kampf-sprechblase-name"></span><span class="kampf-sprechblase-text"></span>';
+      div.querySelector(".kampf-sprechblase-name").textContent = n.name;
+      const textEl = div.querySelector(".kampf-sprechblase-text");
+      // Platz für den ganzen Satz reservieren, damit die Blase beim Tippen nicht wächst
+      div.style.setProperty("--blase-laenge", String(n.text.length));
+      el.blasenPlatz.innerHTML = "";
+      el.blasenPlatz.appendChild(div);
+      blase = { div: div, textEl: textEl, text: n.text, voll: false, zeit: 0, tippen: 0 };
+      const b = blase;
+      if (ohneBewegung() || blasen.length > 0) {
+        zeigeGanz(b);
+        return;
+      }
+      let k = 0;
+      b.tippen = setInterval(function () {
+        k++;
+        textEl.textContent = n.text.slice(0, k);
+        if (k >= n.text.length) zeigeGanz(b);
+      }, DAUER.blaseZeichen);
+    }
+
+    /** Alle Sprechblasen weg (neues Abenteuer). */
+    function blasenLeeren() {
+      blasen.length = 0;
+      if (blase) { clearInterval(blase.tippen); clearTimeout(blase.zeit); blase = null; }
+      el.blasenPlatz.innerHTML = "";
+    }
+
+    /**
+     * Auftritt eines Bosses ohne Kampfwechsel (neues Abenteuer, Neustart):
+     * Einblendung der Welt (bei Level 1) und sein Satz.
+     */
+    function auftritt(boss) {
+      return einreihen(function () {
+        zeigeBoss(boss);
+        meldung("");
+        if (boss.weltLevel === 1) weltEinblendung(boss);
+        sprechblase(boss.name, boss.erscheinen, "erscheinen");
+      });
     }
 
     /** Seltene Eigenschaft unter der Eigenheit – mit Kennzeichnung "Selten" und Erklärung. */
@@ -1798,6 +1968,8 @@ const SudokuKampf = (function () {
     function sieg(e) {
       return einreihen(function () {
         meldung(e.boss.name + " ist besiegt!" + (e.elite ? " Elite-Bonus: " + e.eliteBonus + " Münzen." : ""));
+        // Sein letzter Satz – auch beim Abkürzen der Animationen
+        sprechblase(e.boss.name, e.boss.niederlage, "niederlage");
         verlaufEintrag(e.elite
           ? { text: "Elite " + e.boss.name + " besiegt!", wert: "+" + e.eliteBonus, art: "elite", symbol: "krone" }
           : { text: e.boss.name + " besiegt!", wert: "", art: "besiegt", symbol: "krone" });
@@ -1810,7 +1982,7 @@ const SudokuKampf = (function () {
           // Größer: goldener Blitz, starkes Wackeln, längeres Verglühen, Hinweis mit Bonus
           faerbe(el.blitz, "an-gold", 420);
           animiere(el.buehne, "wackelt-stark", DAUER.kritisch);
-          banner("Elite besiegt! +" + e.eliteBonus + " Münzen", null, "elite-sieg");
+          banner((e.boss.weltboss ? "Weltboss besiegt! +" : "Elite besiegt! +") + e.eliteBonus + " Münzen", null, "elite-sieg");
           el.bossFigur.classList.add("ist-besiegt-elite");
           return warte(DAUER.eliteSieg);
         }
@@ -1822,32 +1994,48 @@ const SudokuKampf = (function () {
     /** Der nächste Boss erscheint (volle HP, Leben aufgefüllt) – mit seiner Eigenheit. */
     function neuerBoss(e, rekord) {
       return einreihen(function () {
-        let text = (e.boss.elite ? "Ein Elite-Boss erscheint! " : "") +
-          "Boss " + e.boss.nummer + ": " + e.boss.name + ", " + e.boss.maxHp + " HP.";
-        if (e.boss.eigenheit) text += " Eigenheit " + e.boss.eigenheit.name + ": " + e.boss.eigenheit.beschreibung;
-        if (e.boss.selten) text += " Selten, " + e.boss.selten.name + ": " + e.boss.selten.beschreibung;
+        const boss = e.boss;
+        const ort = boss.welt.name + ", Level " + boss.weltLevel;
+        let text = (boss.weltboss ? "Der Weltboss erscheint! " : boss.elite ? "Ein Elite-Boss erscheint! " : "") +
+          ort + ": " + boss.name + ", " + boss.maxHp + " HP.";
+        if (boss.eigenheit) text += " Eigenheit " + boss.eigenheit.name + ": " + boss.eigenheit.beschreibung;
+        if (boss.selten) text += " Selten, " + boss.selten.name + ": " + boss.selten.beschreibung;
         meldung(text);
-        verlaufEintrag(e.boss.elite
-          ? { text: "Elite " + e.boss.nummer + ": " + e.boss.name + (e.boss.selten ? " · " + e.boss.selten.name : ""),
-              wert: e.boss.maxHp + " HP", art: "elite", symbol: "stern" }
-          : e.boss.eigenheit
-          ? { text: "Boss " + e.boss.nummer + ": " + e.boss.name + " · " + e.boss.eigenheit.name, wert: "",
-              art: "eigenheit", symbol: "warnung", farbe: e.boss.eigenheit.farbe }
-          : { text: "Boss " + e.boss.nummer + ": " + e.boss.name, wert: e.boss.maxHp + " HP" });
+        verlaufEintrag(boss.elite
+          ? { text: (boss.weltboss ? "Weltboss" : "Elite") + " · Level " + boss.weltLevel + ": " + boss.name + (boss.selten ? " · " + boss.selten.name : ""),
+              wert: boss.maxHp + " HP", art: "elite", symbol: boss.weltboss ? "krone" : "stern" }
+          : boss.eigenheit
+          ? { text: "Level " + boss.weltLevel + ": " + boss.name + " · " + boss.eigenheit.name, wert: "",
+              art: "eigenheit", symbol: "warnung", farbe: boss.eigenheit.farbe }
+          : { text: "Level " + boss.weltLevel + ": " + boss.name, wert: boss.maxHp + " HP" });
         el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite", "loest-sich-auf", "ist-ruhig");
-        zeigeBoss(e.boss);
-        zeigeHp(e.hp, e.boss.maxHp);
+        zeigeBoss(boss);
+        zeigeHp(e.hp, boss.maxHp);
         zeigeHerzen(e.leben, e.maxLeben);
-        zeigeRekord(e.boss, rekord);
+        zeigeRekord(boss, rekord);
         zeigeGegenangriff(e.gegenangriff);      // neuer Angriff, neuer Zähler
-        if (e.boss.elite) {
+        // Neue Welt (oder neuer Durchlauf): kurze Einblendung mit ihrem Namen
+        if (boss.weltLevel === 1) weltEinblendung(boss);
+        // Sein Satz beim Erscheinen – auch beim Abkürzen
+        sprechblase(boss.name, boss.erscheinen, "erscheinen");
+        if (boss.weltboss) {
+          // Eigener Auftritt: Bühne verdunkelt, Boss wächst heran, großes Banner
+          if (!ohneBewegung() && !eilig()) {
+            const b = banner("Der Weltboss erscheint!", null, "weltboss");
+            setTimeout(function () { b.remove(); }, DAUER.weltbossAuftritt);
+            animiere(el.buehne, "weltboss-auftritt", DAUER.weltbossAuftritt);
+            return animiere(el.bossFigur, "erscheint-weltboss", DAUER.weltbossAuftritt);
+          }
+          return Promise.resolve();
+        }
+        if (boss.elite) {
           // Eigene Einblendung (entfällt bei "Bewegung reduzieren" – die Kennzeichnungen bleiben)
           if (!ohneBewegung() && !eilig()) {
             const b = banner("Ein Elite-Boss erscheint!", null, "elite");
             setTimeout(function () { b.remove(); }, DAUER.eliteAuftritt);
           }
-        } else if (e.boss.eigenheit) {
-          banner(e.boss.eigenheit.name, e.boss.eigenheit.farbe, "eigenheit");
+        } else if (boss.eigenheit) {
+          banner(boss.eigenheit.name, boss.eigenheit.farbe, "eigenheit");
         }
         return animiere(el.bossFigur, "erscheint", DAUER.erscheinen);
       });
@@ -1948,6 +2136,7 @@ const SudokuKampf = (function () {
     /** Ein neues Abenteuer: Panel zurück auf den Hinweistext. */
     function neuesAbenteuer() {
       beschleunige();
+      blasenLeeren();
       return einreihen(function () {
         leerePanel();
         wuerfel.zeigeLeer();
@@ -2274,6 +2463,7 @@ const SudokuKampf = (function () {
       zeigeBuchBonus: zeigeBuchBonus,
       sieg: sieg,
       neuerBoss: neuerBoss,
+      auftritt: auftritt,
       verbesserung: verbesserung,
       auswahl: auswahl,
       schliesseAuswahl: schliesseAuswahl,

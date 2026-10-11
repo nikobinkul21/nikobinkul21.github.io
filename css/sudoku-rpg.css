@@ -82,6 +82,8 @@
   --kampf-selten: #a35cff;                 /* Violett: seltene Eigenschaft, "Immun" */
   --kampf-selten-rand: #2e0f5c;
   --elite-figur-faktor: 1.28;              /* so viel größer ist der Sprite eines Elite-Bosses */
+  --boss-figur-faktor: 1.18;               /* Boss-Sprites (Baukasten, 36 × 40) etwas größer als der Held */
+  --weltboss-figur-faktor: 1.5;            /* der Weltboss: eigener, größerer Sprite */
 
   /* Kombo-Zähler: Farben je Stufe (0 = keine Kombo … 4 = ab 10 in Folge) */
   --kombo-1: #4f6ef7;
@@ -2923,4 +2925,377 @@
   .wuerfel-neben.rollt,
   .auswahl-karte--legendaer.erscheint-legendaer,
   .auswahl-karte--legendaer.erscheint-legendaer::after { animation: none !important; }
+}
+
+
+/* ==========================================================================
+   WELTEN UND LEVEL: Welt-Anzeige, Hintergrund, Einblendung, Weltboss,
+   Sprechblasen der Bosse
+   ========================================================================== */
+
+/* Welt und Level über der Bühne: "Felder und Tavernen · Level 7/20" */
+.kampf-welt {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.kampf-welt-text {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text, inherit);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kampf-welt-name {
+  color: var(--welt-akzent, inherit);
+  filter: brightness(0.8);
+}
+
+:root[data-theme="dark"] .kampf-welt-name {
+  filter: none;
+}
+
+.kampf-welt-level,
+.kampf-welt-durchlauf {
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.kampf-welt-durchlauf {
+  color: #c0392b;
+  opacity: 1;
+}
+
+/* Fortschrittsleiste: ein Abschnitt je Level */
+.kampf-welt-leiste {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kampf-welt-abschnitt {
+  position: relative;
+  height: 6px;
+  border-radius: 2px;
+  background: rgba(127, 127, 127, 0.25);
+}
+
+.kampf-welt-abschnitt.ist-geschafft {
+  background: var(--welt-akzent, #e0a43a);
+}
+
+.kampf-welt-abschnitt.ist-aktuell {
+  background: var(--welt-akzent, #e0a43a);
+  box-shadow: 0 0 0 1px var(--kampf-kasten-rand), 0 0 5px var(--welt-akzent, #e0a43a);
+  animation: welt-aktuell 1.2s ease-in-out infinite alternate;
+}
+
+/* Elite-Bosse: goldener Punkt; Weltboss: breiter, rot mit Krone */
+.kampf-welt-abschnitt.ist-elite::after,
+.kampf-welt-abschnitt.ist-weltboss::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kampf-elite, #f5c542);
+  border: 1px solid var(--kampf-elite-dunkel, #b8862a);
+  transform: translate(-50%, -50%);
+}
+
+.kampf-welt-abschnitt.ist-weltboss::after {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: #d83a4a;
+  border-color: #8e2229;
+  box-shadow: 0 0 4px rgba(216, 58, 74, 0.8);
+}
+
+@keyframes welt-aktuell {
+  from { opacity: 0.65; }
+  to   { opacity: 1; }
+}
+
+/* Pixel-Hintergrund der Welt */
+.kampf-hintergrund {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+}
+
+:root[data-theme="dark"] .kampf-hintergrund {
+  filter: brightness(0.62) saturate(0.85);
+}
+
+/* Boss-Sprites aus dem Baukasten sind nicht quadratisch: ganz zeigen, unten anlegen */
+/* (Die Höhe auf der Bühne – unter der Angriffsanzeige – steht beim Gegenangriff weiter oben) */
+.kampf-figur--boss {
+  width: calc(var(--kampf-figur-groesse) * var(--boss-figur-faktor));
+  height: calc(var(--kampf-figur-groesse) * var(--boss-figur-faktor));
+  right: 4%;
+}
+
+/* Die Angriffsanzeige steht mittig über dem (größeren) Boss */
+.kampf-absicht {
+  right: calc(4% + var(--kampf-figur-groesse) * var(--boss-figur-faktor) / 2);
+}
+
+.kampf-figur--boss canvas {
+  object-fit: contain;
+  object-position: bottom;
+}
+
+.kampf-buehne.ist-elite .kampf-figur--boss {
+  width: calc(var(--kampf-figur-groesse) * var(--boss-figur-faktor) * var(--elite-figur-faktor));
+  height: calc(var(--kampf-figur-groesse) * var(--boss-figur-faktor) * var(--elite-figur-faktor));
+  right: 1%;
+}
+
+/* Der Weltboss: noch größer, rote Aura */
+.kampf-buehne.ist-weltboss .kampf-figur--boss {
+  width: calc(var(--kampf-figur-groesse) * var(--weltboss-figur-faktor));
+  height: calc(var(--kampf-figur-groesse) * var(--weltboss-figur-faktor));
+  top: 16%;                                /* unter der Angriffsanzeige */
+  right: 0;
+}
+
+.kampf-buehne.ist-weltboss .kampf-figur--boss::before {
+  background: radial-gradient(circle, rgba(216, 58, 74, 0.7) 0%, rgba(245, 197, 66, 0.4) 45%, transparent 70%);
+}
+
+.kampf-buehne.ist-weltboss .kampf-boss-nr {
+  color: #fff;
+  background: #b8323a;
+}
+
+/* Auftritt des Weltbosses: Bühne wird kurz dunkel, der Boss wächst heran */
+.kampf-buehne.weltboss-auftritt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: rgba(20, 8, 12, 0.55);
+  pointer-events: none;
+  animation: weltboss-dunkel 2.2s ease-in-out forwards;
+}
+
+.kampf-figur--boss.erscheint-weltboss {
+  animation: weltboss-wachsen 2.2s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  z-index: 4;
+}
+
+@keyframes weltboss-dunkel {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes weltboss-wachsen {
+  0%   { opacity: 0; transform: scale(0.3) translateY(30%); filter: brightness(0); }
+  40%  { opacity: 1; transform: scale(1.12); filter: brightness(0.3); }
+  60%  { transform: scale(0.96); filter: brightness(1.6); }
+  100% { transform: none; filter: none; }
+}
+
+.kampf-banner--weltboss {
+  top: 54%;
+  z-index: 7;
+  padding: 7px 16px;
+  font-size: 1.25rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff1b8;
+  background: linear-gradient(90deg, #6e1820, #d83a4a, #6e1820);
+  border-color: #3a0c10;
+  box-shadow: 0 0 22px rgba(216, 58, 74, 0.9), 3px 3px 0 rgba(0, 0, 0, 0.35);
+  animation-duration: 2.2s;
+}
+
+/* Einblendung beim Betreten einer Welt */
+.kampf-welt-einblendung {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 18px;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(20, 20, 28, 0.82);
+  border: 2px solid var(--welt-akzent, #e0a43a);
+  border-radius: 8px;
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: welt-einblendung 1.9s ease-out forwards;
+}
+
+.kampf-welt-einblendung-nr {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--welt-akzent, #e0a43a);
+}
+
+.kampf-welt-einblendung-name {
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+@keyframes welt-einblendung {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.85); letter-spacing: 0.2em; }
+  18%  { opacity: 1; transform: translate(-50%, -50%) scale(1); letter-spacing: normal; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Sprechblase über dem Boss: blockiert nichts (keine Klicks) */
+.kampf-sprechblase-platz {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.kampf-sprechblase {
+  position: absolute;
+  top: 3%;
+  right: 6%;
+  /* Breite nach der Länge des ganzen Satzes – wächst beim Tippen nicht */
+  width: min(72%, calc(var(--blase-laenge, 30) * 0.42em + 1.6em));
+  min-height: 2.2em;
+  padding: 4px 8px 5px;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: #1b1b24;
+  background: #fff;
+  border: 2px solid #1b1b24;
+  border-radius: 8px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  animation: blase-auf 0.18s ease-out;
+}
+
+/* Spitze zum Boss (unten rechts) */
+.kampf-sprechblase::after {
+  content: "";
+  position: absolute;
+  right: 22%;
+  bottom: -8px;
+  width: 10px;
+  height: 8px;
+  background: #fff;
+  border: 2px solid #1b1b24;
+  border-top: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+.kampf-sprechblase-name {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #8e2229;
+}
+
+.kampf-sprechblase--niederlage .kampf-sprechblase-name {
+  color: #6b6b78;
+}
+
+.kampf-sprechblase-text {
+  font-weight: 600;
+}
+
+.kampf-sprechblase.geht {
+  opacity: 0;
+  transition: opacity 0.25s ease-in;
+}
+
+@keyframes blase-auf {
+  from { opacity: 0; transform: translateY(4px) scale(0.9); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Sätze im Verlauf */
+.panel-eintrag--satz .panel-eintrag-text {
+  font-style: italic;
+}
+
+@media (max-width: 767px) {
+  /* Auf dem Handy ist die Bühne flach: Boss nur wenig größer als der Held */
+  :root {
+    --boss-figur-faktor: 1.06;
+  }
+
+  .kampf-figur--boss {
+    width: calc(var(--kampf-figur-groesse-klein) * var(--boss-figur-faktor));
+    height: calc(var(--kampf-figur-groesse-klein) * var(--boss-figur-faktor));
+  }
+
+  .kampf-absicht {
+    right: calc(4% + var(--kampf-figur-groesse-klein) * var(--boss-figur-faktor) / 2);
+  }
+
+  .kampf-buehne.ist-elite .kampf-figur--boss {
+    width: calc(var(--kampf-figur-groesse-klein) * var(--boss-figur-faktor) * var(--elite-figur-faktor));
+    height: calc(var(--kampf-figur-groesse-klein) * var(--boss-figur-faktor) * var(--elite-figur-faktor));
+  }
+
+  .kampf-buehne.ist-weltboss .kampf-figur--boss {
+    width: calc(var(--kampf-figur-groesse-klein) * var(--weltboss-figur-faktor));
+    height: calc(var(--kampf-figur-groesse-klein) * var(--weltboss-figur-faktor));
+    top: 20%;
+  }
+
+  .kampf-sprechblase {
+    font-size: 0.66rem;
+    width: min(64%, calc(var(--blase-laenge, 30) * 0.42em + 1.6em));
+  }
+
+  .kampf-welt-text {
+    font-size: 0.7rem;
+  }
+}
+
+/* Bewegung reduzieren: keine Bewegung, nur Ein-/Ausblenden */
+@media (prefers-reduced-motion: reduce) {
+  .kampf-welt-abschnitt.ist-aktuell,
+  .kampf-sprechblase,
+  .kampf-figur--boss.erscheint-weltboss {
+    animation: none;
+  }
+
+  .kampf-welt-einblendung {
+    animation: welt-einblenden-ruhig 1.9s linear forwards;
+  }
+
+  .kampf-buehne.weltboss-auftritt::after {
+    display: none;
+  }
+}
+
+@keyframes welt-einblenden-ruhig {
+  0%, 85% { opacity: 1; }
+  100%    { opacity: 0; }
 }
