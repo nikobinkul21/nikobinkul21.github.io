@@ -2611,7 +2611,7 @@
   z-index: 4;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   padding: 2px 6px;
   font-size: 0.72rem;
   font-weight: 800;
@@ -2649,9 +2649,15 @@
   border-radius: 5px;
 }
 
-.kampf-boss-angriff-seiten {
-  font-size: 0.6rem;
-  opacity: 0.65;
+/* Angriffsbonus des Bosses neben dem Würfel ("+ 2") */
+.kampf-boss-angriff-bonus {
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: var(--boss-angriff-farbe);
+}
+
+.kampf-boss-angriff-bonus[hidden] {
+  display: none;
 }
 
 .kampf-boss-angriff.rollt .kampf-boss-angriff-wuerfel { animation: boss-wuerfel-rollt 0.25s linear infinite; }
@@ -2716,6 +2722,19 @@
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+/* Unter der Summe des Bosses: Wurf + Angriffsbonus ("13 + 2") */
+.kampf-vergleich-teile {
+  font-size: 0.56rem;
+  font-weight: 800;
+  opacity: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Konter: die Würfel bleiben stehen, bis der Schadensaufbau fertig ist */
+.kampf-vergleich.bleibt {
+  animation: vergleich-ein 0.25s ease-out;
 }
 
 .kampf-vergleich-gegen {
@@ -2855,19 +2874,6 @@
 .panel-summe--ueberladung .panel-wert,
 .panel-kurz-schaden[data-art="ueberladung"],
 .panel-eintrag--ueberladung { color: #ff9cf3; font-weight: 800; }
-
-/* Konter-Zahl auf dem Weg zum Boss */
-.kampf-konter-flug {
-  position: absolute;
-  z-index: 7;
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--konter-farbe);
-  -webkit-text-stroke: 2px #6b3a00;
-  paint-order: stroke fill;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-}
 
 /* Finsternis: die Bühne wird dunkel */
 .kampf-buehne.verdunkelt::before {

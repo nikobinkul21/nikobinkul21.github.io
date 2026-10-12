@@ -83,7 +83,6 @@ const SudokuKampf = (function () {
     bossWurf: 650,          // der Boss holt aus, sein Würfel rollt kurz und zeigt den Angriff
     vergleich: 450,         // beide Würfel stehen nebeneinander, bevor der Ausgang kommt
     ausgang: 650,           // Geblockt / Treffer / Konter
-    konterFlug: 420,        // die Konter-Zahl fliegt zum Boss
     // Buchschlag (Normal, Desktop; Schnell/Smartphone kürzer): zusammen etwa 2 Sekunden
     buchFeld: 110,       // Abstand, in dem die neun Felder aufleuchten und ihre Ziffer losschicken
     buchFlug: 320,       // Flugzeit einer Ziffer zum Schwert
@@ -494,11 +493,12 @@ const SudokuKampf = (function () {
             '<span class="kampf-absicht-kopf"><span class="kampf-absicht-symbol"></span><span class="kampf-absicht-name"></span></span>' +
             '<span class="kampf-absicht-text"></span>' + tippHtml() +
           "</button>" +
-          // Über dem Boss, nur im Verteidigungszug: sein gewürfelter Angriff ("Angriff: 6")
+          // Über dem Boss, nur im Verteidigungszug: sein gewürfelter Angriff
+          // und sein Angriffsbonus ("Angriff: 13 + 2"); dass es ein W20 ist, steht im Vorlesetext
           '<div class="kampf-boss-angriff" role="img" hidden>' +
             '<span class="kampf-boss-angriff-label">Angriff:</span>' +
             '<span class="kampf-boss-angriff-wuerfel"><span class="kampf-boss-angriff-zahl"></span></span>' +
-            '<span class="kampf-boss-angriff-seiten"></span>' +
+            '<span class="kampf-boss-angriff-bonus" hidden></span>' +
           "</div>" +
           // Held unten: Figur links, HP, Münzen und Würfel rechts
           '<div class="kampf-figur kampf-figur--held"><canvas class="kampf-held"></canvas></div>' +
@@ -641,7 +641,7 @@ const SudokuKampf = (function () {
       phaseTipp: container.querySelector(".kampf-phase .kampf-tipp"),
       bossAngriff: container.querySelector(".kampf-boss-angriff"),
       bossAngriffZahl: container.querySelector(".kampf-boss-angriff-zahl"),
-      bossAngriffSeiten: container.querySelector(".kampf-boss-angriff-seiten"),
+      bossAngriffBonus: container.querySelector(".kampf-boss-angriff-bonus"),
     };
 
     SudokuSprites.zeichne(el.heldCanvas, "held", 0);
@@ -1137,7 +1137,7 @@ const SudokuKampf = (function () {
       schwebeZahl(text, art === "heilung" ? "heilung" : "held");
     }
 
-    /** "W8" usw. */
+    /** "W20" usw. */
     function wText(seiten) {
       return "W" + seiten;
     }
@@ -1145,9 +1145,9 @@ const SudokuKampf = (function () {
     /**
      * Phase des Schlagabtauschs SOFORT zeigen: Schwert (Angriffszug) oder
      * Schild (Verteidigungszug) beim Helden, im Verteidigungszug über dem Boss
-     * sein gewürfelter Angriff ("Angriff: 6"). Nur aus Schritten der
-     * Warteschlange aufrufen – sonst verrät die Anzeige den Zug zu früh.
-     * @param {object} p – { phase, bossAngriff, angriffsWuerfel } (SudokuRPG: phaseStand)
+     * sein gewürfelter Angriff mit Angriffsbonus ("Angriff: 13 + 2"). Nur aus
+     * Schritten der Warteschlange aufrufen – sonst verrät die Anzeige den Zug zu früh.
+     * @param {object} p – { phase, bossAngriff, angriffsBonus, angriff, bossWuerfel } (SudokuRPG: phaseStand)
      */
     function zeigePhase(p) {
       if (!p) return;
@@ -1155,8 +1155,9 @@ const SudokuKampf = (function () {
       el.phase.dataset.phase = verteidigung ? "verteidigung" : "angriff";
       el.phaseSymbol.innerHTML = symbolSvg(verteidigung ? "schild" : "schwert");
       const text = verteidigung
-        ? "Verteidigungszug: Der Boss greift mit " + p.bossAngriff + " an (" + wText(p.angriffsWuerfel) + "). Deine nächste richtige Zahl " +
-          "würfelt deinen Block – gleich: kein Schaden, niedriger: du bekommst die Differenz, höher: Konter, der Boss bekommt sie. " +
+        ? "Verteidigungszug: Der Boss greift mit " + angriffSumme(p) + " an. Deine nächste richtige Zahl " +
+          "würfelt deinen Block – gleich: kein Schaden, niedriger: du bekommst die Differenz, höher: Konter – " +
+          "die Differenz ist sein Ausgangswert, dazu kommen deine Boni. " +
           "Eine falsche Zahl kostet " + K.held.fehlerSchaden + " HP, der Angriff bleibt stehen."
         : "Angriffszug: Deine nächste richtige Zahl greift den Boss an – Würfel und Schaden wie gewohnt. Danach verteidigst du dich gegen seinen Angriff.";
       el.phaseTipp.textContent = text;
@@ -1164,9 +1165,23 @@ const SudokuKampf = (function () {
       el.bossAngriff.hidden = !verteidigung;
       if (verteidigung) {
         el.bossAngriffZahl.textContent = p.bossAngriff;
-        el.bossAngriffSeiten.textContent = wText(p.angriffsWuerfel);
-        el.bossAngriff.setAttribute("aria-label", "Angriff des Bosses: " + p.bossAngriff + " (" + wText(p.angriffsWuerfel) + ")");
+        zeigeAngriffsBonus(p.angriffsBonus);
+        el.bossAngriff.setAttribute("aria-label", "Angriff des Bosses: " + angriffSumme(p));
       }
+    }
+
+    /** "13 + 2 = 15 (W20 + Angriffsbonus 2)" bzw. "13 (W20)" */
+    function angriffSumme(p) {
+      const bonus = p.angriffsBonus || 0;
+      return bonus > 0
+        ? SudokuRPG.angriffText(p.bossAngriff, bonus) + " = " + (p.bossAngriff + bonus) + " (" + wText(p.bossWuerfel) + " + Angriffsbonus " + bonus + ")"
+        : p.bossAngriff + " (" + wText(p.bossWuerfel) + ")";
+    }
+
+    /** Der Angriffsbonus neben dem Würfel des Bosses ("+ 2"); ohne Bonus unsichtbar. */
+    function zeigeAngriffsBonus(bonus) {
+      el.bossAngriffBonus.hidden = !(bonus > 0);
+      el.bossAngriffBonus.textContent = bonus > 0 ? "+ " + bonus : "";
     }
 
     /**
@@ -1446,7 +1461,10 @@ const SudokuKampf = (function () {
         // Kein Wurf, keine Rechnung: der Boss ist sofort besiegt
         return [{ key: "regenbogen", label: "Regenbogen", wert: String(e.schaden), art: "regenbogen", schritt: 0 }];
       }
-      if (e.block) return blockZeilen(e, buchName);
+      // Verteidigungszug ohne Konter: nur der Vergleich. Mit Konter: der
+      // Vergleich, dann die Rechnung des Konters wie bei einem Angriff
+      if (e.block && e.block.ergebnis !== "konter") return blockZeilen(e, buchName);
+      if (e.block) vergleichZeilen(e, buchName).forEach(function (z) { zeilen.push(z); });
       if (e.immun) {
         // "Wurf 6 · gerade · immun" – sonst wurde nichts berechnet
         const z = e.rechnung.wuerfel ? wuerfelZeilen(e) : [{ key: "wurf", label: "Wurf", wert: String(e.wurf), schritt: 0 }];
@@ -1477,7 +1495,10 @@ const SudokuKampf = (function () {
         const name = teil ? teil[1] : schritt;
         const wert = teil ? teil[2] : "";
         const grad = gradMitName(name);
-        if (name === "Wurf") {
+        if (name === "Konter") {
+          // Konter: die Differenz aus dem Block ist der Ausgangswert
+          zeilen.push({ key: "konter", label: "Konter", wert: wert, art: "konter", schritt: i });
+        } else if (name === "Wurf") {
           zeilen.push({ key: "wurf", label: "Wurf", wert: wert, schritt: i });
           // Buch des Zweiten: zwei Würfel, der höhere zählt
           if (e.wuerfelModus === "hoechster") {
@@ -1521,34 +1542,47 @@ const SudokuKampf = (function () {
     }
 
     /**
-     * Verteidigungszug als Zeilen: "Boss 6", "Block 9", "Konter 3" (bzw.
-     * "Treffer −4 HP" oder "Geblockt") – dazu Würfel der Bücher und Notizen.
+     * Der Vergleich als Zeilen: "Boss 13 + 2", Würfel der Bücher (beim Block
+     * zählt immer der höchste), Mindestwurf, "Block 19".
      */
-    function blockZeilen(e, buchName) {
+    function vergleichZeilen(e, buchName) {
       const b = e.block;
-      const zeilen = [{ key: "bossAngriff", label: "Boss", wert: String(b.angriff), art: "boss", schritt: 0 }];
+      const zeilen = [{ key: "bossAngriff", label: "Boss", wert: SudokuRPG.angriffText(b.angriffWurf, b.bonus), art: "boss", schritt: 0 }];
       if (e.wuerfe && e.wuerfe.length > 1) {
-        zeilen.push({ key: "blockWuerfel", label: buchName, art: "buch", schritt: 0,
-          wert: e.wuerfelModus === "summe" ? e.wuerfe.join(" + ") : e.wuerfe.join(" / ") });
+        zeilen.push({ key: "blockWuerfel", label: buchName, art: "buch", schritt: 0, wert: e.wuerfe.join(" / ") });
       }
       if (b.schritte.some(function (t) { return /^Mindestwurf/.test(t); })) {
         zeilen.push({ key: "mindestwurf", label: buchName, wert: "≥ " + b.block, art: "buch", schritt: 0 });
       }
       zeilen.push({ key: "block", label: "Block", wert: String(b.block), art: "block", schritt: 0 });
-      if (b.ergebnis === "konter") zeilen.push({ key: "ausgang", label: "Konter", wert: String(b.konter), art: "konter", schritt: 0 });
-      else if (b.ergebnis === "treffer") zeilen.push({ key: "ausgang", label: "Treffer", wert: "−" + b.schaden + " HP", art: "fehler", schritt: 0 });
+      return zeilen;
+    }
+
+    /**
+     * Verteidigungszug ohne Konter als Zeilen: der Vergleich, dann
+     * "Treffer −4 HP" oder "Geblockt" – dazu Notizen.
+     */
+    function blockZeilen(e, buchName) {
+      const b = e.block;
+      const zeilen = vergleichZeilen(e, buchName);
+      if (b.ergebnis === "treffer") zeilen.push({ key: "ausgang", label: "Treffer", wert: "−" + b.schaden + " HP", art: "fehler", schritt: 0 });
       else zeilen.push({ key: "ausgang", label: "Geblockt", wert: "±0", art: "block", schritt: 0 });
-      if (e.giftVerpufft) zeilen.push({ key: "gift", label: "Gift wirkt nur im Angriff", wert: "", art: "notiz", schritt: 0 });
+      if (e.giftVerpufft) zeilen.push({ key: "gift", label: "Gift ohne Konter verpufft", wert: "", art: "notiz", schritt: 0 });
       if (e.buchFaehigkeit > 0) {
         zeilen.push({ key: "buchFaehigkeit", label: buchName, wert: "+" + e.buchFaehigkeit + " Zug", art: "buch", schritt: 0 });
       }
       return zeilen;
     }
 
-    /** Kurzform eines Verteidigungszugs: "Boss 6 · Block 9 · Konter 3" */
-    function blockKurz(b) {
-      return "Boss " + b.angriff + " · Block " + b.block + " · " +
-        (b.ergebnis === "konter" ? "Konter " + b.konter : b.ergebnis === "treffer" ? "Treffer " + b.schaden : "Geblockt");
+    /**
+     * Kurzform eines Verteidigungszugs: "Boss 13 + 2 · Block 9 · Treffer 6",
+     * mit Konter die ganze Rechnung ("… · Konter 4 · Doppelt ×2 = 8").
+     */
+    function blockKurz(e) {
+      const b = e.block;
+      if (b.ergebnis === "konter") return e.rechnung.text;
+      return "Boss " + SudokuRPG.angriffText(b.angriffWurf, b.bonus) + " · Block " + b.block + " · " +
+        (b.ergebnis === "treffer" ? "Treffer " + b.schaden : "Geblockt");
     }
 
     /** Je Würfel eine Zeile: "Würfel 2 · 20 krit → 60", "Würfel 1 · 4 immun" … */
@@ -1601,17 +1635,18 @@ const SudokuKampf = (function () {
         // Verteidigungszug: der Vergleich statt der Schadensrechnung
         const b = e.block;
         const art = b.ergebnis === "konter" ? "konter" : b.ergebnis === "treffer" ? "fehler" : "block";
-        const kurz = blockKurz(b);
+        const kurz = blockKurz(e);
         zeigeZug({
           treffer: rechnungsZeilen(e),
           schaden: b.ergebnis === "treffer"
             ? { label: "Dein Schaden", wert: "−" + b.schaden + " HP", art: art }
-            : { label: b.ergebnis === "konter" ? "Konter" : "Gesamt", wert: String(b.konter), art: art },
+            : { label: "Gesamt", wert: String(gesamt), art: art },
           belohnung: belohnungsZeilen(e),
           muenzen: { label: "Summe", wert: muenzenText(muenzen), art: "gold" },
           kurz: { schaden: kurz, schadenArt: art, muenzen: muenzenText(muenzen) + " Münzen" },
         });
-        verlaufEintrag({ text: kurz, wert: b.ergebnis === "konter" ? "−" + b.konter : b.ergebnis === "treffer" ? "−" + b.schaden + " HP" : "",
+        verlaufEintrag({ text: b.ergebnis === "konter" ? "Konter (Boss " + SudokuRPG.angriffText(b.angriffWurf, b.bonus) + " · Block " + b.block + ")" : kurz,
+          wert: b.ergebnis === "konter" ? "−" + gesamt : b.ergebnis === "treffer" ? "−" + b.schaden + " HP" : "",
           art: art, symbol: "schild" });
         return;
       }
@@ -1886,8 +1921,8 @@ const SudokuKampf = (function () {
         teile.push("Regenbogenschlag! " + e.boss.name + " ist mit einem Schlag besiegt.");
       } else if (e.block) {
         const b = e.block;
-        const vergleich = "Angriff " + b.angriff + ", Block " + b.block;
-        teile.push(b.ergebnis === "konter" ? "Konter! " + vergleich + ": " + b.konter + " Schaden für " + e.boss.name + "."
+        const vergleich = "Angriff " + SudokuRPG.angriffText(b.angriffWurf, b.bonus) + ", Block " + b.block;
+        teile.push(b.ergebnis === "konter" ? "Konter! " + e.rechnung.text + (e.gift > 0 ? " · Gift +" + e.gift : "") + "."
           : b.ergebnis === "treffer" ? "Treffer! " + vergleich + ": " + b.schaden + " HP Schaden für dich, noch " + e.heldHp + " HP."
           : "Geblockt! " + vergleich + ": kein Schaden.");
       } else if (e.immun) {
@@ -2093,7 +2128,9 @@ const SudokuKampf = (function () {
      * Richtige Zahl im Verteidigungszug: Der Würfel des Helden rollt (sein
      * Block) → Heilfeld → beide Würfel stehen nebeneinander → Ausgang:
      * Geblockt (Klingen prallen aufeinander), Treffer (die Bühne wackelt,
-     * der HP-Balken des Helden sinkt) oder Konter (die Zahl fliegt zum Boss).
+     * der HP-Balken des Helden sinkt) oder Konter (Schadensaufbau wie bei
+     * einem Angriff: die Differenz steht neben den Würfeln, die Boni fliegen
+     * darauf zu, die Summe ins Schwert, der Held schlägt zurück).
      * Danach ist wieder ein Angriffszug dran.
      */
     function verteidigung(e) {
@@ -2104,6 +2141,13 @@ const SudokuKampf = (function () {
         zeigeHeilung(e);
         const v = vergleichZeigen(e.block);
         return pause(DAUER.vergleich).then(function () { return ausgang(e, v); });
+      }).then(function () {
+        // Gift des Konters: wie beim Angriff eine eigene grüne Zahl danach
+        if (!(e.gift > 0)) return null;
+        schwebeZahl("−" + e.gift, "gift");
+        zeigeHp(e.hpNachher, e.boss.maxHp);
+        faerbe(el.bossFigur, "vergiftet", 520);
+        return warte(160);
       }).then(function () {
         protokolliereTreffer(e);
         // Angriff abgewehrt (oder eingesteckt): Nächster Zug ist ein Angriff
@@ -2122,8 +2166,17 @@ const SudokuKampf = (function () {
         '<span class="kampf-vergleich-wuerfel kampf-vergleich-wuerfel--held"><span class="kampf-vergleich-name">Block</span><span class="kampf-vergleich-zahl"></span></span>';
       v.querySelector(".kampf-vergleich-wuerfel--boss .kampf-vergleich-zahl").textContent = b.angriff;
       v.querySelector(".kampf-vergleich-wuerfel--held .kampf-vergleich-zahl").textContent = b.block;
+      // Mit Angriffsbonus steht unter der Summe, woraus sie besteht ("13 + 2")
+      if (b.bonus > 0) {
+        const teile = document.createElement("span");
+        teile.className = "kampf-vergleich-teile";
+        teile.textContent = SudokuRPG.angriffText(b.angriffWurf, b.bonus);
+        v.querySelector(".kampf-vergleich-wuerfel--boss").appendChild(teile);
+      }
       el.effekte.appendChild(v);
-      setTimeout(function () { v.remove(); }, DAUER.vergleich + DAUER.ausgang + DAUER.konterFlug + 400);
+      // Beim Konter bleiben die Würfel stehen, bis der Schadensaufbau fertig ist (siehe ausgang)
+      if (b.ergebnis === "konter") v.classList.add("bleibt");
+      else setTimeout(function () { v.remove(); }, DAUER.vergleich + DAUER.ausgang + 400);
       return v;
     }
 
@@ -2153,58 +2206,50 @@ const SudokuKampf = (function () {
           return Promise.all([schlag, pause(DAUER.ausgang / 2)]);
         });
       }
-      // Konter: Der Held wehrt ab und schlägt zurück, die Zahl fliegt zum Boss
+      // Konter: Der Held wehrt ab – dann derselbe Schadensaufbau wie bei einem
+      // Angriff. Die Differenz löst sich vom Block-Würfel und steht neben den
+      // beiden Würfeln, die Boni fliegen darauf zu, die Summe ins Schwert.
       v.classList.add("siegt");
       animiere(el.heldFigur, "blockt", DAUER.ausgang / 2);
       banner("Konter!", null, "konter");
       return pause(DAUER.ausgang / 2).then(function () {
-        animiere(el.heldFigur, "schlaegt", DAUER.schlag);
-        return konterFlug(v, b.konter);
-      }).then(function () {
-        zeigeHp(e.hpNachSchaden, e.boss.maxHp);
-        schwebeZahl("−" + b.konter, "konter");
-        return animiere(el.bossFigur, "getroffen", DAUER.treffer);
-      });
-    }
-
-    /** Die Konter-Zahl fliegt vom Block-Würfel zum Boss (ohne Bewegung: entfällt, die Zahl erscheint am Boss). */
-    function konterFlug(v, zahl) {
-      const start = v.querySelector(".kampf-vergleich-wuerfel--held");
-      if (ohneBewegung() || eilig() || !start) return Promise.resolve();
-      const flaeche = el.effekte.getBoundingClientRect();
-      const a = start.getBoundingClientRect();
-      const z = el.bossFigur.getBoundingClientRect();
-      const flug = document.createElement("span");
-      flug.className = "kampf-konter-flug";
-      flug.textContent = "−" + zahl;
-      flug.style.left = (a.left + a.width / 2 - flaeche.left) + "px";
-      flug.style.top = (a.top + a.height / 2 - flaeche.top) + "px";
-      el.effekte.appendChild(flug);
-      const dx = z.left + z.width / 2 - (a.left + a.width / 2);
-      const dy = z.top + z.height * 0.4 - (a.top + a.height / 2);
-      const animation = flug.animate([
-        { transform: "translate(-50%, -50%) scale(0.8)" },
-        { transform: "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px)) scale(1.3)" },
-      ], { duration: DAUER.konterFlug, easing: "cubic-bezier(0.4, 0, 0.6, 1)" });
-      return new Promise(function (fertig) {
-        // beschleunige(): sofort am Ziel
-        const sofort = function () { animation.cancel(); ende(); };
-        const ende = function () { wartende.delete(sofort); animation.onfinish = null; flug.remove(); fertig(); };
-        animation.onfinish = ende;
-        wartende.add(sofort);
-      });
+        const u = fxUmgebung(e);
+        const punkt = konterPunkte(v);
+        if (punkt) { u.start = punkt.start; u.daneben = punkt.daneben; }
+        return mitAufbau(e, u);
+      }).then(function () { v.remove(); }, function (fehler) { v.remove(); throw fehler; });
     }
 
     /**
-     * Ein Verteidigungszug beginnt: Der Boss holt aus, sein Würfel rollt kurz
-     * und zeigt den Angriff über ihm ("Angriff: 6"), beim Helden erscheint
-     * der Schild. Bei "Bewegung reduzieren" erscheint die Zahl nur.
-     * @param {object} e – { boss, angriff, seiten, phase } (Ereignis "bossAngriff")
+     * Wo der Konter-Aufbau beginnt: auf dem Block-Würfel, und wo die Zahl
+     * steht: rechts neben den beiden Würfeln (auf dem Handy darunter).
+     */
+    function konterPunkte(v) {
+      const held = v.querySelector(".kampf-vergleich-wuerfel--held");
+      if (!held) return null;
+      const w = held.getBoundingClientRect();
+      const r = v.getBoundingClientRect();
+      if (w.width === 0 || r.width === 0) return null;
+      const start = { x: w.left + w.width / 2, y: w.top + w.height / 2 };
+      const daneben = wuerfel.gross()
+        ? { x: r.right + 44, y: r.top + r.height / 2 }
+        : { x: r.left + r.width / 2, y: r.bottom + 22 };
+      return { start: start, daneben: daneben };
+    }
+
+    /**
+     * Ein Verteidigungszug beginnt: Der Boss holt aus, sein W20 rollt kurz
+     * und zeigt den Angriff über ihm, daneben sein Angriffsbonus
+     * ("Angriff: 13 + 2"), beim Helden erscheint der Schild. Bei "Bewegung
+     * reduzieren" erscheint die Zahl nur.
+     * @param {object} e – { boss, wurf, bonus, angriff, seiten, phase } (Ereignis "bossAngriff")
      */
     function bossAngriff(e) {
       return einreihen(function () {
-        meldung(e.boss.name + " greift an: " + e.angriff + " (" + wText(e.seiten) + "). Verteidige dich – deine nächste richtige Zahl ist dein Block.");
-        verlaufEintrag({ text: e.boss.name + " greift an", wert: "Angriff " + e.angriff, art: "angriff", symbol: "schwert" });
+        const text = SudokuRPG.angriffText(e.wurf, e.bonus);
+        meldung(e.boss.name + " greift an: " + angriffSumme({ bossAngriff: e.wurf, angriffsBonus: e.bonus, bossWuerfel: e.seiten }) +
+          ". Verteidige dich – deine nächste richtige Zahl ist dein Block.");
+        verlaufEintrag({ text: e.boss.name + " greift an", wert: "Angriff " + text, art: "angriff", symbol: "schwert" });
         if (ohneBewegung() || eilig()) {
           zeigePhase(e.phase);
           return null;
@@ -2212,12 +2257,12 @@ const SudokuKampf = (function () {
         // Der Würfel des Bosses rollt (nie mit dem Ergebnis – es soll nichts verraten)
         animiere(el.bossFigur, "holt-aus", DAUER.faehigkeitAnsage);
         el.bossAngriff.hidden = false;
-        el.bossAngriffSeiten.textContent = wText(e.seiten);
+        zeigeAngriffsBonus(e.bonus);          // der Bonus steht fest – nur der Würfel rollt
         el.bossAngriff.classList.add("rollt");
         let letzte = 0;
         const flackern = setInterval(function () {
           let z;
-          do { z = 1 + Math.floor(Math.random() * e.seiten); } while ((z === e.angriff || z === letzte) && e.seiten > 2);
+          do { z = 1 + Math.floor(Math.random() * e.seiten); } while ((z === e.wurf || z === letzte) && e.seiten > 2);
           letzte = z;
           el.bossAngriffZahl.textContent = z;
         }, 70);
@@ -2303,7 +2348,7 @@ const SudokuKampf = (function () {
 
     /** Schaden wird aufgebaut, fliegt ins Schwert und entlädt sich im Boss. */
     function mitAufbau(e, u) {
-      zeigeAufbau(e, 1, e.wurf);
+      zeigeAufbau(e, 1, e.block ? e.block.konter : e.wurf);
       const aufbau = u.aktiv
         ? SudokuSchadenFx.aufbau(e, u)
         : Promise.resolve(SudokuSchadenFx.stufeFuer(e.schaden));
@@ -2318,7 +2363,7 @@ const SudokuKampf = (function () {
         SudokuSchadenFx.schwertAus(el.heldFigur);
         zeigeAufbau(e, Infinity, e.schaden);
         zeigeHp(e.hpNachSchaden, e.boss.maxHp);
-        schwebeZahl("−" + e.schaden, e.kritisch ? "kritisch" : e.doppelt ? "doppelt" : "boss");
+        schwebeZahl("−" + e.schaden, e.kritisch ? "kritisch" : e.block ? "konter" : e.doppelt ? "doppelt" : "boss");
         // Ohne Schadensaufbau (Kampfanimationen aus) wird der Krit hier betont
         if (!u.aktiv && e.kritisch) banner("Kritisch!", null, "kritisch");
         // Boss blitzt und die Bühne wackelt weiter, während schon Gift und Münzen kommen
@@ -2483,7 +2528,7 @@ const SudokuKampf = (function () {
         const boss = e.boss;
         const ort = boss.welt.name + ", Level " + boss.weltLevel;
         let text = (boss.weltboss ? "Der Weltboss erscheint! " : boss.elite ? "Ein Elite-Boss erscheint! " : "") +
-          ort + ": " + boss.name + ", " + boss.maxHp + " HP, Angriffswürfel " + wText(boss.angriffsWuerfel) + ". Deine HP sind wieder voll.";
+          ort + ": " + boss.name + ", " + boss.maxHp + " HP, Angriffsbonus +" + boss.angriffsBonus + ". Deine HP sind wieder voll.";
         if (boss.faehigkeit) text += " Fähigkeit " + boss.faehigkeit.name + ": " + boss.faehigkeit.beschreibung;
         if (boss.selten) text += " Selten, " + boss.selten.name + ": " + boss.selten.beschreibung;
         meldung(text);

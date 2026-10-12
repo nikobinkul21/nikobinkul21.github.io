@@ -184,8 +184,12 @@ const SudokuSchadenFx = (function () {
     return liste;
   }
 
-  /** Womit der Aufbau beginnt: der Wurf – bei mehreren Würfeln ihre Summe (nach Krit/Immunität). */
+  /**
+   * Womit der Aufbau beginnt: der Wurf – bei mehreren Würfeln ihre Summe
+   * (nach Krit/Immunität), beim Konter die Differenz aus dem Block.
+   */
   function startwert(e) {
+    if (e.rechnung && e.rechnung.konter) return e.rechnung.basis;
     return e.rechnung && e.rechnung.wuerfel ? e.rechnung.basis : e.wurf;
   }
 

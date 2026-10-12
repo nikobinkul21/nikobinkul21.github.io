@@ -11,11 +11,13 @@
        entsteht in EINER Funktion (berechneSchaden) in fester Reihenfolge:
        Wurf, Immunität/Block, kritisch/Fehlschlag, Zuschläge, Buch-Bonus,
        Schwierigkeit, Doppelschaden, Reihenbrecher, Gift.
-       Verteidigungszug: Zu Beginn würfelt der Boss seinen Angriff (sein
-       Angriffswürfel, z. B. W8). Die richtige Zahl wirft den Würfel des
-       Helden als Block – ein reiner Vergleich (berechneBlock): gleich =
-       nichts, niedriger = der Held bekommt die Differenz als Schaden,
-       höher = Konter, der Boss bekommt die Differenz.
+       Verteidigungszug: Zu Beginn würfelt der Boss seinen Angriff (W20
+       plus sein Angriffsbonus). Die richtige Zahl wirft den Würfel des
+       Helden als Block (berechneBlock): gleich = nichts, niedriger = der
+       Held bekommt die Differenz als Schaden, höher = Konter – die
+       Differenz läuft als Ausgangswert durch die Schadensberechnung (ohne
+       die Stufen des Würfels selbst: kein kritischer Treffer, kein
+       Fehlschlag, keine Immunität).
      - Der Held hat HP (100, "Zähes Herz" mehr). Jede falsche Zahl kostet
        10 HP (die Phase bleibt). Bei 0 HP ist der Durchlauf vorbei – es geht
        wieder bei Welt 1, Level 1 los (Münzen und Rekorde bleiben). Nach
@@ -125,17 +127,22 @@ const SUDOKU_RPG_KONFIG = {
 
   // Schlagabtausch: Jede richtige Zahl wechselt zwischen Angriffs- und
   // Verteidigungszug, jeder Boss beginnt mit einem Angriffszug.
-  // Verteidigungszug: Der Boss würfelt sofort seinen Angriff mit seinem
-  // Angriffswürfel (Feld "angriffsWuerfel" in den Welt-Dateien, sonst
-  // standardWuerfel). Der Wurf des Helden ist sein Block – ein reiner
-  // Vergleich ohne kritischen Treffer, Immunität, Zuschläge oder
-  // Multiplikatoren (nur was den Würfel selbst verändert, gilt: "Größerer
-  // Würfel" und die Würfel der Bücher). Gleich: kein Schaden. Niedriger:
-  // der Held bekommt die Differenz. Höher: Konter – der Boss bekommt sie.
-  // Nur im Angriffszug wirken Reihenbrecher, Doppelschaden, Gift und der
-  // Buch-Bonus; Buchschlag, Regenbogenfeld, Münzen, Heil- und Goldfeld in beiden.
+  // Verteidigungszug: Der Boss würfelt sofort seinen Angriff – bossWuerfel
+  // plus sein Angriffsbonus (Feld "angriffsBonus" in den Welt-Dateien,
+  // sonst standardBonus). Der Wurf des Helden ist sein Block: Was den
+  // Würfel selbst verändert, gilt ("Größerer Würfel", Buch des Zweiten:
+  // höherer von zwei, Buch des Fünften: mindestens 10; beim Buch des
+  // Achten und Neunten zählt der HÖCHSTE Würfel, nicht die Summe).
+  // Gleich: kein Schaden. Niedriger: der Held bekommt die Differenz.
+  // Höher: Konter – die Differenz ist der Ausgangswert der
+  // Schadensberechnung; es gelten alle Stufen, die nicht vom Würfel
+  // abhängen (Zuschläge, Buch-Bonus, Schwierigkeit, Doppelschaden,
+  // Reihenbrecher, Gift), nicht aber kritischer Treffer, Fehlschlag und
+  // Immunität. Die Überladung verbraucht nur ein Treffer im Angriffszug.
+  // Ohne Konter bringt eine fertige Einheit nur Münzen.
   schlagabtausch: {
-    standardWuerfel: 8,   // Angriffswürfel eines Bosses ohne eigenen Eintrag (W8)
+    bossWuerfel: 20,      // Angriffswurf des Bosses: W20
+    standardBonus: 0,     // Angriffsbonus eines Bosses ohne eigenen Eintrag
   },
 
   // Durchlauf: Eine Niederlage beendet ihn – es geht wieder bei Welt 1,
@@ -599,7 +606,7 @@ const SudokuRPG = (function () {
   // auf): Wörter der Verwirrung (genau 9 verschiedene Buchstaben – sonst wäre
   // eine Ziffer nicht eindeutig; ungültige fliegen raus), jeder Boss hat eine
   // bekannte Fähigkeit, und keine kommt vor ihrem "abLevel". Ein fehlender
-  // oder ungültiger Angriffswürfel wird gemeldet (dann gilt standardWuerfel).
+  // oder ungültiger Angriffsbonus wird gemeldet (dann gilt standardBonus).
   (function pruefeFaehigkeiten() {
     K.faehigkeiten.forEach(function (f) {
       if (!f.woerter) return;
@@ -615,8 +622,8 @@ const SudokuRPG = (function () {
         const f = K.faehigkeiten.find(function (x) { return x.id === b.faehigkeit; });
         if (!f) console.warn("Sudoku-Abenteuer: " + b.name + " hat keine bekannte Fähigkeit („" + b.faehigkeit + "“).");
         else if (f.abLevel && i + 1 < f.abLevel) console.warn("Sudoku-Abenteuer: „" + f.name + "“ erst ab Level " + f.abLevel + " (" + b.name + ").");
-        if (!Number.isInteger(b.angriffsWuerfel) || b.angriffsWuerfel < 2) {
-          console.warn("Sudoku-Abenteuer: " + b.name + " hat keinen gültigen Angriffswürfel – es gilt W" + K.schlagabtausch.standardWuerfel + ".");
+        if (!Number.isInteger(b.angriffsBonus) || b.angriffsBonus < 0) {
+          console.warn("Sudoku-Abenteuer: " + b.name + " hat keinen gültigen Angriffsbonus – es gilt +" + K.schlagabtausch.standardBonus + ".");
         }
       });
     });
@@ -870,39 +877,45 @@ const SudokuRPG = (function () {
     return typeof wort === "string" && /^[A-Z]{9}$/.test(wort) && new Set(wort.split("")).size === 9;
   }
 
-  /** Angriffswürfel des Bosses mit dieser Nummer (Seitenzahl, z. B. 8 für W8). */
-  function angriffsWuerfel(nummer) {
-    const w = bossEintrag(nummer).angriffsWuerfel;
-    return Number.isInteger(w) && w >= 2 ? w : K.schlagabtausch.standardWuerfel;
+  /** Angriffsbonus des Bosses mit dieser Nummer (wird auf seinen W20 addiert). */
+  function angriffsBonus(nummer) {
+    const b = bossEintrag(nummer).angriffsBonus;
+    return Number.isInteger(b) && b >= 0 ? b : K.schlagabtausch.standardBonus;
+  }
+
+  /** "13 + 2" bzw. "13" (ohne Bonus) – Angriff des Bosses für Texte und Anzeige. */
+  function angriffText(wurf, bonus) {
+    return bonus > 0 ? wurf + " + " + bonus : String(wurf);
   }
 
   /**
-   * Der Block im Verteidigungszug – ein reiner Vergleich: kein kritischer
-   * Treffer, keine Immunität, keine Zuschläge, keine Multiplikatoren. Was
-   * den Würfel selbst verändert, gilt: mehr Seiten ("Größerer Würfel"), die
-   * Würfel der Bücher (höherer von zwei, Summe) und der Mindestwurf.
-   * Ohne Zufall – deshalb auch einzeln testbar.
-   * @param {object} k – { wuerfe: [Augen], modus: null | "hoechster" | "summe",
-   *                       mindestwurf, angriff (Wurf des Bosses) }
-   * @returns {object} { block, angriff, differenz, ergebnis: "gleich" | "treffer" | "konter",
-   *                     schaden (für den Helden), konter (für den Boss), schritte, text }
+   * Der Block im Verteidigungszug: Vergleich des eigenen Wurfs mit dem
+   * Angriff des Bosses (Wurf + Bonus). Was den Würfel selbst verändert,
+   * gilt: mehr Seiten ("Größerer Würfel"), mehrere Würfel der Bücher (es
+   * zählt immer der HÖCHSTE – auch beim Buch des Achten und Neunten, nicht
+   * die Summe) und der Mindestwurf. Ohne Zufall – einzeln testbar.
+   * @param {object} k – { wuerfe: [Augen], mindestwurf, angriffWurf, bonus }
+   * @returns {object} { block, angriffWurf, bonus, angriff (Summe), differenz,
+   *   ergebnis: "gleich" | "treffer" | "konter", schaden (für den Helden),
+   *   konter (die Differenz – Ausgangswert des Konters), schritte, text }
    */
   function berechneBlock(k) {
     const wuerfe = k.wuerfe;
-    let block = k.modus === "summe" ? wuerfe.reduce(function (a, b) { return a + b; }, 0)
-      : k.modus === "hoechster" ? Math.max.apply(null, wuerfe) : wuerfe[0];
-    const schritte = ["Boss " + k.angriff, "Block " + block];
+    let block = Math.max.apply(null, wuerfe);
+    const bonus = k.bonus || 0;
+    const angriff = k.angriffWurf + bonus;
+    const schritte = ["Boss " + angriffText(k.angriffWurf, bonus), "Block " + block];
     if (k.mindestwurf && block < k.mindestwurf) {
       schritte.push("Mindestwurf +" + (k.mindestwurf - block));
       block = k.mindestwurf;
     }
-    const differenz = block - k.angriff;
+    const differenz = block - angriff;
     const ergebnis = differenz === 0 ? "gleich" : differenz < 0 ? "treffer" : "konter";
     if (ergebnis === "treffer") schritte.push("Treffer " + (-differenz));
     else if (ergebnis === "konter") schritte.push("Konter " + differenz);
     else schritte.push("Geblockt");
     return {
-      block: block, angriff: k.angriff, differenz: differenz, ergebnis: ergebnis,
+      block: block, angriffWurf: k.angriffWurf, bonus: bonus, angriff: angriff, differenz: differenz, ergebnis: ergebnis,
       schaden: Math.max(0, -differenz), konter: Math.max(0, differenz),
       schritte: schritte, text: schritte.join(" · "),
     };
@@ -1051,7 +1064,7 @@ const SudokuRPG = (function () {
       selten: null,          // seltene Eigenschaft – kommt aus dem Spielstand (siehe bossMitStand)
       // Fähigkeit: { id, name, symbol, farbe, dauer, abstand, beschreibung (, sekunden) }
       faehigkeit: faehigkeitFuerAnzeige(faehigkeitVonBoss(nummer), nummer),
-      angriffsWuerfel: angriffsWuerfel(nummer),   // Seiten seines Angriffswürfels (Verteidigungszug)
+      angriffsBonus: angriffsBonus(nummer),       // wird auf seinen Angriffswurf (W20) addiert
     };
   }
 
@@ -1261,8 +1274,12 @@ const SudokuRPG = (function () {
    *   selten        – die seltene Eigenschaft eines Elite-Bosses (oder null)
    *   eliteTreffer  – der wievielte Treffer gegen diesen Elite-Boss
    *   ueberladung   – Faktor des überladenen Schwerts (1 = keine Überladung)
+   *   konter        – Konter im Verteidigungszug: diese Differenz ist der
+   *                   Ausgangswert; die Stufen des Würfels selbst ("wurf" mit
+   *                   Immunität und Mindestwurf, "kritisch" mit Fehlschlag)
+   *                   entfallen, alle übrigen gelten
    * @returns {object} rechnung: { wurf, schaden, gift, kritisch, fehlschlag,
-   *   immun, abwehrGrund, abwehrArt, buchBonus, ueberladen, schritte, text }
+   *   immun, abwehrGrund, abwehrArt, buchBonus, ueberladen, konter, schritte, text }
    */
   /** Eine leere Rechnung für einen Würfel. */
   function neueRechnung(wurf, w) {
@@ -1272,6 +1289,7 @@ const SudokuRPG = (function () {
       wert: 0, giftWert: 0, buchBonus: 0,
       kritisch: false, fehlschlag: false, ende: false,
       ueberladen: false,         // die Überladung hat gewirkt (und ist damit verbraucht)
+      konter: false,             // Konter im Verteidigungszug (Ausgangswert = Differenz)
       immun: false,              // seltene Eigenschaft hat den Treffer abgewehrt
       abwehrGrund: null,         // z. B. "gerade"
       abwehrArt: null,           // "immun" oder "geblockt"
@@ -1307,7 +1325,16 @@ const SudokuRPG = (function () {
       giftAnteil: 0, modifikatoren: [], selten: null, eliteTreffer: 0, wuerfe: null, ueberladung: 1 }, kontext);
     const w = kontext.werte;
     let r;
-    if (!kontext.wuerfe || kontext.wuerfe.length < 2) {
+    if (kontext.konter > 0) {
+      // Konter: kein eigener Wurf – die Differenz aus dem Block ist der
+      // Ausgangswert, dann alle Stufen, die nicht vom Würfel abhängen
+      r = neueRechnung(kontext.konter, w);
+      r.konter = true;
+      r.wert = kontext.konter;
+      r.basis = kontext.konter;
+      r.schritte.push("Konter " + kontext.konter);
+      laufeStufen(r, kontext, SCHADEN_STUFEN.filter(function (s) { return WUERFEL_STUFEN.indexOf(s) === -1; }));
+    } else if (!kontext.wuerfe || kontext.wuerfe.length < 2) {
       // Ein Würfel: alle Stufen nacheinander
       r = neueRechnung(kontext.wuerfe ? kontext.wuerfe[0] : kontext.wurf, w);
       laufeStufen(r, kontext, SCHADEN_STUFEN);
@@ -1357,8 +1384,9 @@ const SudokuRPG = (function () {
        heldHp, heldMaxHp,  ← HP des Helden und ihr Maximum (100 + "Zähes Herz";
                              beim Laden aus den Verbesserungen nachgerechnet)
        phase,              ← "angriff" oder "verteidigung" (Schlagabtausch)
-       bossAngriff,        ← im Verteidigungszug: der gewürfelte Angriff des
-                             Bosses (1 bis sein Angriffswürfel), sonst null
+       bossAngriff,        ← im Verteidigungszug: der Angriffswurf des Bosses
+                             (1 bis schlagabtausch.bossWuerfel, OHNE seinen
+                             Angriffsbonus – der kommt aus den Bossdaten), sonst null
        ueberladen,         ← true: das Schwert ist überladen (nach einem gelösten
                              Sudoku), der nächste Treffer zählt × ueberladung.faktor
        muenzRest,          ← Nachkommastellen der Münzen (0 bis unter 1)
@@ -1633,7 +1661,7 @@ const SudokuRPG = (function () {
     // Phase und angekündigter Angriff (neu in Version 13): Passt etwas nicht
     // (älterer Stand, beschädigt), beginnt die Phase mit einem Angriffszug.
     let phase = "angriff", bossAngriff = null;
-    if (!vorV13 && roh.phase === "verteidigung" && istGanzzahl(roh.bossAngriff, 1, angriffsWuerfel(roh.bossNummer))) {
+    if (!vorV13 && roh.phase === "verteidigung" && istGanzzahl(roh.bossAngriff, 1, K.schlagabtausch.bossWuerfel)) {
       phase = "verteidigung";
       bossAngriff = roh.bossAngriff;
     }
@@ -1906,11 +1934,14 @@ const SudokuRPG = (function () {
 
     /**
      * Phase des Schlagabtauschs für die Anzeige: { phase, bossAngriff,
-     * angriffsWuerfel } – bossAngriff ist im Verteidigungszug der gewürfelte
-     * Angriff des Bosses (über ihm angezeigt), sonst null.
+     * angriffsBonus, angriff, bossWuerfel } – bossAngriff ist im
+     * Verteidigungszug der Angriffswurf des Bosses (über ihm angezeigt, dazu
+     * sein Bonus: "13 + 2"), angriff die Summe; sonst null.
      */
     function phaseStand() {
-      return { phase: zustand.phase, bossAngriff: zustand.bossAngriff, angriffsWuerfel: angriffsWuerfel(zustand.bossNummer) };
+      const bonus = angriffsBonus(zustand.bossNummer);
+      return { phase: zustand.phase, bossAngriff: zustand.bossAngriff, angriffsBonus: bonus,
+        angriff: zustand.bossAngriff ? zustand.bossAngriff + bonus : null, bossWuerfel: K.schlagabtausch.bossWuerfel };
     }
 
     /**
@@ -1918,10 +1949,12 @@ const SudokuRPG = (function () {
      * @returns {object} – Daten für das Ereignis "bossAngriff"
      */
     function verteidigungBeginnt(boss) {
-      const seiten = angriffsWuerfel(zustand.bossNummer);
+      const seiten = K.schlagabtausch.bossWuerfel;
+      const bonus = angriffsBonus(zustand.bossNummer);
       zustand.phase = "verteidigung";
       zustand.bossAngriff = 1 + Math.floor(zufall() * seiten);
-      return { boss: boss, angriff: zustand.bossAngriff, seiten: seiten, phase: phaseStand() };
+      return { boss: boss, wurf: zustand.bossAngriff, bonus: bonus, angriff: zustand.bossAngriff + bonus,
+        seiten: seiten, phase: phaseStand() };
     }
 
     /** Neuer Boss (oder neuer Durchlauf): Es beginnt mit einem Angriffszug. */
@@ -2582,7 +2615,9 @@ const SudokuRPG = (function () {
       //    Reihenbrecher nur im Angriffszug
       const einheiten = fertigeEinheiten(r, index);
       const einheitFertig = einheiten.zeile || einheiten.spalte || einheiten.block;
-      const doppelt = angriff && einheitFertig;
+      const anzahlEinheiten = (einheiten.zeile ? 1 : 0) + (einheiten.spalte ? 1 : 0) + (einheiten.block ? 1 : 0);
+      // (im Verteidigungszug nur bei einem Konter – siehe unten)
+      let doppelt = angriff && einheitFertig;
 
       // 2. Power-up auf diesem Feld? (wirkt in beiden Zügen – nur das Gift
       //    des grünen Felds braucht einen Angriff)
@@ -2603,7 +2638,6 @@ const SudokuRPG = (function () {
       zustand.buchBonus = Math.round((zustand.buchBonus + buchWirkung.bonus) * 1e6) / 1e6;
       zustand.buchSchlaege = zustand.buchSchlaege.concat(buchWirkung.schlaege.map(function (sch) { return sch.id; }));
       if (zusatz.giftAnteil) effekt.giftAnteil += zusatz.giftAnteil;      // Buch des Sechsten
-      const giftVerpufft = !angriff && effekt.giftAnteil > 0;             // Gift: nur im Angriffszug
 
       // 3. Würfel: einer – oder mehrere (Zusatzwirkung eines Buchs).
       //    Regenbogenfeld: kein Wurf – der Boss ist sofort besiegt, egal wie
@@ -2630,7 +2664,7 @@ const SudokuRPG = (function () {
           wurf: wurf, wuerfe: wuerfelModus === "summe" ? wuerfe : null,
           mindestwurf: zusatz.mindestwurf || 0, immerKritisch: Boolean(zusatz.immerKritisch),
           werte: w, buchBonus: zustand.buchBonus, grad: r.grad, doppelt: doppelt,
-          einheiten: (einheiten.zeile ? 1 : 0) + (einheiten.spalte ? 1 : 0) + (einheiten.block ? 1 : 0),
+          einheiten: anzahlEinheiten,
           giftAnteil: effekt.giftAnteil,
           modifikatoren: modifikatoren(bossVorher),
           selten: bossVorher.selten, eliteTreffer: eliteTreffer,
@@ -2638,15 +2672,37 @@ const SudokuRPG = (function () {
         });
         rechnung.regenbogen = false;
       } else {
-        //  Verteidigungszug: reiner Vergleich mit dem angekündigten Angriff.
-        //  Ein Konter trifft den Boss mit der Differenz – durch nichts verändert.
-        block = berechneBlock({ wuerfe: wuerfe, modus: wuerfelModus, mindestwurf: zusatz.mindestwurf || 0, angriff: zustand.bossAngriff });
-        rechnung = {
-          regenbogen: false, block: true, wurf: block.block, schaden: block.konter, gift: 0, buchBonus: 0,
-          kritisch: false, fehlschlag: false, immun: false, wuerfel: null,
-          schritte: block.schritte, text: block.text,
-        };
+        //  Verteidigungszug: Block gegen den angekündigten Angriff (Wurf + Bonus)
+        block = berechneBlock({ wuerfe: wuerfe, mindestwurf: zusatz.mindestwurf || 0,
+          angriffWurf: zustand.bossAngriff, bonus: angriffsBonus(zustand.bossNummer) });
+        if (block.ergebnis === "konter") {
+          //  Konter: Die Differenz läuft durch die Schadensberechnung – mit allen
+          //  Stufen, die nicht vom Würfel abhängen (auch Doppelschaden und
+          //  Reihenbrecher für eine fertige Einheit, Gift, Buch-Bonus), ohne
+          //  kritischen Treffer, Fehlschlag und Immunität. Die Überladung bleibt.
+          doppelt = einheitFertig;
+          rechnung = berechneSchaden({
+            konter: block.konter, werte: w, buchBonus: zustand.buchBonus, grad: r.grad,
+            doppelt: doppelt, einheiten: anzahlEinheiten, giftAnteil: effekt.giftAnteil,
+            modifikatoren: modifikatoren(bossVorher), selten: bossVorher.selten, eliteTreffer: eliteTreffer,
+            ueberladung: 1,
+          });
+        } else {
+          //  Gleichstand oder Treffer: kein Schaden am Boss (eine fertige Einheit bringt nur Münzen)
+          rechnung = { schaden: 0, gift: 0, buchBonus: 0, kritisch: false, fehlschlag: false, immun: false,
+            wuerfel: null, schritte: [] };
+        }
+        rechnung.regenbogen = false;
+        rechnung.block = true;
+        rechnung.wurf = block.block;
+        // Vergleich und Rechnung in einem Text: "Boss 13 + 2 · Block 19 · Konter 4 · Doppelt ×2 … = 38"
+        // (ohne Boni bleibt es beim Vergleich: "Boss 6 · Block 9 · Konter 3")
+        rechnung.text = block.ergebnis === "konter" && rechnung.schritte.length > 1
+          ? block.schritte.slice(0, -1).concat(rechnung.schritte).join(" · ") + " = " + rechnung.schaden
+          : block.text;
       }
+      // Gift wirkt nur auf Schaden am Boss: im Verteidigungszug ohne Konter verpufft es
+      const giftVerpufft = Boolean(block) && block.ergebnis !== "konter" && effekt.giftAnteil > 0;
       const spruch = rechnung.fehlschlag
         ? K.fehlschlagSprueche[Math.floor(zufall() * K.fehlschlagSprueche.length)]
         : null;
@@ -2765,7 +2821,8 @@ const SudokuRPG = (function () {
         doppelt: doppelt, einheiten: einheiten,
         schaden: rechnung.schaden, gift: rechnung.gift,
         // Verteidigungszug: der Vergleich (Angriff des Bosses, Block, Ergebnis)
-        block: block, konter: block ? block.konter : 0, heldSchaden: heldSchaden,
+        // konter: Schaden des Konters am Boss (nach allen Boni, ohne Gift); block.konter ist die Differenz, mit der er beginnt
+        block: block, konter: block && block.ergebnis === "konter" ? rechnung.schaden : 0, heldSchaden: heldSchaden,
         giftVerpufft: giftVerpufft,
         entschaerft: entschaerft,             // Tick, Tick: Timer entschärft
         // Verbesserungen und Bücher, die bei diesem Treffer gewirkt haben (ihr Platz leuchtet auf)
@@ -2841,7 +2898,7 @@ const SudokuRPG = (function () {
       return {
         art: "richtig", phase: phase, wurf: wurf, schaden: rechnung.schaden, gift: rechnung.gift,
         kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, doppelt: doppelt, immun: rechnung.immun,
-        block: block, konter: block ? block.konter : 0, heldSchaden: heldSchaden, heilung: heilung,
+        block: block, konter: block && block.ergebnis === "konter" ? rechnung.schaden : 0, heldSchaden: heldSchaden, heilung: heilung,
         eliteBonus: eliteBonus, regenbogen: regenbogen,
         powerup: powerup, muenzenPlus: muenzenPlus,
         besiegt: besiegt, geloest: geloest, auswahl: Boolean(zustand.auswahl),
@@ -3040,7 +3097,8 @@ const SudokuRPG = (function () {
     gesammelteVerbesserungen: gesammelteVerbesserungen,
     berechneSchaden: berechneSchaden,
     berechneBlock: berechneBlock,
-    angriffsWuerfel: angriffsWuerfel,
+    angriffsBonus: angriffsBonus,
+    angriffText: angriffText,
     zahlText: zahlText,
     erstelle: erstelle,
     alleFortschritteLoeschen: alleFortschritteLoeschen,

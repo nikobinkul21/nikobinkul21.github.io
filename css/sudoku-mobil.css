@@ -678,6 +678,10 @@
     border-radius: 4px;
   }
 
+  .kampf.ist-handy .kampf-boss-angriff-bonus {
+    font-size: 0.64rem;
+  }
+
   /* Beide Würfel nebeneinander: kleiner, in der Mitte des Streifens */
   .kampf.ist-handy .kampf-vergleich {
     top: 42%;
@@ -690,6 +694,10 @@
 
   .kampf.ist-handy .kampf-vergleich-zahl {
     font-size: 1.1rem;
+  }
+
+  .kampf.ist-handy .kampf-vergleich-teile {
+    font-size: 0.48rem;
   }
 
   .kampf.ist-handy .kampf-banner--geblockt,
