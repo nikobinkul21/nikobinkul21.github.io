@@ -30,9 +30,7 @@
   --kampf-hp-knapp: #e0483f;
   --kampf-hp-leer: #c9c9d1;
 
-  /* Herzen, Würfel, Schaden */
-  --kampf-herz: #e8364a;
-  --kampf-herz-leer: rgba(43, 43, 56, 0.2);
+  /* Würfel, Schaden */
   --kampf-wuerfel: #6c4bd8;
   --kampf-schaden: #ffffff;
   --kampf-schaden-rand: #c0182c;
@@ -63,7 +61,7 @@
   --panel-gold: #f2c94c;
   --panel-fehler: #ff7070;
   --panel-daneben: #b8bec8;
-  --panel-leben: #7be38f;
+  --panel-heilung: #7be38f;
 
   /* Großer Würfel (Desktop) */
   --wuerfel-flaeche-hoehe: 200px;          /* feste Höhe der Würfelfläche rechts oben */
@@ -341,7 +339,7 @@
   gap: 4px;
 }
 
-/* Münzen und Würfel nebeneinander unter den Herzen */
+/* Münzen und Würfel nebeneinander unter den HP des Helden */
 .kampf-info-zeile {
   display: flex;
   align-items: center;
@@ -578,21 +576,58 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Herzen */
-.kampf-herzen {
+/* HP des Helden: Balken mit Zahl – im selben Stil wie der Balken des Bosses */
+.kampf-held-hp {
   display: flex;
-  gap: 3px;
+  align-items: center;
+  gap: 4px;
+  width: 132px;
 }
 
-.kampf-herz svg {
-  display: block;
-  width: 17px;
-  height: 15px;
-  fill: var(--kampf-herz);
+.kampf-held-hp-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #d08a00;
 }
 
-.kampf-herz.ist-leer svg {
-  fill: var(--kampf-herz-leer);
+.kampf-held-hp-balken {
+  flex: 1;
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid var(--kampf-kasten-rand);
+  border-radius: 4px;
+  background: var(--kampf-hp-leer);
+}
+
+.kampf-held-hp-fuellung {
+  height: 100%;
+  width: 100%;
+  background: var(--kampf-hp-voll);
+  transition: width 0.45s ease-out, background-color 0.3s;
+}
+
+.kampf-held-hp-balken[data-stufe="mittel"] .kampf-held-hp-fuellung { background: var(--kampf-hp-mittel); }
+.kampf-held-hp-balken[data-stufe="knapp"] .kampf-held-hp-fuellung { background: var(--kampf-hp-knapp); }
+
+.kampf-held-hp-zahl {
+  min-width: 6.2ch;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Schaden: der Balken blitzt rot auf; Heilung: grün */
+.kampf-held-hp.sinkt .kampf-held-hp-balken { animation: held-hp-sinkt 0.4s ease-out; }
+.kampf-held-hp.steigt .kampf-held-hp-balken { animation: held-hp-steigt 0.5s ease-out; }
+
+@keyframes held-hp-sinkt {
+  0%, 100% { box-shadow: none; }
+  30%      { box-shadow: 0 0 0 2px var(--kampf-hp-knapp), 0 0 8px var(--kampf-hp-knapp); }
+}
+
+@keyframes held-hp-steigt {
+  0%, 100% { box-shadow: none; }
+  40%      { box-shadow: 0 0 0 2px var(--kampf-hp-voll), 0 0 10px var(--kampf-hp-voll); }
 }
 
 /* Würfel (W20): Sechseck mit der Zahl des letzten Wurfs */
@@ -1086,7 +1121,7 @@
 .panel-zeile--gift { color: var(--kampf-gift); }
 .panel-zeile--gold,
 .panel-summe--gold .panel-wert { color: var(--panel-gold); }
-.panel-zeile--leben { color: var(--panel-leben); }
+.panel-zeile--heilung { color: var(--panel-heilung); }
 .panel-zeile--fehler,
 .panel-summe--fehler .panel-wert { color: var(--panel-fehler); }
 .panel-zeile--daneben,
@@ -1312,7 +1347,6 @@
 .kampf-figur--held.faellt { animation: kampf-fallen 0.5s ease-in forwards; }
 .kampf-figur--boss.ist-besiegt { animation: kampf-besiegt 0.9s ease-in forwards; }
 .kampf-figur--boss.erscheint { animation: kampf-erscheinen 0.45s ease-out; }
-.kampf-herz.verschwindet { animation: kampf-herz-weg 0.4s ease-out; }
 .kampf-figur--boss.getroffen-stark { animation: kampf-getroffen-stark 0.42s steps(1, end); }
 .kampf-buehne.wackelt { animation: kampf-buehne-wackeln 0.36s linear; }
 .kampf-buehne.wackelt-stark { animation: kampf-buehne-wackeln-stark 0.56s linear; }
@@ -1422,11 +1456,6 @@
 @keyframes kampf-erscheinen {
   from { opacity: 0; transform: translateX(40px); }
   to   { opacity: 1; transform: none; }
-}
-
-@keyframes kampf-herz-weg {
-  0%   { transform: scale(1.5); }
-  100% { transform: scale(1); }
 }
 
 @keyframes kampf-aufsteigen {
@@ -1589,6 +1618,15 @@
   color: var(--kampf-selten);
 }
 
+/* Verteidigungszug: der Wurf ist der Block – blauer Schimmer, "Block" darunter */
+.wuerfel-flaeche[data-art="block"] .wuerfel-koerper {
+  filter: drop-shadow(0 0 8px var(--block-farbe));
+}
+
+.wuerfel-flaeche[data-art="block"] .wuerfel-art {
+  color: var(--block-farbe);
+}
+
 @keyframes wuerfel-aufleuchten {
   0%   { filter: brightness(2.2) drop-shadow(0 0 26px var(--kampf-kritisch)); }
   100% { filter: drop-shadow(0 0 10px var(--kampf-kritisch)) drop-shadow(0 0 22px var(--kampf-kritisch)); }
@@ -1616,6 +1654,11 @@
 .kampf-wuerfel[data-art="geblockt"] {
   filter: grayscale(1);
   opacity: 0.5;
+}
+
+/* Verteidigungszug: der Wurf ist der Block (blau) */
+.kampf-wuerfel[data-art="block"] {
+  background: var(--block-farbe);
 }
 
 
@@ -2404,14 +2447,13 @@
 
 /* ==========================================================================
    FÄHIGKEITEN DER BOSSE
-   Ansage über dem Boss, Schild (Parade) beim Helden, die Animationen der
+   Ansage über dem Boss, die Animationen der
    Fähigkeiten – und ihre Wirkungen im Sudoku (Siegel, Finsternis, Fluch,
    Tick, Tick, Verwirrung).
    sudoku-battle-ui.js und sudoku-ui.js setzen die Klassen.
    ========================================================================== */
 
 :root {
-  --parade-farbe: #3d9bff;          /* Schild, wenn im nächsten Zug pariert werden kann */
   --siegel-kette: rgba(139, 92, 255, 0.55);
   --finsternis-schatten: rgba(20, 16, 40, 0.62);
   --fluch-farbe: #2f9e5a;
@@ -2490,70 +2532,283 @@
 .kampf-figur--boss { top: 19%; }
 .kampf-buehne.ist-elite .kampf-figur--boss { top: 14%; }
 
-/* Schild beim Helden: matt = gerade keine Parade möglich,
-   blau leuchtend = der nächste Zug löst die Fähigkeit aus – eine fertige
-   Zeile, Spalte oder ein fertiger Block in diesem Zug pariert */
-.kampf-parade {
-  position: absolute;
-  left: calc(6% + var(--kampf-figur-groesse) * 0.82);
-  bottom: calc(6% + var(--kampf-figur-groesse) * 0.62);
-  z-index: 4;
-  width: 26px;
-  height: 26px;
-  padding: 3px;
-  background: var(--kampf-kasten);
-  border: 2px solid var(--kampf-kasten-rand);
-  border-radius: 50%;
-  cursor: help;
-  opacity: 0.45;
-  filter: grayscale(1);
-}
-
-.kampf-parade svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  fill: #8a93a6;
-}
-
-.kampf-parade.ist-moeglich {
-  opacity: 1;
-  filter: none;
-  box-shadow: 0 0 0 2px var(--parade-farbe), 0 0 12px var(--parade-farbe);
-  animation: parade-laedt 0.5s ease-out;
-}
-
-.kampf-parade.ist-moeglich svg { fill: var(--parade-farbe); }
-.kampf-parade.pariert { box-shadow: 0 0 0 4px #fff, 0 0 22px var(--parade-farbe); }
-
-.kampf-parade .kampf-tipp {
-  bottom: calc(100% + 4px);
-  left: -10px;
-  width: min(230px, 60vw);
-}
-
-@keyframes parade-laedt {
-  0%   { transform: scale(0.6); }
-  60%  { transform: scale(1.35); }
-  100% { transform: scale(1); }
-}
-
-/* Boss holt aus, Held pariert mit hochgerissenem Schwert */
+/* Boss holt aus (Fähigkeit, Angriff im Verteidigungszug) */
 .kampf-figur--boss.holt-aus { animation: boss-holt-aus 0.45s ease-in-out; }
-.kampf-figur--held.pariert { animation: held-pariert 0.7s ease-out; }
 
 @keyframes boss-holt-aus {
   0%, 100% { transform: none; }
   50%      { transform: translate(10px, -6px) rotate(6deg) scale(1.06); }
 }
 
-@keyframes held-pariert {
+
+/* ==========================================================================
+   SCHLAGABTAUSCH
+   Phase beim Helden (Schwert = Angriffszug, Schild = Verteidigungszug),
+   der gewürfelte Angriff über dem Boss, beide Würfel nebeneinander und der
+   Ausgang (Geblockt, Treffer, Konter). sudoku-battle-ui.js setzt die Klassen.
+   ========================================================================== */
+
+:root {
+  --angriff-farbe: #d9480f;         /* Schwert: Angriffszug */
+  --block-farbe: #3d9bff;           /* Schild, Block: Verteidigungszug */
+  --boss-angriff-farbe: #c92a2a;    /* der Würfel des Bosses */
+  --konter-farbe: #ffb400;          /* Konter */
+  --heilung-farbe: #3fbf5f;         /* Heilung (grüne Zahl über dem Helden) */
+}
+
+/* Phase beim Helden: rundes Symbol neben dem Schwert, mit Erklärung */
+.kampf-phase {
+  position: absolute;
+  left: calc(6% + var(--kampf-figur-groesse) * 0.82);
+  bottom: calc(6% + var(--kampf-figur-groesse) * 0.62);
+  z-index: 4;
+  width: 30px;
+  height: 30px;
+  padding: 4px;
+  background: var(--kampf-kasten);
+  border: 2px solid var(--angriff-farbe);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--angriff-farbe) 30%, transparent), 2px 2px 0 rgba(0, 0, 0, 0.25);
+  cursor: help;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.kampf-phase-symbol svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: var(--angriff-farbe);
+}
+
+.kampf-phase[data-phase="verteidigung"] {
+  border-color: var(--block-farbe);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--block-farbe) 35%, transparent), 0 0 12px var(--block-farbe);
+}
+
+.kampf-phase[data-phase="verteidigung"] .kampf-phase-symbol svg { fill: var(--block-farbe); }
+
+/* Wechsel der Phase: das neue Symbol springt kurz auf */
+.kampf-phase-symbol { display: block; width: 100%; height: 100%; animation: phase-wechsel 0.35s ease-out; }
+
+@keyframes phase-wechsel {
+  0%   { transform: scale(0.4) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(1.25); opacity: 1; }
+  100% { transform: none; }
+}
+
+.kampf-phase .kampf-tipp {
+  bottom: calc(100% + 4px);
+  left: -10px;
+  width: min(260px, 64vw);
+}
+
+/* Angriff des Bosses: kleines Schild über ihm (unter der Ansage der
+   Fähigkeit), roter Würfel mit der Zahl */
+.kampf-boss-angriff {
+  position: absolute;
+  top: calc(3% + 38px);
+  right: calc(6% + var(--kampf-figur-groesse) / 2);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--kampf-kasten-text);
+  background: var(--kampf-kasten);
+  border: 2px solid var(--boss-angriff-farbe);
+  border-radius: 8px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25), 0 0 10px color-mix(in srgb, var(--boss-angriff-farbe) 60%, transparent);
+  transform: translateX(50%);
+  animation: boss-angriff-ein 0.25s ease-out;
+}
+
+/* Elite-Boss: breiterer Infokasten – das Schild rückt an den rechten Rand */
+.kampf-buehne.ist-elite .kampf-boss-angriff {
+  right: 2%;
+  transform: none;
+}
+
+.kampf-boss-angriff[hidden] {
+  display: none;
+}
+
+.kampf-boss-angriff-wuerfel {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 3px;
+  font-size: 0.9rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: var(--boss-angriff-farbe);
+  border-radius: 5px;
+}
+
+.kampf-boss-angriff-seiten {
+  font-size: 0.6rem;
+  opacity: 0.65;
+}
+
+.kampf-boss-angriff.rollt .kampf-boss-angriff-wuerfel { animation: boss-wuerfel-rollt 0.25s linear infinite; }
+.kampf-boss-angriff.landet .kampf-boss-angriff-wuerfel { animation: boss-wuerfel-landet 0.3s ease-out; }
+
+@keyframes boss-angriff-ein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes boss-wuerfel-rollt {
+  0%   { transform: rotate(0); }
+  50%  { transform: rotate(180deg) scale(0.85); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes boss-wuerfel-landet {
+  0%   { transform: scale(1.5); }
+  60%  { transform: scale(0.9); }
+  100% { transform: none; }
+}
+
+/* Beide Würfel nebeneinander mitten auf der Bühne: Boss (rot) gegen Block (blau) */
+.kampf-vergleich {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: vergleich-ein 0.25s ease-out, vergleich-aus 0.3s ease-in 1.2s forwards;
+}
+
+.kampf-vergleich-wuerfel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 42px;
+  padding: 2px 6px 4px;
+  color: #fff;
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 8px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.kampf-vergleich-wuerfel--boss { background: var(--boss-angriff-farbe); }
+.kampf-vergleich-wuerfel--held { background: var(--block-farbe); }
+
+.kampf-vergleich-name {
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+
+.kampf-vergleich-zahl {
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kampf-vergleich-gegen {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #fff;
+  -webkit-text-stroke: 2px var(--kampf-kasten-rand);
+  paint-order: stroke fill;
+}
+
+/* Ausgang: der stärkere Würfel wächst, der schwächere wird blass */
+.kampf-vergleich.bricht .kampf-vergleich-wuerfel--boss,
+.kampf-vergleich.siegt .kampf-vergleich-wuerfel--held { transform: scale(1.15); transition: transform 0.2s; }
+.kampf-vergleich.bricht .kampf-vergleich-wuerfel--held,
+.kampf-vergleich.siegt .kampf-vergleich-wuerfel--boss { opacity: 0.55; transition: opacity 0.2s; }
+
+/* Gleichstand: die Würfel prallen aufeinander */
+.kampf-vergleich.prallt .kampf-vergleich-wuerfel--boss { animation: prallt-links 0.4s ease-out; }
+.kampf-vergleich.prallt .kampf-vergleich-wuerfel--held { animation: prallt-rechts 0.4s ease-out; }
+
+@keyframes vergleich-ein {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes vergleich-aus {
+  to { opacity: 0; }
+}
+
+@keyframes prallt-links {
+  0%, 100% { transform: none; }
+  40%      { transform: translateX(10px) rotate(8deg); }
+  60%      { transform: translateX(-4px); }
+}
+
+@keyframes prallt-rechts {
+  0%, 100% { transform: none; }
+  40%      { transform: translateX(-10px) rotate(-8deg); }
+  60%      { transform: translateX(4px); }
+}
+
+/* Held hebt Schwert/Schild: Geblockt und Abwehr vor dem Konter */
+.kampf-figur--held.blockt { animation: held-blockt 0.6s ease-out; }
+
+@keyframes held-blockt {
   0%   { transform: none; filter: none; }
-  25%  { transform: translate(10px, -10px) rotate(-12deg); filter: drop-shadow(0 0 8px var(--parade-farbe)) brightness(1.4); }
-  60%  { transform: translate(4px, -4px) rotate(-4deg); filter: drop-shadow(0 0 4px var(--parade-farbe)); }
+  25%  { transform: translate(10px, -10px) rotate(-12deg); filter: drop-shadow(0 0 8px var(--block-farbe)) brightness(1.4); }
+  60%  { transform: translate(4px, -4px) rotate(-4deg); filter: drop-shadow(0 0 4px var(--block-farbe)); }
   100% { transform: none; filter: none; }
 }
 
+/* Funken, wenn die Klingen aufeinanderprallen */
+.kampf-blitz.an-funken {
+  background: radial-gradient(circle at 50% 46%, #fff 0%, #ffe08a 18%, transparent 45%);
+  animation: kampf-blitz 0.3s ease-out;
+}
+
+/* "Geblockt!" blau, "Konter!" golden – große Schrift ohne Kasten */
+.kampf-banner--geblockt,
+.kampf-banner--konter {
+  top: 64%;
+  padding: 0;
+  font-size: 1.6rem;
+  text-transform: uppercase;
+  color: #fff;
+  background: none;
+  border: none;
+  box-shadow: none;
+  paint-order: stroke fill;
+}
+
+.kampf-banner--geblockt {
+  -webkit-text-stroke: 3px var(--block-farbe);
+  text-shadow: 0 0 14px var(--block-farbe);
+}
+
+.kampf-banner--konter {
+  -webkit-text-stroke: 3px #a35a00;
+  text-shadow: 0 0 14px var(--konter-farbe);
+}
+
+/* Konter-Zahl auf dem Weg zum Boss */
+.kampf-konter-flug {
+  position: absolute;
+  z-index: 7;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--konter-farbe);
+  -webkit-text-stroke: 2px #6b3a00;
+  paint-order: stroke fill;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
 
 /* Finsternis: die Bühne wird dunkel */
 .kampf-buehne.verdunkelt::before {
@@ -2624,28 +2879,14 @@
   to   { transform: rotate(0); }
 }
 
-/* Banner: Name der Fähigkeit in ihrer Farbe, "Pariert!" groß in Blau */
+/* Banner: Name der Fähigkeit in ihrer Farbe */
 .kampf-banner--faehigkeit {
   top: 40%;
   font-size: 1.15rem;
 }
 
-.kampf-banner--pariert {
-  top: 54%;
-  padding: 0;
-  font-size: 1.8rem;
-  text-transform: uppercase;
-  color: #fff;
-  background: none;
-  border: none;
-  box-shadow: none;
-  -webkit-text-stroke: 3px var(--parade-farbe);
-  paint-order: stroke fill;
-  text-shadow: 0 0 14px var(--parade-farbe);
-}
-
-/* Schwebende Wörter: das verlorene Leben (Tick, Tick) und "Entschärft!" */
-.kampf-schwebezahl--leben {
+/* Schwebende Zahlen am Helden: Schaden rot, Heilung grün – und der Konter am Boss */
+.kampf-schwebezahl--held {
   top: 48%;
   left: 18%;
   font-size: 1.4rem;
@@ -2653,9 +2894,35 @@
   -webkit-text-stroke: 2px #5a0d0d;
 }
 
+.kampf-schwebezahl--heilung {
+  top: 40%;
+  left: 12%;
+  font-size: 1.3rem;
+  color: #8ef0a2;
+  -webkit-text-stroke: 2px #145a26;
+}
+
+.kampf-schwebezahl--konter {
+  top: 22%;
+  right: 14%;
+  font-size: 1.6rem;
+  color: var(--konter-farbe);
+  -webkit-text-stroke: 2px #6b3a00;
+}
+
 /* Panel und Verlauf */
 .panel-eintrag--faehigkeit { color: color-mix(in srgb, var(--zeilen-farbe) 50%, #fff); font-weight: 700; }
-.panel-eintrag--parade { color: #7cc0ff; font-weight: 800; }
+.panel-eintrag--entschaerft { color: #8ef0a2; font-weight: 800; }
+.panel-eintrag--angriff { color: #ff9b9b; font-weight: 700; }
+.panel-eintrag--konter { color: var(--konter-farbe); font-weight: 800; }
+.panel-eintrag--block { color: #7cc0ff; font-weight: 700; }
+.panel-zeile--boss { color: #ff9b9b; }
+.panel-zeile--block,
+.panel-summe--block .panel-wert,
+.panel-kurz-schaden[data-art="block"] { color: #7cc0ff; }
+.panel-zeile--konter,
+.panel-summe--konter .panel-wert,
+.panel-kurz-schaden[data-art="konter"] { color: var(--konter-farbe); }
 
 
 /* ---------- Wirkungen im Sudoku ---------- */
@@ -2880,11 +3147,16 @@
   .kampf-figur--boss { top: 22%; }
   .kampf-buehne.ist-elite .kampf-figur--boss { top: 18%; }
 
-  .kampf-parade {
+  .kampf-phase {
     left: calc(6% + var(--kampf-figur-groesse-klein) * 0.82);
     bottom: calc(6% + var(--kampf-figur-groesse-klein) * 0.6);
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
+    padding: 3px;
+  }
+
+  .kampf-boss-angriff {
+    right: calc(6% + var(--kampf-figur-groesse-klein) / 2);
   }
 }
 
@@ -2931,6 +3203,24 @@
   .kampf-buehne.verdunkelt::before {
     animation: none !important;
     opacity: 0.8;
+  }
+
+  /* Schlagabtausch ohne Bewegung: Phase, Angriff und Vergleich blenden nur ein */
+  .kampf-phase-symbol,
+  .kampf-boss-angriff.rollt .kampf-boss-angriff-wuerfel,
+  .kampf-boss-angriff.landet .kampf-boss-angriff-wuerfel,
+  .kampf-vergleich.prallt .kampf-vergleich-wuerfel--boss,
+  .kampf-vergleich.prallt .kampf-vergleich-wuerfel--held {
+    animation: none !important;
+  }
+
+  .kampf-vergleich {
+    animation: faehigkeit-einblenden 1.6s ease-out forwards !important;
+  }
+
+  .kampf-vergleich.bricht .kampf-vergleich-wuerfel--boss,
+  .kampf-vergleich.siegt .kampf-vergleich-wuerfel--held {
+    transform: none;
   }
 
   @keyframes faehigkeit-einblenden {

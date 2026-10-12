@@ -130,7 +130,7 @@
     min-height: 0;
   }
 
-  /* --- Kopfzeile: Welt und Level, Schwierigkeit, Leben, Münzen, Menü --- */
+  /* --- Kopfzeile: Welt und Level, Schwierigkeit, Münzen, Menü --- */
   .sudoku-kopfzeile {
     grid-area: kopf;
     position: relative;
@@ -209,15 +209,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-  }
-
-  .kopf-stand .kampf-herzen {
-    gap: 1px;
-  }
-
-  .kopf-stand .kampf-herz svg {
-    width: 13px;
-    height: 12px;
   }
 
   .kopf-stand .kampf-muenzen {
@@ -609,16 +600,41 @@
     display: none;
   }
 
-  /* Held: Würfel und Parade neben ihm */
+  /* Held: oben in seiner Spalte HP-Balken und Würfel, die Phase neben ihm */
   .kampf.ist-handy .kampf-buehne .kampf-info--held {
     right: auto;
     left: 3px;
     bottom: auto;
     top: 3px;
+    width: calc(var(--streifen-held) - 2px);
     padding: 2px;
+    align-items: flex-start;
     background: none;
     border: none;
     box-shadow: none;
+  }
+
+  /* HP des Helden: kompakter Balken mit Zahl auf einem kleinen Kasten */
+  .kampf.ist-handy .kampf-held-hp {
+    width: 100%;
+    gap: 3px;
+    padding: 1px 4px;
+    font-size: 0.6rem;
+    background: var(--kampf-kasten);
+    border: 1px solid var(--kampf-kasten-rand);
+    border-radius: 5px;
+  }
+
+  .kampf.ist-handy .kampf-held-hp-label {
+    font-size: 0.52rem;
+  }
+
+  .kampf.ist-handy .kampf-held-hp-balken {
+    height: 5px;
+  }
+
+  .kampf.ist-handy .kampf-held-hp-zahl {
+    min-width: 0;
   }
 
   .kampf.ist-handy .kampf-wuerfel {
@@ -627,11 +643,50 @@
     font-size: 0.72rem;
   }
 
-  .kampf.ist-handy .kampf-buehne .kampf-parade {
+  .kampf.ist-handy .kampf-buehne .kampf-phase {
     left: calc(var(--streifen-held) * 0.62);
     bottom: calc(var(--streifen-held) * 0.45);
     width: 22px;
     height: 22px;
+    padding: 3px;
+  }
+
+  /* Angriff des Bosses: unter der Ansage der Fähigkeit, oben rechts */
+  .kampf.ist-handy .kampf-boss-angriff {
+    top: 22px;
+    right: 3px;
+    gap: 3px;
+    padding: 0 4px;
+    font-size: 0.56rem;
+    border-width: 1.5px;
+    transform: none;
+  }
+
+  .kampf.ist-handy .kampf-boss-angriff-wuerfel {
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.72rem;
+    border-radius: 4px;
+  }
+
+  /* Beide Würfel nebeneinander: kleiner, in der Mitte des Streifens */
+  .kampf.ist-handy .kampf-vergleich {
+    top: 42%;
+  }
+
+  .kampf.ist-handy .kampf-vergleich-wuerfel {
+    min-width: 32px;
+    padding: 1px 4px 2px;
+  }
+
+  .kampf.ist-handy .kampf-vergleich-zahl {
+    font-size: 1.1rem;
+  }
+
+  .kampf.ist-handy .kampf-banner--geblockt,
+  .kampf.ist-handy .kampf-banner--konter {
+    top: 70%;
+    font-size: 1.1rem;
   }
 
   /* Sprechblasen, Banner, Einblendungen: kleiner, bleiben im Streifen */

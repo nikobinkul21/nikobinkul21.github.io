@@ -93,8 +93,8 @@ function initSudoku(container) {
       '<a class="karte link-karte sudoku-modus" href="#games/sudoku/abenteuer">' +
         '<h3>⚔ Abenteuer</h3>' +
         "<p>Besiege Bosse mit richtigen Zahlen. Jede richtige Zahl wirft einen Würfel, " +
-        "nach jedem Boss wählst du eine Verbesserung. Jeder Boss hat eine Fähigkeit – verlierst du alle Leben, " +
-        "beginnt der Durchlauf von vorn.</p>" +
+        "nach jedem Boss wählst du eine Verbesserung. Angriff und Verteidigung wechseln sich ab, jeder Boss hat eine " +
+        "Fähigkeit – fallen deine HP auf 0, beginnt der Durchlauf von vorn.</p>" +
         '<p class="sudoku-modus-stand"></p>' +
       "</a>" +
       '<a class="karte link-karte sudoku-modus" href="#games/sudoku/frei">' +
@@ -106,9 +106,9 @@ function initSudoku(container) {
     // Das Spiel
     '<div class="sudoku" hidden>' +
       // Kopfzeile nur auf dem Smartphone (siehe css/sudoku-mobil.css): eine
-      // Zeile mit Welt und Level (bzw. "Sudoku"), Schwierigkeit, Leben und
-      // Münzen und einem Menü. Welt, Leben und Münzen hängt das Kampffenster
-      // selbst hier ein (SudokuKampf, Handy-Aufbau).
+      // Zeile mit Welt und Level (bzw. "Sudoku"), Schwierigkeit, Münzen und
+      // einem Menü. Welt und Münzen hängt das Kampffenster selbst hier ein
+      // (SudokuKampf, Handy-Aufbau; die HP des Helden bleiben im Kampfstreifen).
       '<div class="sudoku-kopfzeile">' +
         '<div class="kopf-ort"><span class="kopf-titel nur-frei">Sudoku</span></div>' +
         '<span class="kopf-grad"></span>' +
@@ -768,7 +768,7 @@ function initSudoku(container) {
 
     if (!kampf) {
       kampf = SudokuKampf.erstelle(kampfPlatz, {
-        // Smartphone: Welt/Level sowie Leben und Münzen wandern in die Kopfzeile
+        // Smartphone: Welt/Level und Münzen wandern in die Kopfzeile
         kopf: { ort: kopfOrt, stand: kopfStand },
         beimAufgeben: durchlaufAufgeben,
         wuerfelPlatz: wuerfelPlatz,
@@ -803,8 +803,10 @@ function initSudoku(container) {
     abenteuer.an("fehler", function (e) { if (abenteuer === diesesAbenteuer) kampf.fehler(e); });
     // Fähigkeit des Bosses – läuft nach Würfel, Schaden und Treffer dieses Zugs
     abenteuer.an("faehigkeit", function (e) { if (abenteuer === diesesAbenteuer) kampf.faehigkeit(e); });
-    // Tick, Tick: Timer abgelaufen – ein Leben weniger (die Niederlage beim
-    // letzten Leben startet die Timer-Schleife, wenn alle Ereignisse da sind)
+    // Schlagabtausch: Ein Verteidigungszug beginnt – der Boss würfelt seinen Angriff
+    abenteuer.an("bossAngriff", function (e) { if (abenteuer === diesesAbenteuer) kampf.bossAngriff(e); });
+    // Tick, Tick: Timer abgelaufen – HP weniger (fallen sie auf 0, startet die
+    // Timer-Schleife die Niederlage, wenn alle Ereignisse da sind)
     abenteuer.an("timer", function (e) { if (abenteuer === diesesAbenteuer) kampf.timerAbgelaufen(e); });
     abenteuer.an("bossBesiegt", function (e) { if (abenteuer === diesesAbenteuer) kampf.sieg(e); });
     abenteuer.an("auswahl", function (e) {
@@ -827,7 +829,7 @@ function initSudoku(container) {
       });
     });
     abenteuer.an("niederlage", function (e) { letzteNiederlage = e; });
-    // Verbesserungen behalten (älterer Stand): Plätze und Leben neu zeigen
+    // Verbesserungen behalten (älterer Stand): Plätze und HP neu zeigen
     abenteuer.an("behalten", function () {
       if (abenteuer !== diesesAbenteuer) return;
       kampf.zeigeStand(standFuerAnzeige());
@@ -893,9 +895,8 @@ function initSudoku(container) {
 
   function standFuerAnzeige() {
     const z = abenteuer.zustand;
-    const werte = abenteuer.werte();
     return {
-      boss: abenteuer.boss(), hp: z.bossHp, leben: z.leben, maxLeben: werte.maxLeben,
+      boss: abenteuer.boss(), hp: z.bossHp, heldHp: z.heldHp, heldMaxHp: z.heldMaxHp, phase: abenteuer.phaseStand(),
       muenzen: z.muenzen, rekorde: abenteuer.rekorde(),
       verbesserungen: abenteuer.gesammelt(),
       faehigkeitStand: abenteuer.faehigkeitStand(),
@@ -1025,7 +1026,8 @@ function initSudoku(container) {
     }
 
     if (ergebnis.niederlage) {
-      // Niederlage – durch die falsche Zahl (ein abgelaufener Timer kommt über timerTakt)
+      // Niederlage – durch die falsche Zahl oder den Treffer des Bosses im
+      // Verteidigungszug (ein abgelaufener Timer kommt über timerTakt)
       if (ergebnis.art === "fehler") zeigeFehlversuch(index, ziffer);
       else zeichne();
       starteNiederlage();
@@ -1115,8 +1117,8 @@ function initSudoku(container) {
       if (feld) aktualisiereTimer(feld, feld.querySelector(".sudoku-timer"));
       return;
     }
-    // Abgelaufen: Das Kampffenster zeigt es (Ereignis "timer"). Beim letzten
-    // Leben folgt – nach allen Ereignissen – die normale Niederlagen-Abfolge.
+    // Abgelaufen: Das Kampffenster zeigt es (Ereignis "timer"). Fallen die HP
+    // auf 0, folgt – nach allen Ereignissen – die normale Niederlagen-Abfolge.
     if (ergebnis.niederlage) starteNiederlage();
   }
   setInterval(timerTakt, TIMER_TAKT);

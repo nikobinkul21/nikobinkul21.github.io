@@ -58,7 +58,7 @@ const SudokuKampf = (function () {
   const DAUER = {
     schlag: 260,
     treffer: 420,
-    zuschlagen: 380,   // Boss schlägt zu (falsche Zahl)
+    zuschlagen: 380,   // Boss schlägt zu (falsche Zahl, Treffer im Verteidigungszug)
     sieg: 900,
     erscheinen: 450,
     kritisch: 560,     // Wackeln bei kritischem Treffer
@@ -79,7 +79,11 @@ const SudokuKampf = (function () {
     faehigkeitAnsage: 450,  // Boss holt aus, der Name der Fähigkeit erscheint
     faehigkeitWirkung: 650, // eigene Animation der Fähigkeit
     timerAblauf: 900,       // Tick, Tick: der Timer geht hoch
-    parade: 700,         // Held pariert mit dem Schwert
+    // Schlagabtausch (Verteidigungszug)
+    bossWurf: 650,          // der Boss holt aus, sein Würfel rollt kurz und zeigt den Angriff
+    vergleich: 450,         // beide Würfel stehen nebeneinander, bevor der Ausgang kommt
+    ausgang: 650,           // Geblockt / Treffer / Konter
+    konterFlug: 420,        // die Konter-Zahl fliegt zum Boss
     // Buchschlag (Normal, Desktop; Schnell/Smartphone kürzer): zusammen etwa 2 Sekunden
     buchFeld: 110,       // Abstand, in dem die neun Felder aufleuchten und ihre Ziffer losschicken
     buchFlug: 320,       // Flugzeit einer Ziffer zum Schwert
@@ -123,7 +127,7 @@ const SudokuKampf = (function () {
     warnung: '<path d="M3 0h1v1h1v2h1v2h1v2H0V5h1V3h1V1h1z"/><path fill="#fff" d="M3 2h1v2H3zM3 5h1v1H3z"/>',
     krone: '<path d="M0 1h1v2h1V2h1V0h1v2h1v1h1V1h1v6H0z"/>',
     sprechblase: '<path d="M0 0h7v5H3v1H2v1H1V5H0z"/><path fill="rgba(255,255,255,.6)" d="M1 2h1v1H1zM3 2h1v1H3zM5 2h1v1H5z"/>',
-    // Fähigkeiten der Bosse und die Parade
+    // Fähigkeiten der Bosse
     siegel: '<path d="M2 0h3v1h1v2H5V1H2v2H1V1h1z"/><path d="M0 3h7v4H0z"/><path fill="rgba(0,0,0,.5)" d="M3 4h1v2H3z"/>',
     finsternis: '<path d="M2 0h3v1H3v1H2v3h1v1h2v1H2V6H1V5H0V2h1V1h1z"/><path d="M5 2h1v1H5zM6 4h1v1H6z"/>',
     fluch: '<path d="M1 0h5v1h1v3H6v1H5v2H2V5H1V4H0V1h1z"/><path fill="rgba(0,0,0,.6)" d="M2 2h1v1H2zM4 2h1v1H4zM3 4h1v1H3z"/>',
@@ -131,7 +135,11 @@ const SudokuKampf = (function () {
     tickTick: '<path d="M2 2h3v1h1v3H5v1H2V6H1V3h1z"/><path d="M4 1h1v1H4z"/><path fill="#ffd34d" d="M5 0h1v1H5z"/><path fill="rgba(255,255,255,.55)" d="M2 3h1v1H2z"/>',
     // Verwirrung: Fragezeichen
     verwirrung: '<path d="M1 0h5v1H1zM0 1h2v1H0zM5 1h2v1H5zM4 2h2v1H4zM3 3h2v2H3zM3 6h2v1H3z"/>',
+    // Schlagabtausch: Schwert (Angriffszug) und Schild (Verteidigungszug)
     schild: '<path d="M0 0h7v4H6v1H5v1H4v1H3V6H2V5H1V4H0z"/><path fill="rgba(255,255,255,.6)" d="M1 1h2v1H1zM1 2h1v1H1z"/>',
+    schwert: '<path d="M5 0h2v2H6v1H5v1H4v1H3V4H2V3h1V2h1V1h1z"/><path d="M1 3h1v1h1v1h1v1H3v1H2V6H1V5H0V4h1z"/><path fill="rgba(255,255,255,.6)" d="M5 1h1v1H5z"/>',
+    // Heilfeld: Herz mit hellem Kreuz
+    heilung: '<path d="M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z"/><path fill="#fff" d="M3 1h1v1h1v1H4v1H3V3H2V2h1z"/>',
     // Buch: Einband mit hellen Seiten am Rand
     buch: '<path d="M0 0h6v1h1v6H1V6H0z"/><path fill="rgba(255,255,255,.75)" d="M1 6h6v1H1zM6 1h1v5H6z"/><path fill="rgba(0,0,0,.3)" d="M1 0h1v6H1z"/>',
     // Reihenbrecher: eine Reihe Blöcke, in der Mitte zerbrochen
@@ -149,9 +157,6 @@ const SudokuKampf = (function () {
     return '<svg viewBox="0 0 7 7" aria-hidden="true" shape-rendering="crispEdges">' +
       (SYMBOLE[name] || SYMBOLE.stern) + "</svg>";
   }
-
-  // Das Herz für die Lebensanzeige
-  const HERZ_SVG = symbolSvg("herz");
 
 
   /**
@@ -217,10 +222,11 @@ const SudokuKampf = (function () {
 
     let lauf = null;    // der laufende Wurf: { e, art, animationen, zeit, fertig }
 
-    const ART_TEXT = { kritisch: "Kritisch!", fehlschlag: "Fehlschlag", immun: "Immun", geblockt: "Geblockt" };
+    const ART_TEXT = { kritisch: "Kritisch!", fehlschlag: "Fehlschlag", immun: "Immun", geblockt: "Geblockt", block: "Block" };
 
     /** Wie ist der Wurf ausgegangen? (bestimmt die Landung und die Farbe) */
     function artVon(e) {
+      if (e.block) return "block";               // Verteidigungszug: der Wurf ist der Block
       if (e.immun) return e.selten.art;          // "immun" oder "geblockt" (seltene Eigenschaft)
       if (e.kritisch) return "kritisch";
       if (e.fehlschlag) return "fehlschlag";
@@ -488,13 +494,25 @@ const SudokuKampf = (function () {
             '<span class="kampf-absicht-kopf"><span class="kampf-absicht-symbol"></span><span class="kampf-absicht-name"></span></span>' +
             '<span class="kampf-absicht-text"></span>' + tippHtml() +
           "</button>" +
-          // Held unten: Figur links, Herzen, Münzen und Würfel rechts
+          // Über dem Boss, nur im Verteidigungszug: sein gewürfelter Angriff ("Angriff: 6")
+          '<div class="kampf-boss-angriff" role="img" hidden>' +
+            '<span class="kampf-boss-angriff-label">Angriff:</span>' +
+            '<span class="kampf-boss-angriff-wuerfel"><span class="kampf-boss-angriff-zahl"></span></span>' +
+            '<span class="kampf-boss-angriff-seiten"></span>' +
+          "</div>" +
+          // Held unten: Figur links, HP, Münzen und Würfel rechts
           '<div class="kampf-figur kampf-figur--held"><canvas class="kampf-held"></canvas></div>' +
-          // Schild beim Helden: leuchtet im Zug, in dem der Boss seine Fähigkeit
-          // einsetzt (dann pariert eine fertige Einheit)
-          '<button type="button" class="kampf-parade hat-tipp">' + symbolSvg("schild") + tippHtml() + "</button>" +
+          // Beim Helden: die Phase des Schlagabtauschs – Schwert (Angriffszug)
+          // oder Schild (Verteidigungszug), mit Erklärung
+          '<button type="button" class="kampf-phase hat-tipp" data-phase="angriff">' +
+            '<span class="kampf-phase-symbol"></span>' + tippHtml() + "</button>" +
           '<div class="kampf-info kampf-info--held">' +
-            '<div class="kampf-herzen" role="img"></div>' +
+            // HP des Helden – im selben Stil wie der Balken des Bosses
+            '<div class="kampf-held-hp" role="img">' +
+              '<span class="kampf-held-hp-label">HP</span>' +
+              '<div class="kampf-held-hp-balken"><div class="kampf-held-hp-fuellung"></div></div>' +
+              '<span class="kampf-held-hp-zahl"></span>' +
+            "</div>" +
             '<div class="kampf-info-zeile">' +
               // Münzstand mit Münzsymbol
               '<div class="kampf-muenzen" role="img">' + symbolSvg("muenze") +
@@ -582,7 +600,10 @@ const SudokuKampf = (function () {
       bossCanvas: container.querySelector(".kampf-boss"),
       heldFigur: container.querySelector(".kampf-figur--held"),
       heldCanvas: container.querySelector(".kampf-held"),
-      herzen: container.querySelector(".kampf-herzen"),
+      heldHp: container.querySelector(".kampf-held-hp"),
+      heldHpBalken: container.querySelector(".kampf-held-hp-balken"),
+      heldHpFuellung: container.querySelector(".kampf-held-hp-fuellung"),
+      heldHpZahl: container.querySelector(".kampf-held-hp-zahl"),
       wuerfel: container.querySelector(".kampf-wuerfel"),
       wuerfelZahl: container.querySelector(".kampf-wuerfel-zahl"),
       blitz: container.querySelector(".kampf-blitz"),
@@ -612,8 +633,12 @@ const SudokuKampf = (function () {
       absichtName: container.querySelector(".kampf-absicht-name"),
       absichtText: container.querySelector(".kampf-absicht-text"),
       absichtTipp: container.querySelector(".kampf-absicht .kampf-tipp"),
-      parade: container.querySelector(".kampf-parade"),
-      paradeTipp: container.querySelector(".kampf-parade .kampf-tipp"),
+      phase: container.querySelector(".kampf-phase"),
+      phaseSymbol: container.querySelector(".kampf-phase-symbol"),
+      phaseTipp: container.querySelector(".kampf-phase .kampf-tipp"),
+      bossAngriff: container.querySelector(".kampf-boss-angriff"),
+      bossAngriffZahl: container.querySelector(".kampf-boss-angriff-zahl"),
+      bossAngriffSeiten: container.querySelector(".kampf-boss-angriff-seiten"),
     };
 
     SudokuSprites.zeichne(el.heldCanvas, "held", 0);
@@ -635,8 +660,9 @@ const SudokuKampf = (function () {
     /* ---------- Handy-Aufbau ----------
        Auf dem Smartphone (HANDY_MEDIEN, gleiche Bedingung wie in
        css/sudoku-mobil.css) wird das Kampffenster zu einem flachen Streifen:
-       Boss, Held, die fünf Plätze, Würfel und eine Zeile mit dem letzten Zug. Welt und
-       Level sowie Leben und Münzen wandern in die Kopfzeile des Sudokus,
+       Boss, Held mit HP-Balken und Phase, angekündigter Angriff, die fünf
+       Plätze, Würfel und eine Zeile mit dem letzten Zug. Welt und
+       Level sowie die Münzen wandern in die Kopfzeile des Sudokus,
        alles Weitere (letzter Treffer, Belohnung, Verlauf, Erklärungen zu den
        Verbesserungen und zum Boss) in ein Blatt, das von unten einfährt.
        Verschoben werden die Elemente selbst – alle Verweise in "el" bleiben
@@ -680,7 +706,6 @@ const SudokuKampf = (function () {
         const kopf = optionen && optionen.kopf;
         if (kopf) {
           verschiebe(el.welt, kopf.ort);
-          verschiebe(el.herzen, kopf.stand);
           verschiebe(el.muenzen, kopf.stand);
         }
         verschiebe(el.leiste, el.buehne);       // die fünf Plätze stehen im Streifen
@@ -700,7 +725,7 @@ const SudokuKampf = (function () {
       }
     }
 
-    /** Erklärungen zum aktuellen Boss (Fähigkeit, seltene Eigenschaft) für das Blatt. */
+    /** Erklärungen zum aktuellen Boss (Fähigkeit, seltene Eigenschaft, Phase) für das Blatt. */
     function fuelleBlattBoss() {
       blattBoss.innerHTML = "";
       const kopf = document.createElement("h3");
@@ -708,6 +733,7 @@ const SudokuKampf = (function () {
       kopf.textContent = el.bossName.textContent;
       blattBoss.appendChild(kopf);
       [
+        el.phaseTipp.textContent,
         !el.absicht.hidden && el.absichtTipp.textContent,
         !el.selten.hidden && el.seltenTipp.textContent,
         el.eliteHinweis.textContent,
@@ -812,7 +838,7 @@ const SudokuKampf = (function () {
 
     // Was gerade ANGEZEIGT wird (kann wegen der Warteschlange kurz hinter
     // dem echten Spielstand liegen)
-    const anzeige = { bossNummer: 0, weltId: null, muenzen: 0, maxLeben: SudokuRPG.KONFIG.maxLeben, gesammelt: [] };
+    const anzeige = { bossNummer: 0, weltId: null, muenzen: 0, heldHp: null, heldMaxHp: SudokuRPG.KONFIG.held.hp, gesammelt: [] };
     const K = SudokuRPG.KONFIG;
 
     /* ---------- Warteschlange ----------
@@ -1088,25 +1114,56 @@ const SudokuKampf = (function () {
     }
 
     /**
-     * Leben als Herzen. Es gibt immer mindestens so viele Plätze wie
-     * Startleben (verlorene sind leer), bei mehr Leben entsprechend mehr.
+     * HP des Helden als Balken mit Zahl – im selben Stil wie der Balken des
+     * Bosses. Der Balken gleitet (CSS) – sinkt bei Schaden, steigt bei Heilung.
      */
-    function zeigeHerzen(leben, maxLeben) {
-      if (maxLeben) anzeige.maxLeben = maxLeben;
-      const plaetze = Math.max(K.startLeben, leben);
-      if (el.herzen.children.length !== plaetze) {
-        el.herzen.innerHTML = "";
-        for (let i = 0; i < plaetze; i++) {
-          const herz = document.createElement("span");
-          herz.className = "kampf-herz";
-          herz.innerHTML = HERZ_SVG;
-          el.herzen.appendChild(herz);
-        }
+    function zeigeHeldHp(hp, maxHp) {
+      if (maxHp) anzeige.heldMaxHp = maxHp;
+      const max = anzeige.heldMaxHp;
+      const wert = Math.max(0, Math.min(hp, max));
+      anzeige.heldHp = wert;
+      const anteil = wert / max;
+      el.heldHpFuellung.style.width = (anteil * 100) + "%";
+      el.heldHpBalken.dataset.stufe = anteil > 0.5 ? "voll" : anteil > 0.2 ? "mittel" : "knapp";
+      el.heldHpZahl.textContent = wert + "/" + max;
+      el.heldHp.setAttribute("aria-label", "Deine HP: " + wert + " von " + max);
+    }
+
+    /** Schwebende Zahl am Helden: Schaden rot ("−3"), Heilung grün ("+5"). */
+    function heldZahl(text, art) {
+      schwebeZahl(text, art === "heilung" ? "heilung" : "held");
+    }
+
+    /** "W8" usw. */
+    function wText(seiten) {
+      return "W" + seiten;
+    }
+
+    /**
+     * Phase des Schlagabtauschs SOFORT zeigen: Schwert (Angriffszug) oder
+     * Schild (Verteidigungszug) beim Helden, im Verteidigungszug über dem Boss
+     * sein gewürfelter Angriff ("Angriff: 6"). Nur aus Schritten der
+     * Warteschlange aufrufen – sonst verrät die Anzeige den Zug zu früh.
+     * @param {object} p – { phase, bossAngriff, angriffsWuerfel } (SudokuRPG: phaseStand)
+     */
+    function zeigePhase(p) {
+      if (!p) return;
+      const verteidigung = p.phase === "verteidigung" && Boolean(p.bossAngriff);
+      el.phase.dataset.phase = verteidigung ? "verteidigung" : "angriff";
+      el.phaseSymbol.innerHTML = symbolSvg(verteidigung ? "schild" : "schwert");
+      const text = verteidigung
+        ? "Verteidigungszug: Der Boss greift mit " + p.bossAngriff + " an (" + wText(p.angriffsWuerfel) + "). Deine nächste richtige Zahl " +
+          "würfelt deinen Block – gleich: kein Schaden, niedriger: du bekommst die Differenz, höher: Konter, der Boss bekommt sie. " +
+          "Eine falsche Zahl kostet " + K.held.fehlerSchaden + " HP, der Angriff bleibt stehen."
+        : "Angriffszug: Deine nächste richtige Zahl greift den Boss an – Würfel und Schaden wie gewohnt. Danach verteidigst du dich gegen seinen Angriff.";
+      el.phaseTipp.textContent = text;
+      el.phase.setAttribute("aria-label", text);
+      el.bossAngriff.hidden = !verteidigung;
+      if (verteidigung) {
+        el.bossAngriffZahl.textContent = p.bossAngriff;
+        el.bossAngriffSeiten.textContent = wText(p.angriffsWuerfel);
+        el.bossAngriff.setAttribute("aria-label", "Angriff des Bosses: " + p.bossAngriff + " (" + wText(p.angriffsWuerfel) + ")");
       }
-      Array.from(el.herzen.children).forEach(function (herz, i) {
-        herz.classList.toggle("ist-leer", i >= leben);
-      });
-      el.herzen.setAttribute("aria-label", leben + " Leben (höchstens " + anzeige.maxLeben + ")");
     }
 
     /**
@@ -1386,6 +1443,7 @@ const SudokuKampf = (function () {
         // Kein Wurf, keine Rechnung: der Boss ist sofort besiegt
         return [{ key: "regenbogen", label: "Regenbogen", wert: String(e.schaden), art: "regenbogen", schritt: 0 }];
       }
+      if (e.block) return blockZeilen(e, buchName);
       if (e.immun) {
         // "Wurf 6 · gerade · immun" – sonst wurde nichts berechnet
         const z = e.rechnung.wuerfel ? wuerfelZeilen(e) : [{ key: "wurf", label: "Wurf", wert: String(e.wurf), schritt: 0 }];
@@ -1457,6 +1515,37 @@ const SudokuKampf = (function () {
       return zeilen;
     }
 
+    /**
+     * Verteidigungszug als Zeilen: "Boss 6", "Block 9", "Konter 3" (bzw.
+     * "Treffer −4 HP" oder "Geblockt") – dazu Würfel der Bücher und Notizen.
+     */
+    function blockZeilen(e, buchName) {
+      const b = e.block;
+      const zeilen = [{ key: "bossAngriff", label: "Boss", wert: String(b.angriff), art: "boss", schritt: 0 }];
+      if (e.wuerfe && e.wuerfe.length > 1) {
+        zeilen.push({ key: "blockWuerfel", label: buchName, art: "buch", schritt: 0,
+          wert: e.wuerfelModus === "summe" ? e.wuerfe.join(" + ") : e.wuerfe.join(" / ") });
+      }
+      if (b.schritte.some(function (t) { return /^Mindestwurf/.test(t); })) {
+        zeilen.push({ key: "mindestwurf", label: buchName, wert: "≥ " + b.block, art: "buch", schritt: 0 });
+      }
+      zeilen.push({ key: "block", label: "Block", wert: String(b.block), art: "block", schritt: 0 });
+      if (b.ergebnis === "konter") zeilen.push({ key: "ausgang", label: "Konter", wert: String(b.konter), art: "konter", schritt: 0 });
+      else if (b.ergebnis === "treffer") zeilen.push({ key: "ausgang", label: "Treffer", wert: "−" + b.schaden + " HP", art: "fehler", schritt: 0 });
+      else zeilen.push({ key: "ausgang", label: "Geblockt", wert: "±0", art: "block", schritt: 0 });
+      if (e.giftVerpufft) zeilen.push({ key: "gift", label: "Gift wirkt nur im Angriff", wert: "", art: "notiz", schritt: 0 });
+      if (e.buchFaehigkeit > 0) {
+        zeilen.push({ key: "buchFaehigkeit", label: buchName, wert: "+" + e.buchFaehigkeit + " Zug", art: "buch", schritt: 0 });
+      }
+      return zeilen;
+    }
+
+    /** Kurzform eines Verteidigungszugs: "Boss 6 · Block 9 · Konter 3" */
+    function blockKurz(b) {
+      return "Boss " + b.angriff + " · Block " + b.block + " · " +
+        (b.ergebnis === "konter" ? "Konter " + b.konter : b.ergebnis === "treffer" ? "Treffer " + b.schaden : "Geblockt");
+    }
+
     /** Je Würfel eine Zeile: "Würfel 2 · 20 krit → 60", "Würfel 1 · 4 immun" … */
     function wuerfelZeilen(e) {
       return e.rechnung.wuerfel.map(function (w, k) {
@@ -1469,7 +1558,7 @@ const SudokuKampf = (function () {
       });
     }
 
-    /** Münzen dieses Zugs mit Grund, dazu ein gewonnenes Leben. */
+    /** Münzen dieses Zugs mit Grund, dazu die Heilung (Heilfeld). */
     function belohnungsZeilen(e) {
       const zeilen = [];
       const proZahl = e.werte ? e.werte.muenzenProZahl : K.muenzen.proZahl;
@@ -1487,10 +1576,10 @@ const SudokuKampf = (function () {
         zeilen.push({ key: "buchMuenzen", label: e.buch ? "Buch " + e.buch.ziffer : "Buch", wert: "+" + e.buchMuenzen, art: "gold" });
       }
       if (e.eliteBonus > 0) zeilen.push({ key: "elite", label: "Elite-Bonus", wert: "+" + e.eliteBonus, art: "gold" });
-      if (e.lebenPlus > 0) {
-        zeilen.push({ key: "leben", label: "Leben", wert: "+" + e.lebenPlus, art: "leben" });
-      } else if (e.lebenGewuenscht > 0) {
-        zeilen.push({ key: "leben", label: "Leben", wert: "schon voll", art: "daneben" });
+      if (e.heilung > 0) {
+        zeilen.push({ key: "heilung", label: "Heilfeld", wert: "+" + e.heilung + " HP", art: "heilung" });
+      } else if (e.heilungGewuenscht > 0) {
+        zeilen.push({ key: "heilung", label: "Heilfeld", wert: "HP schon voll", art: "daneben" });
       }
       return zeilen;
     }
@@ -1503,6 +1592,24 @@ const SudokuKampf = (function () {
     function protokolliereTreffer(e) {
       const gesamt = e.schaden + e.gift;
       const muenzen = e.muenzenPlus + e.eliteBonus;
+      if (e.block) {
+        // Verteidigungszug: der Vergleich statt der Schadensrechnung
+        const b = e.block;
+        const art = b.ergebnis === "konter" ? "konter" : b.ergebnis === "treffer" ? "fehler" : "block";
+        const kurz = blockKurz(b);
+        zeigeZug({
+          treffer: rechnungsZeilen(e),
+          schaden: b.ergebnis === "treffer"
+            ? { label: "Dein Schaden", wert: "−" + b.schaden + " HP", art: art }
+            : { label: b.ergebnis === "konter" ? "Konter" : "Gesamt", wert: String(b.konter), art: art },
+          belohnung: belohnungsZeilen(e),
+          muenzen: { label: "Summe", wert: muenzenText(muenzen), art: "gold" },
+          kurz: { schaden: kurz, schadenArt: art, muenzen: muenzenText(muenzen) + " Münzen" },
+        });
+        verlaufEintrag({ text: kurz, wert: b.ergebnis === "konter" ? "−" + b.konter : b.ergebnis === "treffer" ? "−" + b.schaden + " HP" : "",
+          art: art, symbol: "schild" });
+        return;
+      }
       const art = e.regenbogen ? "regenbogen" : e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
         e.doppelt ? "doppelt" : "";
       const farbe = e.immun ? e.selten.farbe : null;
@@ -1535,11 +1642,11 @@ const SudokuKampf = (function () {
       zeigeZug({
         treffer: [{ key: "falsch", label: "Falsche Zahl", wert: "✕", art: "fehler" }],
         schaden: { label: "Gesamt", wert: "0", art: "fehler" },
-        belohnung: [{ key: "leben", label: "Leben", wert: "−1", art: "fehler" }],
+        belohnung: [{ key: "hp", label: "HP", wert: "−" + e.schaden, art: "fehler" }],
         muenzen: { label: "Summe", wert: muenzenText(0), art: "" },
-        kurz: { schaden: "Falsche Zahl", schadenArt: "fehler", muenzenArt: "fehler", muenzen: "−1 Leben" },
+        kurz: { schaden: "Falsche Zahl", schadenArt: "fehler", muenzenArt: "fehler", muenzen: "−" + e.schaden + " HP" },
       });
-      verlaufEintrag({ text: "Falsche Zahl", wert: "−1 Leben", art: "fehler", symbol: "herz" });
+      verlaufEintrag({ text: "Falsche Zahl", wert: "−" + e.schaden + " HP", art: "fehler", symbol: "herz" });
     }
 
     /** Zurück zum Hinweistext (neues Abenteuer). */
@@ -1557,7 +1664,8 @@ const SudokuKampf = (function () {
      * Aufsteigende Zahl oder kurzes Wort.
      * Bei "Bewegung reduzieren" erscheint sie nur kurz an Ort und Stelle.
      * @param {string} ziel – "boss", "doppelt", "kritisch", "gift", "daneben",
-     *                        "immun", "muenzen" oder "leben"
+     *                        "immun", "muenzen", "held" (Schaden am Helden),
+     *                        "heilung", "konter" …
      */
     function schwebeZahl(text, ziel) {
       const zahl = document.createElement("span");
@@ -1579,7 +1687,7 @@ const SudokuKampf = (function () {
     }
 
 
-    /* ---------- Fähigkeit des Bosses: Ansage über ihm und Parade ---------- */
+    /* ---------- Fähigkeit des Bosses: Ansage über ihm ---------- */
 
     /** "in 8 Zügen", "in 1 Zug", "jetzt!" (die zweite Zeile der Ansage) */
     function zaehlerText(zaehler) {
@@ -1593,12 +1701,12 @@ const SudokuKampf = (function () {
 
     /**
      * Zeigt den Stand der Fähigkeit SOFORT: Ansage über dem Boss (Symbol,
-     * Name, Zähler; Warnung in den letzten Zügen), Schild beim Helden. Gibt
+     * Name, Zähler; Warnung in den letzten Zügen). Gibt
      * den Stand auch an das Spielfeld weiter (optionen.beimFaehigkeit), das
      * daraus die Wirkungen zeichnet (Siegel, Finsternis, Fluch, Timer,
      * Verwirrung). Wird nur aus Schritten der Warteschlange aufgerufen – so
      * passt alles zur Reihenfolge der Animationen.
-     * @param {object} stand – { faehigkeit, zaehler, warnung, paradeMoeglich, wirkungen }
+     * @param {object} stand – { faehigkeit, zaehler, warnung, wirkungen }
      */
     function zeigeFaehigkeit(stand) {
       if (!stand) return;
@@ -1611,18 +1719,10 @@ const SudokuKampf = (function () {
         el.absichtText.textContent = zaehlerText(stand.zaehler);
         el.absicht.classList.toggle("warnt", Boolean(stand.warnung));
         const erklaerung = f.name + ": " + f.beschreibung + " Kommt alle " + f.abstand +
-          " Züge – jede gesetzte Zahl zählt. Vervollständigst du im Zug der Fähigkeit eine Zeile, Spalte oder einen Block, pariert der Held.";
+          " Züge – jede gesetzte Zahl zählt, im Angriff wie in der Verteidigung.";
         el.absichtTipp.textContent = erklaerung;
         el.absicht.setAttribute("aria-label", absichtText(f, stand.zaehler) + ". " + erklaerung);
       }
-      // Mit dem nächsten Zug setzt der Boss seine Fähigkeit ein: Jetzt zählt die Parade
-      const moeglich = Boolean(stand.paradeMoeglich && f);
-      el.parade.classList.toggle("ist-moeglich", moeglich);
-      const paradeText = moeglich
-        ? "Parade jetzt möglich: Der Boss setzt mit deinem nächsten Zug seine Fähigkeit ein. Vervollständigst du damit eine Zeile, Spalte oder einen 3×3-Block, wehrt der Held sie ab."
-        : "Parade: Vervollständige in dem Zug, in dem der Boss seine Fähigkeit einsetzt, eine Zeile, Spalte oder einen 3×3-Block – dann wehrt der Held sie ab.";
-      el.paradeTipp.textContent = paradeText;
-      el.parade.setAttribute("aria-label", paradeText);
       if (optionen && optionen.beimFaehigkeit) optionen.beimFaehigkeit(stand);
     }
 
@@ -1675,7 +1775,6 @@ const SudokuKampf = (function () {
 
     /** Text für Meldung und Verlauf. */
     function faehigkeitMeldung(e) {
-      if (e.pariert) return e.boss.name + " setzt " + e.faehigkeit.name + " ein – pariert!";
       if (e.verpufft) return e.boss.name + " setzt " + e.faehigkeit.name + " ein – verpufft.";
       const dauer = e.wirkung && e.wirkung.rest ? " für " + e.wirkung.rest + " Züge" : "";
       return e.boss.name + " setzt " + e.faehigkeit.name + " ein! " + e.text + dauer + ".";
@@ -1683,26 +1782,17 @@ const SudokuKampf = (function () {
 
     /**
      * Der Boss setzt seine Fähigkeit ein (Schritt der Warteschlange, nach
-     * Würfel, Schaden und Treffer dieses Zugs): Ansage → Parade, Verpuffen
-     * oder die Wirkung → neuer Stand (Zähler von vorn, Schild, Spielfeld).
+     * Würfel, Schaden und Treffer dieses Zugs): Ansage → Verpuffen oder die
+     * Wirkung → neuer Stand (Zähler von vorn, Spielfeld).
      */
     function faehigkeit(e) {
       return einreihen(function () {
         const f = e.faehigkeit;
         meldung(faehigkeitMeldung(e));
-        const ansage = banner(f.name + "!", f.farbe, "faehigkeit");
+        banner(f.name + "!", f.farbe, "faehigkeit");
         faerbe(el.absicht, "loest-aus", DAUER.faehigkeitAnsage);
         animiere(el.bossFigur, "holt-aus", DAUER.faehigkeitAnsage);
         return pause(DAUER.faehigkeitAnsage).then(function () {
-          if (e.pariert) {
-            // Der Held reißt das Schwert hoch, die Fähigkeit prallt ab
-            ansage.remove();               // Platz für das große "Pariert!"
-            animiere(el.heldFigur, "pariert", DAUER.parade);
-            faerbe(el.parade, "pariert", DAUER.parade);
-            banner("Pariert!", null, "pariert");
-            verlaufEintrag({ text: "Pariert: " + f.name, wert: "Einheit fertig", art: "parade", symbol: "schild" });
-            return pause(DAUER.parade);
-          }
           if (e.verpufft) {
             schwebeZahl("Verpufft", "daneben");
             verlaufEintrag({ text: f.name + " verpufft", wert: "", art: "daneben", symbol: f.symbol });
@@ -1717,29 +1807,28 @@ const SudokuKampf = (function () {
           };
           return animation(e);
         }).then(function () {
-          zeigeFaehigkeit(e.stand);     // Zähler von vorn, Schild, Wirkung im Sudoku
+          zeigeFaehigkeit(e.stand);     // Zähler von vorn, Wirkung im Sudoku
         });
       });
     }
 
     /**
      * Tick, Tick: Der Timer ist abgelaufen – die Bombe geht beim Helden hoch,
-     * ein Leben geht verloren. War es das letzte, folgt danach die Niederlage
-     * (die Oberfläche startet sie nach diesem Schritt).
+     * er verliert HP. Fallen sie auf 0, folgt danach die Niederlage (die
+     * Oberfläche startet sie nach diesem Schritt).
      */
     function timerAbgelaufen(e) {
       return einreihen(function () {
-        meldung("Tick, Tick – der Timer ist abgelaufen! Ein Leben weniger.");
+        meldung("Tick, Tick – der Timer ist abgelaufen! " + e.schaden + " HP Schaden, noch " + e.heldHp + " HP.");
         banner("BUMM!", e.faehigkeit.farbe, "faehigkeit");
         faehigkeitSymbol(e.faehigkeit, "held", null, "explodiert");
-        verlaufEintrag({ text: e.faehigkeit.name + ": Timer abgelaufen", wert: "−" + (e.lebenVorher - e.leben) + " Leben",
+        verlaufEintrag({ text: e.faehigkeit.name + ": Timer abgelaufen", wert: "−" + e.schaden + " HP",
           art: "fehler", symbol: e.faehigkeit.symbol, farbe: e.faehigkeit.farbe });
-        zeigeHerzen(e.leben, e.maxLeben);
-        const herz = el.herzen.children[e.leben];
-        if (herz) animiere(herz, "verschwindet", 400);
+        zeigeHeldHp(e.heldHp, e.heldMaxHp);
         animiere(el.heldFigur, "wird-getroffen", 300);
+        animiere(el.heldHp, "sinkt", 400);
         faerbe(el.blitz, "an-treffer", 300);
-        schwebeZahl("−" + (e.lebenVorher - e.leben) + " ♥", "leben");
+        heldZahl("−" + e.schaden, "held");
         return pause(DAUER.timerAblauf).then(function () {
           if (!e.niederlage) zeigeFaehigkeit(e.stand);
         });
@@ -1751,14 +1840,15 @@ const SudokuKampf = (function () {
 
     /**
      * Zeigt einen Stand SOFORT (ohne Animation) – z. B. nach dem Laden.
-     * @param {object} stand – { boss, hp, leben, maxLeben, muenzen, rekorde,
+     * @param {object} stand – { boss, hp, heldHp, heldMaxHp, phase, muenzen, rekorde,
      *                           verbesserungen, buchBonus, faehigkeitStand }
      */
     function zeigeStand(stand) {
       return einreihen(function () {
         zeigeBoss(stand.boss);
         zeigeHp(stand.hp, stand.boss.maxHp);
-        zeigeHerzen(stand.leben, stand.maxLeben);
+        zeigeHeldHp(stand.heldHp, stand.heldMaxHp);
+        zeigePhase(stand.phase);
         zeigeMuenzen(stand.muenzen, false);
         zeigeVerbesserungen(stand.verbesserungen);
         zeigeBuchBonus(stand.buchBonus);
@@ -1773,6 +1863,12 @@ const SudokuKampf = (function () {
       const teile = [];
       if (e.regenbogen) {
         teile.push("Regenbogenschlag! " + e.boss.name + " ist mit einem Schlag besiegt.");
+      } else if (e.block) {
+        const b = e.block;
+        const vergleich = "Angriff " + b.angriff + ", Block " + b.block;
+        teile.push(b.ergebnis === "konter" ? "Konter! " + vergleich + ": " + b.konter + " Schaden für " + e.boss.name + "."
+          : b.ergebnis === "treffer" ? "Treffer! " + vergleich + ": " + b.schaden + " HP Schaden für dich, noch " + e.heldHp + " HP."
+          : "Geblockt! " + vergleich + ": kein Schaden.");
       } else if (e.immun) {
         teile.push(e.selten.name + "! Wurf " + e.wurf + ", " + e.selten.grund + ", " + e.selten.art + ": kein Schaden.");
       } else if (e.fehlschlag) {
@@ -1784,9 +1880,10 @@ const SudokuKampf = (function () {
         if (e.kritisch && e.doppelt) kopf += "Und doppelt! ";
         teile.push(kopf + e.rechnung.text + (e.gift > 0 ? " · Gift +" + e.gift : "") + ".");
       }
-      if (e.powerup && e.lebenGewuenscht > 0) {
-        teile.push(e.lebenPlus > 0 ? "+" + e.lebenPlus + " Leben!" : "Leben schon voll (" + e.maxLeben + ").");
+      if (e.powerup && e.heilungGewuenscht > 0) {
+        teile.push(e.heilung > 0 ? "Heilfeld: +" + e.heilung + " HP!" : "HP schon voll (" + e.heldMaxHp + ").");
       }
+      if (e.giftVerpufft) teile.push("Gift wirkt nur im Angriff.");
       if (e.powerup && e.powerup.typ === "gold") teile.push("Goldfeld!");
       teile.push("+" + e.muenzenPlus + (e.muenzenPlus === 1 ? " Münze." : " Münzen."));
       if (e.eliteBonus > 0) teile.push("Elite-Bonus +" + e.eliteBonus + " Münzen.");
@@ -1796,7 +1893,7 @@ const SudokuKampf = (function () {
 
     /**
      * Richtige Zahl: würfeln, zuschlagen (oder stolpern), Schaden, Gift,
-     * Münzen, Leben – kurz nacheinander; wirksame Plätze leuchten auf.
+     * Münzen, Heilung – kurz nacheinander; wirksame Plätze leuchten auf.
      */
     /**
      * Alles, was der Schadensaufbau (js/sudoku-damage-fx.js) über die Seite
@@ -1898,14 +1995,16 @@ const SudokuKampf = (function () {
     }
 
     /**
-     * Richtige Zahl: würfeln → Schaden sichtbar aufbauen (Boni fliegen auf
-     * die Zahl zu) → ins Schwert → Schlag → Einschlag im Boss → Gift, Münzen.
+     * Richtige Zahl im Angriffszug: würfeln → Schaden sichtbar aufbauen
+     * (Boni fliegen auf die Zahl zu) → ins Schwert → Schlag → Einschlag im
+     * Boss → Gift, Münzen, Heilung. Im Verteidigungszug: siehe verteidigung().
      */
     function treffer(e) {
       beschleunige();       // ein noch laufender Zug springt sofort zu seinem Ende
       if (e.regenbogen) regenbogenLaeuft = true;   // ab jetzt kürzt nichts mehr ab
       return einreihen(function () {
         zeigeBoss(e.boss);
+        if (e.block) return verteidigung(e);
         // Regenbogenfeld: kein Würfel – der Boss wird mit einem Schlag besiegt
         if (e.regenbogen) {
           return regenbogenSchlag(e).then(function () {
@@ -1931,28 +2030,181 @@ const SudokuKampf = (function () {
           faerbe(el.bossFigur, "vergiftet", 520);
           return warte(160);
         }).then(function () {
-          // Münzen und Leben – jetzt steht auch "Letzter Treffer" komplett
+          // Münzen und Heilung – jetzt steht auch "Letzter Treffer" komplett
           protokolliereTreffer(e);
-          schwebeZahl("+" + (e.muenzenPlus + e.eliteBonus), "muenzen");
-          if (e.lebenPlus > 0) {
-            zeigeHerzen(e.leben, e.maxLeben);
-            const neuesHerz = el.herzen.children[e.leben - 1];
-            if (neuesHerz) animiere(neuesHerz, "verschwindet", 400);   // kurzes "Aufpoppen"
-          }
-          // Tick, Tick: Timer entschärft
-          if (e.entschaerft) {
-            schwebeZahl("Entschärft!", "entschaerft");
-            verlaufEintrag({ text: "Timer entschärft", wert: "", art: "parade", symbol: "tickTick" });
-          }
-          // Fähigkeit: Zähler eins weiter, Wirkungen laufen ab
-          zeigeFaehigkeit(e.faehigkeitStand);
-          // Buch-Bonus des laufenden Sudokus
-          if (typeof e.buchBonus === "number") {
-            zeigeBuchBonus(e.buchBonus);
-            if (e.buchBonusPlus > 0) animiere(el.buchBonus, "pulsiert", 300);
-          }
-          return zeigeMuenzen(e.muenzen, true);
+          zeigeHeilung(e);
+          return zugEnde(e);
         });
+      });
+    }
+
+    /** Heilfeld: grüne Zahl über dem Helden, der Balken steigt (oder: schon voll). */
+    function zeigeHeilung(e) {
+      if (e.heilung > 0) {
+        heldZahl("+" + e.heilung, "heilung");
+        zeigeHeldHp(e.heldHpVorher + e.heilung, e.heldMaxHp);
+        animiere(el.heldHp, "steigt", 500);
+      } else if (e.heilungGewuenscht > 0) {
+        heldZahl("HP voll", "heilung");
+      }
+    }
+
+    /** Was jeder richtige Zug am Ende zeigt: Münzen, Timer, Fähigkeit, Buch-Bonus. */
+    function zugEnde(e) {
+      schwebeZahl("+" + (e.muenzenPlus + e.eliteBonus), "muenzen");
+      // Tick, Tick: Timer entschärft
+      if (e.entschaerft) {
+        schwebeZahl("Entschärft!", "entschaerft");
+        verlaufEintrag({ text: "Timer entschärft", wert: "", art: "entschaerft", symbol: "tickTick" });
+      }
+      // Fähigkeit: Zähler eins weiter, Wirkungen laufen ab
+      zeigeFaehigkeit(e.faehigkeitStand);
+      // Buch-Bonus des laufenden Sudokus
+      if (typeof e.buchBonus === "number") {
+        zeigeBuchBonus(e.buchBonus);
+        if (e.buchBonusPlus > 0) animiere(el.buchBonus, "pulsiert", 300);
+      }
+      return zeigeMuenzen(e.muenzen, true);
+    }
+
+    /**
+     * Richtige Zahl im Verteidigungszug: Der Würfel des Helden rollt (sein
+     * Block) → Heilfeld → beide Würfel stehen nebeneinander → Ausgang:
+     * Geblockt (Klingen prallen aufeinander), Treffer (die Bühne wackelt,
+     * der HP-Balken des Helden sinkt) oder Konter (die Zahl fliegt zum Boss).
+     * Danach ist wieder ein Angriffszug dran.
+     */
+    function verteidigung(e) {
+      return wuerfel.rolle(e, eilig()).then(function () {
+        meldung(trefferText(e));
+        leuchtePlaetze(e.wirksam);
+        // Die Regeln heilen vor dem Vergleich – also auch hier zuerst
+        zeigeHeilung(e);
+        const v = vergleichZeigen(e.block);
+        return pause(DAUER.vergleich).then(function () { return ausgang(e, v); });
+      }).then(function () {
+        protokolliereTreffer(e);
+        // Angriff abgewehrt (oder eingesteckt): Nächster Zug ist ein Angriff
+        zeigePhase({ phase: "angriff", bossAngriff: null });
+        return zugEnde(e);
+      });
+    }
+
+    /** Die beiden Würfel nebeneinander mitten auf der Bühne: Angriff des Bosses und Block. */
+    function vergleichZeigen(b) {
+      const v = document.createElement("div");
+      v.className = "kampf-vergleich kampf-vergleich--" + b.ergebnis;
+      v.innerHTML =
+        '<span class="kampf-vergleich-wuerfel kampf-vergleich-wuerfel--boss"><span class="kampf-vergleich-name">Boss</span><span class="kampf-vergleich-zahl"></span></span>' +
+        '<span class="kampf-vergleich-gegen">' + (b.ergebnis === "gleich" ? "=" : b.ergebnis === "treffer" ? "&gt;" : "&lt;") + "</span>" +
+        '<span class="kampf-vergleich-wuerfel kampf-vergleich-wuerfel--held"><span class="kampf-vergleich-name">Block</span><span class="kampf-vergleich-zahl"></span></span>';
+      v.querySelector(".kampf-vergleich-wuerfel--boss .kampf-vergleich-zahl").textContent = b.angriff;
+      v.querySelector(".kampf-vergleich-wuerfel--held .kampf-vergleich-zahl").textContent = b.block;
+      el.effekte.appendChild(v);
+      setTimeout(function () { v.remove(); }, DAUER.vergleich + DAUER.ausgang + DAUER.konterFlug + 400);
+      return v;
+    }
+
+    /** Ausgang des Verteidigungszugs (siehe verteidigung). */
+    function ausgang(e, v) {
+      const b = e.block;
+      if (b.ergebnis === "gleich") {
+        // Die Klingen prallen aufeinander – kein Schaden
+        v.classList.add("prallt");
+        animiere(el.heldFigur, "blockt", DAUER.ausgang);
+        animiere(el.bossFigur, "holt-aus", DAUER.ausgang);
+        faerbe(el.blitz, "an-funken", 300);
+        banner("Geblockt!", null, "geblockt");
+        return pause(DAUER.ausgang);
+      }
+      if (b.ergebnis === "treffer") {
+        // Der Treffer geht durch: der Boss schlägt zu, die Bühne wackelt, der HP-Balken sinkt
+        v.classList.add("bricht");
+        const schlag = animiere(el.bossFigur, "greift-an", DAUER.zuschlagen);
+        return warte(DAUER.zuschlagen / 2).then(function () {
+          zeigeHeldHp(e.heldHp, e.heldMaxHp);
+          animiere(el.buehne, "wackelt", 360);
+          animiere(el.heldFigur, "wird-getroffen", 300);
+          animiere(el.heldHp, "sinkt", 400);
+          faerbe(el.blitz, "an-treffer", 300);
+          heldZahl("−" + b.schaden, "held");
+          return Promise.all([schlag, pause(DAUER.ausgang / 2)]);
+        });
+      }
+      // Konter: Der Held wehrt ab und schlägt zurück, die Zahl fliegt zum Boss
+      v.classList.add("siegt");
+      animiere(el.heldFigur, "blockt", DAUER.ausgang / 2);
+      banner("Konter!", null, "konter");
+      return pause(DAUER.ausgang / 2).then(function () {
+        animiere(el.heldFigur, "schlaegt", DAUER.schlag);
+        return konterFlug(v, b.konter);
+      }).then(function () {
+        zeigeHp(e.hpNachSchaden, e.boss.maxHp);
+        schwebeZahl("−" + b.konter, "konter");
+        return animiere(el.bossFigur, "getroffen", DAUER.treffer);
+      });
+    }
+
+    /** Die Konter-Zahl fliegt vom Block-Würfel zum Boss (ohne Bewegung: entfällt, die Zahl erscheint am Boss). */
+    function konterFlug(v, zahl) {
+      const start = v.querySelector(".kampf-vergleich-wuerfel--held");
+      if (ohneBewegung() || eilig() || !start) return Promise.resolve();
+      const flaeche = el.effekte.getBoundingClientRect();
+      const a = start.getBoundingClientRect();
+      const z = el.bossFigur.getBoundingClientRect();
+      const flug = document.createElement("span");
+      flug.className = "kampf-konter-flug";
+      flug.textContent = "−" + zahl;
+      flug.style.left = (a.left + a.width / 2 - flaeche.left) + "px";
+      flug.style.top = (a.top + a.height / 2 - flaeche.top) + "px";
+      el.effekte.appendChild(flug);
+      const dx = z.left + z.width / 2 - (a.left + a.width / 2);
+      const dy = z.top + z.height * 0.4 - (a.top + a.height / 2);
+      const animation = flug.animate([
+        { transform: "translate(-50%, -50%) scale(0.8)" },
+        { transform: "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px)) scale(1.3)" },
+      ], { duration: DAUER.konterFlug, easing: "cubic-bezier(0.4, 0, 0.6, 1)" });
+      return new Promise(function (fertig) {
+        // beschleunige(): sofort am Ziel
+        const sofort = function () { animation.cancel(); ende(); };
+        const ende = function () { wartende.delete(sofort); animation.onfinish = null; flug.remove(); fertig(); };
+        animation.onfinish = ende;
+        wartende.add(sofort);
+      });
+    }
+
+    /**
+     * Ein Verteidigungszug beginnt: Der Boss holt aus, sein Würfel rollt kurz
+     * und zeigt den Angriff über ihm ("Angriff: 6"), beim Helden erscheint
+     * der Schild. Bei "Bewegung reduzieren" erscheint die Zahl nur.
+     * @param {object} e – { boss, angriff, seiten, phase } (Ereignis "bossAngriff")
+     */
+    function bossAngriff(e) {
+      return einreihen(function () {
+        meldung(e.boss.name + " greift an: " + e.angriff + " (" + wText(e.seiten) + "). Verteidige dich – deine nächste richtige Zahl ist dein Block.");
+        verlaufEintrag({ text: e.boss.name + " greift an", wert: "Angriff " + e.angriff, art: "angriff", symbol: "schwert" });
+        if (ohneBewegung() || eilig()) {
+          zeigePhase(e.phase);
+          return null;
+        }
+        // Der Würfel des Bosses rollt (nie mit dem Ergebnis – es soll nichts verraten)
+        animiere(el.bossFigur, "holt-aus", DAUER.faehigkeitAnsage);
+        el.bossAngriff.hidden = false;
+        el.bossAngriffSeiten.textContent = wText(e.seiten);
+        el.bossAngriff.classList.add("rollt");
+        let letzte = 0;
+        const flackern = setInterval(function () {
+          let z;
+          do { z = 1 + Math.floor(Math.random() * e.seiten); } while ((z === e.angriff || z === letzte) && e.seiten > 2);
+          letzte = z;
+          el.bossAngriffZahl.textContent = z;
+        }, 70);
+        return pause(DAUER.bossWurf).then(function () {
+          clearInterval(flackern);
+          el.bossAngriff.classList.remove("rollt");
+          zeigePhase(e.phase);
+          return animiere(el.bossAngriff, "landet", 300);
+        }, function (fehler) { clearInterval(flackern); throw fehler; });
       });
     }
 
@@ -2084,20 +2336,22 @@ const SudokuKampf = (function () {
       return wartezeit(ms).then(ende);
     }
 
-    /** Falsche Zahl: Boss schlägt zu, ein Leben geht verloren. */
+    /**
+     * Falsche Zahl: Boss schlägt zu, der Held verliert HP. Die Phase bleibt –
+     * im Verteidigungszug steht der Angriff des Bosses weiter über ihm.
+     */
     function fehler(e) {
       beschleunige();
       return einreihen(function () {
-        meldung(e.boss.name + " schlägt zu! Falsche Zahl, " +
-          (e.leben === 0 ? "keine Leben mehr." : "noch " + e.leben + " Leben."));
+        meldung(e.boss.name + " schlägt zu! Falsche Zahl: " + e.schaden + " HP Schaden, " +
+          (e.heldHp === 0 ? "keine HP mehr." : "noch " + e.heldHp + " HP."));
         protokolliereFehler(e);
-        const rest = e.leben;
         const schlag = animiere(el.bossFigur, "greift-an", DAUER.zuschlagen);
         return warte(DAUER.zuschlagen / 2).then(function () {
-          zeigeHerzen(rest, e.maxLeben);
-          const herz = el.herzen.children[rest];
-          if (herz) animiere(herz, "verschwindet", 400);
+          zeigeHeldHp(e.heldHp, e.heldMaxHp);
+          heldZahl("−" + e.schaden, "held");
           animiere(el.heldFigur, "wird-getroffen", 300);
+          animiere(el.heldHp, "sinkt", 400);
           return schlag;
         }).then(function () {
           zeigeFaehigkeit(e.faehigkeitStand);    // auch eine falsche Zahl zählt als Zug
@@ -2115,6 +2369,7 @@ const SudokuKampf = (function () {
           ? { text: "Elite " + e.boss.name + " besiegt!", wert: "+" + e.eliteBonus, art: "elite", symbol: "krone" }
           : { text: e.boss.name + " besiegt!", wert: "", art: "besiegt", symbol: "krone" });
         zeigeHp(0, e.boss.maxHp);
+        zeigePhase({ phase: "angriff", bossAngriff: null });   // ein angekündigter Angriff ist hinfällig
         // Nach dem Regenbogenschlag ist der Boss schon in Funken zerfallen
         if (ohneBewegung() || eilig() || el.bossFigur.classList.contains("loest-sich-auf")) {
           return Promise.resolve();
@@ -2132,13 +2387,13 @@ const SudokuKampf = (function () {
       });
     }
 
-    /** Der nächste Boss erscheint (volle HP, Leben aufgefüllt) – mit seiner Fähigkeit. */
+    /** Der nächste Boss erscheint (volle HP, HP des Helden aufgefüllt) – mit seiner Fähigkeit, Angriffszug. */
     function neuerBoss(e, rekorde) {
       return einreihen(function () {
         const boss = e.boss;
         const ort = boss.welt.name + ", Level " + boss.weltLevel;
         let text = (boss.weltboss ? "Der Weltboss erscheint! " : boss.elite ? "Ein Elite-Boss erscheint! " : "") +
-          ort + ": " + boss.name + ", " + boss.maxHp + " HP.";
+          ort + ": " + boss.name + ", " + boss.maxHp + " HP, Angriffswürfel " + wText(boss.angriffsWuerfel) + ". Deine HP sind wieder voll.";
         if (boss.faehigkeit) text += " Fähigkeit " + boss.faehigkeit.name + ": " + boss.faehigkeit.beschreibung;
         if (boss.selten) text += " Selten, " + boss.selten.name + ": " + boss.selten.beschreibung;
         meldung(text);
@@ -2152,7 +2407,11 @@ const SudokuKampf = (function () {
         el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite", "loest-sich-auf", "ist-ruhig");
         zeigeBoss(boss);
         zeigeHp(e.hp, boss.maxHp);
-        zeigeHerzen(e.leben, e.maxLeben);
+        // Die einzige volle Heilung: nach einem Sieg – der Balken steigt sichtbar
+        const geheilt = anzeige.heldHp !== null ? e.heldHp - anzeige.heldHp : 0;
+        zeigeHeldHp(e.heldHp, e.heldMaxHp);
+        if (geheilt > 0) heldZahl("+" + geheilt, "heilung");
+        zeigePhase(e.phase);                      // jeder Boss beginnt mit einem Angriffszug
         zeigeRekorde(rekorde);
         zeigeFaehigkeit(e.faehigkeitStand);      // neue Fähigkeit, neuer Zähler
         // Neue Welt (oder neue Runde): kurze Einblendung mit ihrem Namen
@@ -2182,7 +2441,7 @@ const SudokuKampf = (function () {
       });
     }
 
-    /** Eine Verbesserung wurde gewählt: Symbole und ggf. Herzen aktualisieren. */
+    /** Eine Verbesserung wurde gewählt: Symbole und HP (Maximum) aktualisieren. */
     function verbesserung(e) {
       return einreihen(function () {
         if (e.art === "muenzbeutel") {
@@ -2192,12 +2451,12 @@ const SudokuKampf = (function () {
           schwebeZahl("+" + e.muenzenPlus, "muenzen");
           return zeigeMuenzen(e.muenzen, true);
         }
-        meldung(e.name + ", Stufe " + e.stufe + "." + (e.lebenPlus > 0 ? " +" + e.lebenPlus + " Leben." : ""));
+        meldung(e.name + ", Stufe " + e.stufe + ".");
         verlaufEintrag(e.art === "buch"
           ? { text: e.name, wert: "Stufe " + e.stufe, art: "buch", symbol: "buch" }
           : { text: e.name, wert: "Stufe " + e.stufe });
         zeigeVerbesserungen(e.gesammelt, e.id);
-        zeigeHerzen(e.leben, e.maxLeben);
+        zeigeHeldHp(e.heldHp, e.heldMaxHp);
         return null;
       });
     }
@@ -2234,7 +2493,7 @@ const SudokuKampf = (function () {
           verlaufEintrag({ text: "Buchschlag: " + e.buch.name, wert: "−" + e.schaden, art: "buch", symbol: "buch" });
           if (e.eliteBonus > 0 || e.besiegt) {
             zeigeMuenzen(e.muenzen, true);
-            zeigeHerzen(e.leben, e.maxLeben);
+            zeigeHeldHp(e.heldHp, e.heldMaxHp);
           }
           const getroffen = bossGetroffen(e, endstufe);
           return u.aktiv && !u.reduziert ? Promise.all([getroffen, SudokuSchadenFx.entladen(endstufe, u)]) : getroffen;
@@ -2667,7 +2926,7 @@ const SudokuKampf = (function () {
         if (!mitAnimation) return null;
         meldung("Niederlage gegen " + e.boss.name + ".");
         verlaufEintrag({ text: "Niederlage gegen " + e.boss.name, wert: "", art: "fehler", symbol: "kreuz" });
-        zeigeHerzen(0);
+        zeigeHeldHp(0);
         return animiere(el.heldFigur, "faellt", 500).then(function () {
           sprechblase(e.boss.name, e.satz, "sieg");
           return warte(1400);
@@ -2789,6 +3048,8 @@ const SudokuKampf = (function () {
       fehler: fehler,
       faehigkeit: faehigkeit,
       zeigeFaehigkeit: zeigeFaehigkeit,
+      bossAngriff: bossAngriff,
+      zeigePhase: zeigePhase,
       timerAbgelaufen: timerAbgelaufen,
       buchschlag: buchschlag,
       buchSpin: buchSpin,
