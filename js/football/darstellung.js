@@ -304,7 +304,10 @@ function initFootball(container) {
   // Spielablauf
   // ------------------------------------------------------------------
   function neuesMatch() {
-    regeln = FootballRegeln.erstelle();
+    // Übergang: Die Oberfläche spielt noch mit den festen Teams aus
+    // konfig.teams und den bisherigen Figuren (ohne Kader). Auslosung,
+    // Teamkarten und die Sprites des Kaders folgen nach der Freigabe der Namen.
+    regeln = FootballRegeln.erstelle({ kader: {} });
     el.ende.hidden = true;
     el.standbild.hidden = true;
     el.aufdecken.hidden = true;

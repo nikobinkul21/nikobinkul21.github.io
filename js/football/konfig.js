@@ -19,6 +19,37 @@ const FootballKonfig = {
 
   arena: "halleNull",     // Eintrag aus football/arenen.js
 
+  // Kader und Auslosung (Spieler: football/players.js, Fähigkeiten:
+  // football/abilities.js). Vor jedem Match bekommst du 2 verschiedene
+  // Spieler zugelost, der Gegner 2 aus dem Rest. Die Spieler bringen
+  // Haare, Haut und Augen mit – die Trikots kommen vom Team.
+  kader: {
+    proTeam: 2,
+    torwarte: ["timo", "bo"],             // bleiben eigene, schlichte Figuren (figuren.js)
+    trikots: [
+      { trikot: "#2b63d9", trikotSchatten: "#1d47a3", hose: "#f4f6fb", stutzen: "#2b63d9", schuhe: "#22252e", nummer: "#ffffff" },
+      { trikot: "#f07a1a", trikotSchatten: "#bd5a0c", hose: "#26232a", stutzen: "#f07a1a", schuhe: "#f4f6fb", nummer: "#26232a" },
+    ],
+    // Wer spielt hinten? Der Spieler mit der höheren Summe dieser Werte
+    // (er verteidigt in der eigenen Hälfte, siehe regeln.verteidiger)
+    hintenWerte: ["zweikampf", "passBlockieren", "torBlockieren"],
+  },
+
+  // Werte der Fähigkeiten (die Wirkung selbst steht in football/abilities.js)
+  faehigkeiten: {
+    uebersicht: { bonus: { passen: 3 }, zonen: 2 },        // Spielmacher: Pässe, die nicht geblockt werden, rücken 2 Zonen vor
+    ballzauber: { bonus: { dribbeln: 3 }, zonen: 2 },      // Dribbler: gewonnenes Dribbling gegen Zweikampf → 2 Zonen
+    kanone: { bonus: { schiessen: 3 } },                   // Torjäger: aus der gegnerischen Hälfte wie aus dem Strafraum
+    traumannahme: { chance: 0.5, torwartFaktor: 0.5 },     // Ballkünstler: 50 % nach angenommenem Pass, Torwart-Wert halbiert
+    mauer: { chance: 0.15 },                               // Verteidiger: falsch geraten – trotzdem 15 % Ballgewinn
+    sologang: { chance: 0.10 },                            // Solospieler: 10 % beim Dribbeln – Lauf übers ganze Feld, Tor
+    akrobatik: {                                           // Akrobat: Schuss schon ab der Mitte, Chance unabhängig von der Zone
+      abZone: 2,
+      zonenZuschlag: 2,
+      schuesse: ["Fallrückzieher", "Seitfallzieher", "Scherenschlag"],
+    },
+  },
+
   regeln: {
     // Zonen aus deiner Sicht von links nach rechts:
     // 0 eigenes Tor · 1 eigene Hälfte · 2 Mitte · 3 gegnerische Hälfte · 4 Strafraum
@@ -82,6 +113,9 @@ const FootballKonfig = {
     // Gesamtgewichte, der nach deinen Vorlieben verteilt wird.
     gedaechtnis: 8,
     anpassung: 0.5,
+    // Darf jemand schießen, wo die Tabelle oben kein Gewicht hat (Akrobat
+    // in der Mitte), gilt dieses Gewicht für Schießen bzw. Tor blockieren
+    schussOhneGewicht: 3,
     // Elfmeter: Gewichte der Richtungen für den Schuss des Computers;
     // als Torwart reagiert er wie oben auf deine bisherigen Richtungen
     elfmeterSchuss: { links: 4, mitte: 2, rechts: 4 },

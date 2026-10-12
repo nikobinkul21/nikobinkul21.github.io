@@ -14,6 +14,8 @@
    Die Wahl des Computers entsteht, BEVOR deine Wahl ausgewertet wird –
    sie kennt nur den Spielstand und deine bisherigen Züge.
    Bis 3 Tore oder 20 Spielzüge, bei Gleichstand Elfmeterduell.
+   Fähigkeiten (football/abilities.js) hängen sich über benannte Haken
+   ein (haken(…, "wertBonus") usw.) – im Elfmeterduell gelten sie nicht.
    Zufall von außen (zufall: () => 0…1) – so sind die Regeln testbar.
    ========================================================================== */
 
@@ -23,6 +25,8 @@ const FootballRegeln = (function () {
   // in Node.js werden sie hier nachgeladen
   const STANDARD_KONFIG = typeof FootballKonfig !== "undefined" ? FootballKonfig : require("./konfig.js");
   const STANDARD_FIGUREN = typeof FootballFiguren !== "undefined" ? FootballFiguren : require("./figuren.js");
+  const STANDARD_KADER = typeof FootballKader !== "undefined" ? FootballKader : require("./players.js");
+  const FAEHIGKEITEN = typeof FootballFaehigkeiten !== "undefined" ? FootballFaehigkeiten : require("./abilities.js");
 
   /** Gewichtete Auswahl: { a: 3, b: 1 } → "a" in 3 von 4 Fällen. */
   function waehle(gewichte, zufall) {
@@ -37,15 +41,51 @@ const FootballRegeln = (function () {
   }
 
   /**
+   * Auslosung: dir werden proTeam verschiedene Spieler aus dem Kader
+   * zugelost (in dieser Reihenfolge, für die Slot-Anzeige), der Gegner
+   * bekommt proTeam aus dem Rest. In jedem Team spielt der Spieler mit
+   * den höheren Abwehrwerten hinten (Index 1).
+   * @returns {object} { teams: [{ name, spieler, torwart }, …], gezogen: [[ids in Zugreihenfolge], […]] }
+   */
+  function auslosen(optionen) {
+    optionen = optionen || {};
+    const K = optionen.konfig || STANDARD_KONFIG;
+    const kader = optionen.kader || STANDARD_KADER;
+    const zufall = optionen.zufall || function () { return Math.random(); };
+    const topf = Object.keys(kader);
+    const ziehe = function () { return topf.splice(Math.floor(zufall() * topf.length), 1)[0]; };
+    const gezogen = [[], []];
+    for (let t = 0; t < 2; t++) {
+      for (let i = 0; i < K.kader.proTeam; i++) gezogen[t].push(ziehe());
+    }
+    const abwehr = function (id) {
+      return K.kader.hintenWerte.reduce(function (s, w) { return s + kader[id].werte[w]; }, 0);
+    };
+    const teams = gezogen.map(function (ids, t) {
+      // vorne der Offensivere, hinten der mit mehr Abwehr (bei Gleichstand: Reihenfolge der Ziehung)
+      const spieler = ids.slice().sort(function (a, b) { return abwehr(a) - abwehr(b); });
+      return { name: K.teams[t].name, spieler: spieler, torwart: K.kader.torwarte[t] };
+    });
+    return { teams: teams, gezogen: gezogen };
+  }
+
+  /**
    * Ein neues Match.
-   * @param {object} [optionen] – { zufall, konfig, figuren }
+   * @param {object} [optionen] – { zufall, konfig, figuren, kader, teams, auslosen }
+   *   teams:   [{ name, spieler: [id, id], torwart }, …] fest vorgeben
+   *   auslosen: true – Teams aus dem Kader auslosen (siehe auslosen)
+   *   sonst gelten konfig.teams
    */
   function erstelle(optionen) {
     optionen = optionen || {};
     const K = optionen.konfig || STANDARD_KONFIG;
-    const F = optionen.figuren || STANDARD_FIGUREN;
+    const KADER = optionen.kader || STANDARD_KADER;
+    // Alle Figuren: Torhüter (und ältere Figuren) aus figuren.js, dazu der Kader
+    const F = Object.assign({}, optionen.figuren || STANDARD_FIGUREN, KADER);
     // ohne Vorgabe: Math.random (bei jedem Wurf neu gelesen)
     const zufall = optionen.zufall || function () { return Math.random(); };
+    const auslosung = optionen.auslosen ? auslosen({ konfig: K, kader: KADER, zufall: zufall }) : null;
+    const teams = optionen.teams || (auslosung ? auslosung.teams : K.teams);
     const R = K.regeln;
     const LETZTE = R.zonen.length - 1;          // 4: Strafraum
 
@@ -58,6 +98,7 @@ const FootballRegeln = (function () {
       phase: "spiel",            // "spiel" | "elfmeter" | "ende"
       elfmeter: null,            // { schuetzeTeam, schuesse: [[…], […]] } (true = Tor)
       ende: null,                // { sieger: 0 | 1, grund: "tore" | "zuege" | "elfmeter" }
+      traumannahme: null,        // Figur, deren Traumannahme gerade aktiv ist (Fähigkeit)
       vorlieben: [],             // deine letzten Angriffsaktionen (für die KI)
       elfmeterVorlieben: [],     // deine bisherigen Schussrichtungen im Elfmeter
     };
@@ -83,6 +124,46 @@ const FootballRegeln = (function () {
       return f;
     }
 
+    // ---------------------------------------------------------------
+    // Fähigkeiten: die benannten Haken (siehe football/abilities.js)
+    // ---------------------------------------------------------------
+
+    function faehigkeitVon(id) {
+      const f = F[id];
+      return f && f.faehigkeit ? FAEHIGKEITEN.holen(f.faehigkeit) : null;
+    }
+
+    /** Haken einer Figur aufrufen; ohne passende Fähigkeit: null. */
+    function haken(id, name, kontext) {
+      const fa = faehigkeitVon(id);
+      if (!fa || !fa.wirkung[name]) return null;
+      const k = Object.assign({ konfig: K, zufall: zufall, figurId: id, zustand: zustand }, kontext || {});
+      return { faehigkeit: fa, aufruf: function () {
+        const args = Array.prototype.slice.call(arguments);
+        return fa.wirkung[name].apply(null, args.concat([k]));
+      } };
+    }
+
+    /** Wert einer Figur für eine Aktion – mit Zuschlag der Fähigkeit (außer mitFaehigkeit = false). */
+    function wert(id, name, mitFaehigkeit) {
+      const basis = figur(id).werte[name];
+      if (mitFaehigkeit === false) return basis;
+      const h = haken(id, "wertBonus");
+      return basis + (h ? h.aufruf(name) : 0);
+    }
+
+    /** Ab welcher Zone (Sicht des Schützen) darf diese Figur schießen? */
+    function schussAb(id) {
+      const h = haken(id, "schussAbZone");
+      return h ? h.aufruf(R.schussAbZone) : R.schussAbZone;
+    }
+
+    /** Ausgelöste Fähigkeit für das Ergebnis festhalten. */
+    function ausgeloest(e, id, team, extra) {
+      const fa = faehigkeitVon(id);
+      e.faehigkeiten.push(Object.assign({ id: fa.id, name: fa.name, symbol: fa.symbol, figur: id, team: team }, extra || {}));
+    }
+
     /** Wer verteidigt? Im eigenen Drittel (Angreifer ab Zone 3) der hintere Spieler, sonst der vordere. */
     function verteidigerIndex(angreiferRel) {
       return angreiferRel >= R.schussAbZone ? 1 : 0;
@@ -96,9 +177,9 @@ const FootballRegeln = (function () {
       return K.aktionen[art].find(function (a) { return a.id === id; });
     }
 
-    /** Darf der Ballführende von hier schießen? */
+    /** Darf der Ballführende von hier schießen? (Akrobatik: schon ab der Mitte) */
     function schussErlaubt(team) {
-      return relZone(team) >= R.schussAbZone;
+      return relZone(team) >= schussAb(teams[team].spieler[zustand.traeger]);
     }
 
     /** Welche Aktionen hat ein Team in seiner Lage? (erlaubt / Grund) */
@@ -109,7 +190,8 @@ const FootballRegeln = (function () {
         return K.aktionen.angriff.map(function (a) {
           const erlaubt = a.id !== "schiessen" || schuss;
           return { id: a.id, name: a.name, taste: a.taste, erlaubt: erlaubt,
-            grund: erlaubt ? "" : "Schießen geht erst ab der gegnerischen Hälfte" };
+            grund: erlaubt ? "" : schussAb(teams[team].spieler[zustand.traeger]) < R.schussAbZone
+              ? "Schießen geht erst ab der Mitte" : "Schießen geht erst ab der gegnerischen Hälfte" };
         });
       }
       return K.aktionen.verteidigung.map(function (a) {
@@ -127,6 +209,7 @@ const FootballRegeln = (function () {
     function kiAngriff() {
       const g = Object.assign({}, K.ki.angriff[relZone(1)]);
       if (!schussErlaubt(1)) g.schiessen = 0;
+      else if (!(g.schiessen > 0)) g.schiessen = K.ki.schussOhneGewicht;    // Akrobat in der Mitte
       return waehle(g, zufall);
     }
 
@@ -139,6 +222,7 @@ const FootballRegeln = (function () {
       const basis = Object.assign({}, K.ki.verteidigung[relZone(0)]);
       const schuss = schussErlaubt(0);
       if (!schuss) basis.torBlockieren = 0;
+      else if (!(basis.torBlockieren > 0)) basis.torBlockieren = K.ki.schussOhneGewicht;
       const erlaubteAngriffe = K.aktionen.angriff.filter(function (a) { return a.id !== "schiessen" || schuss; })
         .map(function (a) { return a.id; });
       const letzte = zustand.vorlieben.slice(-K.ki.gedaechtnis).filter(function (id) { return erlaubteAngriffe.indexOf(id) >= 0; });
@@ -181,10 +265,10 @@ const FootballRegeln = (function () {
       if (angriffTeam === 0) zustand.vorlieben.push(meineAktion);
 
       const rel = relZone(angriffTeam);
-      const angreiferId = K.teams[angriffTeam].spieler[zustand.traeger];
+      const angreiferId = teams[angriffTeam].spieler[zustand.traeger];
       const vIndex = verteidigerIndex(rel);
-      const verteidigerId = K.teams[verteidigungTeam].spieler[vIndex];
-      const torwartId = K.teams[verteidigungTeam].torwart;
+      const verteidigerId = teams[verteidigungTeam].spieler[vIndex];
+      const torwartId = teams[verteidigungTeam].torwart;
       const a = aktion("angriff", angriffId);
       const v = aktion("verteidigung", verteidigungId);
       const passt = v.konter === a.id;
@@ -194,7 +278,7 @@ const FootballRegeln = (function () {
         art: "zug",
         angriffTeam: angriffTeam,
         angreifer: angreiferId,
-        mitspieler: K.teams[angriffTeam].spieler[1 - zustand.traeger],
+        mitspieler: teams[angriffTeam].spieler[1 - zustand.traeger],
         verteidiger: verteidigerId,
         torwart: torwartId,
         angriff: a.id,
@@ -203,15 +287,37 @@ const FootballRegeln = (function () {
         vergleich: null,
         torwartDuell: null,
         ausgang: null,          // "pass" | "dribbling" | "tor" | "abgefangen" | "zweikampf" | "geblockt" | "gehalten"
-        ballgewinn: false,      // die Verteidigung hat richtig geraten und den Vergleich gewonnen
+        ballgewinn: false,      // die Verteidigung hat den Ball erobert (Vergleich gewonnen oder Mauer)
         tor: false,
+        zonen: 0,               // um wie viele Zonen der Ball vorgerückt ist
+        sologang: false,
+        schussArt: null,        // Akrobatik: "Fallrückzieher" …
+        faehigkeiten: [],       // ausgelöste Fähigkeiten in ihrer Reihenfolge
         vorher: vorher,
       };
+      const traumVorher = zustand.traumannahme;
 
-      // 1. Passt die Verteidigung? Dann Wertevergleich
+      // Haken "vorDuell": Sologang – die Verteidigung spielt keine Rolle
+      const solo = haken(angreiferId, "vorDuell", { aktion: a.id });
+      const sonder = solo ? solo.aufruf() : null;
+      if (sonder && sonder.art === "sologang") {
+        ausgeloest(e, angreiferId, angriffTeam);
+        e.sologang = true;
+        e.tor = true;
+        e.ausgang = "tor";
+        e.zonen = LETZTE - rel;
+        zustand.tore[angriffTeam]++;
+        zustand.ballTeam = verteidigungTeam;
+        zustand.zone = R.anstossZone;
+        zustand.traeger = 0;
+        zustand.traumannahme = null;
+        return abschluss(e);
+      }
+
+      // 1. Passt die Verteidigung? Dann Wertevergleich (mit Wertezuschlägen der Fähigkeiten)
       let gelingt = true;
       if (passt) {
-        const wa = figur(angreiferId).werte[a.wert], wv = figur(verteidigerId).werte[v.wert];
+        const wa = wert(angreiferId, a.wert), wv = wert(verteidigerId, v.wert);
         const ra = wuerfle(), rv = wuerfle();
         const angriffGewinnt = R.gleichstandFuer === "verteidiger" ? wa + ra > wv + rv : wa + ra >= wv + rv;
         e.vergleich = {
@@ -220,11 +326,19 @@ const FootballRegeln = (function () {
           sieger: angriffGewinnt ? "angriff" : "verteidigung",
         };
         gelingt = angriffGewinnt;
+      } else {
+        // Haken "falschGeraten": Mauer – trotzdem eine kleine Chance auf den Ball
+        const mauer = haken(verteidigerId, "falschGeraten", { aktion: a.id });
+        if (mauer && mauer.aufruf()) {
+          ausgeloest(e, verteidigerId, verteidigungTeam);
+          gelingt = false;
+        }
       }
 
       // 2. Ausgang
       if (!gelingt) {
         e.ballgewinn = true;
+        zustand.traumannahme = null;            // Ballverlust: eine Traumannahme verfällt
         if (a.id === "schiessen") {
           // Schuss geblockt: Ball für die Verteidiger in ihrer eigenen Hälfte
           e.ausgang = "geblockt";
@@ -238,16 +352,51 @@ const FootballRegeln = (function () {
           zustand.traeger = vIndex;
         }
       } else if (a.id === "passen" || a.id === "dribbeln") {
-        // Eine Zone vor (im Strafraum bleibt der Ball im Strafraum)
-        const neu = Math.min(LETZTE, rel + 1);
+        // Haken "vorruecken": eine Zone vor (Übersicht, Ballzauber: zwei).
+        // Im Strafraum bleibt der Ball im Strafraum.
+        const vor = haken(angreiferId, "vorruecken", { aktion: a.id, passt: passt, gewonnen: true });
+        let zonen = 1;
+        if (vor) {
+          zonen = vor.aufruf(1);
+          if (zonen > 1 && rel < LETZTE - 1) ausgeloest(e, angreiferId, angriffTeam, { zonen: zonen });
+        }
+        const neu = Math.min(LETZTE, rel + zonen);
+        e.zonen = neu - rel;
         zustand.zone = absZone(angriffTeam, neu);
-        if (a.id === "passen") zustand.traeger = 1 - zustand.traeger;
+        if (a.id === "passen") {
+          // abgegeben: eine Traumannahme des Passgebers verfällt
+          if (zustand.traumannahme === angreiferId) zustand.traumannahme = null;
+          zustand.traeger = 1 - zustand.traeger;
+          const empfaenger = teams[angriffTeam].spieler[zustand.traeger];
+          // Haken "passAngenommen": Traumannahme
+          const annahme = haken(empfaenger, "passAngenommen", { aktion: a.id });
+          if (annahme && annahme.aufruf()) {
+            zustand.traumannahme = empfaenger;
+            ausgeloest(e, empfaenger, angriffTeam);
+          }
+        }
         e.ausgang = a.id === "passen" ? "pass" : "dribbling";
       } else {
         // Schuss aufs Tor: noch am Torwart vorbei?
-        const ws = figur(angreiferId).werte.schiessen;
-        const bonus = R.schussZone[rel] || 0;
-        const wt = figur(torwartId).werte.torBlockieren;
+        // Haken "schussArt" (Akrobatik), "schussZuschlag" (Kanone, Akrobatik),
+        // "torwartWert" (Traumannahme)
+        const art = haken(angreiferId, "schussArt");
+        if (art) {
+          e.schussArt = art.aufruf();
+          ausgeloest(e, angreiferId, angriffTeam, { schussArt: e.schussArt });
+        }
+        const ws = wert(angreiferId, "schiessen");
+        const zuschlag = haken(angreiferId, "schussZuschlag");
+        const standard = R.schussZone[rel] || 0;
+        const bonus = zuschlag ? zuschlag.aufruf(rel, standard) : standard;
+        if (zuschlag && bonus > standard && !art) ausgeloest(e, angreiferId, angriffTeam);
+        let wt = wert(torwartId, "torBlockieren");
+        const traum = haken(angreiferId, "torwartWert");
+        if (traum && zustand.traumannahme === angreiferId) {
+          wt = traum.aufruf(wt);
+          ausgeloest(e, angreiferId, angriffTeam, { torwartHalbiert: true });
+        }
+        zustand.traumannahme = null;            // der Schuss verbraucht sie
         const rs = wuerfle(), rt = wuerfle();
         const tor = R.gleichstandFuer === "verteidiger" ? ws + bonus + rs > wt + rt : ws + bonus + rs >= wt + rt;
         e.torwartDuell = {
@@ -270,12 +419,18 @@ const FootballRegeln = (function () {
           zustand.traeger = 1;
         }
       }
-      if (e.ausgang === "pass") e.empfaenger = K.teams[angriffTeam].spieler[zustand.traeger];
+      if (e.ausgang === "pass") e.empfaenger = teams[angriffTeam].spieler[zustand.traeger];
+      e.traumannahmeVerfallen = Boolean(traumVorher) && !zustand.traumannahme && !e.faehigkeiten.some(function (f) { return f.torwartHalbiert; });
+      return abschluss(e);
+    }
 
+    /** Gemeinsamer Abschluss jedes Spielzugs: Zähler, Texte, Ende. */
+    function abschluss(e) {
       zustand.zug++;
       e.zug = zustand.zug;
       e.nachher = { zone: zustand.zone, ballTeam: zustand.ballTeam, traeger: zustand.traeger };
       e.tore = zustand.tore.slice();
+      e.traumannahme = zustand.traumannahme;
       e.text = zugText(e);
       e.detail = detailText(e);
 
@@ -296,6 +451,9 @@ const FootballRegeln = (function () {
       const ich = e.angriffTeam === 0;
       const a = aktion("angriff", e.angriff).nomen, v = aktion("verteidigung", e.verteidigung).nomen;
       const anfang = ich ? a + " gegen " + v : v + " gegen " + a;
+      if (e.sologang) {
+        return (ich ? "Sologang von " : "Sologang des Gegners – ") + F[e.angreifer].name + (ich ? ": Tor!" : ": Gegentor!");
+      }
       let ende;
       if (ich) {
         if (e.ausgang === "tor") ende = "Tor!";
@@ -351,8 +509,8 @@ const FootballRegeln = (function () {
       const nr = el.schuesse[team].length;
       return {
         schuetzeTeam: team,
-        schuetze: K.teams[team].spieler[nr % K.teams[team].spieler.length],
-        torwart: K.teams[1 - team].torwart,
+        schuetze: teams[team].spieler[nr % teams[team].spieler.length],
+        torwart: teams[1 - team].torwart,
         nummer: nr + 1,
         tore: [treffer(0), treffer(1)],
         schuesse: [el.schuesse[0].slice(), el.schuesse[1].slice()],
@@ -396,7 +554,8 @@ const FootballRegeln = (function () {
       // Richtige Ecke: Wertevergleich. Falsche Ecke: Tor.
       let vergleich = null, tor = true;
       if (schussRichtung === torwartRichtung) {
-        const ws = figur(lage.schuetze).werte.schiessen, wt = figur(lage.torwart).werte.torBlockieren;
+        // Im Elfmeterduell gelten nur die Grundwerte – keine Fähigkeiten
+        const ws = wert(lage.schuetze, "schiessen", false), wt = wert(lage.torwart, "torBlockieren", false);
         const rs = wuerfle(), rt = wuerfle();
         tor = R.gleichstandFuer === "verteidiger" ? ws + rs > wt + rt : ws + rs >= wt + rt;
         vergleich = { schuss: { wert: ws, wurf: rs, summe: ws + rs }, torwart: { wert: wt, wurf: rt, summe: wt + rt } };
@@ -454,6 +613,10 @@ const FootballRegeln = (function () {
       zustand: zustand,
       konfig: K,
       figuren: F,
+      teams: teams,                 // die beiden Teams dieses Matches
+      auslosung: auslosung,         // { teams, gezogen } – nur bei optionen.auslosen
+      wert: wert,                   // Wert einer Figur mit Fähigkeit (für Teamkarten)
+      faehigkeitVon: faehigkeitVon,
       relZone: relZone,
       aktionenFuer: aktionenFuer,
       // Was du gerade wählen kannst: { art, aktionen } – art: "angriff" |
@@ -477,10 +640,10 @@ const FootballRegeln = (function () {
       spieleElfmeter: spieleElfmeter,
       elfmeterLage: elfmeterLage,
       // Wer gerade den Ball hat / wer verteidigt (Figur-IDs) – für die Darstellung
-      ballfuehrer: function () { return K.teams[zustand.ballTeam].spieler[zustand.traeger]; },
+      ballfuehrer: function () { return teams[zustand.ballTeam].spieler[zustand.traeger]; },
       verteidigerFuer: function () {
         const t = zustand.ballTeam;
-        return K.teams[1 - t].spieler[verteidigerIndex(relZone(t))];
+        return teams[1 - t].spieler[verteidigerIndex(relZone(t))];
       },
       // Für Tests und die Simulation
       kiAngriff: kiAngriff,
@@ -489,7 +652,7 @@ const FootballRegeln = (function () {
     };
   }
 
-  return { erstelle: erstelle, waehle: waehle };
+  return { erstelle: erstelle, auslosen: auslosen, waehle: waehle };
 })();
 
 // Für Tests außerhalb des Browsers (Node.js)
