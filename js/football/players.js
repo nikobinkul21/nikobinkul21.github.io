@@ -11,7 +11,7 @@
      werte      – passen, dribbeln, schiessen, zweikampf, passBlockieren,
                   torBlockieren (Grundwerte; gewürfelt wird Wert + W6)
      faehigkeit – Kennung aus football/abilities.js. Wertezuschläge der
-                  Fähigkeit (z. B. Übersicht: Passen +3) kommen dazu.
+                  Fähigkeit (z. B. Kanone: Schießen +3) kommen dazu.
    Neuer Spieler? Einen Eintrag ergänzen – mehr ist nicht nötig.
    Namen und Aussehen hat der Nutzer festgelegt.
    ========================================================================== */
@@ -53,7 +53,7 @@ const FootballKader = {
       frisur: "kurzBand", extras: [],
       haut: "#e3b089", hautSchatten: "#c48f68", haare: "#1f5a3a", haareGlanz: "#2f7a52", band: "#15161c", augen: "#8b9097",
     },
-    werte: { passen: 4, dribbeln: 4, schiessen: 6, zweikampf: 5, passBlockieren: 4, torBlockieren: 4 },
+    werte: { passen: 4, dribbeln: 4, schiessen: 5, zweikampf: 5, passBlockieren: 4, torBlockieren: 4 },
     faehigkeit: "kanone",
   },
 
@@ -66,7 +66,7 @@ const FootballKader = {
       frisur: "zopf", extras: [],
       haut: "#f0c7a2", hautSchatten: "#d4a47f", haare: "#f2d23a", haareGlanz: "#ffffff", haareDrei: "#e0402a", augen: "#d08a1e",
     },
-    werte: { passen: 5, dribbeln: 5, schiessen: 5, zweikampf: 4, passBlockieren: 4, torBlockieren: 3 },
+    werte: { passen: 5, dribbeln: 5, schiessen: 6, zweikampf: 4, passBlockieren: 4, torBlockieren: 3 },
     faehigkeit: "traumannahme",
   },
 

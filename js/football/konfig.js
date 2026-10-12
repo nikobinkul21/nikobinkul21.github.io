@@ -36,12 +36,12 @@ const FootballKonfig = {
 
   // Werte der Fähigkeiten (die Wirkung selbst steht in football/abilities.js)
   faehigkeiten: {
-    uebersicht: { bonus: { passen: 3 }, zonen: 2 },        // Spielmacher: Pässe, die nicht geblockt werden, rücken 2 Zonen vor
+    uebersicht: { bonus: { passen: 2 }, zonen: 2 },        // Spielmacher: Pässe, die nicht geblockt werden, rücken 2 Zonen vor
     ballzauber: { bonus: { dribbeln: 3 }, zonen: 2 },      // Dribbler: gewonnenes Dribbling gegen Zweikampf → 2 Zonen
     kanone: { bonus: { schiessen: 3 } },                   // Torjäger: aus der gegnerischen Hälfte wie aus dem Strafraum
     traumannahme: { chance: 0.5, torwartFaktor: 0.5 },     // Ballkünstler: 50 % nach angenommenem Pass, Torwart-Wert halbiert
     mauer: { chance: 0.15 },                               // Verteidiger: falsch geraten – trotzdem 15 % Ballgewinn
-    sologang: { chance: 0.10 },                            // Solospieler: 10 % beim Dribbeln – Lauf übers ganze Feld, Tor
+    sologang: { chance: 0.15 },                            // Solospieler: 15 % beim Dribbeln – Lauf übers ganze Feld, Tor
     akrobatik: {                                           // Akrobat: Schuss schon ab der Mitte, Chance unabhängig von der Zone
       abZone: 2,
       zonenZuschlag: 2,

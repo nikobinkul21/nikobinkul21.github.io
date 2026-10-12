@@ -88,7 +88,7 @@ const FootballFaehigkeiten = (function () {
     {
       id: "sologang",
       name: "Sologang",
-      beschreibung: "Wählt er Dribbeln, startet mit 10 % ein Sologang: Lauf übers ganze Feld und Tor – die Verteidigung spielt keine Rolle.",
+      beschreibung: "Wählt er Dribbeln, startet mit 15 % ein Sologang: Lauf übers ganze Feld und Tor – die Verteidigung spielt keine Rolle.",
       symbol: "blitz",
       wirkung: {
         vorDuell: function (k) {
