@@ -591,6 +591,29 @@ button:focus-visible {
   display: none;
 }
 
+/* Zwischenüberschrift innerhalb eines Einstellungs-Blocks */
+.einstellungen-unter {
+  margin: 20px 0 4px;
+  font-size: 1rem;
+}
+
+/* Knopf, der etwas unwiderruflich löscht */
+.knopf--gefahr {
+  color: #d1242f;
+}
+
+.knopf--gefahr:hover {
+  border-color: #d1242f;
+}
+
+:root[data-theme="dark"] .knopf--gefahr {
+  color: #ff7b72;
+}
+
+:root[data-theme="dark"] .knopf--gefahr:hover {
+  border-color: #ff7b72;
+}
+
 .einstellungen-hinweis[data-art="erfolg"] {
   color: #1a7f37;
 }

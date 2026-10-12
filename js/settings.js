@@ -53,6 +53,14 @@ const EinstellungenAnsicht = (function () {
         "<p>Würfelwurf und Schadensaufbau. Normal: Würfel 2 Sekunden, danach höchstens etwa 1,5 Sekunden. " +
           "Schnell: alles deutlich kürzer. Aus: das Ergebnis erscheint sofort.</p>" +
         '<p class="einstellungen-hinweis einstellungen-hinweis--wuerfel" role="status"></p>' +
+        // Alles löschen – auch Münzen und Rekorde (doppelte Rückfrage)
+        '<h3 class="einstellungen-unter">Fortschritt</h3>' +
+        "<p>Eine Niederlage oder „Durchlauf aufgeben“ beginnt nur den Durchlauf von vorn – Münzen und Rekorde bleiben. " +
+          "Hier löschst du wirklich alles, auch Münzen und Rekorde.</p>" +
+        '<div class="einstellungen-knoepfe">' +
+          '<button type="button" class="knopf knopf--gefahr" data-aktion="abenteuer-loeschen">Alle Fortschritte löschen</button>' +
+        "</div>" +
+        '<p class="einstellungen-hinweis einstellungen-hinweis--loeschen" role="status"></p>' +
       "</section>";
 
     // Auswahl aus der Liste der Stufen erzeugen und die gespeicherte vorwählen
@@ -78,8 +86,25 @@ const EinstellungenAnsicht = (function () {
       if (!knopf) return;
       if (knopf.dataset.aktion === "exportieren") exportieren();
       if (knopf.dataset.aktion === "importieren") el.datei.click();
+      if (knopf.dataset.aktion === "abenteuer-loeschen") fortschritteLoeschen(container);
     });
     el.datei.addEventListener("change", importieren);
+  }
+
+
+  /**
+   * Sudoku-Abenteuer: alle Fortschritte löschen – nach zwei Rückfragen,
+   * denn auch Münzen und Rekorde sind danach weg.
+   */
+  function fortschritteLoeschen(container) {
+    const hinweis = container.querySelector(".einstellungen-hinweis--loeschen");
+    if (!window.confirm("Alle Fortschritte im Sudoku-Abenteuer löschen? Auch Münzen und Rekorde gehen verloren.")) return;
+    if (!window.confirm("Wirklich? Das lässt sich nicht rückgängig machen.")) {
+      hinweis.textContent = "Nichts gelöscht.";
+      return;
+    }
+    SudokuRPG.alleFortschritteLoeschen();
+    hinweis.textContent = "Alle Fortschritte gelöscht. Das nächste Abenteuer beginnt ganz von vorn.";
   }
 
 
@@ -160,8 +185,8 @@ const EinstellungenAnsicht = (function () {
         const geprueft = SudokuRPG.pruefeDaten(roh.sudokuAbenteuer);
         if (!geprueft.ok) return { ok: false, fehler: geprueft.fehler };
         abenteuer = { vorhanden: true, daten: geprueft.daten };
-        abenteuerText = "• Sudoku-Abenteuer: Boss " + geprueft.daten.bossNummer +
-          ", Rekord " + geprueft.daten.rekord +
+        abenteuerText = "• Sudoku-Abenteuer: Level " + geprueft.daten.bossNummer +
+          ", Rekord Level " + geprueft.daten.rekorde.level +
           ", " + geprueft.daten.muenzen + " Münzen, " +
           Object.keys(geprueft.daten.verbesserungen).length + " Verbesserungen\n";
       }

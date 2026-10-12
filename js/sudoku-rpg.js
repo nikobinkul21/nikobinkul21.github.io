@@ -84,10 +84,17 @@ const SUDOKU_RPG_KONFIG = {
   ],
 
   // Leben
-  startLeben: 3,        // so viele Leben zu Beginn (und nach einer Niederlage)
+  startLeben: 3,        // so viele Leben zu Beginn jedes Durchlaufs
   maxLeben: 5,          // mehr geht nicht (Zähes Herz erhöht das)
   lebenNachBoss: 3,     // nach einem besiegten Boss wird darauf aufgefüllt
                         // (wer mehr hat, behält sie)
+
+  // Durchlauf: Eine Niederlage beendet ihn – es geht wieder bei Welt 1,
+  // Level 1 los (mit Buch-Spin). Münzen und Rekorde bleiben.
+  durchlauf: {
+    // Satz eines Bosses, der keinen eigenen Siegessatz ("sieg") hat
+    siegSatz: "Das war's für heute, kleiner Held.",
+  },
 
   // Münzen
   muenzen: {
@@ -569,7 +576,10 @@ const SudokuRPG = (function () {
   // Version 9: Welten und Level – bossNummer bleibt, die HP folgen der neuen Formel.
   // Version 10: ohne Kombo; höchstens K.plaetze Verbesserungen (Reihenfolge in
   //             "plaetze"), Einschüchtern statt Schrei.
-  const VERSION = 10;
+  // Version 11: Durchläufe – eine Niederlage beendet den Durchlauf ("ende"
+  //             hält die Zusammenfassung fest), dauerhafte "rekorde", Werte
+  //             des laufenden Durchlaufs in "lauf".
+  const VERSION = 11;
 
 
   /* ------------------------------------------------------------------------
@@ -920,6 +930,7 @@ const SudokuRPG = (function () {
       weltbossLevel: K.welten.weltbossLevel,
       erscheinen: b.erscheinen || "",
       niederlage: b.niederlage || "",
+      sieg: b.sieg || K.durchlauf.siegSatz,   // Satz, wenn der Held gegen ihn verliert
       maxHp: maxHp(nummer),
       elite: p.elite,
       weltboss: p.weltboss,
@@ -1263,10 +1274,38 @@ const SudokuRPG = (function () {
        raetsel: null | { grad, vorgaben, loesung, eingaben, geloest,
                          powerups: [ { index, typ } ],
                          regenbogen: null | Index des Regenbogenfelds },
+       rekorde: {         ← dauerhaft, überstehen jedes Ende eines Durchlaufs
+         level,           ← höchstes erreichtes Level (Bossnummer, über alle Welten)
+         treffer,         ← höchster Einzeltreffer (Würfeltreffer inkl. Gift)
+         bosse,           ← meiste besiegte Bosse in einem Durchlauf
+         durchlaeufe,     ← Anzahl begonnener Durchläufe (der laufende zählt mit)
+         regenbogen       ← Anzahl gefundener Regenbogenfelder
+       },
+       lauf: {            ← Werte des laufenden Durchlaufs
+         treffer,         ← höchster Einzeltreffer in diesem Durchlauf
+         muenzenStart,    ← Münzen zu Beginn (gesammelt = jetzt − Start)
+         vorher: { level, treffer, bosse }  ← Rekorde zu Beginn (für "Neuer Rekord!")
+       },
+       ende,              ← null oder die Zusammenfassung des gerade beendeten
+                            Durchlaufs (Niederlage oder aufgegeben). Solange sie
+                            da ist, ruht das Spiel – erst neuerDurchlauf() geht
+                            weiter. Der Rest des Spielstands ist dann schon
+                            auf Anfang (Level 1, ohne Verbesserungen und Bücher).
        extras: {}          ← frei für spätere Erweiterungen
      }
      raetsel = null bedeutet: Es muss ein neues Sudoku ausgelost werden.
      ------------------------------------------------------------------------ */
+
+  /** Rekorde eines ganz neuen Abenteuers (der erste Durchlauf läuft schon). */
+  function neueRekorde() {
+    return { level: 1, treffer: 0, bosse: 0, durchlaeufe: 1, regenbogen: 0 };
+  }
+
+  /** Werte für einen beginnenden Durchlauf (Rekorde zu Beginn merken). */
+  function neuerLauf(muenzen, rekorde) {
+    return { treffer: 0, muenzenStart: muenzen,
+      vorher: { level: rekorde.level, treffer: rekorde.treffer, bosse: rekorde.bosse } };
+  }
 
   function neuerZustand() {
     return {
@@ -1292,6 +1331,9 @@ const SudokuRPG = (function () {
       buchSchlaege: [],
       buchSchlagOffen: [],
       raetsel: null,
+      rekorde: neueRekorde(),
+      lauf: neuerLauf(0, neueRekorde()),
+      ende: null,
       extras: {},
     };
   }
@@ -1358,6 +1400,7 @@ const SudokuRPG = (function () {
     const vorV8 = roh.version < 8;
     const vorV9 = roh.version < 9;
     const vorV10 = roh.version < 10;
+    const vorV11 = roh.version < 11;
 
     // Bücher (Version 7: eigene Kategorie bis Stufe 5, Version 8: Teil der
     // Verbesserungen bis Stufe 10). Mehr als maxBuecher → die mit der höchsten
@@ -1546,9 +1589,16 @@ const SudokuRPG = (function () {
       }
     }
 
+    // Rekorde, laufender Durchlauf, Ende (neu in Version 11). Ältere Stände:
+    // Der bisherige Durchlauf läuft einfach weiter; die Rekorde kommen aus
+    // dem, was der Stand hergibt (erreichtes Level, besiegte Bosse).
+    const rekorde = pruefeRekorde(vorV11 ? null : roh.rekorde, roh.bossNummer, roh.rekord);
+    const lauf = pruefeLauf(vorV11 ? null : roh.lauf, muenzen, rekorde);
+    const ende = vorV11 ? null : pruefeEnde(roh.ende);
+
     return {
       ok: true,
-      ergaenzt: vorV10,
+      ergaenzt: vorV11,
       daten: {
         version: VERSION,
         bossNummer: roh.bossNummer,
@@ -1572,8 +1622,59 @@ const SudokuRPG = (function () {
         buchSchlaege: buchSchlaege,
         buchSchlagOffen: buchSchlagOffen,
         raetsel: raetsel,
+        rekorde: rekorde,
+        lauf: lauf,
+        ende: ende,
         extras: roh.extras && typeof roh.extras === "object" ? roh.extras : {},
       },
+    };
+  }
+
+  /**
+   * Rekorde aus dem Spielstand – fehlen sie (vor Version 11) oder sind sie
+   * beschädigt, aus Bossnummer und Rekord (höchster besiegter Boss) ableiten.
+   * Nie kleiner als das, was der Stand selbst zeigt.
+   */
+  function pruefeRekorde(r, bossNummer, rekord) {
+    const zahl = function (wert, standard) { return istGanzzahl(wert, 0, 1e9) ? wert : standard; };
+    const gueltig = r && typeof r === "object";
+    return {
+      level: Math.max(bossNummer, rekord + 1, gueltig ? zahl(r.level, 1) : 1),
+      treffer: gueltig ? zahl(r.treffer, 0) : 0,
+      bosse: Math.max(rekord, gueltig ? zahl(r.bosse, 0) : 0),
+      durchlaeufe: Math.max(1, gueltig ? zahl(r.durchlaeufe, 1) : 1),
+      regenbogen: gueltig ? zahl(r.regenbogen, 0) : 0,
+    };
+  }
+
+  /** Werte des laufenden Durchlaufs – fehlen sie, beginnt die Zählung jetzt. */
+  function pruefeLauf(l, muenzen, rekorde) {
+    const zahl = function (wert) { return istGanzzahl(wert, 0, 1e9); };
+    if (!l || typeof l !== "object" || !zahl(l.treffer) || !zahl(l.muenzenStart) ||
+        !l.vorher || !zahl(l.vorher.level) || !zahl(l.vorher.treffer) || !zahl(l.vorher.bosse)) {
+      // (Älterer Stand: Was er bisher erreicht hat, gilt nicht als "neuer Rekord".)
+      return neuerLauf(muenzen, rekorde);
+    }
+    return { treffer: l.treffer, muenzenStart: Math.min(l.muenzenStart, muenzen),
+      vorher: { level: l.vorher.level, treffer: l.vorher.treffer, bosse: l.vorher.bosse } };
+  }
+
+  /** Zusammenfassung eines beendeten Durchlaufs – beschädigt → null. */
+  function pruefeEnde(e) {
+    const zahl = function (wert, min) { return istGanzzahl(wert, min || 0, 1e9); };
+    if (!e || typeof e !== "object" || ["niederlage", "aufgegeben"].indexOf(e.grund) === -1 ||
+        !zahl(e.bossNummer, 1) || !zahl(e.bosse) || !zahl(e.treffer) || !zahl(e.muenzen) ||
+        !zahl(e.durchlauf, 1) || !Array.isArray(e.gesammelt) || !Array.isArray(e.neueRekorde)) {
+      return null;
+    }
+    return {
+      grund: e.grund, bossNummer: e.bossNummer, bosse: e.bosse, treffer: e.treffer,
+      muenzen: e.muenzen, durchlauf: e.durchlauf,
+      gesammelt: e.gesammelt.filter(function (g) {
+        if (!g || typeof g.id !== "string" || !zahl(g.stufe, 1)) return false;
+        return istBuch(g.id) ? Boolean(buchInfo(g.id)) : Boolean(verbesserungInfo(g.id));
+      }).map(function (g) { return { id: g.id, stufe: g.stufe }; }),
+      neueRekorde: e.neueRekorde.filter(function (k) { return ["level", "treffer", "bosse"].indexOf(k) !== -1; }),
     };
   }
 
@@ -1794,6 +1895,7 @@ const SudokuRPG = (function () {
 
     /** Ein neues Sudoku übernehmen (nachdem die Oberfläche es erzeugt hat) – mit Power-up-Feldern. */
     function starteRaetsel(gradId, vorgaben, loesung) {
+      if (zustand.ende) return false;          // Durchlauf vorbei: erst "Neuer Durchlauf"
       zustand.raetsel = {
         grad: gradId,
         vorgaben: vorgaben.slice(),
@@ -1854,6 +1956,7 @@ const SudokuRPG = (function () {
 
     /** Braucht das Abenteuer noch den Buch-Spin (noch kein Buch)? */
     function brauchtBuchSpin() {
+      if (zustand.ende) return false;          // erst nach "Neuer Durchlauf"
       return K.buecher.length > 0 && Object.keys(zustand.buecher).length === 0;
     }
 
@@ -1920,6 +2023,7 @@ const SudokuRPG = (function () {
       }
       zustand.rekord = Math.max(zustand.rekord, bossVorher.nummer);
       zustand.bossNummer++;
+      rekordeNachSieg();
       eliteAuslosen();
       zustand.bossHp = maxHp(zustand.bossNummer);
       zustand.leben = Math.max(zustand.leben, K.lebenNachBoss);
@@ -2061,24 +2165,103 @@ const SudokuRPG = (function () {
       return ereignis;
     }
 
+    /* ---------- Durchlauf ---------- */
+
+    /** Ist der Durchlauf vorbei (Zusammenfassung offen)? Dann ruht das Spiel bis neuerDurchlauf(). */
+    function durchlaufVorbei() {
+      return zustand.ende !== null;
+    }
+
+    /** Ein neuer Boss ist erreicht: Rekorde für Level und besiegte Bosse nachziehen. */
+    function rekordeNachSieg() {
+      zustand.rekorde.level = Math.max(zustand.rekorde.level, zustand.bossNummer);
+      zustand.rekorde.bosse = Math.max(zustand.rekorde.bosse, zustand.rekord);
+    }
+
     /**
-     * Niederlage: gleicher Boss mit vollen HP, Leben wieder auf Start, neues
-     * Sudoku nötig. Münzen und Verbesserungen bleiben, der Zähler des
-     * Gegenangriffs beginnt von vorn.
-     * @returns {object} – Daten für das Ereignis "niederlage"
+     * Beendet den Durchlauf (Niederlage oder aufgegeben): Die Zusammenfassung
+     * wird festgehalten, alles andere geht auf Anfang – Welt 1, Level 1,
+     * Boss-HP, Leben und Lebensmaximum, Verbesserungen, Bücher, Angriffszähler,
+     * laufende Wirkungen und das Sudoku samt Power-ups. Münzen und Rekorde
+     * bleiben. Weiter geht es erst mit neuerDurchlauf() (dann Buch-Spin und
+     * Auslosung der Schwierigkeit wie bei einem frischen Abenteuer).
+     * @returns {object} – Daten für die Ereignisse "niederlage" / "aufgegeben"
      */
-    function niederlageAnwenden(boss) {
-      const niederlage = {
-        boss: boss, schadenGemacht: boss.maxHp - zustand.bossHp, rekord: zustand.rekord,
-        muenzen: zustand.muenzen,
+    function durchlaufBeenden(grund, boss) {
+      const lauf = zustand.lauf;
+      zustand.ende = {
+        grund: grund,
+        bossNummer: boss.nummer,
+        bosse: zustand.rekord,                       // besiegte Bosse in diesem Durchlauf
+        treffer: lauf.treffer,
+        muenzen: Math.max(0, zustand.muenzen - lauf.muenzenStart),
+        durchlauf: zustand.rekorde.durchlaeufe,
+        gesammelt: belegtePlaetze().map(function (id) {
+          return { id: id, stufe: istBuch(id) ? zustand.buecher[id] : zustand.verbesserungen[id] };
+        }),
+        // In diesem Durchlauf übertroffen (Durchläufe und Regenbogenfelder sind Zähler)
+        neueRekorde: ["level", "treffer", "bosse"].filter(function (k) { return zustand.rekorde[k] > lauf.vorher[k]; }),
       };
-      zustand.bossHp = boss.maxHp;
-      zustand.leben = K.startLeben;
-      zustand.raetsel = null;
-      zustand.eingeschuechtert = false;
-      if (zustand.elite) zustand.elite.treffer = 0;   // seltene Eigenschaft bleibt, der Zähler beginnt neu
-      zustand.gegenangriff = neuerGegenangriff(zustand.bossNummer);
-      return niederlage;
+      const bleibt = {
+        muenzen: zustand.muenzen, muenzRest: zustand.muenzRest,
+        rekorde: zustand.rekorde, ende: zustand.ende, extras: zustand.extras,
+      };
+      zustand = Object.assign(neuerZustand(), bleibt);
+      zustand.lauf = neuerLauf(zustand.muenzen, zustand.rekorde);
+      if (istElite(1)) eliteAuslosen();          // nur wenn Level 1 ein Elite-Level wäre
+      return Object.assign({ boss: boss }, zusammenfassung());
+    }
+
+    /**
+     * Zusammenfassung des beendeten Durchlaufs für die Anzeige (null, wenn
+     * keiner beendet ist): Boss mit seinem Satz, erreichtes Level, besiegte
+     * Bosse, höchster Treffer, gesammelte Münzen, Verbesserungen und Bücher
+     * zum Schluss, neue Rekorde und alle Rekorde.
+     */
+    function zusammenfassung() {
+      const e = zustand.ende;
+      if (!e) return null;
+      const boss = bossInfo(e.bossNummer);
+      return {
+        grund: e.grund,
+        boss: boss,
+        satz: e.grund === "niederlage" ? boss.sieg : "",
+        bosse: e.bosse,
+        treffer: e.treffer,
+        muenzen: e.muenzen,
+        muenzenGesamt: zustand.muenzen,
+        durchlauf: e.durchlauf,
+        gesammelt: e.gesammelt.map(function (g) {
+          if (istBuch(g.id)) return buchFuerAnzeige(g.id, g.stufe);
+          const stufen = {}; stufen[g.id] = g.stufe;
+          return Object.assign({ art: "verbesserung" }, verbesserungenFuerAnzeige([g.id], stufen)[0]);
+        }),
+        neueRekorde: e.neueRekorde.slice(),
+        rekorde: Object.assign({}, zustand.rekorde),
+      };
+    }
+
+    /** Nach der Zusammenfassung: Der nächste Durchlauf beginnt (zählt mit). */
+    function neuerDurchlauf() {
+      if (!zustand.ende) return false;
+      zustand.ende = null;
+      zustand.rekorde.durchlaeufe++;
+      zustand.lauf = neuerLauf(zustand.muenzen, zustand.rekorde);
+      speichern();
+      melde("neuerDurchlauf", { boss: bossMitStand(zustand.bossNummer), durchlauf: zustand.rekorde.durchlaeufe });
+      return true;
+    }
+
+    /**
+     * "Durchlauf aufgeben": endet wie eine Niederlage (mit Zusammenfassung).
+     * @returns {object|null} – die Zusammenfassung (null, wenn schon vorbei)
+     */
+    function aufgeben() {
+      if (zustand.ende) return null;
+      const daten = durchlaufBeenden("aufgegeben", bossMitStand(zustand.bossNummer));
+      speichern();
+      melde("aufgegeben", daten);
+      return daten;
     }
 
     /** Falsche Zahl → Leben weg, Eigenheit des Bosses (Zahl und Power-up bleiben). */
@@ -2106,7 +2289,7 @@ const SudokuRPG = (function () {
       if (zustand.leben <= 0) {
         // Niederlage – der Boss greift dann nicht mehr an
         ereignis.gegenangriff = gegenangriffAnzeige();
-        const niederlage = niederlageAnwenden(boss);
+        const niederlage = durchlaufBeenden("niederlage", boss);
         speichern();
         melde("fehler", ereignis);
         melde("niederlage", niederlage);
@@ -2120,8 +2303,7 @@ const SudokuRPG = (function () {
         angriff.stand = gegenangriffAnzeige();
         if (zustand.leben <= 0) {
           angriff.niederlage = true;
-          niederlage = niederlageAnwenden(boss);
-          angriff.stand = gegenangriffAnzeige();
+          niederlage = durchlaufBeenden("niederlage", boss);
         }
       }
       speichern();
@@ -2153,6 +2335,7 @@ const SudokuRPG = (function () {
      * @returns {object} { art: "richtig" | "fehler" | "gesperrt" | "kein-raetsel" | "auswahl-offen", … }
      */
     function setzeZahl(index, ziffer) {
+      if (zustand.ende) return { art: "durchlauf-vorbei" };    // erst "Neuer Durchlauf"
       const r = zustand.raetsel;
       if (zustand.auswahl) return { art: "auswahl-offen" };     // erst eine Verbesserung wählen
       if (mussBehalten()) return { art: "auswahl-offen" };      // erst wählen, welche Verbesserungen bleiben
@@ -2240,6 +2423,14 @@ const SudokuRPG = (function () {
       const spruch = rechnung.fehlschlag
         ? K.fehlschlagSprueche[Math.floor(zufall() * K.fehlschlagSprueche.length)]
         : null;
+      // Rekorde: höchster Einzeltreffer (Würfeltreffer samt Gift), gefundene Regenbogenfelder
+      if (regenbogen) {
+        zustand.rekorde.regenbogen++;
+      } else {
+        const einzel = rechnung.schaden + rechnung.gift;
+        zustand.lauf.treffer = Math.max(zustand.lauf.treffer, einzel);
+        zustand.rekorde.treffer = Math.max(zustand.rekorde.treffer, einzel);
+      }
       const hpNachSchaden = Math.max(0, hpVorher - rechnung.schaden);
       const hpNachher = Math.max(0, hpNachSchaden - rechnung.gift);
       zustand.bossHp = hpNachher;
@@ -2315,13 +2506,8 @@ const SudokuRPG = (function () {
       let niederlage = null;
       if (angriff) {
         angriff.stand = gegenangriffAnzeige();
-        if (zustand.leben <= 0) {
-          angriff.niederlage = true;
-          niederlage = niederlageAnwenden(bossVorher);
-          angriff.stand = gegenangriffAnzeige();
-        }
+        if (zustand.leben <= 0) angriff.niederlage = true;   // Durchlauf endet – unten, nach dem Treffer
       }
-      speichern();
 
       // Alles, was diese Zahl bewirkt hat, in EINEM Ereignis
       const treffer = {
@@ -2360,6 +2546,10 @@ const SudokuRPG = (function () {
         wuerfe: wuerfe, wuerfelModus: wuerfelModus,
         buchMuenzen: buchMuenzen, buchAngriff: buchAngriff,
       };
+      // Niederlage durch den Angriff: erst jetzt alles zurücksetzen (das
+      // Ereignis oben beschreibt noch den Zug, wie er war), dann speichern
+      if (angriff && angriff.niederlage) niederlage = durchlaufBeenden("niederlage", bossVorher);
+      speichern();
       melde("richtig", treffer);
       if (powerup) {
         melde("powerup", { index: index, typ: powerup.typ, effekt: effekt, treffer: treffer });
@@ -2476,11 +2666,15 @@ const SudokuRPG = (function () {
 
     /** Muss vor dem Weiterspielen ein neues Sudoku ausgelost werden? */
     function brauchtRaetsel() {
+      if (zustand.ende) return false;          // Durchlauf vorbei: erst "Neuer Durchlauf"
       return !zustand.raetsel || zustand.raetsel.geloest;
     }
 
-    /** Alles auf Anfang: Boss 1, Startleben, 0 Münzen, keine Verbesserungen, kein Rekord. */
-    function zuruecksetzen() {
+    /**
+     * "Alle Fortschritte löschen" (Einstellungen): wirklich alles auf Anfang –
+     * auch Münzen und Rekorde. Danach Buch-Spin wie bei einem neuen Abenteuer.
+     */
+    function allesLoeschen() {
       zustand = neuerZustand();                // ohne Bücher → die Oberfläche startet den Buch-Spin
       if (istElite(1)) eliteAuslosen();       // nur wenn Level 1 ein Elite-Level wäre
       speichern();
@@ -2508,7 +2702,13 @@ const SudokuRPG = (function () {
       setzeZahl: setzeZahl,
       waehleVerbesserung: waehleVerbesserung,
       brauchtRaetsel: brauchtRaetsel,
-      zuruecksetzen: zuruecksetzen,
+      // Durchläufe und Rekorde
+      durchlaufVorbei: durchlaufVorbei,
+      zusammenfassung: zusammenfassung,
+      neuerDurchlauf: neuerDurchlauf,
+      aufgeben: aufgeben,
+      rekorde: function () { return Object.assign({}, zustand.rekorde); },
+      allesLoeschen: allesLoeschen,
     };
   }
 
@@ -2521,6 +2721,14 @@ const SudokuRPG = (function () {
   function alsObjekt() {
     const geprueft = pruefeDaten(BROWSER_SPEICHER.laden());
     return geprueft.ok ? geprueft.daten : null;
+  }
+
+  /**
+   * "Alle Fortschritte löschen" (Einstellungen): Spielstand samt Münzen und
+   * Rekorden weg – beim nächsten Öffnen beginnt ein ganz neues Abenteuer.
+   */
+  function alleFortschritteLoeschen() {
+    ersetzen(null);
   }
 
   /** Ersetzt den Spielstand (geprüfte Daten) – oder löscht ihn bei null. */
@@ -2558,6 +2766,7 @@ const SudokuRPG = (function () {
     berechneSchaden: berechneSchaden,
     zahlText: zahlText,
     erstelle: erstelle,
+    alleFortschritteLoeschen: alleFortschritteLoeschen,
     pruefeDaten: pruefeDaten,
     alsObjekt: alsObjekt,
     ersetzen: ersetzen,

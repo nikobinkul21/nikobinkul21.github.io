@@ -444,7 +444,7 @@ const SudokuKampf = (function () {
    * Baut ein Kampffenster.
    * @param {HTMLElement} container – wohin das Fenster gezeichnet wird
    * @param {object} optionen
-   *   beimZuruecksetzen – Funktion, die bei Klick auf "Abenteuer zurücksetzen" läuft
+   *   beimAufgeben      – Funktion, die bei Klick auf "Durchlauf aufgeben" läuft
    *   wuerfelPlatz      – Element für den großen Würfel (Desktop), optional
    *   gitterFeld(i)     – liefert Feld i des Sudokus (Herkunft des Doppelschadens)
    *   gradAnzeige       – Element mit der Schwierigkeit (Herkunft des Schwierigkeitsbonus)
@@ -548,8 +548,12 @@ const SudokuKampf = (function () {
           "</div>" +
         "</div>" +
         '<div class="kampf-fuss">' +
-          '<span class="kampf-rekord"></span>' +
-          '<button type="button" class="kampf-reset">Abenteuer zurücksetzen</button>' +
+          // Dauerhafte Rekorde (überstehen jede Niederlage) – zum Aufklappen
+          '<details class="kampf-rekorde">' +
+            '<summary class="kampf-rekorde-kopf"></summary>' +
+            '<dl class="kampf-rekorde-liste"></dl>' +
+          "</details>" +
+          '<button type="button" class="kampf-reset">Durchlauf aufgeben</button>' +
         "</div>" +
       "</section>";
 
@@ -603,7 +607,8 @@ const SudokuKampf = (function () {
       belohnungZeilen: container.querySelector(".panel-belohnung .panel-zeilen"),
       belohnungSumme: container.querySelector(".panel-belohnung .panel-summe"),
       verlauf: container.querySelector(".panel-verlauf-liste"),
-      rekord: container.querySelector(".kampf-rekord"),
+      rekordeKopf: container.querySelector(".kampf-rekorde-kopf"),
+      rekordeListe: container.querySelector(".kampf-rekorde-liste"),
       absicht: container.querySelector(".kampf-absicht"),
       absichtSymbol: container.querySelector(".kampf-absicht-symbol"),
       absichtName: container.querySelector(".kampf-absicht-name"),
@@ -619,7 +624,7 @@ const SudokuKampf = (function () {
       function () { beschleunige(); });
 
     container.querySelector(".kampf-reset").addEventListener("click", function () {
-      if (optionen && optionen.beimZuruecksetzen) optionen.beimZuruecksetzen();
+      if (optionen && optionen.beimAufgeben) optionen.beimAufgeben();
     });
 
     // Schmales Fenster (alter Aufbau ohne Handy-Modus): Antippen der kompakten Zeile klappt die drei Blöcke auf
@@ -934,9 +939,9 @@ const SudokuKampf = (function () {
       el.weltName.textContent = w.name;
       el.weltLevel.textContent = " · Level " + boss.weltLevel + "/" + boss.levelProWelt;
       el.weltDurchlauf.hidden = boss.durchlauf <= 1;
-      el.weltDurchlauf.textContent = " · Durchlauf " + boss.durchlauf;
+      el.weltDurchlauf.textContent = " · Runde " + boss.durchlauf;   // Welt-Umlauf (nicht der Durchlauf bis zur Niederlage)
       el.welt.setAttribute("aria-label", w.name + ", Level " + boss.weltLevel + " von " + boss.levelProWelt +
-        (boss.durchlauf > 1 ? ", Durchlauf " + boss.durchlauf : ""));
+        (boss.durchlauf > 1 ? ", Runde " + boss.durchlauf : ""));
       // Leiste: ein Abschnitt je Level – geschafft, aktuell, Elite, Weltboss
       if (el.weltLeiste.children.length !== boss.levelProWelt) {
         el.weltLeiste.innerHTML = "";
@@ -960,7 +965,7 @@ const SudokuKampf = (function () {
     }
 
     /**
-     * Kurze Einblendung beim Betreten einer Welt (Name, Nummer, ggf. Durchlauf).
+     * Kurze Einblendung beim Betreten einer Welt (Name, Nummer, ggf. Runde).
      * Blockiert nichts; bei "Bewegung reduzieren" ohne Bewegung, nur Ein-/Ausblenden.
      */
     function weltEinblendung(boss) {
@@ -970,10 +975,10 @@ const SudokuKampf = (function () {
       e.setAttribute("aria-hidden", "true");
       e.innerHTML = '<span class="kampf-welt-einblendung-nr"></span><span class="kampf-welt-einblendung-name"></span>';
       e.querySelector(".kampf-welt-einblendung-nr").textContent = "Welt " + boss.welt.nummer +
-        (boss.durchlauf > 1 ? " · Durchlauf " + boss.durchlauf : "");
+        (boss.durchlauf > 1 ? " · Runde " + boss.durchlauf : "");
       e.querySelector(".kampf-welt-einblendung-name").textContent = boss.welt.name;
       el.buehne.appendChild(e);
-      meldung("Welt " + boss.welt.nummer + ": " + boss.welt.name + (boss.durchlauf > 1 ? ", Durchlauf " + boss.durchlauf : "") + ".");
+      meldung("Welt " + boss.welt.nummer + ": " + boss.welt.name + (boss.durchlauf > 1 ? ", Runde " + boss.durchlauf : "") + ".");
       setTimeout(function () { e.remove(); }, DAUER.weltEinblendung);
     }
 
@@ -1277,10 +1282,18 @@ const SudokuKampf = (function () {
       wuerfel.zeige(zahl, "");
     }
 
-    function zeigeRekord(boss, rekord) {
-      // Kurz, damit die Fußzeile in eine Zeile passt (die Bossnummer steht im Kampffenster)
-      el.rekord.textContent = "Rekord: " + (rekord === 0 ? "noch keiner" : rekord + (rekord === 1 ? " Boss" : " Bosse"));
-      el.rekord.title = "Höchster besiegter Boss";
+    /** Die dauerhaften Rekorde in der Fußzeile (Kopf kurz, Liste zum Aufklappen). */
+    function zeigeRekorde(rekorde) {
+      if (!rekorde) return;
+      el.rekordeKopf.textContent = "Rekorde · " + levelText(rekorde.level);
+      el.rekordeListe.innerHTML = "";
+      rekordZeilen(rekorde).forEach(function (z) {
+        const zeile = document.createElement("div");
+        zeile.innerHTML = "<dt></dt><dd></dd>";
+        zeile.querySelector("dt").textContent = z.label;
+        zeile.querySelector("dd").textContent = z.wert;
+        el.rekordeListe.appendChild(zeile);
+      });
     }
 
     /** Kurze Meldung für Screenreader (die sichtbare Darstellung übernimmt das Panel). */
@@ -1779,7 +1792,7 @@ const SudokuKampf = (function () {
 
     /**
      * Zeigt einen Stand SOFORT (ohne Animation) – z. B. nach dem Laden.
-     * @param {object} stand – { boss, hp, leben, maxLeben, muenzen, rekord,
+     * @param {object} stand – { boss, hp, leben, maxLeben, muenzen, rekorde,
      *                           verbesserungen, buchBonus, eingeschuechtert, gegenangriff }
      */
     function zeigeStand(stand) {
@@ -1791,7 +1804,7 @@ const SudokuKampf = (function () {
         zeigeVerbesserungen(stand.verbesserungen);
         zeigeEingeschuechtert(Boolean(stand.eingeschuechtert));
         zeigeBuchBonus(stand.buchBonus);
-        zeigeRekord(stand.boss, stand.rekord);
+        zeigeRekorde(stand.rekorde);
         zeigeGegenangriff(stand.gegenangriff);
         el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite", "loest-sich-auf", "ist-ruhig");
       });
@@ -2186,7 +2199,7 @@ const SudokuKampf = (function () {
     }
 
     /** Der nächste Boss erscheint (volle HP, Leben aufgefüllt) – mit seiner Eigenheit. */
-    function neuerBoss(e, rekord) {
+    function neuerBoss(e, rekorde) {
       return einreihen(function () {
         const boss = e.boss;
         const ort = boss.welt.name + ", Level " + boss.weltLevel;
@@ -2207,9 +2220,9 @@ const SudokuKampf = (function () {
         zeigeBoss(boss);
         zeigeHp(e.hp, boss.maxHp);
         zeigeHerzen(e.leben, e.maxLeben);
-        zeigeRekord(boss, rekord);
+        zeigeRekorde(rekorde);
         zeigeGegenangriff(e.gegenangriff);      // neuer Angriff, neuer Zähler
-        // Neue Welt (oder neuer Durchlauf): kurze Einblendung mit ihrem Namen
+        // Neue Welt (oder neue Runde): kurze Einblendung mit ihrem Namen
         if (boss.weltLevel === 1) weltEinblendung(boss);
         // Sein Satz beim Erscheinen – auch beim Abkürzen
         sprechblase(boss.name, boss.erscheinen, "erscheinen");
@@ -2700,44 +2713,137 @@ const SudokuKampf = (function () {
     }
 
     /**
-     * Niederlage-Bildschirm: zeigt, wie weit man gekommen ist.
-     * @returns {Promise} – erfüllt, wenn "Erneut antreten" gedrückt wurde
+     * Ende eines Durchlaufs (Niederlage oder aufgegeben). Bei einer Niederlage
+     * läuft erst alles in der Warteschlange (Fehler, Angriff des Bosses), dann
+     * fällt der Held und der Boss sagt seinen Satz – erst danach erscheint die
+     * Zusammenfassung. Nach dem Neuladen oder beim Aufgeben kommt sie sofort.
+     * Weiter geht es nur mit "Neuer Durchlauf".
+     * @param {object} e – Zusammenfassung aus den Regeln (zusammenfassung())
+     * @param {object} [optionen] – { animation: true } bei einer Niederlage im Spiel
+     * @returns {Promise} – erfüllt, wenn "Neuer Durchlauf" gedrückt wurde
      */
-    function niederlage(rahmen, e) {
+    function durchlaufEnde(rahmen, e, optionen) {
+      const mitAnimation = Boolean(optionen && optionen.animation);
+      schliesseAuswahl();
       return einreihen(function () {
+        if (e.grund === "aufgegeben") {
+          meldung("Durchlauf aufgegeben.");
+          verlaufEintrag({ text: "Durchlauf aufgegeben", wert: "", art: "fehler", symbol: "kreuz" });
+          return null;
+        }
+        if (!mitAnimation) return null;
         meldung("Niederlage gegen " + e.boss.name + ".");
         verlaufEintrag({ text: "Niederlage gegen " + e.boss.name, wert: "", art: "fehler", symbol: "kreuz" });
         zeigeHerzen(0);
-        return animiere(el.heldFigur, "faellt", 500);
+        return animiere(el.heldFigur, "faellt", 500).then(function () {
+          sprechblase(e.boss.name, e.satz, "sieg");
+          return warte(1400);
+        });
       }).then(function () {
         return new Promise(function (weiter) {
-          const overlay = document.createElement("div");
-          overlay.className = "niederlage";
-          overlay.setAttribute("role", "dialog");
-          overlay.setAttribute("aria-label", "Niederlage");
-          overlay.innerHTML =
-            '<div class="niederlage-kasten">' +
-              '<p class="niederlage-titel">Niederlage!</p>' +
-              '<p class="niederlage-text"></p>' +
-              '<p class="niederlage-rekord"></p>' +
-              '<button type="button" class="niederlage-knopf">Erneut antreten</button>' +
-            "</div>";
-          overlay.querySelector(".niederlage-text").textContent =
-            "Boss " + e.boss.nummer + " – " + e.boss.name + " war zu stark. Du hast " +
-            e.schadenGemacht + " von " + e.boss.maxHp + " HP geschafft. " +
-            "Deine Münzen und Verbesserungen bleiben.";
-          overlay.querySelector(".niederlage-rekord").textContent = e.rekord === 0
-            ? "Rekord: noch kein Boss besiegt."
-            : "Rekord: " + e.rekord + (e.rekord === 1 ? " Boss besiegt." : " Bosse besiegt.");
+          const overlay = zusammenfassungBauen(e);
           rahmen.appendChild(overlay);
           const knopf = overlay.querySelector(".niederlage-knopf");
           knopf.addEventListener("click", function () {
             overlay.remove();
             weiter();
           });
-          knopf.focus();
+          knopf.focus({ preventScroll: true });
         });
       });
+    }
+
+    /** Zeilen der Rekorde (Fußzeile und Zusammenfassung). */
+    function rekordZeilen(r) {
+      return [
+        { key: "level", label: "Höchstes Level", wert: levelText(r.level) },
+        { key: "bosse", label: "Meiste Bosse in einem Durchlauf", wert: String(r.bosse) },
+        { key: "treffer", label: "Höchster Treffer", wert: String(r.treffer) },
+        { key: "durchlaeufe", label: "Durchläufe", wert: String(r.durchlaeufe) },
+        { key: "regenbogen", label: "Regenbogenfelder gefunden", wert: String(r.regenbogen) },
+      ];
+    }
+
+    /** "Welt 1 · Level 7" (ab der zweiten Runde mit Runde) für eine Bossnummer. */
+    function levelText(nummer) {
+      const b = SudokuRPG.bossInfo(nummer);
+      return "Welt " + b.welt.nummer + " · Level " + b.weltLevel + (b.durchlauf > 1 ? " · Runde " + b.durchlauf : "");
+    }
+
+    /**
+     * Der Bildschirm am Ende eines Durchlaufs: erreichte Welt und Level, der
+     * Boss mit seinem Satz, besiegte Bosse, höchster Treffer, gesammelte
+     * Münzen, Verbesserungen und Bücher zum Schluss. Neue Rekorde leuchten.
+     */
+    function zusammenfassungBauen(e) {
+      const neu = function (key) { return e.neueRekorde.indexOf(key) !== -1; };
+      const overlay = document.createElement("div");
+      overlay.className = "niederlage durchlauf-ende" + (e.grund === "aufgegeben" ? " ist-aufgegeben" : "");
+      overlay.setAttribute("role", "dialog");
+      overlay.setAttribute("aria-modal", "true");
+      overlay.setAttribute("aria-labelledby", "durchlauf-ende-titel");
+      overlay.innerHTML =
+        '<div class="niederlage-kasten ende-kasten">' +
+          '<p class="niederlage-titel" id="durchlauf-ende-titel"></p>' +
+          '<p class="ende-untertitel"></p>' +
+          '<p class="ende-banner" hidden></p>' +
+          '<div class="ende-boss">' +
+            '<canvas class="ende-boss-bild" width="48" height="48" aria-hidden="true"></canvas>' +
+            '<div class="ende-boss-text"><p class="ende-boss-name"></p><p class="ende-satz" hidden></p></div>' +
+          "</div>" +
+          '<dl class="ende-werte"></dl>' +
+          '<p class="ende-abschnitt">Deine Verbesserungen und Bücher</p>' +
+          '<ul class="ende-plaetze"></ul>' +
+          '<p class="ende-hinweis"></p>' +
+          '<button type="button" class="niederlage-knopf">Neuer Durchlauf</button>' +
+        "</div>";
+      const $ = function (sel) { return overlay.querySelector(sel); };
+      $(".niederlage-titel").textContent = e.grund === "aufgegeben" ? "Durchlauf aufgegeben" : "Niederlage!";
+      $(".ende-untertitel").textContent = "Durchlauf " + e.durchlauf + " ist vorbei.";
+      if (e.neueRekorde.length > 0) {
+        $(".ende-banner").hidden = false;
+        $(".ende-banner").textContent = "★ " + (e.neueRekorde.length === 1 ? "Neuer Rekord!" : e.neueRekorde.length + " neue Rekorde!") + " ★";
+      }
+      SudokuSprites.zeichne($(".ende-boss-bild"), e.boss.sprite, e.boss.runde);
+      $(".ende-boss-name").textContent = (e.grund === "aufgegeben" ? "Aufgegeben gegen " : "Gescheitert an ") + e.boss.name;
+      if (e.satz) {
+        $(".ende-satz").hidden = false;
+        $(".ende-satz").textContent = "„" + e.satz + "“";
+      }
+      // Werte des Durchlaufs – ein neuer Rekord ist hervorgehoben
+      [
+        { key: "level", label: "Erreicht", wert: levelText(e.boss.nummer) },
+        { key: "bosse", label: "Besiegte Bosse", wert: String(e.bosse) },
+        { key: "treffer", label: "Höchster Treffer", wert: String(e.treffer) },
+        { key: "muenzen", label: "Gesammelte Münzen", wert: "+" + e.muenzen + " (jetzt " + e.muenzenGesamt + ")" },
+      ].forEach(function (z) {
+        const zeile = document.createElement("div");
+        zeile.className = "ende-wert" + (neu(z.key) ? " ist-rekord" : "");
+        zeile.innerHTML = "<dt></dt><dd><span></span></dd>";
+        zeile.querySelector("dt").textContent = z.label;
+        zeile.querySelector("dd span").textContent = z.wert;
+        if (neu(z.key)) zeile.querySelector("dd").insertAdjacentHTML("beforeend", '<strong class="ende-neu">Neuer Rekord!</strong>');
+        $(".ende-werte").appendChild(zeile);
+      });
+      // Verbesserungen und Bücher zum Schluss: Symbol, Name, Stufe
+      if (e.gesammelt.length === 0) {
+        $(".ende-plaetze").innerHTML = '<li class="ende-platz ist-leer">Keine</li>';
+      }
+      e.gesammelt.forEach(function (v) {
+        const li = document.createElement("li");
+        li.className = "ende-platz" + (v.art === "buch" ? " ende-platz--buch kampf-platz--" + v.seltenheit : "");
+        li.style.setProperty("--chip-farbe", v.farbe);
+        li.innerHTML = v.art === "buch"
+          ? '<span class="ende-platz-symbol kampf-buch-symbol">' + symbolSvg("buch") + '<span class="kampf-buch-ziffer"></span></span>'
+          : '<span class="ende-platz-symbol">' + symbolSvg(v.symbol) + "</span>";
+        li.insertAdjacentHTML("beforeend", '<span class="ende-platz-name"></span><span class="ende-platz-stufe"></span>');
+        if (v.art === "buch") li.querySelector(".kampf-buch-ziffer").textContent = v.ziffer;
+        li.querySelector(".ende-platz-name").textContent = v.name;
+        li.querySelector(".ende-platz-stufe").textContent = "Stufe " + v.stufe + "/" + v.maxStufe;
+        $(".ende-plaetze").appendChild(li);
+      });
+      $(".ende-hinweis").textContent = "Münzen und Rekorde bleiben. Der nächste Durchlauf beginnt in Welt 1, Level 1.";
+      return overlay;
     }
 
     return {
@@ -2767,7 +2873,7 @@ const SudokuKampf = (function () {
       danach: danach,
       fertig: fertig,
       losen: losen,
-      niederlage: niederlage,
+      durchlaufEnde: durchlaufEnde,
     };
   }
 

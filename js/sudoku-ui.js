@@ -60,7 +60,7 @@ function initSudoku(container) {
   let freiesSpiel = sudokuSpielstandLesen();
   let abenteuer = null;         // ein SudokuRPG-Abenteuer (Regeln + Spielstand)
   let kampf = null;             // das Kampffenster (SudokuKampf)
-  let letzteNiederlage = null;  // Daten der letzten Niederlage (für den Niederlage-Bildschirm)
+  let letzteNiederlage = null;  // Zusammenfassung der letzten Niederlage (für den Bildschirm am Ende)
   let ausgewaehlt = 0;          // Nummer des gewählten Felds (0–80)
   let regenbogenLaeuft = false; // Regenbogenschlag läuft → Eingabe gesperrt (nicht abkürzbar)
   let letzterTreffer = null;    // Promise: Animation des letzten Treffers ist fertig
@@ -118,7 +118,7 @@ function initSudoku(container) {
           '<label class="kopf-eintrag kopf-eintrag--grad nur-frei">Schwierigkeit <select class="kopf-grad-auswahl"></select></label>' +
           '<button type="button" class="kopf-eintrag" role="menuitem" data-aktion="neu">Neues Spiel</button>' +
           '<a class="kopf-eintrag" role="menuitem" href="#einstellungen">Einstellungen</a>' +
-          '<button type="button" class="kopf-eintrag kopf-eintrag--warnung nur-abenteuer" role="menuitem" data-aktion="zuruecksetzen">Abenteuer zurücksetzen</button>' +
+          '<button type="button" class="kopf-eintrag kopf-eintrag--warnung nur-abenteuer" role="menuitem" data-aktion="aufgeben">Durchlauf aufgeben</button>' +
         "</div>" +
       "</div>" +
       '<div class="sudoku-steuerung">' +
@@ -260,11 +260,14 @@ function initSudoku(container) {
   /** Kurzer Stand auf den Karten der Moduswahl. */
   function zeigeModusStand() {
     const stand = SudokuRPG.alsObjekt();
-    modiAuswahl.querySelector(".sudoku-modus-stand").textContent = stand
-      ? "Weiter bei Boss " + stand.bossNummer + " (" + SudokuRPG.bossInfo(stand.bossNummer).name + ")" +
-        (stand.rekord > 0 ? " · Rekord: " + stand.rekord : "") +
-        (stand.muenzen > 0 ? " · " + stand.muenzen + " Münzen" : "")
-      : "Neues Abenteuer beginnen";
+    const boss = stand && SudokuRPG.bossInfo(stand.bossNummer);
+    modiAuswahl.querySelector(".sudoku-modus-stand").textContent = !stand
+      ? "Neues Abenteuer beginnen"
+      : stand.ende
+      ? "Durchlauf vorbei – Zusammenfassung ansehen" + (stand.muenzen > 0 ? " · " + stand.muenzen + " Münzen" : "")
+      : "Weiter bei Level " + boss.weltLevel + " (" + boss.name + ")" +
+        (stand.rekorde.level > 1 ? " · Rekord: Level " + SudokuRPG.bossInfo(stand.rekorde.level).weltLevel : "") +
+        (stand.muenzen > 0 ? " · " + stand.muenzen + " Münzen" : "");
     const frei = sudokuSpielstandLesen();
     modiAuswahl.querySelector(".sudoku-modus-stand--frei").textContent =
       frei && !frei.geloest ? "Spiel fortsetzen · " + SudokuEngine.gradMitId(frei.grad).name : "";
@@ -690,7 +693,7 @@ function initSudoku(container) {
       kampf = SudokuKampf.erstelle(kampfPlatz, {
         // Smartphone: Welt/Level sowie Leben und Münzen wandern in die Kopfzeile
         kopf: { ort: kopfOrt, stand: kopfStand },
-        beimZuruecksetzen: abenteuerZuruecksetzen,
+        beimAufgeben: durchlaufAufgeben,
         wuerfelPlatz: wuerfelPlatz,
         // Herkunft fliegender Boni beim Schadensaufbau (Doppelschaden, Schwierigkeit)
         gitterFeld: function (i) { return felder[i]; },
@@ -732,7 +735,7 @@ function initSudoku(container) {
     abenteuer.an("neuerBoss", function (e) {
       if (abenteuer !== diesesAbenteuer) return;
       // Nach dem Erscheinen neu zeichnen: Ein Boss mit "Nebel" versteckt die Power-ups
-      kampf.neuerBoss(e, diesesAbenteuer.zustand.rekord).then(function () {
+      kampf.neuerBoss(e, diesesAbenteuer.rekorde()).then(function () {
         if (abenteuer === diesesAbenteuer && spiel) zeichne();
       });
     });
@@ -749,7 +752,8 @@ function initSudoku(container) {
 
     kampf.zeigeStand(standFuerAnzeige());
     // Ganz neues Abenteuer: Einblendung der ersten Welt, der erste Boss spricht
-    if (abenteuer.zustand.bossNummer === 1 && abenteuer.zustand.rekord === 0 && abenteuer.brauchtRaetsel()) {
+    if (abenteuer.zustand.bossNummer === 1 && abenteuer.zustand.rekord === 0 && abenteuer.brauchtRaetsel() &&
+        !abenteuer.durchlaufVorbei()) {
       kampf.auftritt(abenteuer.boss());
     }
     kampf.text(abenteuer.zustand.raetsel && !abenteuer.zustand.raetsel.geloest
@@ -763,6 +767,19 @@ function initSudoku(container) {
         setzeBeschaeftigtAnzeige();
         if (spiel && !beschaeftigt.abenteuer && !waehltVerbesserung()) waehle(ausgewaehlt, true);
       });
+    }
+    // Durchlauf schon vorbei (z. B. während der Niederlage neu geladen oder
+    // zwischendurch ins freie Spiel gewechselt)? → gleich die Zusammenfassung;
+    // weiter geht es nur mit "Neuer Durchlauf"
+    if (abenteuer.durchlaufVorbei()) {
+      spiel = null;
+      beschaeftigt.abenteuer = true;
+      setzeBeschaeftigtAnzeige();
+      kampf.text("Der Durchlauf ist vorbei.");
+      kampf.durchlaufEnde(rahmen, abenteuer.zusammenfassung()).then(function () {
+        if (abenteuer === diesesAbenteuer) neuenDurchlaufStarten();
+      });
+      return;
     }
     // Beim letzten Mal wurde nicht mehr gewählt? → Auswahl gleich zeigen
     if (abenteuer.zustand.auswahl) zeigeAuswahl(abenteuer.auswahlInfo());
@@ -792,7 +809,7 @@ function initSudoku(container) {
     const werte = abenteuer.werte();
     return {
       boss: abenteuer.boss(), hp: z.bossHp, leben: z.leben, maxLeben: werte.maxLeben,
-      muenzen: z.muenzen, rekord: z.rekord,
+      muenzen: z.muenzen, rekorde: abenteuer.rekorde(),
       eingeschuechtert: z.eingeschuechtert,
       verbesserungen: abenteuer.gesammelt(),
       gegenangriff: abenteuer.gegenangriff(),
@@ -873,8 +890,9 @@ function initSudoku(container) {
     const raetsel = SudokuEngine.erzeugeRaetsel(grad.vorgaben);
 
     Promise.all([raetsel, walze]).then(function (ergebnisse) {
-      beschaeftigt.abenteuer = false;
       if (abenteuer !== diesesAbenteuer) return;   // inzwischen neu geladen → verwerfen
+      if (abenteuer.durchlaufVorbei()) return;     // inzwischen aufgegeben → die Zusammenfassung regelt den Rest
+      beschaeftigt.abenteuer = false;
       const r = ergebnisse[0];
       abenteuer.starteRaetsel(grad.id, r.raetsel, r.loesung);
       if (modus !== "abenteuer") return;
@@ -956,18 +974,32 @@ function initSudoku(container) {
     }
   }
 
-  /** Eingabe sperren, Niederlage-Bildschirm zeigen (nach den Animationen), dann neu antreten. */
+  /**
+   * Niederlage: Eingabe sperren, nach den Animationen (Fehler, Angriff) die
+   * Zusammenfassung zeigen. Der Spielstand ist da schon auf Anfang – lädt man
+   * neu, kommt gleich die Zusammenfassung (siehe starteAbenteuer).
+   */
   function starteNiederlage() {
     const diesesAbenteuer = abenteuer;
     beschaeftigt.abenteuer = true;
     setzeBeschaeftigtAnzeige();
-    kampf.niederlage(rahmen, letzteNiederlage).then(function () {
-      if (abenteuer !== diesesAbenteuer) return;
-      kampf.zeigeStand(standFuerAnzeige());
-      kampf.text("Neuer Versuch gegen " + abenteuer.boss().name + "!");
-      beschaeftigt.abenteuer = false;
-      neuesAbenteuerRaetsel();
+    kampf.durchlaufEnde(rahmen, letzteNiederlage, { animation: true }).then(function () {
+      if (abenteuer === diesesAbenteuer) neuenDurchlaufStarten();
     });
+  }
+
+  /** "Neuer Durchlauf": Welt 1, Level 1 – erst der Buch-Spin, dann die Schwierigkeit. */
+  function neuenDurchlaufStarten() {
+    abenteuer.neuerDurchlauf();
+    spiel = null;
+    kampf.schliesseAuswahl();
+    kampf.zeigeStand(standFuerAnzeige());
+    kampf.zeigeWurf(null);
+    kampf.neuesAbenteuer();
+    kampf.auftritt(abenteuer.boss());
+    kampf.text("Durchlauf " + abenteuer.rekorde().durchlaeufe + " beginnt!");
+    beschaeftigt.abenteuer = false;
+    neuesAbenteuerRaetsel();                  // vorher der Buch-Spin
   }
 
   /** Kurzer Hinweis über dem Gitter, der nach gut einer Sekunde verschwindet. */
@@ -1010,21 +1042,25 @@ function initSudoku(container) {
     }, 700);
   }
 
-  function abenteuerZuruecksetzen() {
-    if (!window.confirm("Abenteuer wirklich zurücksetzen? Du beginnst wieder bei Boss 1 mit " + SudokuRPG.KONFIG.startLeben +
-      " Leben – Rekord, Münzen und Verbesserungen werden gelöscht.")) {
+  /**
+   * "Durchlauf aufgeben": nach Rückfrage endet der Durchlauf wie bei einer
+   * Niederlage – mit Zusammenfassung. Münzen und Rekorde bleiben.
+   */
+  function durchlaufAufgeben() {
+    if (!abenteuer || abenteuer.durchlaufVorbei()) return;
+    if (!window.confirm("Durchlauf wirklich aufgeben? Du beginnst wieder in Welt 1, Level 1 – ohne Verbesserungen " +
+      "und Bücher. Münzen und Rekorde bleiben.")) {
       return;
     }
-    abenteuer.zuruecksetzen();
-    kampf.schliesseAuswahl();
+    const diesesAbenteuer = abenteuer;
+    const daten = abenteuer.aufgeben();
+    if (!daten) return;
+    spiel = null;
+    beschaeftigt.abenteuer = true;
     setzeBeschaeftigtAnzeige();
-    kampf.zeigeStand(standFuerAnzeige());
-    kampf.zeigeWurf(null);
-    kampf.neuesAbenteuer();
-    kampf.auftritt(abenteuer.boss());
-    kampf.text("Ein neues Abenteuer beginnt!");
-    if (!beschaeftigt.abenteuer) neuesAbenteuerRaetsel();
-    else buchSpinAbwarten();                  // Buch-Spin nach der laufenden Walze
+    kampf.durchlaufEnde(rahmen, daten).then(function () {
+      if (abenteuer === diesesAbenteuer) neuenDurchlaufStarten();
+    });
   }
 
 
@@ -1104,8 +1140,8 @@ function initSudoku(container) {
       // Freies Spiel: neues Rätsel; Abenteuer: zurück zur Moduswahl
       if (modus === "frei") neuesFreiesSpiel();
       else location.hash = "#games/sudoku";
-    } else if (eintrag.dataset.aktion === "zuruecksetzen") {
-      abenteuerZuruecksetzen();
+    } else if (eintrag.dataset.aktion === "aufgeben") {
+      durchlaufAufgeben();
     }
   });
   // Schwierigkeit im Menü = die Auswahl des freien Spiels
