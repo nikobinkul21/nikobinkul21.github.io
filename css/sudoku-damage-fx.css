@@ -324,3 +324,117 @@
   paint-order: stroke fill;
   text-shadow: 0 0 10px #f2c14e, 0 0 18px #f2c14e;
 }
+
+
+/* ---------- Überladung (gelöstes Sudoku) ----------
+   Die Zahlen fliegen ins Schwert, das Schwert glüht dauerhaft in langsam
+   durchlaufenden Regenbogenfarben mit kleinen Funken, bis der nächste
+   Treffer es entlädt. Werte (Dauer, Faktor): js/sudoku-damage-fx.js und
+   js/sudoku-rpg.js (KONFIG.ueberladung). */
+
+:root {
+  --ueberladung-dauer: 4s;          /* so lange dauert ein Farbdurchlauf des Glühens */
+}
+
+/* Leuchtende Kopie einer Zahl auf dem Weg ins Schwert */
+.fx-ladeziffer-wert {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 2px #3b2a7a;
+  paint-order: stroke fill;
+  text-shadow: 0 0 8px #29d3ff, 0 0 14px #ff3df0;
+}
+
+@media (max-width: 999px) {
+  .fx-ladeziffer-wert {
+    font-size: 1rem;
+    -webkit-text-stroke-width: 1.5px;
+  }
+}
+
+/* Dauerhaftes Glühen am Schwert (Ebene im Bild des Helden, wie .schwert-glut) */
+.schwert-ueberladung {
+  position: absolute;
+  left: 58%;
+  top: -22%;
+  width: 60%;
+  height: 92%;
+  pointer-events: none;
+}
+
+.ueberladung-licht {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--fx-regenbogen);
+  -webkit-mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 0%, rgba(0, 0, 0, 0.75) 40%, transparent 72%);
+  mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 0%, rgba(0, 0, 0, 0.75) 40%, transparent 72%);
+  opacity: 0.85;
+  animation: ueberladung-drehen var(--ueberladung-dauer) linear infinite;
+}
+
+/* Kleine Funken, die vom Schwert aufsteigen */
+.ueberladung-funke {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: #fff;
+  box-shadow: 0 0 6px #ffb800, 0 0 10px #ff3df0;
+  opacity: 0;
+  animation: ueberladung-funke 1.4s ease-out infinite;
+}
+
+.ueberladung-funke:nth-child(3) { left: 30%; animation-delay: 0.45s; box-shadow: 0 0 6px #29d3ff, 0 0 10px #3ddc5a; }
+.ueberladung-funke:nth-child(4) { left: 68%; animation-delay: 0.9s; box-shadow: 0 0 6px #8b5cff, 0 0 10px #ff3d3d; }
+
+@keyframes ueberladung-drehen {
+  from { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.12); }
+  to   { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes ueberladung-funke {
+  0%   { opacity: 0; transform: translate(0, 0) scale(1); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(6px, -26px) scale(0.4); }
+}
+
+/* Die große Zahl springt auf das Zehnfache: Regenbogen-Schrift */
+.fx-zahl.ist-ueberladen .fx-wert {
+  color: #fff;
+  text-shadow: 0 0 10px #ff3df0, 0 0 20px #29d3ff, 0 0 32px #ffb800;
+}
+
+/* Etikett "×10": größer, in Regenbogenfarben */
+.fx-etikett--ueberladung span {
+  font-size: 1.3rem;
+  color: #fff;
+  background: linear-gradient(90deg, #ff3d3d, #ffb800, #3ddc5a, #29d3ff, #8b5cff, #ff3df0);
+  -webkit-text-stroke: 2px var(--fx-rand);
+  paint-order: stroke fill;
+  box-shadow: 0 0 14px #ff3df0, 0 0 24px #29d3ff;
+}
+
+/* Verpuffen: grauer Rauchring, wenn das Glühen erlischt */
+.fx-ring--verpuffen .fx-inhalt {
+  border-color: rgba(200, 205, 215, 0.85);
+  border-width: 4px;
+  background: radial-gradient(circle, rgba(220, 224, 232, 0.45), transparent 70%);
+}
+
+/* "Bewegung reduzieren": Das Glühen steht still, keine Funken */
+@media (prefers-reduced-motion: reduce) {
+  .ueberladung-licht {
+    animation: none;
+  }
+
+  .ueberladung-funke {
+    display: none;
+  }
+}

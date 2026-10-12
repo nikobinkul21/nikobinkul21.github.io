@@ -651,6 +651,15 @@
     padding: 3px;
   }
 
+  /* Überladung: Etikett "×10" klein über dem Phasen-Symbol */
+  .kampf.ist-handy .kampf-buehne .kampf-ueberladung {
+    left: calc(var(--streifen-held) * 0.6);
+    bottom: calc(var(--streifen-held) * 0.45 + 26px);
+    padding: 0 4px;
+    font-size: 0.66rem;
+    border-width: 1.5px;
+  }
+
   /* Angriff des Bosses: unter der Ansage der Fähigkeit, oben rechts */
   .kampf.ist-handy .kampf-boss-angriff {
     top: 22px;

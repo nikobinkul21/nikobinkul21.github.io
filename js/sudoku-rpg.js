@@ -24,6 +24,8 @@
        des Schwierigkeitsgrads) – in beiden Phasen.
      - Power-up-Felder im Sudoku lösen beim richtigen Ausfüllen eine
        Wirkung aus (Heilung, Gift, Münzen …).
+     - Überladung: Wer ein Sudoku vollständig löst, überlädt das Schwert –
+       der nächste Treffer in einem Angriffszug macht das Zehnfache.
      - Nach jedem besiegten Boss wählt man eine von drei Verbesserungen –
        höchstens fünf verschiedene (Bücher zählen mit), danach nur noch
        Stufenaufstiege oder ein Münzbeutel.
@@ -51,6 +53,7 @@
      "verbesserung"   – eine Verbesserung wurde gewählt
      "buchschlag"     – ein Buch löst aus (alle neun Felder seiner Ziffer gefüllt)
      "neuerBoss"      – der nächste Boss steht bereit
+     "ueberladung"    – das Sudoku ist gelöst: das Schwert ist überladen
      "sudokuGeloest"  – alle Felder richtig
      "niederlage"     – HP auf 0: der Durchlauf ist vorbei
      "aufgegeben"     – Durchlauf aufgegeben
@@ -91,6 +94,18 @@ const SUDOKU_RPG_KONFIG = {
                         // (eine 1 ist ein Fehlschlag ohne Schaden)
   doppelschadenFaktor: 2, // Zeile/Spalte/Block vervollständigt → Schaden × 2
                           // (mehrere Einheiten gleichzeitig: trotzdem nur × 2)
+
+  // Überladung: Wer ein Sudoku vollständig löst, überlädt das Schwert. Der
+  // nächste Treffer in einem Angriffszug, der Schaden macht, zählt × faktor –
+  // als letzter Schritt auf den gesamten Schaden (auch den Reihenbrecher);
+  // Gift wird aus dem Schaden davor berechnet. Danach ist sie verbraucht.
+  // Nicht verbraucht wird sie von Verteidigungszügen und Kontern, Fehlern,
+  // Buchschlägen, dem Regenbogenfeld und Treffern ohne Schaden (Fehlschlag,
+  // Immunität). Höchstens eine gleichzeitig; sie bleibt über einen Sieg
+  // hinweg erhalten und gilt dann gegen den nächsten Boss.
+  ueberladung: {
+    faktor: 10,
+  },
 
   // Sprüche bei einem Fehlschlag (eine wird zufällig gezeigt)
   fehlschlagSprueche: [
@@ -625,7 +640,8 @@ const SudokuRPG = (function () {
   // Version 13: Schlagabtausch – HP des Helden ("heldHp", "heldMaxHp") statt
   //             Leben, "phase" und der angekündigte "bossAngriff"; das rote
   //             Power-up "rot" ist jetzt das Heilfeld "heil".
-  const VERSION = 13;
+  // Version 14: "ueberladen" – das Schwert ist nach einem gelösten Sudoku überladen.
+  const VERSION = 14;
   // Bis Version 12: so viele Leben hatte man zu Beginn – alte Leben werden
   // anteilig zu HP (2 von 3 Leben → 67 % der HP)
   const ALTE_START_LEBEN = 3;
@@ -1133,6 +1149,8 @@ const SudokuRPG = (function () {
        7. reihen        + Extra-Schaden je fertiger Einheit (Reihenbrecher) –
                         kommt NACH der Verdopplung und wird nicht mitverdoppelt
        8. gift          Giftanteil des bis hierher berechneten Schadens
+       9. ueberladung   × Überladungsfaktor (nach einem gelösten Sudoku) – auf
+                        den gesamten Schaden, das Gift bleibt, wie es ist
        Am Ende wird aufgerundet (Schaden und Gift getrennt).
 
      Verbesserungen wirken über die Spielwerte (werteVon). Seltene
@@ -1143,7 +1161,7 @@ const SudokuRPG = (function () {
      rechnung.ende = true, bleibt es beim aktuellen Wert (z. B. 0).
      ------------------------------------------------------------------------ */
 
-  const SCHADEN_STUFEN = ["wurf", "kritisch", "zuschlag", "buch", "schwierigkeit", "doppelt", "reihen", "gift"];
+  const SCHADEN_STUFEN = ["wurf", "kritisch", "zuschlag", "buch", "schwierigkeit", "doppelt", "reihen", "gift", "ueberladung"];
 
   // Diese Stufen gelten für JEDEN Würfel einzeln (bei mehreren Würfeln)
   const WUERFEL_STUFEN = ["wurf", "kritisch"];
@@ -1215,6 +1233,14 @@ const SudokuRPG = (function () {
     gift: function (r, k) {
       if (k.giftAnteil > 0) r.giftWert = r.wert * k.giftAnteil;
     },
+    // Überladenes Schwert: nur ein Treffer, der wirklich Schaden macht
+    ueberladung: function (r, k) {
+      if (k.ueberladung > 1 && r.wert > 0) {
+        r.wert *= k.ueberladung;
+        r.ueberladen = true;
+        r.schritte.push("Überladung ×" + zahlText(k.ueberladung));
+      }
+    },
   };
 
   /**
@@ -1234,8 +1260,9 @@ const SudokuRPG = (function () {
    *   modifikatoren – Liste { <stufe>: function (rechnung, kontext) }
    *   selten        – die seltene Eigenschaft eines Elite-Bosses (oder null)
    *   eliteTreffer  – der wievielte Treffer gegen diesen Elite-Boss
+   *   ueberladung   – Faktor des überladenen Schwerts (1 = keine Überladung)
    * @returns {object} rechnung: { wurf, schaden, gift, kritisch, fehlschlag,
-   *   immun, abwehrGrund, abwehrArt, buchBonus, schritte, text }
+   *   immun, abwehrGrund, abwehrArt, buchBonus, ueberladen, schritte, text }
    */
   /** Eine leere Rechnung für einen Würfel. */
   function neueRechnung(wurf, w) {
@@ -1244,6 +1271,7 @@ const SudokuRPG = (function () {
       kritischAb: w.wuerfelSeiten - w.kritischeAugen + 1,   // ab dieser Augenzahl kritisch
       wert: 0, giftWert: 0, buchBonus: 0,
       kritisch: false, fehlschlag: false, ende: false,
+      ueberladen: false,         // die Überladung hat gewirkt (und ist damit verbraucht)
       immun: false,              // seltene Eigenschaft hat den Treffer abgewehrt
       abwehrGrund: null,         // z. B. "gerade"
       abwehrArt: null,           // "immun" oder "geblockt"
@@ -1276,7 +1304,7 @@ const SudokuRPG = (function () {
 
   function berechneSchaden(kontext) {
     kontext = Object.assign({ werte: werteVon({}), grad: null, doppelt: false, einheiten: 0,
-      giftAnteil: 0, modifikatoren: [], selten: null, eliteTreffer: 0, wuerfe: null }, kontext);
+      giftAnteil: 0, modifikatoren: [], selten: null, eliteTreffer: 0, wuerfe: null, ueberladung: 1 }, kontext);
     const w = kontext.werte;
     let r;
     if (!kontext.wuerfe || kontext.wuerfe.length < 2) {
@@ -1331,6 +1359,8 @@ const SudokuRPG = (function () {
        phase,              ← "angriff" oder "verteidigung" (Schlagabtausch)
        bossAngriff,        ← im Verteidigungszug: der gewürfelte Angriff des
                              Bosses (1 bis sein Angriffswürfel), sonst null
+       ueberladen,         ← true: das Schwert ist überladen (nach einem gelösten
+                             Sudoku), der nächste Treffer zählt × ueberladung.faktor
        muenzRest,          ← Nachkommastellen der Münzen (0 bis unter 1)
        verbesserungen,     ← { id: Stufe }
        plaetze,            ← ids aller Verbesserungen UND Bücher in der Reihenfolge,
@@ -1405,6 +1435,7 @@ const SudokuRPG = (function () {
       heldMaxHp: K.held.hp,
       phase: "angriff",     // jeder Boss beginnt mit einem Angriffszug
       bossAngriff: null,
+      ueberladen: false,
       muenzen: 0,
       muenzRest: 0,
       rekord: 0,            // höchster besiegter Boss
@@ -1496,6 +1527,7 @@ const SudokuRPG = (function () {
     const vorV11 = roh.version < 11;
     const vorV12 = roh.version < 12;
     const vorV13 = roh.version < 13;
+    const vorV14 = roh.version < 14;
 
     // Bücher (Version 7: eigene Kategorie bis Stufe 5, Version 8: Teil der
     // Verbesserungen bis Stufe 10). Mehr als maxBuecher → die mit der höchsten
@@ -1714,7 +1746,7 @@ const SudokuRPG = (function () {
 
     return {
       ok: true,
-      ergaenzt: vorV13,
+      ergaenzt: vorV14,
       daten: {
         version: VERSION,
         bossNummer: roh.bossNummer,
@@ -1723,6 +1755,8 @@ const SudokuRPG = (function () {
         heldMaxHp: werte.maxHp,     // folgt immer den Verbesserungen
         phase: phase,
         bossAngriff: bossAngriff,
+        // Überladung (neu in Version 14) – ältere Stände: keine
+        ueberladen: !vorV14 && roh.ueberladen === true,
         muenzen: muenzen,
         muenzRest: muenzRest,
         rekord: roh.rekord,
@@ -2094,7 +2128,7 @@ const SudokuRPG = (function () {
     function neuerBossDaten() {
       const boss = bossMitStand(zustand.bossNummer);
       return Object.assign({ boss: boss, hp: zustand.bossHp, rekord: zustand.rekord,
-        faehigkeitStand: faehigkeitAnzeige(), phase: phaseStand() }, heldStand());
+        faehigkeitStand: faehigkeitAnzeige(), phase: phaseStand(), ueberladen: zustand.ueberladen }, heldStand());
     }
 
     /* ---------- Bücher ---------- */
@@ -2600,6 +2634,7 @@ const SudokuRPG = (function () {
           giftAnteil: effekt.giftAnteil,
           modifikatoren: modifikatoren(bossVorher),
           selten: bossVorher.selten, eliteTreffer: eliteTreffer,
+          ueberladung: zustand.ueberladen ? K.ueberladung.faktor : 1,
         });
         rechnung.regenbogen = false;
       } else {
@@ -2626,6 +2661,10 @@ const SudokuRPG = (function () {
       const hpNachSchaden = Math.max(0, hpVorher - rechnung.schaden);
       const hpNachher = Math.max(0, hpNachSchaden - rechnung.gift);
       zustand.bossHp = hpNachher;
+      // Überladung verbraucht? Nur, wenn sie in der Rechnung gewirkt hat
+      // (Angriffszug mit Schaden – nicht bei Fehlschlag, Immunität, Block, Regenbogen)
+      const ueberladungVerbraucht = Boolean(rechnung.ueberladen);
+      if (ueberladungVerbraucht) zustand.ueberladen = false;
 
       // 4. Münzen: (je Zahl + je fertige Zeile/Spalte + je Block + Power-up) × Münzfaktor.
       //    Nachkommastellen werden in muenzRest gesammelt.
@@ -2683,10 +2722,13 @@ const SudokuRPG = (function () {
         letzter.heldHp = zustand.heldHp;
       }
 
-      // 8. Sudoku komplett? Dann gibt es danach ein neues.
+      // 8. Sudoku komplett? Dann gibt es danach ein neues – und das Schwert ist
+      //    überladen (höchstens eine Überladung; auch wenn dieser Zug den Boss
+      //    besiegt hat: Sie gilt dann gegen den nächsten Boss).
       const geloest = r.vorgaben.every(function (v, i) { return (v || r.eingaben[i]) === r.loesung[i]; });
       if (geloest) {
         r.geloest = true;
+        zustand.ueberladen = true;
       }
 
       // 9. Fähigkeit: Der Zug zählt – nicht, wenn der Zug den Boss oder den
@@ -2751,6 +2793,10 @@ const SudokuRPG = (function () {
         // alle Würfel (bei Büchern mit mehreren Würfeln) und wie sie zählen
         wuerfe: wuerfe, wuerfelModus: wuerfelModus,
         buchMuenzen: buchMuenzen, buchFaehigkeit: buchFaehigkeit,
+        // Überladung: Faktor, wenn sie bei diesem Treffer gewirkt hat (sonst null),
+        // und ob das Schwert nach diesem Zug überladen ist
+        ueberladung: ueberladungVerbraucht ? K.ueberladung.faktor : null,
+        ueberladen: zustand.ueberladen,
       };
       // Niederlage: Der Boss hat den Helden im Verteidigungszug besiegt
       const niederlageDaten = niederlage ? durchlaufBeenden("niederlage", bossVorher) : null;
@@ -2769,6 +2815,12 @@ const SudokuRPG = (function () {
         };
       }
       buchschlaege.forEach(function (ereignis) { melde("buchschlag", ereignis); });
+      // Sudoku gelöst: Welle, die Zahlen fliegen ins Schwert, es ist überladen –
+      // noch vor Fähigkeit, Angriff des Bosses und Sieg
+      if (geloest) {
+        melde("ueberladung", { index: index, boss: bossVorher, faktor: K.ueberladung.faktor,
+          zahlen: r.loesung.slice(), besiegt: besiegt });
+      }
       if (einsatz) melde("faehigkeit", einsatz);
       if (bossAngriffEreignis) melde("bossAngriff", bossAngriffEreignis);
       if (besiegt) {
@@ -2795,6 +2847,7 @@ const SudokuRPG = (function () {
         besiegt: besiegt, geloest: geloest, auswahl: Boolean(zustand.auswahl),
         faehigkeit: einsatz, entschaerft: entschaerft, niederlage: false,
         buchschlag: buchWirkung.schlaege.length > 0,
+        ueberladung: ueberladungVerbraucht ? K.ueberladung.faktor : null, ueberladen: zustand.ueberladen,
       };
     }
 
@@ -2907,6 +2960,7 @@ const SudokuRPG = (function () {
       faehigkeitStand: faehigkeitAnzeige,
       phaseStand: phaseStand,
       heldStand: heldStand,
+      ueberladen: function () { return zustand.ueberladen; },
       timerVergeht: timerVergeht,
       buchBonus: function () { return zustand.buchBonus; },
       brauchtBuchSpin: brauchtBuchSpin,

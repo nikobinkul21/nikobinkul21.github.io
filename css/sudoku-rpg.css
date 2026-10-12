@@ -2797,6 +2797,65 @@
   text-shadow: 0 0 14px var(--konter-farbe);
 }
 
+/* Überladenes Schwert: Etikett "×10" neben dem Helden (über dem Phasen-Symbol) */
+.kampf-ueberladung {
+  position: absolute;
+  left: calc(6% + var(--kampf-figur-groesse) * 0.78);
+  bottom: calc(6% + var(--kampf-figur-groesse) * 0.62 + 34px);
+  z-index: 4;
+  padding: 1px 6px;
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(90deg, #ff3d3d, #ffb800, #3ddc5a, #29d3ff, #8b5cff, #ff3df0);
+  background-size: 200% 100%;
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 6px;
+  -webkit-text-stroke: 2px var(--kampf-kasten-rand);
+  paint-order: stroke fill;
+  box-shadow: 0 0 10px rgba(255, 61, 240, 0.7);
+  animation: ueberladung-etikett 3s linear infinite;
+}
+
+.kampf-ueberladung[hidden] {
+  display: none;
+}
+
+@keyframes ueberladung-etikett {
+  from { background-position: 0% 0; }
+  to   { background-position: 200% 0; }
+}
+
+/* Der überladene Schlag: das ganze Kampffenster bebt */
+.kampf.bebt { animation: kampf-beben 0.7s linear; }
+
+@keyframes kampf-beben {
+  0%, 100% { transform: none; }
+  10% { transform: translate(-8px, 4px) rotate(-0.6deg); }
+  25% { transform: translate(7px, -5px) rotate(0.5deg); }
+  40% { transform: translate(-6px, 3px); }
+  55% { transform: translate(5px, -3px) rotate(0.3deg); }
+  70% { transform: translate(-3px, 2px); }
+  85% { transform: translate(2px, -1px); }
+}
+
+/* Banner "Überladen! ×10" bzw. "Überladung ×10!" in Regenbogenfarben */
+.kampf-banner--ueberladung {
+  top: 56%;
+  padding: 2px 12px;
+  font-size: 1.35rem;
+  color: #fff;
+  background: linear-gradient(90deg, #ff3d3d, #ffb800, #3ddc5a, #29d3ff, #8b5cff, #ff3df0);
+  -webkit-text-stroke: 2px var(--kampf-kasten-rand);
+  paint-order: stroke fill;
+  box-shadow: 0 0 18px rgba(255, 61, 240, 0.8), 3px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.panel-zeile--ueberladung,
+.panel-summe--ueberladung .panel-wert,
+.panel-kurz-schaden[data-art="ueberladung"],
+.panel-eintrag--ueberladung { color: #ff9cf3; font-weight: 800; }
+
 /* Konter-Zahl auf dem Weg zum Boss */
 .kampf-konter-flug {
   position: absolute;
@@ -3221,6 +3280,12 @@
   .kampf-vergleich.bricht .kampf-vergleich-wuerfel--boss,
   .kampf-vergleich.siegt .kampf-vergleich-wuerfel--held {
     transform: none;
+  }
+
+  /* Überladung ohne Bewegung: Etikett steht still, das Fenster bebt nicht */
+  .kampf-ueberladung,
+  .kampf.bebt {
+    animation: none !important;
   }
 
   @keyframes faehigkeit-einblenden {

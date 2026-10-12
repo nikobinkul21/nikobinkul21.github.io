@@ -506,6 +506,8 @@ const SudokuKampf = (function () {
           // oder Schild (Verteidigungszug), mit Erklärung
           '<button type="button" class="kampf-phase hat-tipp" data-phase="angriff">' +
             '<span class="kampf-phase-symbol"></span>' + tippHtml() + "</button>" +
+          // Überladenes Schwert (nach einem gelösten Sudoku): Etikett "×10" neben dem Helden
+          '<span class="kampf-ueberladung" role="img" hidden></span>' +
           '<div class="kampf-info kampf-info--held">' +
             // HP des Helden – im selben Stil wie der Balken des Bosses
             '<div class="kampf-held-hp" role="img">' +
@@ -633,6 +635,7 @@ const SudokuKampf = (function () {
       absichtName: container.querySelector(".kampf-absicht-name"),
       absichtText: container.querySelector(".kampf-absicht-text"),
       absichtTipp: container.querySelector(".kampf-absicht .kampf-tipp"),
+      ueberladung: container.querySelector(".kampf-ueberladung"),
       phase: container.querySelector(".kampf-phase"),
       phaseSymbol: container.querySelector(".kampf-phase-symbol"),
       phaseTipp: container.querySelector(".kampf-phase .kampf-tipp"),
@@ -838,7 +841,7 @@ const SudokuKampf = (function () {
 
     // Was gerade ANGEZEIGT wird (kann wegen der Warteschlange kurz hinter
     // dem echten Spielstand liegen)
-    const anzeige = { bossNummer: 0, weltId: null, muenzen: 0, heldHp: null, heldMaxHp: SudokuRPG.KONFIG.held.hp, gesammelt: [] };
+    const anzeige = { bossNummer: 0, weltId: null, muenzen: 0, heldHp: null, heldMaxHp: SudokuRPG.KONFIG.held.hp, ueberladen: false, gesammelt: [] };
     const K = SudokuRPG.KONFIG;
 
     /* ---------- Warteschlange ----------
@@ -1496,6 +1499,8 @@ const SudokuKampf = (function () {
           zeilen.push({ key: "doppelt", label: "Doppelschaden", wert: wert, art: "doppelt", schritt: i });
         } else if (name === "Reihenbrecher") {
           zeilen.push({ key: "reihen", label: "Reihenbrecher", wert: wert, art: "reihe", schritt: i });
+        } else if (name === "Überladung") {
+          zeilen.push({ key: "ueberladung", label: "Überladung", wert: wert, art: "ueberladung", schritt: i });
         } else if (e.boss.selten && name === e.boss.selten.name) {
           zeilen.push({ key: "selten", label: name, wert: wert, art: "selten", farbe: e.boss.selten.farbe, schritt: i });
         } else {
@@ -1610,7 +1615,7 @@ const SudokuKampf = (function () {
           art: art, symbol: "schild" });
         return;
       }
-      const art = e.regenbogen ? "regenbogen" : e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
+      const art = e.regenbogen ? "regenbogen" : e.ueberladung ? "ueberladung" : e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
         e.doppelt ? "doppelt" : "";
       const farbe = e.immun ? e.selten.farbe : null;
       let kurz = gesamt + " Schaden";
@@ -1626,6 +1631,8 @@ const SudokuKampf = (function () {
       });
       if (e.regenbogen) {
         verlaufEintrag({ text: "Regenbogenschlag!", wert: "−" + gesamt, art: "regenbogen", symbol: "stern" });
+      } else if (e.ueberladung) {
+        verlaufEintrag({ text: "Überladener Schlag ×" + e.ueberladung, wert: "−" + gesamt, art: "ueberladung", symbol: "blitz" });
       } else if (e.immun) {
         verlaufEintrag({ text: e.selten.name + ": Wurf " + e.wurf + " " + e.selten.art, wert: "0", art: "selten", symbol: "stern", farbe: e.selten.farbe });
       } else if (e.kritisch) {
@@ -1686,6 +1693,19 @@ const SudokuKampf = (function () {
       return b;
     }
 
+
+    /**
+     * Überladung SOFORT zeigen: Das Schwert glüht dauerhaft (Regenbogen,
+     * Funken – siehe sudoku-damage-fx.js) und neben dem Helden steht "×10".
+     */
+    function zeigeUeberladung(an) {
+      anzeige.ueberladen = Boolean(an);
+      SudokuSchadenFx.schwertUeberladen(el.heldFigur, Boolean(an));
+      el.ueberladung.hidden = !an;
+      el.ueberladung.textContent = "×" + K.ueberladung.faktor;
+      el.ueberladung.setAttribute("aria-label", "Schwert überladen: Der nächste Treffer im Angriffszug macht das " +
+        (K.ueberladung.faktor === 10 ? "Zehnfache" : K.ueberladung.faktor + "-Fache") + ".");
+    }
 
     /* ---------- Fähigkeit des Bosses: Ansage über ihm ---------- */
 
@@ -1840,7 +1860,7 @@ const SudokuKampf = (function () {
 
     /**
      * Zeigt einen Stand SOFORT (ohne Animation) – z. B. nach dem Laden.
-     * @param {object} stand – { boss, hp, heldHp, heldMaxHp, phase, muenzen, rekorde,
+     * @param {object} stand – { boss, hp, heldHp, heldMaxHp, phase, ueberladen, muenzen, rekorde,
      *                           verbesserungen, buchBonus, faehigkeitStand }
      */
     function zeigeStand(stand) {
@@ -1849,6 +1869,7 @@ const SudokuKampf = (function () {
         zeigeHp(stand.hp, stand.boss.maxHp);
         zeigeHeldHp(stand.heldHp, stand.heldMaxHp);
         zeigePhase(stand.phase);
+        zeigeUeberladung(stand.ueberladen);
         zeigeMuenzen(stand.muenzen, false);
         zeigeVerbesserungen(stand.verbesserungen);
         zeigeBuchBonus(stand.buchBonus);
@@ -1874,9 +1895,9 @@ const SudokuKampf = (function () {
       } else if (e.fehlschlag) {
         teile.push(e.spruch);
       } else {
-        let kopf = "";
-        if (e.kritisch) kopf = "Kritischer Treffer! ";
-        else if (e.doppelt) kopf = "Doppelter Schaden! ";
+        let kopf = e.ueberladung ? "Überladener Schlag! " : "";
+        if (e.kritisch) kopf += "Kritischer Treffer! ";
+        else if (e.doppelt) kopf += "Doppelter Schaden! ";
         if (e.kritisch && e.doppelt) kopf += "Und doppelt! ";
         teile.push(kopf + e.rechnung.text + (e.gift > 0 ? " · Gift +" + e.gift : "") + ".");
       }
@@ -1929,6 +1950,7 @@ const SudokuKampf = (function () {
             return (e.buch && mitte(el.verbesserungen.querySelector('[data-id="' + e.buch.id + '"]'))) || mitte(el.buchBonus);
           }
           if (name === "selten") return el.selten.hidden ? null : mitte(el.selten);
+          if (name === "ueberladung") return { x: held.left + held.width * FX.schwertPunkt.x, y: held.top + held.height * FX.schwertPunkt.y };
           if (name === "grad") return mitte(optionen && optionen.gradAnzeige);
           if (name === "doppelt") return einheitMitte(e);
           if (name === "reihe") return einheitMitte(e, schritt && schritt.einheit);
@@ -2301,7 +2323,75 @@ const SudokuKampf = (function () {
         if (!u.aktiv && e.kritisch) banner("Kritisch!", null, "kritisch");
         // Boss blitzt und die Bühne wackelt weiter, während schon Gift und Münzen kommen
         const getroffen = bossGetroffen(e, stufe);
+        if (e.ueberladung) return ueberladenerSchlag(e, u, getroffen);
         return u.aktiv ? SudokuSchadenFx.entladen(stufe, u) : getroffen;
+      });
+    }
+
+    /**
+     * Der überladene Schlag entlädt sich: Regenbogenstrahl vom Schwert zum
+     * Boss, der Boss wird stark erschüttert, das ganze Kampffenster bebt –
+     * danach erlischt das Glühen mit einem kurzen Verpuffen.
+     */
+    function ueberladenerSchlag(e, u, getroffen) {
+      const T = SudokuSchadenFx.KONFIG.ueberladung;
+      if (!u.aktiv) banner("Überladung ×" + e.ueberladung + "!", null, "ueberladung");
+      if (u.aktiv && !u.reduziert && !eilig() && u.boss) SudokuSchadenFx.regenbogenStrahl(u.schwert, u.boss, T.strahl * u.faktor);
+      faerbe(el.blitz, "an-regenbogen", 500);
+      animiere(el.kampf, "bebt", 700);
+      animiere(el.bossFigur, "getroffen-stark", DAUER.kritisch);
+      const entladung = u.aktiv ? SudokuSchadenFx.entladen(SudokuSchadenFx.stufeFuer(Infinity), u) : getroffen;
+      return Promise.all([entladung, warte(T.strahl * (u.aktiv ? u.faktor : 1))]).then(function () {
+        SudokuSchadenFx.ueberladungVerpuffen(u);
+        zeigeUeberladung(false);
+      });
+    }
+
+    /**
+     * Sudoku gelöst (Schritt der Warteschlange, nach Würfel, Treffer bzw.
+     * Block und Konter des letzten Zugs): die Welle über das Gitter → die 81
+     * Zahlen fliegen als schnelle Welle ins Schwert, es wird immer heller →
+     * Lichtblitz, das Schwert ist überladen. Zusammen etwa 2,5 Sekunden,
+     * abkürzbar. Ohne Bewegung (oder Kampfanimationen "Aus"): nur das
+     * Aufleuchten des Gitters, dann glüht das Schwert.
+     * @param {object} e – Ereignis "ueberladung" { index, zahlen, faktor }
+     * @param {function} welle – spielt die Welle über das Gitter, gibt ein Promise zurück
+     */
+    function ueberladung(e, welle) {
+      return einreihen(function () {
+        const T = SudokuSchadenFx.KONFIG.ueberladung;
+        const u = fxUmgebung(e);
+        const ruhig = ohneBewegung() || !u.aktiv;
+        meldung("Sudoku gelöst! Die Zahlen fliegen ins Schwert …");
+        const w = welle ? welle() : null;
+        // Auf die Welle warten – höchstens welleMax (abkürzbar wie alle Wartezeiten)
+        const warten = pause(ruhig ? T.reduziert : T.welleMax * u.faktor);
+        return (w ? Promise.race([w, warten]) : warten).then(function () {
+          if (ruhig || eilig() || !optionen || !optionen.gitterFeld) return null;
+          // Von allen 81 Feldern: eine leuchtende Kopie der Zahl, gestaffelt nach
+          // dem Abstand zum zuletzt gesetzten Feld (die Zahlen im Gitter bleiben stehen)
+          const z0 = Math.floor(e.index / 9), s0 = e.index % 9;
+          const zahlen = [];
+          for (let i = 0; i < 81; i++) {
+            const feld = optionen.gitterFeld(i);
+            const r = feld && feld.getBoundingClientRect();
+            if (!r || r.width === 0) continue;
+            zahlen.push({ p: { x: r.left + r.width / 2, y: r.top + r.height / 2 }, ziffer: e.zahlen[i],
+              abstand: Math.hypot(Math.floor(i / 9) - z0, (i % 9) - s0) });
+          }
+          return SudokuSchadenFx.ueberladenFlug(zahlen, u);
+        }).then(function () {
+          // Das Schwert ist überladen: Lichtblitz, Glühen, "×10", Text
+          SudokuSchadenFx.schwertAus(el.heldFigur);
+          if (!ruhig) SudokuSchadenFx.ueberladenBlitz(u);
+          faerbe(el.blitz, "an-regenbogen", 400);
+          zeigeUeberladung(true);
+          const text = "Schwert überladen! Nächster Schlag ×" + e.faktor;
+          meldung(text);
+          verlaufEintrag({ text: text, wert: "", art: "ueberladung", symbol: "blitz" });
+          banner("Überladen! ×" + e.faktor, null, "ueberladung");
+          return pause(T.blitz * (ruhig ? 1 : u.faktor));
+        });
       });
     }
 
@@ -3050,6 +3140,8 @@ const SudokuKampf = (function () {
       zeigeFaehigkeit: zeigeFaehigkeit,
       bossAngriff: bossAngriff,
       zeigePhase: zeigePhase,
+      ueberladung: ueberladung,
+      zeigeUeberladung: zeigeUeberladung,
       timerAbgelaufen: timerAbgelaufen,
       buchschlag: buchschlag,
       buchSpin: buchSpin,

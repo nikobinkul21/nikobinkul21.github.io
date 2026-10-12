@@ -803,6 +803,14 @@ function initSudoku(container) {
     abenteuer.an("fehler", function (e) { if (abenteuer === diesesAbenteuer) kampf.fehler(e); });
     // Fähigkeit des Bosses – läuft nach Würfel, Schaden und Treffer dieses Zugs
     abenteuer.an("faehigkeit", function (e) { if (abenteuer === diesesAbenteuer) kampf.faehigkeit(e); });
+    // Sudoku gelöst: Welle über das Gitter, die Zahlen fliegen ins Schwert, es ist überladen
+    abenteuer.an("ueberladung", function (e) {
+      if (abenteuer !== diesesAbenteuer) return;
+      kampf.ueberladung(e, function () {
+        brett.classList.remove("wird-erzeugt");    // die Welle soll man sehen
+        return SudokuEffekte.spieleSieg(felder, e.index);
+      });
+    });
     // Schlagabtausch: Ein Verteidigungszug beginnt – der Boss würfelt seinen Angriff
     abenteuer.an("bossAngriff", function (e) { if (abenteuer === diesesAbenteuer) kampf.bossAngriff(e); });
     // Tick, Tick: Timer abgelaufen – HP weniger (fallen sie auf 0, startet die
@@ -897,6 +905,7 @@ function initSudoku(container) {
     const z = abenteuer.zustand;
     return {
       boss: abenteuer.boss(), hp: z.bossHp, heldHp: z.heldHp, heldMaxHp: z.heldMaxHp, phase: abenteuer.phaseStand(),
+      ueberladen: abenteuer.ueberladen(),
       muenzen: z.muenzen, rekorde: abenteuer.rekorde(),
       verbesserungen: abenteuer.gesammelt(),
       faehigkeitStand: abenteuer.faehigkeitStand(),
@@ -1040,18 +1049,17 @@ function initSudoku(container) {
       if (ergebnis.regenbogen) starteRegenbogenschlag(index);
       zeichne();
       if (ergebnis.geloest) {
-        // Große Welle über das Gitter – erst nach Wurf und Treffer (Warteschlange
-        // des Kampffensters), danach neue Schwierigkeit auslosen. Die Eingabe ist
-        // sofort gesperrt, ausgegraut wird erst für die Slot-Walze.
+        // Die Welle über das Gitter und die Überladung laufen in der
+        // Warteschlange des Kampffensters (Ereignis "ueberladung") – erst
+        // nach Wurf und Treffer, vor Sieg und Auswahl. Danach neue
+        // Schwierigkeit auslosen. Die Eingabe ist sofort gesperrt, ausgegraut
+        // wird erst für die Slot-Walze.
         const diesesAbenteuer = abenteuer;
         beschaeftigt.abenteuer = true;
         kampf.danach(function () {
-          brett.classList.remove("wird-erzeugt");    // die Welle soll man sehen
-          return SudokuEffekte.spieleSieg(felder, index).then(function () {
-            zeigeStatus("Sudoku gelöst!", "erfolg");
-          });
+          zeigeStatus("Sudoku gelöst!", "erfolg");
         }).then(function () {
-          return new Promise(function (ok) { setTimeout(ok, 900); });
+          return new Promise(function (ok) { setTimeout(ok, 600); });
         }).then(function () {
           if (abenteuer !== diesesAbenteuer) return;
           zeigeStatus("");

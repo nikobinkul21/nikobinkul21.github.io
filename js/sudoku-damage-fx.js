@@ -10,6 +10,9 @@
      4. Die Summe fliegt mit Leuchtspur ins Schwert des Helden.
      5. Das Schwert leuchtet (je nach Schaden in fünf Stufen), der Held
         schlägt zu, das Leuchten entlädt sich im Boss (entladen).
+   Dazu die Überladung nach einem gelösten Sudoku: Die 81 Zahlen fliegen
+   ins Schwert (ueberladenFlug), es glüht dauerhaft (schwertUeberladen), und
+   beim nächsten Treffer springt die Zahl als letztes Etikett auf "×10".
    Gesteuert wird alles von js/sudoku-battle-ui.js. Aussehen:
    css/sudoku-damage-fx.css. Animiert werden nur transform und opacity.
    ========================================================================== */
@@ -57,6 +60,22 @@ const SUDOKU_FX_KONFIG = {
     ruhig: 1400,            // ruhige Fassung ("Aus" / "Bewegung reduzieren"): Einblenden
     funkenFeld: 16,         // Funken beim Zerspringen des Felds
     funkenBoss: 36,         // Funken beim Zerfallen des Bosses
+  },
+
+  // Überladung (gelöstes Sudoku): Welle, Zahlen ins Schwert, Blitz – zusammen
+  // etwa 2,5 Sekunden (Desktop, "Normal"); auf dem Smartphone etwa halb so lang
+  ueberladung: {
+    welleMax: 1100,         // so lange höchstens auf die Welle über das Gitter warten
+    staffel: 34,            // Startverzögerung je Feld Abstand zum zuletzt gesetzten Feld
+    flug: 520,              // Flugzeit einer Zahl ins Schwert
+    blitz: 450,             // Lichtblitz: das Schwert ist überladen
+    reduziert: 900,         // "Bewegung reduzieren": Gitter leuchtet, kurz stehen lassen
+    // Der überladene Schlag (im Schadensaufbau, nach den übrigen Boni)
+    etikettFlug: 320,       // "×10" fliegt vom Schwert auf die Zahl
+    sprung: 420,            // die Zahl springt auf das Zehnfache
+    strahl: 420,            // Regenbogenstrahl vom Schwert zum Boss
+    verpuffen: 450,         // danach erlischt das Glühen
+    funken: 26,             // bunte Funken beim Sprung und am Boss
   },
 
   // Auf dem Smartphone sind die Wege kürzer – der Ablauf ist etwa halb so lang
@@ -138,7 +157,12 @@ const SudokuSchadenFx = (function () {
       const grad = gradMitName(name);
       // zeile: zu welcher Zeile in "Letzter Treffer" der Schritt gehört
       const eintrag = { art: "bonus", label: name + " " + rechnung + text, quelle: "wuerfel", wert: aufrunden(wert), zeile: i - 1 };
-      if (name === "Kritisch") {
+      if (name === "Überladung") {
+        // Überladenes Schwert: das letzte Etikett, eigene Inszenierung (siehe aufbau)
+        eintrag.art = "ueberladung";
+        eintrag.label = rechnung + text;
+        eintrag.quelle = "ueberladung";
+      } else if (name === "Kritisch") {
         eintrag.art = "krit";
         eintrag.label = "Krit " + rechnung + text;
       } else if (name === "Zuschlag") {
@@ -400,7 +424,9 @@ const SudokuSchadenFx = (function () {
 
     // 2./3. Die Boni: Die Etiketten starten gestaffelt und schlagen nacheinander
     //       ein – je mehr Boni, desto dichter folgen sie (statt länger zu dauern)
-    const boni = schritte.slice(index);
+    //       Die Überladung kommt zuletzt und für sich (siehe unten).
+    const boni = schritte.slice(index).filter(function (s) { return s.art !== "ueberladung"; });
+    const ueberladung = schritte.find(function (s) { return s.art === "ueberladung"; });
     kette = kette.then(function () {
       if (u.eilig() || boni.length === 0) return null;
       const budget = t.etiketten - (stufe.id === "regenbogen" ? t.regenbogenAbzug : 0);
@@ -434,6 +460,30 @@ const SudokuSchadenFx = (function () {
       });
       return folge.then(function () { return u.warte(Math.min(120, abstand)); });
     });
+
+    // 3b. Überladung: "×10" löst sich vom glühenden Schwert, schlägt in die
+    //     Zahl ein – sie springt mit Regenbogenring und Funken auf das Zehnfache
+    if (ueberladung) {
+      const T = K.ueberladung;
+      kette = kette.then(function () {
+        if (u.eilig()) return null;
+        const von = u.quelle("ueberladung") || u.schwert;
+        const etikett = element("fx-etikett fx-etikett--ueberladung", von, "<span>" + ueberladung.label + "</span>");
+        fliege(etikett, von, u.daneben, T.etikettFlug * u.faktor, "cubic-bezier(0.5, 0, 0.75, 0.6)");
+        return u.warte(T.etikettFlug * u.faktor).then(function () { etikett.remove(); });
+      }).then(function () {
+        if (u.eilig()) return null;
+        zahl.classList.add("ist-ueberladen");
+        ring(u.daneben, "fx-ring--regenbogen", T.sprung * 1.4 * u.faktor, 3);
+        funken(u.daneben, T.funken, true, T.sprung * 1.6 * u.faktor);
+        huepfe(zahl, ueberladung.wert, T.sprung * u.faktor);
+        return zaehle(zahl, wert, ueberladung.wert, T.sprung * 0.7 * u.faktor, u);
+      }).then(function () {
+        wert = ueberladung.wert;
+        u.beimSchritt(ueberladung.zeile, wert);
+        return u.warte(T.sprung * 0.4 * u.faktor);
+      });
+    }
 
     // 4. Die Summe fliegt mit Leuchtspur ins Schwert und geht darin auf
     return kette.then(function () {
@@ -584,8 +634,94 @@ const SudokuSchadenFx = (function () {
     setTimeout(function () { funken(p, Math.round(K.regenbogenSchlag.funkenBoss / 2), true, ms * 0.5); }, ms * 0.3);
   }
 
+  /* ------------------------------------------------------------------------
+     ÜBERLADUNG – einzelne Bausteine, den Ablauf steuert sudoku-battle-ui.js
+     ------------------------------------------------------------------------ */
+
+  /**
+   * Die Zahlen fliegen ins Schwert: Von jedem Feld löst sich eine leuchtende
+   * Kopie der Zahl und fliegt – als schnelle Welle vom zuletzt gesetzten Feld
+   * aus – zum Schwert. Mit jeder ankommenden Zahl leuchtet es heller.
+   * Nur transform und opacity; alles wird danach entfernt.
+   * @param {object[]} zahlen – { p: {x, y}, ziffer, abstand } je Feld
+   * @param {object} u – Umgebung (schwert, held, warte, eilig, faktor)
+   * @returns {Promise} – erfüllt, wenn die letzte Zahl angekommen ist
+   */
+  function ueberladenFlug(zahlen, u) {
+    const T = K.ueberladung;
+    if (u.eilig() || zahlen.length === 0) return Promise.resolve();
+    const flug = T.flug * u.faktor, staffel = T.staffel * u.faktor;
+    let angekommen = 0, spaeteste = 0;
+    const stufen = K.stufen.length - 1;
+    zahlen.forEach(function (z) {
+      const start = z.abstand * staffel;
+      spaeteste = Math.max(spaeteste, start);
+      setTimeout(function () {
+        if (u.eilig()) return;
+        const el = element("fx-ladeziffer", z.p, '<span class="fx-ladeziffer-wert"></span>');
+        el.querySelector(".fx-ladeziffer-wert").textContent = z.ziffer;
+        fliege(el, z.p, u.schwert, flug, "cubic-bezier(0.5, 0, 0.8, 0.5)");
+        el.querySelector(".fx-inhalt").animate([
+          { transform: "scale(1.4)", opacity: 0 },
+          { transform: "scale(1.2)", opacity: 1, offset: 0.15 },
+          { transform: "scale(0.9)", opacity: 1, offset: 0.8 },
+          { transform: "scale(0.2)", opacity: 0 },
+        ], { duration: Math.max(1, flug), fill: "forwards" });
+        setTimeout(function () {
+          el.remove();
+          if (u.eilig()) return;
+          // Das Schwert wird mit jeder Zahl heller (glimmen … regenbogen)
+          angekommen++;
+          const nummer = Math.min(stufen, Math.floor((angekommen / zahlen.length) * stufen + 1e-9));
+          schwertLeuchten(u.held, Object.assign({ nummer: nummer }, K.stufen[nummer]));
+        }, flug);
+      }, start);
+    });
+    return u.warte(spaeteste + flug + 30);
+  }
+
+  /** Lichtblitz am Schwert: Es ist überladen. */
+  function ueberladenBlitz(u) {
+    const T = K.ueberladung;
+    if (u.eilig()) return;
+    ring(u.schwert, "fx-ring--regenbogen", T.blitz * u.faktor * 1.2, 2.6);
+    funken(u.schwert, Math.round(T.funken * 0.7), true, T.blitz * u.faktor);
+  }
+
+  /**
+   * Das dauerhafte Glühen des überladenen Schwerts (langsam durchlaufende
+   * Regenbogenfarben, kleine Funken) – an oder aus. Liegt im Bild des
+   * Helden (wie das Leuchten), die Bewegung macht das CSS.
+   */
+  function schwertUeberladen(held, an) {
+    let glut = held.querySelector(".schwert-ueberladung");
+    if (an && !glut) {
+      glut = document.createElement("span");
+      glut.className = "schwert-ueberladung";
+      glut.setAttribute("aria-hidden", "true");
+      glut.innerHTML = '<span class="ueberladung-licht"></span>' +
+        '<span class="ueberladung-funke"></span><span class="ueberladung-funke"></span><span class="ueberladung-funke"></span>';
+      held.appendChild(glut);
+    } else if (!an && glut) {
+      glut.remove();
+    }
+  }
+
+  /** Das Glühen erlischt mit einem kurzen Verpuffen (Rauchring und ein paar Funken). */
+  function ueberladungVerpuffen(u) {
+    const T = K.ueberladung;
+    schwertUeberladen(u.held, false);
+    if (u.eilig() || u.reduziert) return;
+    ring(u.schwert, "fx-ring--verpuffen", T.verpuffen * u.faktor, 1.6);
+    funken(u.schwert, 8, false, T.verpuffen * u.faktor);
+  }
+
   return {
     KONFIG: K,
+    ueberladenFlug: ueberladenFlug,
+    ueberladenBlitz: ueberladenBlitz,
+    schwertUeberladen: schwertUeberladen,
+    ueberladungVerpuffen: ueberladungVerpuffen,
     zerspringen: zerspringen,
     regenbogenStrahl: regenbogenStrahl,
     bildschirmBlitz: bildschirmBlitz,
