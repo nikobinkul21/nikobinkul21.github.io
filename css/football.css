@@ -21,6 +21,7 @@
   flex-direction: column;
   gap: var(--fb-luecke);
   min-height: 0;
+  position: relative;              /* für Auslosung und Teamkarte */
 }
 
 /* Der Spielbereich nutzt die volle Breite (die Sudoku-Regel
@@ -48,10 +49,21 @@
   font-weight: 700;
 }
 
+/* Teamnamen sind Knöpfe: Hovern oder Antippen öffnet die Teamkarte */
 .fb-team {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 2px 4px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--farbe-text);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: underline dotted 1px;
+  text-underline-offset: 3px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -632,5 +644,386 @@
 
   .fb-knopf:hover:not(:disabled) {
     transform: none;
+  }
+}
+
+
+/* ---------- Ballinfo bei aktiver Traumannahme ---------- */
+
+.fb-ballinfo.ist-traum {
+  color: #ffe98a;
+  box-shadow: 0 0 10px rgba(255, 216, 74, 0.55);
+}
+
+/* ---------- Standbild einer Fähigkeit ---------- */
+
+.fb-standbild-symbol svg {
+  width: 30px;
+  height: 30px;
+  color: #ffe14d;
+}
+
+.fb-standbild-symbol:empty,
+.fb-standbild-info:empty {
+  display: none;
+}
+
+.fb-standbild-info {
+  font-size: 0.85rem;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
+.fb-standbild[data-art="faehigkeit"] .fb-standbild-titel {
+  color: #ffe14d;
+}
+
+.fb-standbild[data-art="faehigkeit"] {
+  background:
+    repeating-conic-gradient(from 0deg at 35% 50%, rgba(255, 255, 255, 0.08) 0 10deg, transparent 10deg 20deg),
+    radial-gradient(circle at 35% 50%, var(--fb-standbild-farbe, #2b63d9), rgba(8, 12, 22, 0.94) 72%);
+}
+
+/* ---------- Spielerkarte (Auslosung und Teamkarte) ---------- */
+
+.fb-karte {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 2px solid var(--fb-farbe-du);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.fb-karte[data-team="1"] {
+  border-color: var(--fb-farbe-gegner);
+}
+
+.fb-karte-kopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fb-karte-bild {
+  flex: none;
+  width: 32px;
+  height: 48px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.fb-karte-kopf div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.fb-karte-name {
+  font-size: 0.9rem;
+}
+
+.fb-karte-rolle {
+  font-size: 0.72rem;
+  color: var(--farbe-text-leise);
+}
+
+.fb-karte-werte {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fb-karte-werte li {
+  display: grid;
+  grid-template-columns: 6.6em 1fr 1.3em 1.6em;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+}
+
+.fb-wert-name {
+  color: var(--farbe-text-leise);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fb-balken {
+  position: relative;
+  height: 6px;
+  background: var(--farbe-rand);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.fb-balken i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--farbe-text-leise);
+}
+
+.fb-balken i.fb-balken-plus {
+  background: #e8a317;
+}
+
+.fb-wert-zahl {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fb-wert-plus {
+  font-weight: 800;
+  color: #c98407;
+}
+
+.fb-karte-faehigkeit {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  padding-top: 4px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.fb-karte-faehigkeit svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: #e8a317;
+}
+
+.fb-karte-faehigkeit b {
+  font-size: 0.82rem;
+}
+
+.fb-karte-faehigkeit p {
+  margin: 1px 0 0;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  color: var(--farbe-text-leise);
+}
+
+.fb-aktiv {
+  padding: 0 5px;
+  font-size: 0.62rem;
+  color: #3a2a00;
+  background: #ffd84a;
+  border-radius: 999px;
+}
+
+/* ---------- Teamkarte im Spiel ---------- */
+
+.fb-teamkarte {
+  position: absolute;
+  z-index: 20;
+  top: 40px;
+  left: 0;
+  right: 0;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 8px;
+  background: var(--farbe-hintergrund);
+  border: 1px solid var(--farbe-rand);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  animation: fb-ein 0.15s ease-out;
+}
+
+.fb-teamkarte[hidden] {
+  display: none;
+}
+
+.fb-teamkarte-titel {
+  margin: 0 0 6px;
+  font-weight: 800;
+}
+
+.fb-teamkarte-spieler {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ---------- Auslosung ---------- */
+
+.fb-los {
+  position: absolute;
+  z-index: 30;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px;
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--fb-farbe-du) 22%, transparent), transparent 60%),
+    var(--farbe-hintergrund);
+  border-radius: var(--radius-m);
+  overflow: auto;
+}
+
+.fb-los[hidden] {
+  display: none;
+}
+
+.fb-los-titel {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fb-los-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 620px;
+}
+
+.fb-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  padding: 0;
+  background: var(--farbe-flaeche);
+  border: 2px dashed var(--farbe-rand);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.fb-slot.dreht {
+  border-style: solid;
+  border-color: var(--fb-farbe-du);
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--fb-farbe-du) 25%, transparent);
+}
+
+.fb-slot.steht {
+  display: block;
+  min-height: 0;
+  border: 0;
+  background: none;
+  animation: fb-zoom 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.fb-slot.steht .fb-karte {
+  height: 100%;
+}
+
+.fb-slot-frage {
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: var(--farbe-text-leise);
+}
+
+.fb-slot-bild {
+  width: 48px;
+  height: 72px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.fb-slot-name {
+  font-weight: 800;
+}
+
+.fb-slot-rolle {
+  font-size: 0.75rem;
+  color: var(--farbe-text-leise);
+}
+
+.fb-los-unten {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 620px;
+  text-align: center;
+}
+
+.fb-los-unten[hidden] {
+  display: none;
+}
+
+.fb-los-gegner {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--farbe-text-leise);
+}
+
+.fb-los-gegner b {
+  color: var(--fb-farbe-gegner);
+}
+
+.fb-anpfiff {
+  height: 48px;
+  padding: 0 32px;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #fff;
+  background: var(--fb-farbe-du);
+  border: 0;
+  border-bottom: 4px solid color-mix(in srgb, var(--fb-farbe-du) 60%, #000);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.fb-anpfiff:focus-visible {
+  outline: 3px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .fb-los {
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .fb-los-titel {
+    font-size: 1rem;
+  }
+
+  .fb-los-slots,
+  .fb-teamkarte-spieler {
+    gap: 6px;
+  }
+
+  .fb-karte {
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .fb-karte-werte li {
+    grid-template-columns: 1fr 1.2em 1.5em;
+    font-size: 0.62rem;
+  }
+
+  /* auf dem Handy ohne Balken: Name, Zahl und Zuschlag reichen */
+  .fb-karte-werte .fb-balken {
+    display: none;
+  }
+
+  .fb-karte-faehigkeit p {
+    font-size: 0.62rem;
+  }
+
+  .fb-teamkarte {
+    top: 36px;
+    padding: 6px;
   }
 }

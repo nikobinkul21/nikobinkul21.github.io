@@ -71,10 +71,9 @@ const FootballRegeln = (function () {
 
   /**
    * Ein neues Match.
-   * @param {object} [optionen] – { zufall, konfig, figuren, kader, teams, auslosen }
-   *   teams:   [{ name, spieler: [id, id], torwart }, …] fest vorgeben
-   *   auslosen: true – Teams aus dem Kader auslosen (siehe auslosen)
-   *   sonst gelten konfig.teams
+   * @param {object} [optionen] – { zufall, konfig, figuren, kader, teams }
+   *   teams:   [{ name, spieler: [id, id], torwart }, …] fest vorgeben –
+   *            sonst werden die Teams aus dem Kader gelost (siehe auslosen)
    */
   function erstelle(optionen) {
     optionen = optionen || {};
@@ -84,8 +83,8 @@ const FootballRegeln = (function () {
     const F = Object.assign({}, optionen.figuren || STANDARD_FIGUREN, KADER);
     // ohne Vorgabe: Math.random (bei jedem Wurf neu gelesen)
     const zufall = optionen.zufall || function () { return Math.random(); };
-    const auslosung = optionen.auslosen ? auslosen({ konfig: K, kader: KADER, zufall: zufall }) : null;
-    const teams = optionen.teams || (auslosung ? auslosung.teams : K.teams);
+    const auslosung = optionen.teams ? null : auslosen({ konfig: K, kader: KADER, zufall: zufall });
+    const teams = optionen.teams || auslosung.teams;
     const R = K.regeln;
     const LETZTE = R.zonen.length - 1;          // 4: Strafraum
 
@@ -614,7 +613,7 @@ const FootballRegeln = (function () {
       konfig: K,
       figuren: F,
       teams: teams,                 // die beiden Teams dieses Matches
-      auslosung: auslosung,         // { teams, gezogen } – nur bei optionen.auslosen
+      auslosung: auslosung,         // { teams, gezogen } – wenn die Teams gelost wurden
       wert: wert,                   // Wert einer Figur mit Fähigkeit (für Teamkarten)
       faehigkeitVon: faehigkeitVon,
       relZone: relZone,

@@ -7,14 +7,20 @@
    Ein Spielzug wird als Ablauf aus Stationen gespielt: Jede Figur und der
    Ball bekommen eine Spur ({ t, x, y, pose }, t von 0 bis 1). abkuerzen()
    springt sofort ans Ende.
+   Fähigkeiten: Sologang (Lauf übers ganze Feld mit Nachbildern),
+   Traumannahme (Ballannahme mit Leuchtspur, Schimmer solange aktiv),
+   Akrobatik (Fallrückzieher, Seitfallzieher, Scherenschlag), dazu farbige
+   Ballspuren bei Übersicht und Kanone. Über dem Ballführer und seinem
+   Gegenspieler steht ihre Rückennummer in Teamfarbe.
    ========================================================================== */
 
 const FootballSzene = (function () {
 
   function erstelle(canvas, optionen) {
     const K = optionen.konfig;
-    const F = optionen.figuren;
     const A = optionen.arena;
+    let F = {};                 // Figuren des Matches (setzeMatch)
+    let TEAMS = null;
     const S = K.szene;
     const ctx = canvas.getContext("2d");
     // Gezeichnet wird in einem Raster von S.breite × S.hoehe (Feld, Wand,
@@ -33,10 +39,23 @@ const FootballSzene = (function () {
 
     // Alle sechs Figuren: Schlüssel "team-index" bzw. "team-k" (Torwart)
     const FIGUREN = [];
-    K.teams.forEach(function (team, t) {
-      team.spieler.forEach(function (id, i) { FIGUREN.push({ schluessel: t + "-" + i, id: id, team: t }); });
-      FIGUREN.push({ schluessel: t + "-k", id: team.torwart, team: t, torwart: true });
-    });
+
+    /** Neues Match: die beiden Teams und ihre Figuren (mit Teamfarben). */
+    function setzeMatch(teams, figuren) {
+      TEAMS = teams;
+      F = figuren;
+      FIGUREN.length = 0;
+      teams.forEach(function (team, t) {
+        team.spieler.forEach(function (id, i) { FIGUREN.push({ schluessel: t + "-" + i, id: id, team: t }); });
+        FIGUREN.push({ schluessel: t + "-k", id: team.torwart, team: t, torwart: true });
+      });
+      traum = null;
+    }
+
+    let markiert = [];          // Schlüssel der handelnden Spieler (Nummer darüber)
+    let traum = null;           // Schlüssel der Figur mit aktiver Traumannahme
+    let spurPunkte = [];        // Leuchtspur des Balls
+    let nachbilder = [];        // Nachbilder (Sologang)
 
     let aktuell = {};          // schluessel → { x, y, pose, bild, richtung }
     let ball = { x: WELT / 2, y: S.boden - 2, bild: 0 };
@@ -95,9 +114,20 @@ const FootballSzene = (function () {
         aktuell[k] = { x: f.x, y: f.y, richtung: f.richtung, pose: "stehen", bild: 0 };
       });
       ball = { x: auf.ball.x, y: auf.ball.y, bild: 0 };
+      markiert = [auf.traeger, auf.verteidiger];
       kameraZiel = kameraFuer(ball.x, auf.dir);
       kameraX = kameraZiel;
       zeichne();
+    }
+
+    /** Traumannahme sichtbar machen (Figur-ID oder null). */
+    function setzeTraum(figurId) {
+      traum = null;
+      if (!figurId || !TEAMS) return;
+      TEAMS.forEach(function (team, t) {
+        const i = team.spieler.indexOf(figurId);
+        if (i >= 0) traum = t + "-" + i;
+      });
     }
 
     function kameraFuer(x, dir) {
@@ -174,6 +204,37 @@ const FootballSzene = (function () {
       const halteBall = function (t) { const l = ballSpur[ballSpur.length - 1]; ballZu(t, l.x, l.y); };
       let ziel = null;           // Station, in der alle am Ende in L1 stehen
       const p0 = L0.figuren;
+      const hat = function (id) { return (e.faehigkeiten || []).some(function (f) { return f.id === id; }); };
+      let spur = null;           // Farbe der Ballspur (Fähigkeit)
+      let nachbild = null;       // Figur mit Nachbildern (Sologang)
+      markiert = [tr, ver];
+
+      if (e.sologang) {
+        // Sologang: Lauf mit dem Ball durch alle Zonen bis vors Tor, Schuss, Tor –
+        // die Verteidiger kommen nicht hinterher
+        const torX = dir > 0 ? TOR_RECHTS : TOR_LINKS;
+        const kSchl = (1 - e.angriffTeam) + "-k";
+        const vorTor = torX - dir * 30;
+        nachbild = tr;
+        spur = "#ff4d5e";
+        lauf(spuren, tr, 0.02, 0.62, { x: vorTor, y: p0[tr].y }, "laufen");
+        spuren[tr][spuren[tr].length - 1].linear = true;
+        ballSpur.length = 0;
+        ballSpur.push({ t: 0, x: b0.x, y: b0.y });
+        ballZu(0.62, vorTor + dir * 7, p0[tr].y - 2, { linear: true });
+        station(spuren, tr, 0.64, { pose: "schiessen", bild: 1 });
+        ballZu(0.76, torX + dir * 9, S.boden - 12, { bogen: 5 });
+        ballZu(0.86, torX + dir * 10, S.boden - 2, {});
+        lauf(spuren, ver, 0.05, 0.4, { x: p0[ver].x + dir * 20, y: p0[ver].y }, "laufen");
+        station(spuren, kSchl, 0.68, { pose: "hechten", bild: 0, x: torX - dir * 8, y: p0[kSchl].y + 6 });
+        station(spuren, kSchl, 0.86, { pose: "stehen", bild: 0, x: p0[kSchl].x, y: p0[kSchl].y });
+        station(spuren, tr, 0.8, { pose: "jubel", bild: 0 });
+        station(spuren, tr, 0.9, { pose: "jubel", bild: 1, y: p0[tr].y - 3 });
+        station(spuren, tr, 1, { pose: "jubel", bild: 0, y: p0[tr].y });
+        halteBall(1);
+        return spiele({ spuren: spuren, ballSpur: ballSpur, dauer: dauer * 1.5, tor: dir > 0 ? "rechts" : "links",
+          kameraDir: dir, spur: spur, nachbild: nachbild });
+      }
 
       if (e.ausgang === "pass" || e.ausgang === "abgefangen") {
         // Ausholen, Pass – der Ball fliegt zum Mitspieler (bzw. zum Verteidiger)
@@ -185,7 +246,16 @@ const FootballSzene = (function () {
           const zielPos = L1.figuren[empf];
           lauf(spuren, mit, 0.0, 0.5, { x: zielPos.x, y: zielPos.y });
           halteBall(0.2);
-          ballZu(0.55, fussX(zielPos, zielPos.richtung), zielPos.y - 2, { bogen: 9 });
+          ballZu(0.55, fussX(zielPos, zielPos.richtung), zielPos.y - 2, { bogen: hat("uebersicht") ? 16 : 9 });
+          if (hat("uebersicht")) spur = "#5fb4ff";
+          if (hat("traumannahme")) {
+            // Traumannahme: der Ball zieht eine goldene Leuchtspur, der Empfänger stoppt ihn mit dem Knie
+            spur = "#ffd84a";
+            station(spuren, mit, 0.5, { pose: "annahme", bild: 0 });
+            ballZu(0.62, fussX(zielPos, zielPos.richtung) - zielPos.richtung * 2, zielPos.y - 9, { bogen: 3 });
+            ballZu(0.72, fussX(zielPos, zielPos.richtung), zielPos.y - 2, {});
+            station(spuren, mit, 0.74, { pose: "stehen", bild: 0 });
+          }
           // Hat der Verteidiger auf den Pass getippt? Er springt – zu spät
           if (e.verteidigung === "passBlockieren") {
             const mitte = (p0[tr].x + zielPos.x) / 2;
@@ -233,10 +303,24 @@ const FootballSzene = (function () {
         const torX = dir > 0 ? TOR_RECHTS : TOR_LINKS;
         const kSchl = (1 - e.angriffTeam) + "-k";
         const kPos = p0[kSchl];
-        station(spuren, tr, 0.04, { pose: "schiessen", bild: 0 });
-        station(spuren, tr, 0.22, { pose: "schiessen", bild: 1 });
-        station(spuren, tr, 0.45, { pose: "stehen", bild: 0 });
-        halteBall(0.22);
+        if (e.schussArt) {
+          // Akrobatik: Absprung, die jeweilige Schussbewegung in der Luft, Landung
+          const pose = { "Fallrückzieher": "fallrueckzieher", "Seitfallzieher": "seitfallzieher", "Scherenschlag": "scherenschlag" }[e.schussArt] || "schiessen";
+          const hoch = pose === "scherenschlag" ? 7 : 5;
+          station(spuren, tr, 0.04, { pose: "schiessen", bild: 0 });
+          station(spuren, tr, 0.12, { pose: pose, bild: 0, y: p0[tr].y - hoch, richtung: pose === "fallrueckzieher" ? -dir : dir });
+          station(spuren, tr, 0.36);                       // in der Luft halten
+          station(spuren, tr, 0.44, { pose: "stehen", bild: 0, y: p0[tr].y, richtung: dir });
+          ballZu(0.18, b0.x + dir * 2, p0[tr].y - 14, { bogen: 6 });
+          spur = "#ff9de2";
+        } else {
+          station(spuren, tr, 0.04, { pose: "schiessen", bild: 0 });
+          station(spuren, tr, 0.22, { pose: "schiessen", bild: 1 });
+          station(spuren, tr, 0.45, { pose: "stehen", bild: 0 });
+          halteBall(0.22);
+        }
+        if (hat("kanone")) spur = "#ff9a3c";
+        if (e.faehigkeiten && e.faehigkeiten.some(function (f) { return f.torwartHalbiert; })) spur = "#ffd84a";
         if (e.ausgang === "geblockt") {
           // Der Verteidiger wirft sich in den Schuss
           const blockX = p0[ver].x - dir * 4;
@@ -286,7 +370,7 @@ const FootballSzene = (function () {
       }
 
       return spiele({ spuren: spuren, ballSpur: ballSpur, dauer: dauer, tor: e.tor ? (dir > 0 ? "rechts" : "links") : null,
-        kameraDir: dir });
+        kameraDir: dir, spur: spur, nachbild: nachbild, markiertDanach: [L1.traeger, L1.verteidiger] });
     }
 
     /** Nach einem Tor (bzw. vor dem Elfmeter): alle laufen in die neue Lage. */
@@ -318,7 +402,7 @@ const FootballSzene = (function () {
       const punkt = torX - dir * 46;
       const p = {};
       // Schütze am Punkt, Torwart auf der Linie, der Rest wartet an der Mittellinie
-      const schuetzeIndex = K.teams[team].spieler.indexOf(lage.schuetze);
+      const schuetzeIndex = TEAMS[team].spieler.indexOf(lage.schuetze);
       p[team + "-" + schuetzeIndex] = { x: punkt - dir * 10, y: S.boden + 2, richtung: dir };
       p[team + "-" + (1 - schuetzeIndex)] = { x: punkt - dir * 70, y: S.boden - 4, richtung: dir };
       p[(1 - team) + "-0"] = { x: punkt - dir * 82, y: S.boden - 5, richtung: dir };
@@ -338,6 +422,7 @@ const FootballSzene = (function () {
         aktuell[k] = { x: f.x, y: f.y, richtung: f.richtung, pose: "stehen", bild: 0 };
       });
       ball = { x: auf.ball.x, y: auf.ball.y, bild: 0 };
+      markiert = [auf.schuetze, auf.torwart];
       kameraZiel = kameraFuer(auf.torX - auf.dir * 50, 0);
       kameraX = kameraZiel;
       zeichne();
@@ -383,6 +468,8 @@ const FootballSzene = (function () {
     function spiele(a) {
       return new Promise(function (fertig) {
         ablauf = Object.assign(a, { start: performance.now(), fertig: fertig, torGezeigt: false });
+        spurPunkte = [];
+        nachbilder = [];
         if (a.dauer <= 0) abkuerzen();
         else starte();
       });
@@ -404,6 +491,20 @@ const FootballSzene = (function () {
       });
       const b = wert(a.ballSpur, t);
       ball = { x: b.x, y: b.y, bild: b.bewegt ? Math.floor(zeit / 70) % 2 : ball.bild };
+      // Leuchtspur: die letzten Positionen des fliegenden Balls
+      if (a.spur && b.bewegt) {
+        spurPunkte.push({ x: ball.x, y: ball.y });
+        if (spurPunkte.length > 16) spurPunkte.shift();
+      }
+      // Nachbilder: alle paar Bilder ein Abbild der laufenden Figur
+      if (a.nachbild && aktuell[a.nachbild] && t < 0.8) {
+        const n = aktuell[a.nachbild];
+        const letztes = nachbilder[nachbilder.length - 1];
+        if (!letztes || Math.abs(letztes.x - n.x) > 9) {
+          nachbilder.push(Object.assign({}, n));
+          if (nachbilder.length > 6) nachbilder.shift();
+        }
+      }
       if (a.tor && !a.torGezeigt && t >= 0.5) { netzWackeln[a.tor] = 1; a.torGezeigt = true; }
       kameraZiel = a.kameraFest !== undefined ? a.kameraFest : kameraFuer(ball.x, a.kameraDir);
     }
@@ -415,6 +516,9 @@ const FootballSzene = (function () {
         anwenden(ablauf, t);
         if (t >= 1) {
           const fertig = ablauf.fertig;
+          if (ablauf.markiertDanach) markiert = ablauf.markiertDanach;
+          spurPunkte = [];
+          nachbilder = [];
           if (ablauf.dauer <= 1 || jetzt - ablauf.start > ablauf.dauer) kameraX = kameraZiel;
           ablauf = null;
           fertig();
@@ -472,6 +576,24 @@ const FootballSzene = (function () {
       });
       dinge.push({ y: ball.y + 2, ball: true });
       dinge.sort(function (a, b) { return a.y - b.y; });
+      // Nachbilder (Sologang): durchsichtige Abbilder hinter der Figur
+      if (ablauf && ablauf.nachbild) {
+        const fig = FIGUREN.find(function (f) { return f.schluessel === ablauf.nachbild; });
+        nachbilder.forEach(function (n, i) {
+          ctx.globalAlpha = 0.12 + 0.06 * i;
+          FootballSprites.zeichneFigur(ctx, fig.id, F[fig.id], n.pose, n.bild, n.x - links, n.y, n.richtung);
+        });
+        ctx.globalAlpha = 1;
+      }
+      // Leuchtspur des Balls
+      if (ablauf && ablauf.spur) {
+        spurPunkte.forEach(function (pk, i) {
+          ctx.globalAlpha = (i + 1) / spurPunkte.length * 0.8;
+          ctx.fillStyle = ablauf.spur;
+          ctx.fillRect(Math.round(pk.x - links) - 1, Math.round(pk.y) - 1, 3, 3);
+        });
+        ctx.globalAlpha = 1;
+      }
       dinge.forEach(function (d) {
         if (d.ball) {
           schatten(ball.x - links, Math.max(ball.y + 2, Math.min(S.boden + 4, ball.y + 2)), 3);
@@ -482,7 +604,15 @@ const FootballSzene = (function () {
         if (a.x - links < -20 || a.x - links > BREITE + 20) return;
         const boden = a.pose === "hechten" ? a.y + 4 : a.y;
         schatten(a.x - links, boden, 5);
+        if (d.f.schluessel === traum) schimmer(a.x - links, a.y);
         FootballSprites.zeichneFigur(ctx, d.f.id, F[d.f.id], a.pose, a.bild, a.x - links, a.y, a.richtung);
+      });
+      // Rückennummern über den handelnden Spielern
+      markiert.forEach(function (k) {
+        const a = aktuell[k];
+        const fig = FIGUREN.find(function (f) { return f.schluessel === k; });
+        if (!a || !fig) return;
+        nummernSchild(a.x - links, a.y - FootballSprites.HOEHE - 3, F[fig.id]);
       });
       // Tor rechts vorn: Pfosten über den Figuren
       zeichnePfosten(links, TOR_LINKS, -1);
@@ -509,6 +639,39 @@ const FootballSzene = (function () {
       kameraZiel = kameraFuer(kameraZiel, 0);
       kameraX = kameraFuer(kameraX, 0);
       zeichne();
+    }
+
+    /** Goldener Schimmer um eine Figur (aktive Traumannahme). */
+    function schimmer(x, y) {
+      const puls = Math.floor(zeit / 120) % 4;
+      ctx.fillStyle = "rgba(255, 216, 74, 0.25)";
+      ctx.fillRect(Math.round(x) - 9, Math.round(y) - 25, 18, 25);
+      ctx.fillStyle = "#ffe98a";
+      const punkte = [[-8, -20], [8, -14], [-7, -8], [7, -24], [0, -27], [9, -4]];
+      punkte.forEach(function (pk, i) {
+        if ((i + puls) % 2 === 0) ctx.fillRect(Math.round(x + pk[0]), Math.round(y + pk[1]), 1, 1);
+      });
+    }
+
+    /** Rückennummer in Teamfarbe über einer Figur (3×5-Ziffern). */
+    function nummernSchild(x, y, figur) {
+      const ziffern = String(figur.nummer).split("").map(function (z) { return FootballSprites.daten.ZIFFERN[z]; });
+      const breite = ziffern.reduce(function (s, z) { return s + z[0].length; }, 0) + ziffern.length - 1;
+      const x0 = Math.round(x - breite / 2), y0 = Math.round(y - 5);
+      ctx.fillStyle = "#15161c";
+      ctx.fillRect(x0 - 2, y0 - 2, breite + 4, 9);
+      ctx.fillStyle = figur.palette.trikot;
+      ctx.fillRect(x0 - 1, y0 - 1, breite + 2, 7);
+      ctx.fillStyle = figur.palette.nummer || "#ffffff";
+      let xx = x0;
+      ziffern.forEach(function (z) {
+        for (let r = 0; r < 5; r++) for (let c = 0; c < z[r].length; c++) if (z[r][c] === "1") ctx.fillRect(xx + c, y0 + r, 1, 1);
+        xx += z[0].length + 1;
+      });
+      // kleiner Pfeil nach unten
+      ctx.fillStyle = "#15161c";
+      ctx.fillRect(Math.round(x) - 1, y0 + 7, 3, 1);
+      ctx.fillRect(Math.round(x), y0 + 8, 1, 1);
     }
 
     function schatten(x, y, breite) {
@@ -679,6 +842,8 @@ const FootballSzene = (function () {
 
     return {
       setzeLage: setzeLage,
+      setzeMatch: setzeMatch,
+      setzeTraum: setzeTraum,
       passeGroesseAn: passeGroesseAn,
       setzeElfmeter: setzeElfmeter,
       spieleZug: spieleZug,

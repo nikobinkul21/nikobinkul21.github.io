@@ -8,13 +8,12 @@
 
 const FootballKonfig = {
 
-  // Die beiden Teams: 0 = du (Knöpfe), 1 = der Computer.
-  // Die Einträge verweisen auf Figuren aus football/figuren.js.
-  // spieler[0] greift vorne an und verteidigt in der gegnerischen Hälfte,
-  // spieler[1] verteidigt in der eigenen Hälfte (siehe regeln.verteidiger).
+  // Die beiden Teams: 0 = du (Knöpfe), 1 = der Computer. Die Spieler
+  // werden vor jedem Match aus dem Kader gelost (siehe kader unten);
+  // spieler[0] spielt vorne, spieler[1] verteidigt die eigene Hälfte.
   teams: [
-    { name: "Nordlicht", spieler: ["haru", "milo"], torwart: "timo" },
-    { name: "Glutwerk", spieler: ["viktor", "jano"], torwart: "bo" },
+    { name: "Nordlicht" },
+    { name: "Glutwerk" },
   ],
 
   arena: "halleNull",     // Eintrag aus football/arenen.js
@@ -127,6 +126,9 @@ const FootballKonfig = {
     aufdecken: 700,          // beide Aktionen stehen nebeneinander
     szene: 1500,             // die Szene spielt den Ausgang
     standbild: 1000,         // Standbild bei Tor oder Ballgewinn
+    faehigkeit: 1000,        // Standbild, wenn eine Fähigkeit auslöst
+    slot: 1300,              // Auslosung: so lange dreht sich ein Slot
+    slotPause: 350,          // Pause zwischen den beiden Slots
     elfmeter: 1300,          // ein Elfmeter
     ruhig: 350,              // "Bewegung reduzieren": nur kurzes Einblenden
   },

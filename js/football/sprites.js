@@ -5,11 +5,15 @@
    - POSE: der Körper (Stehen, Laufen, Passen, Schießen, Zweikampf,
      Jubel, Hechten) als Raster ab Zeile 9
    Jedes Zeichen ist eine Farbe der Palette der Figur ("." = durchsichtig):
-     k Umriss · s Haut · S Hautschatten · h Haare · H Haarglanz · e Augen
+     k Umriss · s Haut · S Hautschatten · e Augen
+     h Haare · H zweite Haarfarbe/Glanz · r dritte Haarfarbe · B Band
+     x Bart · z Narbe · f Sommersprossen
      t Trikot · T Trikotschatten · p Hose · c Stutzen · b Schuhe
-     g Hände (bei Torhütern: Handschuhe)
+     g Hände (bei Torhütern: Handschuhe) · n Rückennummer
    Die Rückennummer wird mit einer 3×5-Pixelschrift aufs Trikot gesetzt
-   (in den Jubel-Posen, wenn sich die Figur zum Publikum dreht).
+   (die 1 ist nur einen Pixel breit – so passen auch 10, 14 und 17).
+   Spieler des Kaders: spielfigur(spieler, trikot) baut aus Aussehen
+   (players.js) und Teamtrikot die Figur für diese Funktionen.
    Später lassen sich die Raster einfach durch eigene Grafiken ersetzen:
    zeichneFigur() ist die einzige Stelle, die sie auf den Canvas bringt.
    Alle Figuren hier sind eigens für NTB gezeichnet.
@@ -26,17 +30,10 @@ const FootballSprites = (function () {
     ".....kSSSk......",   // 8: Hals
   ];
 
+  // Je Frisur die Zeilen 0–5 (darunter folgt das Gesicht), dazu optional
+  // Pixel außerhalb des Rasters (zusatz: [x, y, Zeichen], z. B. der Zopf)
   const FRISUREN = {
-    // Strubbelig, schwarz, mit einer Strähne, die vorn in die Stirn fällt
-    strubbel: [
-      "......k..k......",
-      "....kkhkkhkk....",
-      "...khhhhhhhhk...",
-      "...khHhhhhhhhk..",
-      "...khhhhhhhhhk..",
-      "...khhhssshek...",
-    ],
-    // Kurz geschoren
+    // Kurz geschoren (Torhüter)
     kurz: [
       "................",
       ".....kkkkk......",
@@ -45,24 +42,81 @@ const FootballSprites = (function () {
       "...khhhhhhhk....",
       "...khhhssssek...",
     ],
-    // Hochgestellte Spitzen
-    stachel: [
-      "....k.k.k.......",
-      "...khkhkhk.k....",
-      "...khhhhhhkhk...",
-      "...khHhhhhhhk...",
-      "...khhhhhhhk....",
+    // Nach hinten stehend: Spitzen ragen am Hinterkopf heraus, Stirn frei
+    zurueck: [
+      "................",
+      "..kk.kkkkk......",
+      ".khhkhhhhhkk....",
+      "..khhhhHhhhhk...",
+      "...khhhhhhssk...",
       "...khhhssssek...",
     ],
-    // Mit Stirnband in Trikotfarbe
-    band: [
+    // Irokese: hoher Kamm mit Streifen (h/H), Seiten kurz rasiert
+    irokese: [
+      "....kkkkkkk.....",
+      "...khHhHhHhk....",
+      "...khHhHhHhHk...",
+      "...kSSSssssssk..",
+      "...kSSssssssk...",
+      "...kSssssssek...",
+    ],
+    // Kurz mit Stirnband (B)
+    kurzBand: [
       "................",
       ".....kkkkk......",
       "....khhhhhk.....",
-      "...kTTTTTTTk....",
-      "...khhhhhhhk....",
+      "...khHhhhhhk....",
+      "...kBBBBBBBBk...",
       "...khhhssssek...",
     ],
+    // Lange Haare im Zopf, dreifarbig (h, H, r); der Zopf hängt hinten herab
+    zopf: {
+      zeilen: [
+        "................",
+        ".....kkkkkk.....",
+        "....khhHhhhk....",
+        "...khrhhHhhhk...",
+        "..kkhhhhhhhhk...",
+        "..khkhhhssssek..",
+      ],
+      zusatz: [[1, 5, "k"], [0, 6, "k"], [1, 6, "r"], [2, 6, "k"],
+        [0, 7, "k"], [1, 7, "h"], [2, 7, "k"], [0, 8, "k"], [1, 8, "H"], [2, 8, "k"],
+        [0, 9, "k"], [1, 9, "r"], [2, 9, "k"], [1, 10, "k"]],
+    },
+    // Kurz und glatt mit Seitenscheitel
+    kurzGlatt: [
+      "................",
+      ".....kkkkkk.....",
+      "....khhhhhhk....",
+      "...khHHhhhhhk...",
+      "...khhhhhhhhk...",
+      "...khhhssssek...",
+    ],
+    // Nach oben gegelt: steile Spitzen, Stirn frei
+    gegelt: [
+      "....k.k.kk......",
+      "...khkhkhhk.....",
+      "...khhhhhhhk....",
+      "...khHhhhhhhk...",
+      "...khhhhsssk....",
+      "...khhhssssek...",
+    ],
+    // Locken mit Haarband (B)
+    locken: [
+      "....kk.kk.......",
+      "...khhkhhkk.....",
+      "..khHhhHhhhk....",
+      "..kBBBBBBBBk....",
+      "..khhHhhhhhhk...",
+      "..khHhhssssek...",
+    ],
+  };
+
+  // Extras im Gesicht (Kopfkoordinaten)
+  const EXTRAS = {
+    stoppelbart: [[7, 7, "x"], [9, 7, "x"], [8, 6, "x"], [10, 6, "x"]],
+    narbe: [[10, 4, "z"], [10, 5, "z"]],
+    sommersprossen: [[8, 6, "f"], [10, 6, "f"], [9, 5, "f"]],
   };
 
   // ------------------------------------------------------------------
@@ -129,10 +183,32 @@ const FootballSprites = (function () {
       "....kkkk........",
       "................",
     ],
+    // Ballannahme: Knie hoch
+    annahme: [
+      "....kpk.kppk....",
+      "....ksk..kssk...",
+      "....kck...kcck..",
+      "....kck....kbbk.",
+      "....kck....kkkk.",
+      "....kbbk........",
+      "....kkkk........",
+      "................",
+    ],
+    // Scherenschlag: in der Luft, die Beine wie eine Schere
+    schere: [
+      "....kpk.kpppk...",
+      "...ksk.....kssk.",
+      "..kck.......kcck",
+      ".kck.........kbb",
+      "kbbk.........kkk",
+      "kkk.............",
+      "................",
+      "................",
+    ],
   };
 
   function pose(beine, extra) {
-    return Object.assign({ ab: 9, kopf: { x: 0, y: 0 }, koerper: OBERKOERPER.concat(BEINE[beine]), nummer: false }, extra || {});
+    return Object.assign({ ab: 9, kopf: { x: 0, y: 0 }, koerper: OBERKOERPER.concat(BEINE[beine]), nummer: true }, extra || {});
   }
 
   const POSEN = {
@@ -157,12 +233,48 @@ const FootballSprites = (function () {
         "kkkk............k.",
       ],
     }],
-    // Jubel: beide Arme hoch (Hände über dem Kopf), zum Publikum gedreht –
-    // nur hier ist die Rückennummer zu sehen (auch im Standbild)
+    annahme: [pose("annahme")],
+    // Jubel: beide Arme hoch (Hände über dem Kopf)
     jubel: [
-      pose("stehen", { nummer: true, arme: [[1, 2], [1, 3], [2, 4], [2, 5], [2, 6], [14, 2], [14, 3], [13, 4], [13, 5], [13, 6]] }),
-      pose("schritt1", { nummer: true, arme: [[1, 1], [1, 2], [2, 3], [2, 4], [2, 5], [14, 1], [14, 2], [13, 3], [13, 4], [13, 5]] }),
+      pose("stehen", { arme: [[1, 2], [1, 3], [2, 4], [2, 5], [2, 6], [14, 2], [14, 3], [13, 4], [13, 5], [13, 6]] }),
+      pose("schritt1", { arme: [[1, 1], [1, 2], [2, 3], [2, 4], [2, 5], [14, 1], [14, 2], [13, 3], [13, 4], [13, 5]] }),
     ],
+    // Akrobatik: Fallrückzieher – rücklings in der Luft, ein Bein schlägt über den Kopf
+    fallrueckzieher: [{
+      ab: 1, kopf: { x: -1, y: 12 }, breite: 24, nummer: false,
+      koerper: [
+        "...................kbbk.",
+        "..................kcck..",
+        ".................kcck...",
+        "................kssk....",
+        "...............kppk.....",
+        "..............kpppk.....",
+        ".............kppppkkk...",
+        "............kTttpkscck..",
+        "...........kttttk..kcbbk",
+        "..........kttttk....kkk.",
+        ".........kttttgk........",
+        "........ktttTk..........",
+        "........kkkk............",
+      ],
+    }],
+    // Akrobatik: Seitfallzieher – seitlich flach in der Luft, Bein nach vorn oben
+    seitfallzieher: [{
+      ab: 9, kopf: { x: -1, y: 6 }, breite: 24, nummer: false,
+      koerper: [
+        "......................kb",
+        ".....................kck",
+        "...................kcck.",
+        "...........kkkkkkkppk...",
+        "..........kttttTTpppk...",
+        "..........ktttTTppk.kck.",
+        "..........kgttTkkkk..kck",
+        "...........kkkk......kbk",
+        ".....................kk.",
+      ],
+    }],
+    // Akrobatik: Scherenschlag – aufrecht in der Luft, Arme ausgebreitet
+    scherenschlag: [pose("schere", { arme: [[2, 10], [1, 9], [13, 10], [14, 9]] })],
     // Torwart hechtet: flach in der Luft, die Handschuhe vorn am Kopf (24 breit)
     hechten: [{
       ab: 14, kopf: { x: 8, y: 6 }, breite: 24, nummer: false,
@@ -201,6 +313,8 @@ const FootballSprites = (function () {
     const p = figur.palette;
     return {
       k: "#15161c", s: p.haut, S: p.hautSchatten, h: p.haare, H: p.haareGlanz, e: p.augen,
+      r: p.haareDrei || p.haareGlanz, B: p.band || p.trikotSchatten, x: p.bart || p.hautSchatten,
+      z: p.narbe || p.hautSchatten, f: p.sommersprossen || p.hautSchatten,
       t: p.trikot, T: p.trikotSchatten, p: p.hose, c: p.stutzen, b: p.schuhe,
       g: figur.sprite && figur.sprite.torwart ? "#f5e663" : p.haut,
       n: p.nummer,
@@ -223,9 +337,15 @@ const FootballSprites = (function () {
       for (let x = 0; x < zeile.length; x++) setze(x, p.ab + i, zeile[x]);
     });
     // Kopf (Frisur + Gesicht) darüber
-    const frisur = FRISUREN[(figur.sprite && figur.sprite.frisur) || "kurz"] || FRISUREN.kurz;
-    frisur.concat(GESICHT).forEach(function (zeile, i) {
+    const eintrag = FRISUREN[(figur.sprite && figur.sprite.frisur) || "kurz"] || FRISUREN.kurz;
+    const frisur = Array.isArray(eintrag) ? { zeilen: eintrag, zusatz: [] } : eintrag;
+    frisur.zeilen.concat(GESICHT).forEach(function (zeile, i) {
       for (let x = 0; x < zeile.length; x++) setze(x + p.kopf.x, i + p.kopf.y, zeile[x]);
+    });
+    // Zusatzpixel der Frisur (Zopf) und Extras im Gesicht (Bart, Narbe, Sommersprossen)
+    const extras = (figur.sprite && figur.sprite.extras) || [];
+    frisur.zusatz.concat.apply(frisur.zusatz, extras.map(function (x) { return EXTRAS[x] || []; })).forEach(function (a) {
+      setze(a[0] + p.kopf.x, a[1] + p.kopf.y, a[2]);
     });
     // Arme (Jubel)
     (p.arme || []).forEach(function (a) { setze(a[0], a[1], "g"); });
@@ -246,7 +366,7 @@ const FootballSprites = (function () {
   const cache = {};
 
   function bildVon(figurId, figur, poseName, bild) {
-    const schluessel = figurId + "|" + poseName + "|" + bild;
+    const schluessel = figurId + "|" + figur.palette.trikot + "|" + poseName + "|" + bild;
     if (cache[schluessel]) return cache[schluessel];
     const r = raster(figur, poseName, bild);
     const farben = farbenVon(figur);
@@ -297,6 +417,19 @@ const FootballSprites = (function () {
     });
   }
 
+  /**
+   * Figur eines Kaderspielers in Teamfarben: Aussehen (players.js) +
+   * Trikot (konfig.kader.trikots[team]) → { name, nummer, palette, sprite, werte }.
+   */
+  function spielfigur(spieler, trikot) {
+    const a = spieler.aussehen;
+    return {
+      name: spieler.name, nummer: spieler.nummer, werte: spieler.werte, faehigkeit: spieler.faehigkeit, rolle: spieler.rolle,
+      palette: Object.assign({}, a, trikot),
+      sprite: { frisur: a.frisur, extras: a.extras || [] },
+    };
+  }
+
   /** Anzahl der Bilder einer Pose (für Animationen). */
   function bilder(poseName) {
     return (POSEN[poseName] || POSEN.stehen).length;
@@ -308,10 +441,11 @@ const FootballSprites = (function () {
     frisuren: Object.keys(FRISUREN),
     raster: raster,
     bilder: bilder,
+    spielfigur: spielfigur,
     zeichneFigur: zeichneFigur,
     zeichneBall: zeichneBall,
     // Für Prüfungen: die rohen Daten
-    daten: { FRISUREN: FRISUREN, POSEN: POSEN, ZIFFERN: ZIFFERN, BALL: BALL },
+    daten: { FRISUREN: FRISUREN, EXTRAS: EXTRAS, POSEN: POSEN, ZIFFERN: ZIFFERN, BALL: BALL },
   };
 })();
 
