@@ -16,6 +16,12 @@ const SPIELE = [
     beschreibung: "Das klassische 9×9-Zahlenrätsel in vier Schwierigkeitsgraden.",
     init: initSudoku,
   },
+  {
+    id: "football",
+    name: "Fußball",
+    beschreibung: "Duell 2 gegen 2 in Seitenansicht: Passen, Dribbeln, Schießen – und den Gegner durchschauen.",
+    init: initFootball,
+  },
 ];
 
 // Merkt sich, welche Spiele schon gestartet wurden (init nur 1x)
