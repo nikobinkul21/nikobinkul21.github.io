@@ -2,7 +2,7 @@
    worlds/welt3.js – Welt 3: "Höhlen und Zwergenminen" (Level 41 bis 60)
    Tropfsteinhöhlen, Grubenlampen und Schienen der Zwerge.
    Noch leer: Solange "bosse" leer ist, wird die Welt übersprungen – nach
-   der letzten gebauten Welt beginnt der nächste Durchlauf bei Welt 1.
+   der letzten gebauten Welt beginnt die nächste Runde bei Welt 1.
    Aufbau der Bosse wie in worlds/welt1.js (genau 20, Level 5/10/15 Elite,
    Level 20 Weltboss).
    ========================================================================== */

@@ -58,12 +58,12 @@ const SudokuKampf = (function () {
   const DAUER = {
     schlag: 260,
     treffer: 420,
-    angriff: 380,
+    zuschlagen: 380,   // Boss schlägt zu (falsche Zahl)
     sieg: 900,
     erscheinen: 450,
     kritisch: 560,     // Wackeln bei kritischem Treffer
     stolpern: 520,
-    banner: 1100,      // Hinweis, wenn eine Boss-Eigenheit auslöst
+    banner: 1100,      // großer Hinweis auf der Bühne (z. B. Name der Fähigkeit)
     eliteAuftritt: 1500, // Einblendung "Ein Elite-Boss erscheint"
     weltbossAuftritt: 2200, // eigener Auftritt des Weltbosses (Bühne dunkel, großes Banner)
     weltEinblendung: 1900,  // Name der Welt beim Betreten (blockiert nichts)
@@ -76,8 +76,9 @@ const SudokuKampf = (function () {
     walze: 1900,       // Slot-Walze bis zum Stillstand
     walzePause: 550,   // kurz stehen lassen, bevor das Sudoku startet
     walzeSpecial: 900, // bei Special Grade etwas länger
-    angriffAnsage: 450,  // Boss holt aus, der Name des Angriffs erscheint
-    angriffWirkung: 650, // eigene Animation des Angriffs
+    faehigkeitAnsage: 450,  // Boss holt aus, der Name der Fähigkeit erscheint
+    faehigkeitWirkung: 650, // eigene Animation der Fähigkeit
+    timerAblauf: 900,       // Tick, Tick: der Timer geht hoch
     parade: 700,         // Held pariert mit dem Schwert
     // Buchschlag (Normal, Desktop; Schnell/Smartphone kürzer): zusammen etwa 2 Sekunden
     buchFeld: 110,       // Abstand, in dem die neun Felder aufleuchten und ihre Ziffer losschicken
@@ -122,19 +123,26 @@ const SudokuKampf = (function () {
     warnung: '<path d="M3 0h1v1h1v2h1v2h1v2H0V5h1V3h1V1h1z"/><path fill="#fff" d="M3 2h1v2H3zM3 5h1v1H3z"/>',
     krone: '<path d="M0 1h1v2h1V2h1V0h1v2h1v1h1V1h1v6H0z"/>',
     sprechblase: '<path d="M0 0h7v5H3v1H2v1H1V5H0z"/><path fill="rgba(255,255,255,.6)" d="M1 2h1v1H1zM3 2h1v1H3zM5 2h1v1H5z"/>',
-    // Gegenangriffe der Bosse und die Parade
-    // Einschüchtern: finsterer Blick (zwei schräge Brauen, zwei Augen)
-    einschuechtern: '<path d="M0 1h1v1h1v1h1v1H1V3H0zM6 1h1v2H6v1H4V3h1V2h1z"/><path d="M1 5h2v1H1zM4 5h2v1H4z"/>',
+    // Fähigkeiten der Bosse und die Parade
     siegel: '<path d="M2 0h3v1h1v2H5V1H2v2H1V1h1z"/><path d="M0 3h7v4H0z"/><path fill="rgba(0,0,0,.5)" d="M3 4h1v2H3z"/>',
     finsternis: '<path d="M2 0h3v1H3v1H2v3h1v1h2v1H2V6H1V5H0V2h1V1h1z"/><path d="M5 2h1v1H5zM6 4h1v1H6z"/>',
     fluch: '<path d="M1 0h5v1h1v3H6v1H5v2H2V5H1V4H0V1h1z"/><path fill="rgba(0,0,0,.6)" d="M2 2h1v1H2zM4 2h1v1H4zM3 4h1v1H3z"/>',
-    hieb: '<path d="M5 0h1v1H5zM4 1h1v1H4zM3 2h1v1H3zM2 3h1v1H2zM1 4h1v1H1zM6 2h1v1H6zM5 3h1v1H5zM4 4h1v1H4zM3 5h1v1H3zM2 6h1v1H2z"/>',
+    // Tick, Tick: Bombe mit brennender Lunte
+    tickTick: '<path d="M2 2h3v1h1v3H5v1H2V6H1V3h1z"/><path d="M4 1h1v1H4z"/><path fill="#ffd34d" d="M5 0h1v1H5z"/><path fill="rgba(255,255,255,.55)" d="M2 3h1v1H2z"/>',
+    // Verwirrung: Fragezeichen
+    verwirrung: '<path d="M1 0h5v1H1zM0 1h2v1H0zM5 1h2v1H5zM4 2h2v1H4zM3 3h2v2H3zM3 6h2v1H3z"/>',
     schild: '<path d="M0 0h7v4H6v1H5v1H4v1H3V6H2V5H1V4H0z"/><path fill="rgba(255,255,255,.6)" d="M1 1h2v1H1zM1 2h1v1H1z"/>',
     // Buch: Einband mit hellen Seiten am Rand
     buch: '<path d="M0 0h6v1h1v6H1V6H0z"/><path fill="rgba(255,255,255,.75)" d="M1 6h6v1H1zM6 1h1v5H6z"/><path fill="rgba(0,0,0,.3)" d="M1 0h1v6H1z"/>',
     // Reihenbrecher: eine Reihe Blöcke, in der Mitte zerbrochen
     reihe: '<path d="M0 2h2v3H0zM5 2h2v3H5z"/><path d="M3 1h1v2H3zM2 4h1v2H2zM4 3h1v1H4z"/><path fill="rgba(255,255,255,.55)" d="M0 2h1v1H0zM5 2h1v1H5z"/>',
   };
+
+  /** "2:00" aus Millisekunden (aufgerundet auf volle Sekunden) – Timer von Tick, Tick. */
+  function zeitText(ms) {
+    const sek = Math.max(0, Math.ceil(ms / 1000));
+    return Math.floor(sek / 60) + ":" + String(sek % 60).padStart(2, "0");
+  }
 
   /** Ein Symbol als fertiges SVG (Farbe kommt über CSS: fill). */
   function symbolSvg(name) {
@@ -214,7 +222,6 @@ const SudokuKampf = (function () {
     /** Wie ist der Wurf ausgegangen? (bestimmt die Landung und die Farbe) */
     function artVon(e) {
       if (e.immun) return e.selten.art;          // "immun" oder "geblockt" (seltene Eigenschaft)
-      if (e.eigenheit) return "geblockt";        // Rüstung
       if (e.kritisch) return "kritisch";
       if (e.fehlschlag) return "fehlschlag";
       return "";
@@ -250,7 +257,7 @@ const SudokuKampf = (function () {
           if (!rollend) {
             const teil = e.rechnung && e.rechnung.wuerfel ? e.rechnung.wuerfel[k] : null;
             if (teil && teil.kritisch) kasten.classList.add("ist-kritisch");
-            if (teil && (teil.immun || teil.geblockt)) kasten.classList.add("ist-immun");
+            if (teil && teil.immun) kasten.classList.add("ist-immun");
             if (teil && teil.fehlschlag) kasten.classList.add("ist-fehlschlag");
             if (e.wuerfelModus === "hoechster" && k !== hoechster) kasten.classList.add("zaehlt-nicht");
           }
@@ -462,12 +469,9 @@ const SudokuKampf = (function () {
         '<div class="kampf-buehne">' +
           // Pixel-Hintergrund der Welt (hinter allem)
           '<canvas class="kampf-hintergrund" aria-hidden="true"></canvas>' +
-          // Boss oben: Infokasten links (mit Eigenheit), Figur rechts
+          // Boss oben: Infokasten links, Figur rechts
           '<div class="kampf-info kampf-info--boss">' +
             '<div class="kampf-name"><span class="kampf-boss-name"></span> <span class="kampf-boss-nr"></span></div>' +
-            '<button type="button" class="kampf-eigenheit hat-tipp">' +
-              '<span class="kampf-eigenheit-name"></span>' + tippHtml() +
-            "</button>" +
             // Nur bei Elite-Bossen: die seltene Eigenschaft
             '<button type="button" class="kampf-selten hat-tipp" hidden>' +
               '<span class="kampf-selten-marke">Selten</span><span class="kampf-selten-name"></span>' + tippHtml() +
@@ -479,17 +483,15 @@ const SudokuKampf = (function () {
             '<div class="kampf-hp-zeile"><span class="kampf-elite-hinweis"></span><span class="kampf-hp-zahl"></span></div>' +
           "</div>" +
           '<div class="kampf-figur kampf-figur--boss"><canvas class="kampf-boss"></canvas></div>' +
-          // Über dem Boss: sein angekündigter Angriff mit Zähler ("Siegel in 8 Zügen")
+          // Über dem Boss: seine Fähigkeit mit Zähler ("Siegel in 8 Zügen")
           '<button type="button" class="kampf-absicht hat-tipp" hidden>' +
             '<span class="kampf-absicht-kopf"><span class="kampf-absicht-symbol"></span><span class="kampf-absicht-name"></span></span>' +
             '<span class="kampf-absicht-text"></span>' + tippHtml() +
           "</button>" +
           // Held unten: Figur links, Herzen, Münzen und Würfel rechts
           '<div class="kampf-figur kampf-figur--held"><canvas class="kampf-held"></canvas></div>' +
-          // Eingeschüchtert (Angriff des Bosses): der nächste Treffer macht halben Schaden
-          '<span class="kampf-held-status" role="img" aria-label="Eingeschüchtert: Dein nächster Treffer macht nur halben Schaden." hidden title="Eingeschüchtert: Dein nächster Treffer macht nur halben Schaden.">' +
-            symbolSvg("einschuechtern") + "<span>½</span></span>" +
-          // Schild beim Helden: leuchtet im Zug des Angriffs (dann pariert eine fertige Einheit)
+          // Schild beim Helden: leuchtet im Zug, in dem der Boss seine Fähigkeit
+          // einsetzt (dann pariert eine fertige Einheit)
           '<button type="button" class="kampf-parade hat-tipp">' + symbolSvg("schild") + tippHtml() + "</button>" +
           '<div class="kampf-info kampf-info--held">' +
             '<div class="kampf-herzen" role="img"></div>' +
@@ -568,9 +570,6 @@ const SudokuKampf = (function () {
       blasenPlatz: container.querySelector(".kampf-sprechblase-platz"),
       bossName: container.querySelector(".kampf-boss-name"),
       bossNr: container.querySelector(".kampf-boss-nr"),
-      eigenheit: container.querySelector(".kampf-eigenheit"),
-      eigenheitName: container.querySelector(".kampf-eigenheit-name"),
-      eigenheitTipp: container.querySelector(".kampf-eigenheit .kampf-tipp"),
       hpFuellung: container.querySelector(".kampf-hp-fuellung"),
       hpBalken: container.querySelector(".kampf-hp-balken"),
       hpZahl: container.querySelector(".kampf-hp-zahl"),
@@ -593,7 +592,6 @@ const SudokuKampf = (function () {
       muenzenZahl: container.querySelector(".kampf-muenzen-zahl"),
       leiste: container.querySelector(".kampf-leiste"),
       platzInfo: container.querySelector(".kampf-platz-info"),
-      heldStatus: container.querySelector(".kampf-held-status"),
       verbesserungen: container.querySelector(".kampf-verbesserungen"),
       buchBonus: container.querySelector(".kampf-buchbonus"),
       buchBonusWert: container.querySelector(".kampf-buchbonus-wert"),
@@ -702,7 +700,7 @@ const SudokuKampf = (function () {
       }
     }
 
-    /** Erklärungen zum aktuellen Boss (Eigenheit, seltene Eigenschaft, Angriff) für das Blatt. */
+    /** Erklärungen zum aktuellen Boss (Fähigkeit, seltene Eigenschaft) für das Blatt. */
     function fuelleBlattBoss() {
       blattBoss.innerHTML = "";
       const kopf = document.createElement("h3");
@@ -710,9 +708,8 @@ const SudokuKampf = (function () {
       kopf.textContent = el.bossName.textContent;
       blattBoss.appendChild(kopf);
       [
-        !el.eigenheit.disabled && el.eigenheitTipp.textContent,
-        !el.selten.hidden && el.seltenTipp.textContent,
         !el.absicht.hidden && el.absichtTipp.textContent,
+        !el.selten.hidden && el.seltenTipp.textContent,
         el.eliteHinweis.textContent,
       ].filter(Boolean).forEach(function (text) {
         const p = document.createElement("p");
@@ -915,7 +912,6 @@ const SudokuKampf = (function () {
       el.bossNr.title = "Boss Nr. " + boss.nummer;
       el.buehne.classList.toggle("ist-elite", boss.elite);
       el.buehne.classList.toggle("ist-weltboss", Boolean(boss.weltboss));
-      zeigeEigenheit(boss.eigenheit);
       zeigeSelten(boss.elite ? boss.selten : null);
       // Klein links unter dem HP-Balken: Zähler der seltenen Eigenschaft bzw.
       // bei normalen Bossen, wann der nächste Elite-Boss kommt
@@ -1070,7 +1066,7 @@ const SudokuKampf = (function () {
       });
     }
 
-    /** Seltene Eigenschaft unter der Eigenheit – mit Kennzeichnung "Selten" und Erklärung. */
+    /** Seltene Eigenschaft unter dem Bossnamen – mit Kennzeichnung "Selten" und Erklärung. */
     function zeigeSelten(selten) {
       el.selten.classList.remove("offen");
       el.selten.hidden = !selten;
@@ -1080,25 +1076,6 @@ const SudokuKampf = (function () {
       el.seltenTipp.textContent = "Selten – " + selten.name + ": " + selten.beschreibung;
       el.selten.setAttribute("aria-label", "Seltene Eigenschaft " + selten.name + ": " + selten.beschreibung);
       el.selten.setAttribute("aria-expanded", "false");
-    }
-
-    /** Eigenheit unter dem Bossnamen – mit Erklärung beim Darüberfahren/Antippen. */
-    function zeigeEigenheit(eigenheit) {
-      el.eigenheit.classList.remove("offen");
-      el.eigenheit.disabled = !eigenheit;
-      el.eigenheit.classList.toggle("ist-leer", !eigenheit);
-      if (!eigenheit) {
-        el.eigenheitName.textContent = "Keine Eigenheit";
-        el.eigenheitTipp.textContent = "";
-        el.eigenheit.removeAttribute("aria-label");
-        el.eigenheit.removeAttribute("aria-expanded");
-        return;
-      }
-      el.eigenheit.style.setProperty("--eigenheit-farbe", eigenheit.farbe);
-      el.eigenheitName.textContent = "⚠ " + eigenheit.name;
-      el.eigenheitTipp.textContent = eigenheit.name + ": " + eigenheit.beschreibung;
-      el.eigenheit.setAttribute("aria-label", "Eigenheit " + eigenheit.name + ": " + eigenheit.beschreibung);
-      el.eigenheit.setAttribute("aria-expanded", "false");
     }
 
     function zeigeHp(hp, maxHp) {
@@ -1271,11 +1248,6 @@ const SudokuKampf = (function () {
         platz.classList.add("leuchtet");
         setTimeout(function () { platz.classList.remove("leuchtet"); }, 700);
       });
-    }
-
-    /** Eingeschüchtert (Angriff): Marke beim Helden an oder aus. */
-    function zeigeEingeschuechtert(an) {
-      el.heldStatus.hidden = !an;
     }
 
     function zeigeWurf(zahl) {
@@ -1459,21 +1431,15 @@ const SudokuKampf = (function () {
           zeilen.push({ key: "fehlschlag", label: "Fehlschlag", wert: "×0", art: "daneben", schritt: i });
         } else if (name === "Zuschlag") {
           zeilen.push({ key: "zuschlag", label: "Zuschlag", wert: wert, schritt: i });
-        } else if (name === "Eingeschüchtert") {
-          zeilen.push({ key: "eingeschuechtert", label: "Eingeschüchtert", wert: wert, art: "daneben", schritt: i });
         } else if (grad) {
           zeilen.push({ key: "schwierigkeit", label: "Schwierigkeit",
             wert: "+" + Math.round(SudokuRPG.belohnung(grad.id).schadensBonus * 100) + " %", schritt: i });
         } else if (name === "Doppelt") {
           zeilen.push({ key: "doppelt", label: "Doppelschaden", wert: wert, art: "doppelt", schritt: i });
-        } else if (name === "Fluch") {
-          zeilen.push({ key: "fluch", label: "Fluch", wert: wert, art: "fluch", schritt: i });
         } else if (name === "Reihenbrecher") {
           zeilen.push({ key: "reihen", label: "Reihenbrecher", wert: wert, art: "reihe", schritt: i });
         } else if (e.boss.selten && name === e.boss.selten.name) {
           zeilen.push({ key: "selten", label: name, wert: wert, art: "selten", farbe: e.boss.selten.farbe, schritt: i });
-        } else if (e.eigenheit && name === e.eigenheit.name) {
-          zeilen.push({ key: "eigenheit", label: name, wert: wert, art: "eigenheit", farbe: e.eigenheit.farbe, schritt: i });
         } else {
           zeilen.push({ key: "schritt" + i, label: name, wert: wert, schritt: i });
         }
@@ -1483,9 +1449,9 @@ const SudokuKampf = (function () {
         const durchBuch = e.buch && e.buch.zusatz === "gift" && !(e.powerup && e.powerup.typ === "gift");
         zeilen.push({ key: "gift", label: durchBuch ? "Gift (" + buchName + ")" : "Gift", wert: "+" + e.gift, art: "gift", schritt: ende });
       }
-      // Buch des Vierten: Angriff des Bosses kommt einen Zug später
-      if (e.buchAngriff > 0) {
-        zeilen.push({ key: "buchAngriff", label: buchName, wert: "+" + e.buchAngriff + " Zug", art: "buch", schritt: ende });
+      // Buch des Vierten: Die Fähigkeit des Bosses kommt einen Zug später
+      if (e.buchFaehigkeit > 0) {
+        zeilen.push({ key: "buchFaehigkeit", label: buchName, wert: "+" + e.buchFaehigkeit + " Zug", art: "buch", schritt: ende });
       }
       if (e.fehlschlag && e.spruch) zeilen.push({ key: "spruch", label: e.spruch, wert: "", art: "notiz", schritt: ende });
       return zeilen;
@@ -1496,10 +1462,10 @@ const SudokuKampf = (function () {
       return e.rechnung.wuerfel.map(function (w, k) {
         let wert = String(w.wurf);
         if (w.kritisch) wert += " ×" + SudokuRPG.zahlText(K.kritischFaktor) + " = " + w.wert;
-        else if (w.immun || w.geblockt) wert += " " + (w.abwehrArt || "geblockt");
+        else if (w.immun) wert += " " + w.abwehrArt;
         else if (w.fehlschlag) wert += " Fehlschlag";
         return { key: "wuerfel" + k, label: "Würfel " + (k + 1), wert: wert,
-          art: w.kritisch ? "kritisch" : w.immun || w.geblockt || w.fehlschlag ? "daneben" : "", schritt: 0 };
+          art: w.kritisch ? "kritisch" : w.immun || w.fehlschlag ? "daneben" : "", schritt: 0 };
       });
     }
 
@@ -1537,15 +1503,13 @@ const SudokuKampf = (function () {
     function protokolliereTreffer(e) {
       const gesamt = e.schaden + e.gift;
       const muenzen = e.muenzenPlus + e.eliteBonus;
-      const art = e.regenbogen ? "regenbogen" : e.verflucht ? "fluch" : e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
-        e.eigenheit ? "eigenheit" : e.doppelt ? "doppelt" : "";
-      const farbe = e.immun ? e.selten.farbe : e.eigenheit ? e.eigenheit.farbe : null;
+      const art = e.regenbogen ? "regenbogen" : e.immun ? "selten" : e.kritisch ? "kritisch" : e.fehlschlag ? "daneben" :
+        e.doppelt ? "doppelt" : "";
+      const farbe = e.immun ? e.selten.farbe : null;
       let kurz = gesamt + " Schaden";
       if (e.regenbogen) kurz = "Regenbogenschlag";
-      else if (e.verflucht) kurz = "Verflucht";
       else if (e.immun) kurz = e.selten.art === "geblockt" ? "Geblockt" : "Immun";
       else if (e.fehlschlag) kurz = "Fehlschlag";
-      else if (e.eigenheit) kurz = "Geblockt";
       zeigeZug({
         treffer: rechnungsZeilen(e),
         schaden: { label: "Gesamt", wert: String(gesamt), art: art, farbe: farbe },
@@ -1555,16 +1519,12 @@ const SudokuKampf = (function () {
       });
       if (e.regenbogen) {
         verlaufEintrag({ text: "Regenbogenschlag!", wert: "−" + gesamt, art: "regenbogen", symbol: "stern" });
-      } else if (e.verflucht) {
-        verlaufEintrag({ text: "Fluch: " + e.ziffer + " macht keinen Schaden", wert: "0", art: "fluch", symbol: "fluch" });
       } else if (e.immun) {
         verlaufEintrag({ text: e.selten.name + ": Wurf " + e.wurf + " " + e.selten.art, wert: "0", art: "selten", symbol: "stern", farbe: e.selten.farbe });
       } else if (e.kritisch) {
         verlaufEintrag({ text: e.doppelt ? "Kritisch und doppelt!" : "Kritischer Treffer", wert: "−" + gesamt, art: "kritisch", symbol: "blitz" });
       } else if (e.fehlschlag) {
         verlaufEintrag({ text: "Fehlschlag", wert: "0", art: "daneben", symbol: "kreuz" });
-      } else if (e.eigenheit) {
-        verlaufEintrag({ text: e.eigenheit.name + " blockt", wert: "0", art: "eigenheit", symbol: "warnung", farbe: e.eigenheit.farbe });
       } else {
         verlaufEintrag({ text: e.doppelt ? "Doppelschaden" : "Treffer", wert: "−" + gesamt, art: e.doppelt ? "doppelt" : "" });
       }
@@ -1572,26 +1532,14 @@ const SudokuKampf = (function () {
 
     /** Panel und Verlauf nach einer falschen Zahl. */
     function protokolliereFehler(e) {
-      const treffer = [{ key: "falsch", label: "Falsche Zahl", wert: "✕", art: "fehler" }];
-      if (e.eigenheit && e.hp !== e.hpVorher) {
-        treffer.push({ key: "eigenheit", label: e.eigenheit.name, wert: "+" + (e.hp - e.hpVorher) + " HP", art: "eigenheit", farbe: e.eigenheit.farbe });
-      }
-      const belohnung = [{ key: "leben", label: "Leben", wert: "−1", art: "fehler" }];
-      const verlust = e.muenzen - e.muenzenVorher;
-      if (verlust < 0) {
-        belohnung.push({ key: "dieb", label: e.eigenheit ? e.eigenheit.name : "Verlust", wert: muenzenText(verlust), art: "fehler" });
-      }
       zeigeZug({
-        treffer: treffer,
+        treffer: [{ key: "falsch", label: "Falsche Zahl", wert: "✕", art: "fehler" }],
         schaden: { label: "Gesamt", wert: "0", art: "fehler" },
-        belohnung: belohnung,
-        muenzen: { label: "Summe", wert: muenzenText(verlust), art: verlust < 0 ? "fehler" : "" },
-        kurz: { schaden: "Falsche Zahl", schadenArt: "fehler", muenzenArt: "fehler", muenzen: "−1 Leben" + (verlust < 0 ? " · " + muenzenText(verlust) + " Münzen" : "") },
+        belohnung: [{ key: "leben", label: "Leben", wert: "−1", art: "fehler" }],
+        muenzen: { label: "Summe", wert: muenzenText(0), art: "" },
+        kurz: { schaden: "Falsche Zahl", schadenArt: "fehler", muenzenArt: "fehler", muenzen: "−1 Leben" },
       });
       verlaufEintrag({ text: "Falsche Zahl", wert: "−1 Leben", art: "fehler", symbol: "herz" });
-      if (e.eigenheit) {
-        verlaufEintrag({ text: e.eigenheit.name + ": " + e.eigenheit.text, wert: "", art: "eigenheit", symbol: "warnung", farbe: e.eigenheit.farbe });
-      }
     }
 
     /** Zurück zum Hinweistext (neues Abenteuer). */
@@ -1609,7 +1557,7 @@ const SudokuKampf = (function () {
      * Aufsteigende Zahl oder kurzes Wort.
      * Bei "Bewegung reduzieren" erscheint sie nur kurz an Ort und Stelle.
      * @param {string} ziel – "boss", "doppelt", "kritisch", "gift", "daneben",
-     *                        "geblockt", "heilung", "muenzen" oder "muenzen-weg"
+     *                        "immun", "muenzen" oder "leben"
      */
     function schwebeZahl(text, ziel) {
       const zahl = document.createElement("span");
@@ -1619,7 +1567,7 @@ const SudokuKampf = (function () {
       setTimeout(function () { zahl.remove(); }, 900);
     }
 
-    /** Großer Hinweis mitten auf der Bühne (z. B. wenn eine Eigenheit auslöst). */
+    /** Großer Hinweis mitten auf der Bühne (z. B. der Name einer Fähigkeit). */
     function banner(text, farbe, art) {
       const b = document.createElement("div");
       b.className = "kampf-banner" + (art ? " kampf-banner--" + art : "");
@@ -1630,159 +1578,170 @@ const SudokuKampf = (function () {
       return b;
     }
 
-    /** Eine Eigenheit hat ausgelöst: Hinweis auf der Bühne, Eigenheit blinkt auf. */
-    function eigenheitAusgeloest(e) {
-      banner(e.name + "! " + e.text.charAt(0).toUpperCase() + e.text.slice(1), e.farbe, "eigenheit");
-      return faerbe(el.eigenheit, "ausgeloest", 900);
-    }
 
+    /* ---------- Fähigkeit des Bosses: Ansage über ihm und Parade ---------- */
 
-    /* ---------- Gegenangriff: Absicht des Bosses und Parade ---------- */
-
-    /** "in 8 Zügen", "in 1 Zug", "jetzt!" (die zweite Zeile der Absicht) */
+    /** "in 8 Zügen", "in 1 Zug", "jetzt!" (die zweite Zeile der Ansage) */
     function zaehlerText(zaehler) {
       return zaehler <= 0 ? "jetzt!" : "in " + zaehler + (zaehler === 1 ? " Zug" : " Zügen");
     }
 
     /** "Siegel in 8 Zügen" bzw. "Siegel jetzt!" (für Screenreader) */
-    function absichtText(a, zaehler) {
-      return a.name + " " + zaehlerText(zaehler);
+    function absichtText(f, zaehler) {
+      return f.name + " " + zaehlerText(zaehler);
     }
 
     /**
-     * Zeigt den Gegenangriff-Stand SOFORT: Absicht über dem Boss (Warnung in
-     * den letzten Zügen), Schild beim Helden. Gibt den Stand auch an das
-     * Spielfeld weiter (optionen.beimGegenangriff), das daraus Siegel,
-     * Finsternis und Fluch zeichnet. Wird nur aus Schritten der Warteschlange
-     * aufgerufen – so passt alles zur Reihenfolge der Animationen.
-     * @param {object} stand – { angriff, zaehler, warnung, paradeMoeglich, wirkungen }
+     * Zeigt den Stand der Fähigkeit SOFORT: Ansage über dem Boss (Symbol,
+     * Name, Zähler; Warnung in den letzten Zügen), Schild beim Helden. Gibt
+     * den Stand auch an das Spielfeld weiter (optionen.beimFaehigkeit), das
+     * daraus die Wirkungen zeichnet (Siegel, Finsternis, Fluch, Timer,
+     * Verwirrung). Wird nur aus Schritten der Warteschlange aufgerufen – so
+     * passt alles zur Reihenfolge der Animationen.
+     * @param {object} stand – { faehigkeit, zaehler, warnung, paradeMoeglich, wirkungen }
      */
-    function zeigeGegenangriff(stand) {
+    function zeigeFaehigkeit(stand) {
       if (!stand) return;
-      const a = stand.angriff;
-      el.absicht.hidden = !a;
-      if (a) {
-        el.absicht.style.setProperty("--angriff-farbe", a.farbe);
-        el.absichtSymbol.innerHTML = symbolSvg(a.symbol);
-        el.absichtName.textContent = a.name;
+      const f = stand.faehigkeit;
+      el.absicht.hidden = !f;
+      if (f) {
+        el.absicht.style.setProperty("--faehigkeit-farbe", f.farbe);
+        el.absichtSymbol.innerHTML = symbolSvg(f.symbol);
+        el.absichtName.textContent = f.name;
         el.absichtText.textContent = zaehlerText(stand.zaehler);
         el.absicht.classList.toggle("warnt", Boolean(stand.warnung));
-        const erklaerung = a.name + ": " + a.beschreibung + " Kommt alle " + a.abstand +
-          " Züge – jede gesetzte Zahl zählt. Vervollständigst du im Zug des Angriffs eine Zeile, Spalte oder einen Block, pariert der Held.";
+        const erklaerung = f.name + ": " + f.beschreibung + " Kommt alle " + f.abstand +
+          " Züge – jede gesetzte Zahl zählt. Vervollständigst du im Zug der Fähigkeit eine Zeile, Spalte oder einen Block, pariert der Held.";
         el.absichtTipp.textContent = erklaerung;
-        el.absicht.setAttribute("aria-label", absichtText(a, stand.zaehler) + ". " + erklaerung);
+        el.absicht.setAttribute("aria-label", absichtText(f, stand.zaehler) + ". " + erklaerung);
       }
-      // Mit dem nächsten Zug greift der Boss an: Jetzt zählt die Parade
-      const moeglich = Boolean(stand.paradeMoeglich && a);
+      // Mit dem nächsten Zug setzt der Boss seine Fähigkeit ein: Jetzt zählt die Parade
+      const moeglich = Boolean(stand.paradeMoeglich && f);
       el.parade.classList.toggle("ist-moeglich", moeglich);
       const paradeText = moeglich
-        ? "Parade jetzt möglich: Der Boss greift mit deinem nächsten Zug an. Vervollständigst du damit eine Zeile, Spalte oder einen 3×3-Block, wehrt der Held ab."
-        : "Parade: Vervollständige im Zug des Angriffs eine Zeile, Spalte oder einen 3×3-Block – dann wehrt der Held ab.";
+        ? "Parade jetzt möglich: Der Boss setzt mit deinem nächsten Zug seine Fähigkeit ein. Vervollständigst du damit eine Zeile, Spalte oder einen 3×3-Block, wehrt der Held sie ab."
+        : "Parade: Vervollständige in dem Zug, in dem der Boss seine Fähigkeit einsetzt, eine Zeile, Spalte oder einen 3×3-Block – dann wehrt der Held sie ab.";
       el.paradeTipp.textContent = paradeText;
       el.parade.setAttribute("aria-label", paradeText);
-      if (optionen && optionen.beimGegenangriff) optionen.beimGegenangriff(stand);
+      if (optionen && optionen.beimFaehigkeit) optionen.beimFaehigkeit(stand);
     }
 
-    /** Ein Symbol mitten auf der Bühne (oder am Boss), das kurz auftaucht und verschwindet. */
-    function angriffSymbol(e, ort, zusatz) {
+    /** Ein Symbol mitten auf der Bühne (oder am Boss/Helden), das kurz auftaucht und verschwindet. */
+    function faehigkeitSymbol(f, ort, zusatz, klasse) {
       const s = document.createElement("div");
-      s.className = "kampf-angriff-symbol kampf-angriff-symbol--" + ort;
-      s.style.setProperty("--angriff-farbe", e.angriff.farbe);
-      s.innerHTML = symbolSvg(e.angriff.symbol) + (zusatz ? '<span class="kampf-angriff-zusatz"></span>' : "");
-      if (zusatz) s.querySelector(".kampf-angriff-zusatz").textContent = zusatz;
+      s.className = "kampf-faehigkeit-symbol kampf-faehigkeit-symbol--" + ort + (klasse ? " " + klasse : "");
+      s.style.setProperty("--faehigkeit-farbe", f.farbe);
+      s.innerHTML = symbolSvg(f.symbol) + (zusatz ? '<span class="kampf-faehigkeit-zusatz"></span>' : "");
+      if (zusatz) s.querySelector(".kampf-faehigkeit-zusatz").textContent = zusatz;
       el.effekte.appendChild(s);
-      setTimeout(function () { s.remove(); }, DAUER.angriffWirkung + 400);
+      setTimeout(function () { s.remove(); }, DAUER.faehigkeitWirkung + 400);
       return s;
     }
 
     /**
-     * Die eigene Animation jedes Angriffs (nach der Ansage). Neuer Angriff ohne
-     * Eintrag hier? Dann erscheint nur sein Symbol (siehe angriff()).
+     * Die eigene Animation jeder Fähigkeit (nach der Ansage). Neue Fähigkeit
+     * ohne Eintrag hier? Dann erscheint nur ihr Symbol (siehe faehigkeit()).
+     * Bei "Bewegung reduzieren" blenden die Symbole nur ein (CSS).
      */
-    const ANGRIFF_ANIMATION = {
-      // Einschüchtern: der Boss starrt, der Held duckt sich, bis zum nächsten
-      // Treffer steht "½" beim Helden
-      einschuechtern: function (e) {
-        angriffSymbol(e, "held");
-        animiere(el.heldFigur, "duckt-sich", DAUER.angriffWirkung);
-        zeigeEingeschuechtert(true);
-        return pause(DAUER.angriffWirkung);
-      },
-      // Siegel: ein Schloss dreht sich in der Bühnenmitte, Ketten erscheinen im Sudoku
-      siegel: function (e) {
-        angriffSymbol(e, "mitte", "Block " + (e.wirkung.daten.block + 1));
-        return pause(DAUER.angriffWirkung);
-      },
-      // Finsternis: die Bühne verdunkelt sich kurz
+    const FAEHIGKEIT_ANIMATION = {
+      // Finsternis: die Bühne verdunkelt sich kurz, eine dunkle Wolke in der Mitte
       finsternis: function (e) {
-        angriffSymbol(e, "mitte");
-        faerbe(el.buehne, "verdunkelt", DAUER.angriffWirkung + 200);
-        return pause(DAUER.angriffWirkung);
+        faehigkeitSymbol(e.faehigkeit, "mitte");
+        faerbe(el.buehne, "verdunkelt", DAUER.faehigkeitWirkung + 200);
+        return pause(DAUER.faehigkeitWirkung);
       },
       // Fluch: ein Totenkopf mit der verfluchten Ziffer steigt über dem Boss auf
       fluch: function (e) {
-        angriffSymbol(e, "boss", String(e.wirkung.daten.ziffer));
-        return pause(DAUER.angriffWirkung);
+        faehigkeitSymbol(e.faehigkeit, "boss", String(e.wirkung.daten.ziffer));
+        return pause(DAUER.faehigkeitWirkung);
       },
-      // Hieb: der Boss springt vor, der Held wird getroffen, ein Herz geht verloren
-      hieb: function (e) {
-        angriffSymbol(e, "held");
-        animiere(el.bossFigur, "greift-an", DAUER.angriff);
-        return warte(DAUER.angriff / 2).then(function () {
-          zeigeHerzen(e.leben, e.maxLeben);
-          const herz = el.herzen.children[e.leben];
-          if (herz) animiere(herz, "verschwindet", 400);
-          animiere(el.heldFigur, "wird-getroffen", 300);
-          faerbe(el.blitz, "an-hieb", 300);
-          schwebeZahl("−" + (e.lebenVorher - e.leben) + " ♥", "hieb");
-          return pause(DAUER.angriffWirkung - DAUER.angriff / 2);
-        });
+      // Siegel: ein Schloss schlägt in der Bühnenmitte zu
+      siegel: function (e) {
+        faehigkeitSymbol(e.faehigkeit, "mitte", "Block " + (e.wirkung.daten.block + 1));
+        return pause(DAUER.faehigkeitWirkung);
+      },
+      // Tick, Tick: eine tickende Bombe mit der Zeit fliegt zum Spielfeld
+      tickTick: function (e) {
+        faehigkeitSymbol(e.faehigkeit, "mitte", zeitText(e.wirkung.daten.restMs), "tickt");
+        return pause(DAUER.faehigkeitWirkung);
+      },
+      // Verwirrung: ein Fragezeichen wirbelt, die Bühne schwankt kurz
+      verwirrung: function (e) {
+        faehigkeitSymbol(e.faehigkeit, "mitte", "?!", "wirbelt");
+        faerbe(el.buehne, "verwirrt", DAUER.faehigkeitWirkung + 200);
+        return pause(DAUER.faehigkeitWirkung);
       },
     };
 
     /** Text für Meldung und Verlauf. */
-    function angriffMeldung(e) {
-      if (e.pariert) return e.boss.name + " greift an – " + e.angriff.name + "! Pariert!";
-      if (e.verpufft) return e.boss.name + " greift an – " + e.angriff.name + " verpufft.";
-      const dauer = e.wirkung ? " für " + e.wirkung.rest + " Züge" : "";
-      return e.boss.name + " greift an – " + e.angriff.name + "! " + e.text + dauer + ".";
+    function faehigkeitMeldung(e) {
+      if (e.pariert) return e.boss.name + " setzt " + e.faehigkeit.name + " ein – pariert!";
+      if (e.verpufft) return e.boss.name + " setzt " + e.faehigkeit.name + " ein – verpufft.";
+      const dauer = e.wirkung && e.wirkung.rest ? " für " + e.wirkung.rest + " Züge" : "";
+      return e.boss.name + " setzt " + e.faehigkeit.name + " ein! " + e.text + dauer + ".";
     }
 
     /**
-     * Der Boss greift an (Schritt der Warteschlange, nach Würfel, Schaden und
-     * Treffer dieses Zugs): Ansage → Parade, Verpuffen oder die Wirkung →
-     * neuer Stand (Zähler von vorn, Schild, Spielfeld).
+     * Der Boss setzt seine Fähigkeit ein (Schritt der Warteschlange, nach
+     * Würfel, Schaden und Treffer dieses Zugs): Ansage → Parade, Verpuffen
+     * oder die Wirkung → neuer Stand (Zähler von vorn, Schild, Spielfeld).
      */
-    function angriff(e) {
+    function faehigkeit(e) {
       return einreihen(function () {
-        meldung(angriffMeldung(e));
-        const ansage = banner(e.angriff.name + "!", e.angriff.farbe, "angriff");
-        faerbe(el.absicht, "loest-aus", DAUER.angriffAnsage);
-        animiere(el.bossFigur, "holt-aus", DAUER.angriffAnsage);
-        return pause(DAUER.angriffAnsage).then(function () {
+        const f = e.faehigkeit;
+        meldung(faehigkeitMeldung(e));
+        const ansage = banner(f.name + "!", f.farbe, "faehigkeit");
+        faerbe(el.absicht, "loest-aus", DAUER.faehigkeitAnsage);
+        animiere(el.bossFigur, "holt-aus", DAUER.faehigkeitAnsage);
+        return pause(DAUER.faehigkeitAnsage).then(function () {
           if (e.pariert) {
-            // Der Held reißt das Schwert hoch, der Angriff prallt ab
+            // Der Held reißt das Schwert hoch, die Fähigkeit prallt ab
             ansage.remove();               // Platz für das große "Pariert!"
             animiere(el.heldFigur, "pariert", DAUER.parade);
             faerbe(el.parade, "pariert", DAUER.parade);
             banner("Pariert!", null, "pariert");
-            verlaufEintrag({ text: "Pariert: " + e.angriff.name, wert: "Einheit fertig", art: "parade", symbol: "schild" });
+            verlaufEintrag({ text: "Pariert: " + f.name, wert: "Einheit fertig", art: "parade", symbol: "schild" });
             return pause(DAUER.parade);
           }
           if (e.verpufft) {
             schwebeZahl("Verpufft", "daneben");
-            verlaufEintrag({ text: e.angriff.name + " verpufft", wert: "", art: "daneben", symbol: e.angriff.symbol });
-            return pause(DAUER.angriffWirkung / 2);
+            verlaufEintrag({ text: f.name + " verpufft", wert: "", art: "daneben", symbol: f.symbol });
+            return pause(DAUER.faehigkeitWirkung / 2);
           }
-          verlaufEintrag({ text: e.angriff.name + ": " + e.text, wert: e.wirkung ? e.wirkung.rest + " Züge" : "",
-            art: "angriff", symbol: e.angriff.symbol, farbe: e.angriff.farbe });
-          const animation = ANGRIFF_ANIMATION[e.angriff.id] || function () {
-            angriffSymbol(e, "mitte");
-            return pause(DAUER.angriffWirkung);
+          verlaufEintrag({ text: f.name + ": " + e.text,
+            wert: e.wirkung && e.wirkung.rest ? e.wirkung.rest + " Züge" : e.wirkung && e.wirkung.daten.restMs ? zeitText(e.wirkung.daten.restMs) : "",
+            art: "faehigkeit", symbol: f.symbol, farbe: f.farbe });
+          const animation = FAEHIGKEIT_ANIMATION[f.id] || function () {
+            faehigkeitSymbol(f, "mitte");
+            return pause(DAUER.faehigkeitWirkung);
           };
           return animation(e);
         }).then(function () {
-          zeigeGegenangriff(e.stand);     // Zähler von vorn, Schild, Siegel/Finsternis/Fluch im Sudoku
+          zeigeFaehigkeit(e.stand);     // Zähler von vorn, Schild, Wirkung im Sudoku
+        });
+      });
+    }
+
+    /**
+     * Tick, Tick: Der Timer ist abgelaufen – die Bombe geht beim Helden hoch,
+     * ein Leben geht verloren. War es das letzte, folgt danach die Niederlage
+     * (die Oberfläche startet sie nach diesem Schritt).
+     */
+    function timerAbgelaufen(e) {
+      return einreihen(function () {
+        meldung("Tick, Tick – der Timer ist abgelaufen! Ein Leben weniger.");
+        banner("BUMM!", e.faehigkeit.farbe, "faehigkeit");
+        faehigkeitSymbol(e.faehigkeit, "held", null, "explodiert");
+        verlaufEintrag({ text: e.faehigkeit.name + ": Timer abgelaufen", wert: "−" + (e.lebenVorher - e.leben) + " Leben",
+          art: "fehler", symbol: e.faehigkeit.symbol, farbe: e.faehigkeit.farbe });
+        zeigeHerzen(e.leben, e.maxLeben);
+        const herz = el.herzen.children[e.leben];
+        if (herz) animiere(herz, "verschwindet", 400);
+        animiere(el.heldFigur, "wird-getroffen", 300);
+        faerbe(el.blitz, "an-treffer", 300);
+        schwebeZahl("−" + (e.lebenVorher - e.leben) + " ♥", "leben");
+        return pause(DAUER.timerAblauf).then(function () {
+          if (!e.niederlage) zeigeFaehigkeit(e.stand);
         });
       });
     }
@@ -1793,7 +1752,7 @@ const SudokuKampf = (function () {
     /**
      * Zeigt einen Stand SOFORT (ohne Animation) – z. B. nach dem Laden.
      * @param {object} stand – { boss, hp, leben, maxLeben, muenzen, rekorde,
-     *                           verbesserungen, buchBonus, eingeschuechtert, gegenangriff }
+     *                           verbesserungen, buchBonus, faehigkeitStand }
      */
     function zeigeStand(stand) {
       return einreihen(function () {
@@ -1802,10 +1761,9 @@ const SudokuKampf = (function () {
         zeigeHerzen(stand.leben, stand.maxLeben);
         zeigeMuenzen(stand.muenzen, false);
         zeigeVerbesserungen(stand.verbesserungen);
-        zeigeEingeschuechtert(Boolean(stand.eingeschuechtert));
         zeigeBuchBonus(stand.buchBonus);
         zeigeRekorde(stand.rekorde);
-        zeigeGegenangriff(stand.gegenangriff);
+        zeigeFaehigkeit(stand.faehigkeitStand);
         el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite", "loest-sich-auf", "ist-ruhig");
       });
     }
@@ -1815,8 +1773,6 @@ const SudokuKampf = (function () {
       const teile = [];
       if (e.regenbogen) {
         teile.push("Regenbogenschlag! " + e.boss.name + " ist mit einem Schlag besiegt.");
-      } else if (e.verflucht) {
-        teile.push("Fluch! Die " + e.ziffer + " ist verflucht und macht keinen Schaden.");
       } else if (e.immun) {
         teile.push(e.selten.name + "! Wurf " + e.wurf + ", " + e.selten.grund + ", " + e.selten.art + ": kein Schaden.");
       } else if (e.fehlschlag) {
@@ -1824,7 +1780,6 @@ const SudokuKampf = (function () {
       } else {
         let kopf = "";
         if (e.kritisch) kopf = "Kritischer Treffer! ";
-        else if (e.eigenheit) kopf = e.eigenheit.name + "! ";
         else if (e.doppelt) kopf = "Doppelter Schaden! ";
         if (e.kritisch && e.doppelt) kopf += "Und doppelt! ";
         teile.push(kopf + e.rechnung.text + (e.gift > 0 ? " · Gift +" + e.gift : "") + ".");
@@ -1835,6 +1790,7 @@ const SudokuKampf = (function () {
       if (e.powerup && e.powerup.typ === "gold") teile.push("Goldfeld!");
       teile.push("+" + e.muenzenPlus + (e.muenzenPlus === 1 ? " Münze." : " Münzen."));
       if (e.eliteBonus > 0) teile.push("Elite-Bonus +" + e.eliteBonus + " Münzen.");
+      if (e.entschaerft) teile.push("Timer entschärft!");
       return teile.join(" ");
     }
 
@@ -1875,7 +1831,6 @@ const SudokuKampf = (function () {
           if (name === "buecher" || name === "buch") {
             return (e.buch && mitte(el.verbesserungen.querySelector('[data-id="' + e.buch.id + '"]'))) || mitte(el.buchBonus);
           }
-          if (name === "boss") return mitte(el.bossFigur);          // Einschüchtern
           if (name === "selten") return el.selten.hidden ? null : mitte(el.selten);
           if (name === "grad") return mitte(optionen && optionen.gradAnzeige);
           if (name === "doppelt") return einheitMitte(e);
@@ -1917,7 +1872,7 @@ const SudokuKampf = (function () {
     function zeigeAufbau(e, n, zwischenwert) {
       el.panel.classList.remove("ist-leer");
       // Zeilen der ersten n Schritte (eine Zeile kann mehrere Würfel umfassen, siehe rechnungsZeilen)
-      const zeilen = rechnungsZeilen(e).filter(function (z) { return z.key !== "gift" && z.key !== "spruch" && z.key !== "buchAngriff"; });
+      const zeilen = rechnungsZeilen(e).filter(function (z) { return z.key !== "gift" && z.key !== "spruch" && z.key !== "buchFaehigkeit"; });
       setzeZeilen(el.trefferZeilen, zeilen.filter(function (z) { return z.schritt < n; }));
       setzeZeile(el.trefferSumme, { label: "Gesamt", wert: String(zwischenwert) }, true);
       if (n === 1) {
@@ -1964,9 +1919,8 @@ const SudokuKampf = (function () {
         return wuerfel.rolle(e, eilig()).then(function () {
           meldung(trefferText(e));
           leuchtePlaetze(e.wirksam);          // was bei diesem Treffer wirkt, leuchtet auf
-          if (e.eingeschuechtert) zeigeEingeschuechtert(false);
           const u = fxUmgebung(e);
-          if (e.fehlschlag || e.immun || e.eigenheit || e.verflucht) return keinAufbau(e, u);
+          if (e.fehlschlag || e.immun) return keinAufbau(e, u);
           return mitAufbau(e, u);
         }).then(function () {
           // Gift (grünes Power-up): wie bisher eigene grüne Zahl nach dem Treffer
@@ -1985,8 +1939,13 @@ const SudokuKampf = (function () {
             const neuesHerz = el.herzen.children[e.leben - 1];
             if (neuesHerz) animiere(neuesHerz, "verschwindet", 400);   // kurzes "Aufpoppen"
           }
-          // Gegenangriff: Zähler eins weiter, Wirkungen laufen ab
-          zeigeGegenangriff(e.gegenangriff);
+          // Tick, Tick: Timer entschärft
+          if (e.entschaerft) {
+            schwebeZahl("Entschärft!", "entschaerft");
+            verlaufEintrag({ text: "Timer entschärft", wert: "", art: "parade", symbol: "tickTick" });
+          }
+          // Fähigkeit: Zähler eins weiter, Wirkungen laufen ab
+          zeigeFaehigkeit(e.faehigkeitStand);
           // Buch-Bonus des laufenden Sudokus
           if (typeof e.buchBonus === "number") {
             zeigeBuchBonus(e.buchBonus);
@@ -2094,7 +2053,7 @@ const SudokuKampf = (function () {
       });
     }
 
-    /** Fehlschlag, immun oder geblockt: kein Aufbau, die Zahl zerfällt oder prallt ab. */
+    /** Fehlschlag oder abgewehrt (seltene Eigenschaft): kein Aufbau, die Zahl zerfällt oder prallt ab. */
     function keinAufbau(e, u) {
       protokolliereTreffer(e);
       const art = e.fehlschlag ? "zerfallen" : "abprallen";
@@ -2104,23 +2063,11 @@ const SudokuKampf = (function () {
         schwebeZahl("Daneben!", "daneben");
         return zahl;
       }
-      if (e.verflucht) {
-        // Fluch des Bosses: Die Zahl prallt ab, der Totenkopf blitzt auf
-        schwebeZahl("Verflucht!", "fluch");
-        animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
-        return zahl;
-      }
-      if (e.immun) {
-        // Seltene Eigenschaft: Wurf wirkungslos – Würfel grau (siehe Würfel), Boss wehrt ab
-        schwebeZahl(e.selten.art === "geblockt" ? "Geblockt!" : "Immun!", "immun");
-        banner(e.selten.name + "!", e.selten.farbe, "selten");
-        animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
-        return Promise.all([zahl, faerbe(el.selten, "ausgeloest", 900)]);
-      }
-      // Rüstung hat den Wurf geblockt
-      schwebeZahl("Geblockt!", "geblockt");
+      // Seltene Eigenschaft: Wurf wirkungslos – Würfel grau (siehe Würfel), Boss wehrt ab
+      schwebeZahl(e.selten.art === "geblockt" ? "Geblockt!" : "Immun!", "immun");
+      banner(e.selten.name + "!", e.selten.farbe, "selten");
       animiere(el.bossFigur, "wehrt-ab", DAUER.treffer);
-      return Promise.all([zahl, eigenheitAusgeloest(e.eigenheit)]);
+      return Promise.all([zahl, faerbe(el.selten, "ausgeloest", 900)]);
     }
 
     /**
@@ -2137,36 +2084,23 @@ const SudokuKampf = (function () {
       return wartezeit(ms).then(ende);
     }
 
-    /** Falsche Zahl: Boss greift an, ein Leben geht verloren, ggf. Eigenheit. */
+    /** Falsche Zahl: Boss schlägt zu, ein Leben geht verloren. */
     function fehler(e) {
       beschleunige();
       return einreihen(function () {
-        let text = e.boss.name + " greift an! Falsche Zahl, " +
-          (e.leben === 0 ? "keine Leben mehr." : "noch " + e.leben + " Leben.");
-        if (e.eigenheit) text += " " + e.eigenheit.name + ": " + e.eigenheit.text + ".";
-        meldung(text);
+        meldung(e.boss.name + " schlägt zu! Falsche Zahl, " +
+          (e.leben === 0 ? "keine Leben mehr." : "noch " + e.leben + " Leben."));
         protokolliereFehler(e);
         const rest = e.leben;
-        const angriff = animiere(el.bossFigur, "greift-an", DAUER.angriff);
-        return warte(DAUER.angriff / 2).then(function () {
+        const schlag = animiere(el.bossFigur, "greift-an", DAUER.zuschlagen);
+        return warte(DAUER.zuschlagen / 2).then(function () {
           zeigeHerzen(rest, e.maxLeben);
           const herz = el.herzen.children[rest];
           if (herz) animiere(herz, "verschwindet", 400);
           animiere(el.heldFigur, "wird-getroffen", 300);
-          return angriff;
+          return schlag;
         }).then(function () {
-          zeigeGegenangriff(e.gegenangriff);    // auch eine falsche Zahl zählt als Zug
-          if (!e.eigenheit) return null;
-          // Regeneration: HP steigen. Dieb: Münzen sinken.
-          if (e.hp !== e.hpVorher) {
-            schwebeZahl("+" + (e.hp - e.hpVorher), "heilung");
-            zeigeHp(e.hp, e.boss.maxHp);
-          }
-          if (e.muenzen !== e.muenzenVorher) {
-            schwebeZahl("−" + (e.muenzenVorher - e.muenzen), "muenzen-weg");
-            zeigeMuenzen(e.muenzen, true);
-          }
-          return eigenheitAusgeloest(e.eigenheit);
+          zeigeFaehigkeit(e.faehigkeitStand);    // auch eine falsche Zahl zählt als Zug
         });
       });
     }
@@ -2198,30 +2132,29 @@ const SudokuKampf = (function () {
       });
     }
 
-    /** Der nächste Boss erscheint (volle HP, Leben aufgefüllt) – mit seiner Eigenheit. */
+    /** Der nächste Boss erscheint (volle HP, Leben aufgefüllt) – mit seiner Fähigkeit. */
     function neuerBoss(e, rekorde) {
       return einreihen(function () {
         const boss = e.boss;
         const ort = boss.welt.name + ", Level " + boss.weltLevel;
         let text = (boss.weltboss ? "Der Weltboss erscheint! " : boss.elite ? "Ein Elite-Boss erscheint! " : "") +
           ort + ": " + boss.name + ", " + boss.maxHp + " HP.";
-        if (boss.eigenheit) text += " Eigenheit " + boss.eigenheit.name + ": " + boss.eigenheit.beschreibung;
+        if (boss.faehigkeit) text += " Fähigkeit " + boss.faehigkeit.name + ": " + boss.faehigkeit.beschreibung;
         if (boss.selten) text += " Selten, " + boss.selten.name + ": " + boss.selten.beschreibung;
         meldung(text);
         verlaufEintrag(boss.elite
           ? { text: (boss.weltboss ? "Weltboss" : "Elite") + " · Level " + boss.weltLevel + ": " + boss.name + (boss.selten ? " · " + boss.selten.name : ""),
               wert: boss.maxHp + " HP", art: "elite", symbol: boss.weltboss ? "krone" : "stern" }
-          : boss.eigenheit
-          ? { text: "Level " + boss.weltLevel + ": " + boss.name + " · " + boss.eigenheit.name, wert: "",
-              art: "eigenheit", symbol: "warnung", farbe: boss.eigenheit.farbe }
+          : boss.faehigkeit
+          ? { text: "Level " + boss.weltLevel + ": " + boss.name + " · " + boss.faehigkeit.name, wert: boss.maxHp + " HP",
+              art: "faehigkeit", symbol: boss.faehigkeit.symbol, farbe: boss.faehigkeit.farbe }
           : { text: "Level " + boss.weltLevel + ": " + boss.name, wert: boss.maxHp + " HP" });
         el.bossFigur.classList.remove("ist-besiegt", "ist-besiegt-elite", "loest-sich-auf", "ist-ruhig");
-        zeigeEingeschuechtert(false);          // Einschüchtern endet mit dem besiegten Boss
         zeigeBoss(boss);
         zeigeHp(e.hp, boss.maxHp);
         zeigeHerzen(e.leben, e.maxLeben);
         zeigeRekorde(rekorde);
-        zeigeGegenangriff(e.gegenangriff);      // neuer Angriff, neuer Zähler
+        zeigeFaehigkeit(e.faehigkeitStand);      // neue Fähigkeit, neuer Zähler
         // Neue Welt (oder neue Runde): kurze Einblendung mit ihrem Namen
         if (boss.weltLevel === 1) weltEinblendung(boss);
         // Sein Satz beim Erscheinen – auch beim Abkürzen
@@ -2242,8 +2175,8 @@ const SudokuKampf = (function () {
             const b = banner("Ein Elite-Boss erscheint!", null, "elite");
             setTimeout(function () { b.remove(); }, DAUER.eliteAuftritt);
           }
-        } else if (boss.eigenheit) {
-          banner(boss.eigenheit.name, boss.eigenheit.farbe, "eigenheit");
+        } else if (boss.faehigkeit) {
+          banner(boss.faehigkeit.name, boss.faehigkeit.farbe, "faehigkeit");
         }
         return animiere(el.bossFigur, "erscheint", DAUER.erscheinen);
       });
@@ -2714,7 +2647,7 @@ const SudokuKampf = (function () {
 
     /**
      * Ende eines Durchlaufs (Niederlage oder aufgegeben). Bei einer Niederlage
-     * läuft erst alles in der Warteschlange (Fehler, Angriff des Bosses), dann
+     * läuft erst alles in der Warteschlange (Fehler, Fähigkeit des Bosses), dann
      * fällt der Held und der Boss sagt seinen Satz – erst danach erscheint die
      * Zusammenfassung. Nach dem Neuladen oder beim Aufgeben kommt sie sofort.
      * Weiter geht es nur mit "Neuer Durchlauf".
@@ -2854,8 +2787,9 @@ const SudokuKampf = (function () {
       zeigeWurf: zeigeWurf,
       treffer: treffer,
       fehler: fehler,
-      angriff: angriff,
-      zeigeGegenangriff: zeigeGegenangriff,
+      faehigkeit: faehigkeit,
+      zeigeFaehigkeit: zeigeFaehigkeit,
+      timerAbgelaufen: timerAbgelaufen,
       buchschlag: buchschlag,
       buchSpin: buchSpin,
       zeigeBuchBonus: zeigeBuchBonus,
@@ -2884,5 +2818,6 @@ const SudokuKampf = (function () {
     setzeWuerfelEinstellung: setzeWuerfelEinstellung,
     erstelle: erstelle,
     symbolSvg: symbolSvg,
+    zeitText: zeitText,
   };
 })();

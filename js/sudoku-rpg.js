@@ -7,9 +7,9 @@
      - Jede richtige Zahl wirft einen Würfel. Der Schaden entsteht in EINER
        Funktion (berechneSchaden) in fester Reihenfolge: Wurf, Immunität/
        Block, kritisch/Fehlschlag, Zuschläge, Buch-Bonus, Schwierigkeit,
-       Doppelschaden, Reihenbrecher, (Einschüchtern), Gift.
-     - Jede falsche Zahl kostet ein Leben. Bei 0 Leben ist der Kampf
-       verloren, der Boss beginnt mit vollen HP von vorn.
+       Doppelschaden, Reihenbrecher, Gift.
+     - Jede falsche Zahl kostet ein Leben. Bei 0 Leben ist der Durchlauf
+       vorbei – es geht wieder bei Welt 1, Level 1 los (Münzen und Rekorde bleiben).
      - Richtige Zahlen und fertige Einheiten bringen Münzen (× Münzfaktor
        des Schwierigkeitsgrads).
      - Power-up-Felder im Sudoku lösen beim richtigen Ausfüllen eine
@@ -17,7 +17,9 @@
      - Nach jedem besiegten Boss wählt man eine von drei Verbesserungen –
        höchstens fünf verschiedene (Bücher zählen mit), danach nur noch
        Stufenaufstiege oder ein Münzbeutel.
-     - Jeder Boss kann eine Eigenheit haben (Regeneration, Rüstung …).
+     - Jeder Boss hat genau eine Fähigkeit (Finsternis, Fluch, Siegel,
+       Tick, Tick, Verwirrung). Ein Zähler kündigt sie an; bei 0 setzt er
+       sie ein.
      - Jeder fünfte Boss ist ein Elite-Boss: doppelte HP, dazu eine seltene
        Eigenschaft (Immunität, Schildwall …), als Belohnung Extra-Münzen und
        zwei Verbesserungen.
@@ -27,7 +29,9 @@
      "richtig"        – richtige Zahl: Wurf, Rechnung, Schaden, Gift, Münzen …
                         (alles, was diese eine Zahl bewirkt, in EINEM Ereignis)
      "powerup"        – ein Power-up-Feld wurde ausgelöst
-     "fehler"         – falsche Zahl: ein Leben weniger, ggf. Eigenheit
+     "fehler"         – falsche Zahl: ein Leben weniger
+     "faehigkeit"     – der Boss setzt seine Fähigkeit ein (oder sie wird pariert)
+     "timer"          – der Timer von "Tick, Tick" ist abgelaufen (ein Leben weniger)
      "bossBesiegt"    – HP auf 0
      "auswahl"        – Verbesserungen stehen zur Wahl (bis gewählt ist, zählt keine Zahl)
      "behalten"       – älterer Spielstand mit mehr Verbesserungen als Plätzen:
@@ -36,8 +40,10 @@
      "buchschlag"     – ein Buch löst aus (alle neun Felder seiner Ziffer gefüllt)
      "neuerBoss"      – der nächste Boss steht bereit
      "sudokuGeloest"  – alle Felder richtig
-     "niederlage"     – keine Leben mehr
-     "zurueckgesetzt" – Abenteuer von vorn
+     "niederlage"     – keine Leben mehr: der Durchlauf ist vorbei
+     "aufgegeben"     – Durchlauf aufgegeben
+     "neuerDurchlauf" – nach der Zusammenfassung geht es von vorn los
+     "zurueckgesetzt" – alle Fortschritte gelöscht
 
    ERWEITERN ohne die Grundregeln umzuschreiben:
      1. Auf Ereignisse hören:     spiel.an("bossBesiegt", function (e) { … })
@@ -45,7 +51,7 @@
                                     zuschlag: function (rechnung) { rechnung.wert += 2; }
                                   } })
         (ein Modifikator für eine Stufe der Schadensberechnung, siehe unten)
-     3. Neue Power-up-Typen, Verbesserungen, Eigenheiten: je ein weiterer
+     3. Neue Power-up-Typen, Verbesserungen, Fähigkeiten: je ein weiterer
         Eintrag in der Konfiguration
      4. Eigene Daten im Spielstand: zustand.extras.meinItem = …
         ("extras" wird mitgespeichert und bleibt sonst unangetastet)
@@ -203,12 +209,12 @@ const SUDOKU_RPG_KONFIG = {
   //   immerKritisch – der Treffer ist automatisch kritisch (auch bei einer 1)
   //   giftAnteil   – zusätzlich dieser Anteil des Schadens als Gift
   //   muenzen      – so viele Münzen extra (ohne Münzfaktor)
-  //   angriff      – um so viele Züge wird der Angriffszähler des Bosses zurückgesetzt
+  //   faehigkeit   – um so viele Züge wird der Fähigkeitszähler des Bosses zurückgesetzt
   buchZusaetze: {
     keine: {},
     hoechsterVonZwei: { wuerfel: { anzahl: 2, modus: "hoechster" } },
     muenzen: { muenzen: 3 },
-    angriffZurueck: { angriff: 1 },
+    faehigkeitZurueck: { faehigkeit: 1 },
     mindestwurf: { mindestwurf: 10 },
     gift: { giftAnteil: 0.5 },
     kritisch: { immerKritisch: true },
@@ -224,7 +230,7 @@ const SUDOKU_RPG_KONFIG = {
     { id: "buch1", name: "Das Buch des Ersten", ziffer: 1, seltenheit: "gewoehnlich", zusatz: "keine", zusatzText: "Keine Zusatzwirkung." },
     { id: "buch2", name: "Das Buch des Zweiten", ziffer: 2, seltenheit: "gewoehnlich", zusatz: "hoechsterVonZwei", zusatzText: "Zwei Würfel, der höhere zählt." },
     { id: "buch3", name: "Das Buch des Dritten", ziffer: 3, seltenheit: "gewoehnlich", zusatz: "muenzen", zusatzText: "3 Münzen extra." },
-    { id: "buch4", name: "Das Buch des Vierten", ziffer: 4, seltenheit: "selten", zusatz: "angriffZurueck", zusatzText: "Der Angriffszähler des Bosses wird um 1 Zug zurückgesetzt." },
+    { id: "buch4", name: "Das Buch des Vierten", ziffer: 4, seltenheit: "selten", zusatz: "faehigkeitZurueck", zusatzText: "Der Fähigkeitszähler des Bosses wird um 1 Zug zurückgesetzt." },
     { id: "buch5", name: "Das Buch des Fünften", ziffer: 5, seltenheit: "selten", zusatz: "mindestwurf", zusatzText: "Der Wurf zählt mindestens als 10." },
     { id: "buch6", name: "Das Buch des Sechsten", ziffer: 6, seltenheit: "mythisch", zusatz: "gift", zusatzText: "Zusätzlich die Hälfte des Schadens als Gift." },
     { id: "buch7", name: "Das Buch des Siebten", ziffer: 7, seltenheit: "mythisch", zusatz: "kritisch", zusatzText: "Automatisch ein kritischer Treffer." },
@@ -317,48 +323,73 @@ const SUDOKU_RPG_KONFIG = {
     weltbossLevel: 20,      // der Weltboss: Elite-Regeln, aber weltbossFaktor statt eliteFaktor
   },
 
-  // Gegenangriffe: Jeder Boss kündigt seinen Angriff an. Jede gesetzte Zahl
-  // (richtig oder falsch) zählt den Zähler um 1 herunter, bei 0 greift der
-  // Boss an und der Zähler beginnt von vorn.
-  // Parade: Vervollständigt GENAU der Zug, in dem der Boss angreift, eine
-  // Zeile, Spalte oder einen 3×3-Block, wehrt der Held den Angriff ab.
-  // Paraden lassen sich nicht aufheben – es zählt nur dieser eine Zug.
-  gegenangriff: {
-    eliteKuerzer: 2,        // bei Elite-Bossen kommt der Angriff so viele Züge früher (5 − 2 = alle 3 Züge)
+  // Fähigkeiten der Bosse: Jeder Boss hat genau eine (Feld "faehigkeit" in
+  // den Welt-Dateien). Über ihm steht ein Zähler mit Ansage: Jede gesetzte
+  // Zahl (richtig oder falsch) senkt ihn um 1, bei 0 setzt der Boss seine
+  // Fähigkeit ein und der Zähler beginnt von vorn. Besiegt der Treffer den
+  // Boss, setzt er sie nicht mehr ein.
+  // Parade: Vervollständigt GENAU der Zug, in dem der Boss seine Fähigkeit
+  // einsetzt, eine Zeile, Spalte oder einen 3×3-Block, wehrt der Held sie ab.
+  // Alle Wirkungen enden spätestens mit dem Sudoku oder dem Sieg über den Boss.
+  faehigkeit: {
+    abstand: 8,             // Startwert des Zählers
+    abstandElite: 6,        // … bei Elite-Bossen (und dem Weltboss)
     warnungAb: 2,           // in den letzten so vielen Zügen pulsiert die Anzeige
   },
 
-
-  // Die Angriffe. Neuer Angriff? Einfach ein weiterer Eintrag:
+  // Die Fähigkeiten. Neue Fähigkeit? Einfach ein weiterer Eintrag:
   //   id, name, symbol, farbe – Kennung und Anzeige (Symbole: SYMBOLE in js/sudoku-battle-ui.js)
-  //   abstand      – alle so vielen Züge greift der Boss an
-  //   dauer        – so viele Züge hält die Wirkung an (0 = wirkt sofort und einmalig)
-  //   wert         – Stärke (z. B. Leben beim Hieb)
-  //   beschreibung – {dauer} und {wert} werden ersetzt
-  //   wirkung(a)   – passiert beim Angriff. a = { zustand, raetsel, wert, dauer,
-  //                  zufall, waehle(liste), leer(i), blockFelder(b) }.
-  //                  Gibt { text, daten } zurück – oder null: Der Angriff verpufft.
-  //                  "daten" merkt sich eine Wirkung mit Dauer (z. B. welcher Block).
-  //   Wirkungen mit Dauer auf das Spielfeld (alle optional):
-  //     feld(daten, i)    – "versiegelt" (dort kann man nichts setzen) oder
-  //                         "verdeckt" (Zahl wird als "?" gezeigt) oder null
-  //     ziffer(daten, z)  – "verflucht": diese Ziffer macht keinen Schaden
+  //   dauer        – so viele Züge hält die Wirkung an (null = nicht nach Zügen,
+  //                  z. B. ein Timer – dann endet sie selbst)
+  //   abLevel      – frühestens ab diesem Level einer Welt (optional, wird beim Laden geprüft)
+  //   beschreibung – {dauer}, {sekunden} und {leben} werden ersetzt
+  //   wirkung(a)   – passiert beim Einsatz. a = { zustand, raetsel, zufall,
+  //                  waehle(liste), leer(i), frei(i), blockFelder(b), eintrag }
+  //                  (leer: Feld ohne Zahl; frei: leer und gerade von keiner
+  //                  Wirkung betroffen). Gibt { text, daten } zurück – oder
+  //                  null: Die Fähigkeit verpufft. "daten" merkt sich die
+  //                  laufende Wirkung (z. B. welcher Block).
+  //   Wirkungen auf das Spielfeld (alle optional):
+  //     feld(daten, i)    – "versiegelt" (dort kann man nichts setzen),
+  //                         "verdeckt" (Zahl wird als "?" gezeigt) oder
+  //                         "timer" (Feld mit dem Timer) – sonst null
+  //     ziffer(daten, z)  – "verflucht": diese Ziffer kann man nicht setzen
   //     gueltig(daten)    – prüft gespeicherte Daten beim Laden
-  angriffe: [
+  faehigkeiten: [
     {
-      // Bis zum nächsten Treffer: Schaden × wert (Stufe "einschuechtern" der Rechnung)
-      id: "einschuechtern", name: "Einschüchtern", symbol: "einschuechtern", farbe: "#e98a15",
-      abstand: 5, dauer: 0, wert: 0.5,
-      beschreibung: "Dein nächster Treffer macht nur halben Schaden.",
+      id: "finsternis", name: "Finsternis", symbol: "finsternis", farbe: "#3b3561",
+      dauer: 5,
+      beschreibung: "Verdeckt für {dauer} Züge alle Zahlen in einer Zeile und einer Spalte. Sie zeigen „?“.",
       wirkung: function (a) {
-        if (a.zustand.eingeschuechtert) return null;       // wirkt schon → verpufft
-        a.zustand.eingeschuechtert = true;
-        return { text: "Nächster Treffer: halber Schaden", daten: null };
+        const zeile = Math.floor(a.zufall() * 9), spalte = Math.floor(a.zufall() * 9);
+        return { text: "Zeile " + (zeile + 1) + " und Spalte " + (spalte + 1) + " verdeckt", daten: { zeile: zeile, spalte: spalte } };
+      },
+      feld: function (daten, i) {
+        return Math.floor(i / 9) === daten.zeile || i % 9 === daten.spalte ? "verdeckt" : null;
+      },
+      gueltig: function (daten) {
+        return [daten.zeile, daten.spalte].every(function (x) { return Number.isInteger(x) && x >= 0 && x <= 8; });
       },
     },
     {
+      id: "fluch", name: "Fluch", symbol: "fluch", farbe: "#2f9e5a",
+      dauer: 5,
+      beschreibung: "Verflucht für {dauer} Züge eine Ziffer, die im Sudoku noch fehlt. Sie kann in der Zeit nicht gesetzt werden.",
+      wirkung: function (a) {
+        const fehlt = [];
+        for (let i = 0; i < 81; i++) {
+          if (a.leer(i) && fehlt.indexOf(a.raetsel.loesung[i]) === -1) fehlt.push(a.raetsel.loesung[i]);
+        }
+        if (fehlt.length === 0) return null;
+        const ziffer = a.waehle(fehlt.sort());
+        return { text: "Ziffer " + ziffer + " verflucht", daten: { ziffer: ziffer } };
+      },
+      ziffer: function (daten, z) { return z === daten.ziffer ? "verflucht" : null; },
+      gueltig: function (daten) { return Number.isInteger(daten.ziffer) && daten.ziffer >= 1 && daten.ziffer <= 9; },
+    },
+    {
       id: "siegel", name: "Siegel", symbol: "siegel", farbe: "#8b5cff",
-      abstand: 5, dauer: 4, wert: 0,
+      dauer: 4,
       beschreibung: "Versiegelt für {dauer} Züge einen 3×3-Block mit leeren Feldern. Dort kannst du nichts setzen.",
       wirkung: function (a) {
         // Nur Blöcke mit leeren Feldern – und nur, wenn außerhalb noch ein
@@ -381,102 +412,55 @@ const SUDOKU_RPG_KONFIG = {
       gueltig: function (daten) { return Number.isInteger(daten.block) && daten.block >= 0 && daten.block <= 8; },
     },
     {
-      id: "finsternis", name: "Finsternis", symbol: "finsternis", farbe: "#3b3561",
-      abstand: 5, dauer: 5, wert: 0,
-      beschreibung: "Verdeckt für {dauer} Züge alle Zahlen in einer Zeile und einer Spalte.",
+      // Ein leeres Feld bekommt einen Timer. Die richtige Zahl dort entschärft
+      // ihn; läuft er ab, kostet das ein Leben. Die Zeit vergeht nur, solange
+      // das Spiel sichtbar ist (die Oberfläche meldet sie: timerVergeht).
+      id: "tickTick", name: "Tick, Tick", symbol: "tickTick", farbe: "#e2541b",
+      dauer: null, abLevel: 5,
+      sekunden: 120,          // so lange läuft der Timer
+      warnungSekunden: 20,    // in den letzten so vielen Sekunden: rot und pulsierend
+      leben: 1,               // so viele Leben kostet der Ablauf
+      beschreibung: "Ein leeres Feld bekommt einen Timer von {sekunden} Sekunden. Setzt du dort rechtzeitig die richtige Zahl, ist er entschärft – sonst kostet er {leben} Leben.",
       wirkung: function (a) {
-        const zeile = Math.floor(a.zufall() * 9), spalte = Math.floor(a.zufall() * 9);
-        return { text: "Zeile " + (zeile + 1) + " und Spalte " + (spalte + 1) + " verdeckt", daten: { zeile: zeile, spalte: spalte } };
+        // Höchstens ein Timer gleichzeitig – nie auf einem versiegelten oder verdeckten Feld
+        if (a.zustand.faehigkeit.wirkungen.some(function (w) { return w.id === a.eintrag.id; })) return null;
+        const felder = [];
+        for (let i = 0; i < 81; i++) if (a.frei(i)) felder.push(i);
+        if (felder.length === 0) return null;
+        const feld = a.waehle(felder);
+        const z = Math.floor(feld / 9), s = feld % 9;
+        return { text: "Timer in Zeile " + (z + 1) + ", Spalte " + (s + 1), daten: { feld: feld, restMs: a.eintrag.sekunden * 1000 } };
       },
-      feld: function (daten, i) {
-        return Math.floor(i / 9) === daten.zeile || i % 9 === daten.spalte ? "verdeckt" : null;
-      },
-      gueltig: function (daten) {
-        return [daten.zeile, daten.spalte].every(function (x) { return Number.isInteger(x) && x >= 0 && x <= 8; });
+      feld: function (daten, i) { return i === daten.feld ? "timer" : null; },
+      gueltig: function (daten, eintrag) {
+        return Number.isInteger(daten.feld) && daten.feld >= 0 && daten.feld <= 80 &&
+          typeof daten.restMs === "number" && daten.restMs > 0 && daten.restMs <= eintrag.sekunden * 1000;
       },
     },
     {
-      id: "fluch", name: "Fluch", symbol: "fluch", farbe: "#2f9e5a",
-      abstand: 5, dauer: 5, wert: 0,
-      beschreibung: "Verflucht für {dauer} Züge eine Ziffer, die im Sudoku noch fehlt. Setzt du sie, macht sie keinen Schaden.",
+      // Alle Ziffern werden zu Buchstaben eines Worts: 1 → erster Buchstabe,
+      // 2 → zweiter … Jedes Wort braucht genau 9 verschiedene Buchstaben
+      // (A–Z), sonst wäre eine Ziffer nicht eindeutig – geprüft beim Laden.
+      id: "verwirrung", name: "Verwirrung", symbol: "verwirrung", farbe: "#d13f9a",
+      dauer: 4,
+      beschreibung: "Für {dauer} Züge werden alle Ziffern zu Buchstaben eines Worts: 1 ist der erste Buchstabe, 2 der zweite und so weiter.",
+      woerter: [
+        "SPIDERMAN",    // Film
+        "MINECRAFT",    // Game
+        "CYBERPUNK",    // Game
+        "DUCKTALES",    // Serie
+        "LIGHTYEAR",    // Film (Buzz)
+        "DAVYJONES",    // Film (Fluch der Karibik)
+        "GHOSTFACE",    // Film (Scream)
+        "SLYTHERIN",    // Film (Harry Potter)
+        "DRAGONITE",    // Anime und Games (Pokémon)
+        "HARLEQUIN",    // Comics, Film und Games
+      ],
       wirkung: function (a) {
-        const fehlt = [];
-        for (let i = 0; i < 81; i++) {
-          if (a.leer(i) && fehlt.indexOf(a.raetsel.loesung[i]) === -1) fehlt.push(a.raetsel.loesung[i]);
-        }
-        if (fehlt.length === 0) return null;
-        const ziffer = a.waehle(fehlt.sort());
-        return { text: "Ziffer " + ziffer + " verflucht", daten: { ziffer: ziffer } };
+        const wort = a.waehle(a.eintrag.woerter);
+        return { text: "Ziffern werden zu Buchstaben", daten: { wort: wort } };
       },
-      ziffer: function (daten, z) { return z === daten.ziffer ? "verflucht" : null; },
-      gueltig: function (daten) { return Number.isInteger(daten.ziffer) && daten.ziffer >= 1 && daten.ziffer <= 9; },
-    },
-    {
-      id: "hieb", name: "Hieb", symbol: "hieb", farbe: "#d63a3a",
-      abstand: 5, dauer: 0, wert: 1,
-      beschreibung: "Kostet dich {wert} Leben.",
-      wirkung: function (a) {
-        a.zustand.leben = Math.max(0, a.zustand.leben - a.wert);
-        return { text: "−" + a.wert + " Leben", daten: null };
-      },
-    },
-  ],
-
-  // Boss-Eigenheiten. Neue? Einfach einen weiteren Eintrag:
-  //   id, name, farbe, wert – Kennung, Anzeige und Stärke
-  //   beschreibung          – {wert} wird durch die Zahl ersetzt
-  //   wirkung – eine oder mehrere dieser Stellen:
-  //     beiFehler(spiel)  – nach jeder falschen Zahl; spiel = { zustand, boss, wert }.
-  //                         Gibt einen kurzen Text zurück, wenn sie ausgelöst hat.
-  //     schaden: { <stufe>: function (rechnung, kontext) } – hängt sich in die
-  //                         Schadensberechnung ein (Stufen: siehe SCHADEN_STUFEN)
-  //     powerupsUnsichtbar – true: die Oberfläche zeigt keine Power-up-Felder
-  eigenheiten: [
-    {
-      id: "regeneration", name: "Regeneration", farbe: "#2fae8e", wert: 15,
-      beschreibung: "Heilt bei jedem deiner Fehler {wert} HP.",
-      wirkung: {
-        beiFehler: function (spiel) {
-          const vorher = spiel.zustand.bossHp;
-          spiel.zustand.bossHp = Math.min(spiel.boss.maxHp, vorher + spiel.wert);
-          const geheilt = spiel.zustand.bossHp - vorher;
-          return geheilt > 0 ? "heilt " + geheilt + " HP" : null;
-        },
-      },
-    },
-    {
-      id: "ruestung", name: "Rüstung", farbe: "#7d8796", wert: 5,
-      beschreibung: "Würfe von {wert} oder weniger machen keinen Schaden.",
-      wirkung: {
-        schaden: {
-          // Nach "kritisch": ein Fehlschlag bleibt ein Fehlschlag
-          kritisch: function (rechnung, kontext) {
-            if (!rechnung.fehlschlag && !rechnung.kritisch && rechnung.wurf <= kontext.eigenheit.wert) {
-              rechnung.geblockt = true;
-              rechnung.wert = 0;
-              rechnung.ende = true;
-              rechnung.schritte.push("Rüstung blockt");
-              rechnung.ausgeloest = "blockt den Wurf";
-            }
-          },
-        },
-      },
-    },
-    {
-      id: "nebel", name: "Nebel", farbe: "#8b7fc7", wert: 0,
-      beschreibung: "Die Power-up-Felder sind unsichtbar, wirken aber normal.",
-      wirkung: { powerupsUnsichtbar: true },
-    },
-    {
-      id: "dieb", name: "Dieb", farbe: "#c77d1d", wert: 5,
-      beschreibung: "Stiehlt bei jedem deiner Fehler {wert} Münzen.",
-      wirkung: {
-        beiFehler: function (spiel) {
-          const gestohlen = Math.min(spiel.wert, spiel.zustand.muenzen);
-          spiel.zustand.muenzen -= gestohlen;
-          return gestohlen > 0 ? "stiehlt " + gestohlen + (gestohlen === 1 ? " Münze" : " Münzen") : null;
-        },
-      },
+      gueltig: function (daten, eintrag) { return eintrag.woerter.indexOf(daten.wort) !== -1; },
     },
   ],
 
@@ -487,8 +471,11 @@ const SUDOKU_RPG_KONFIG = {
   },
 
   // Seltene Eigenschaften: Jeder Elite-Boss bekommt zusätzlich zu seiner
-  // normalen Eigenheit eine davon – zufällig nach "gewicht", nie dieselbe
-  // wie beim Elite-Boss davor. Aufbau wie bei den Eigenheiten oben, dazu:
+  // Fähigkeit eine davon – zufällig nach "gewicht", nie dieselbe wie beim
+  // Elite-Boss davor. Aufbau:
+  //   id, name, farbe, gewicht, wert, beschreibung ({wert} wird ersetzt)
+  //   wirkung.schaden: { <stufe>: function (rechnung, kontext) } – hängt sich
+  //       in die Schadensberechnung ein (Stufen: siehe SCHADEN_STUFEN)
   //   rechnung.abwehren(grund, art) – der Treffer macht gar keinen Schaden
   //       (art: "immun" oder "geblockt"); in der Stufe "wurf" geprüft, also
   //       vor kritischem Treffer, Zuschlägen, Doppelschaden und Gift
@@ -567,6 +554,30 @@ const SudokuRPG = (function () {
   if (!WELTEN.some(function (w) { return w && w.bosse && w.bosse.length > 0; })) {
     throw new Error("Sudoku-Abenteuer: Keine Welt mit Bossen gefunden (js/worlds/welt1.js).");
   }
+  // Beim Laden prüfen (Fehler in Konfiguration oder Welt-Dateien fallen sofort
+  // auf): Wörter der Verwirrung (genau 9 verschiedene Buchstaben – sonst wäre
+  // eine Ziffer nicht eindeutig; ungültige fliegen raus), jeder Boss hat eine
+  // bekannte Fähigkeit, und keine kommt vor ihrem "abLevel".
+  (function pruefeFaehigkeiten() {
+    K.faehigkeiten.forEach(function (f) {
+      if (!f.woerter) return;
+      const falsch = f.woerter.filter(function (w) { return !wortGueltigRoh(w); });
+      if (falsch.length > 0) {
+        console.warn("Sudoku-Abenteuer: Wörter ohne genau 9 verschiedene Buchstaben: " + falsch.join(", "));
+        f.woerter = f.woerter.filter(wortGueltigRoh);
+      }
+    });
+    WELTEN.forEach(function (welt) {
+      if (!welt) return;
+      welt.bosse.forEach(function (b, i) {
+        const f = K.faehigkeiten.find(function (x) { return x.id === b.faehigkeit; });
+        if (!f) console.warn("Sudoku-Abenteuer: " + b.name + " hat keine bekannte Fähigkeit („" + b.faehigkeit + "“).");
+        else if (f.abLevel && i + 1 < f.abLevel) console.warn("Sudoku-Abenteuer: „" + f.name + "“ erst ab Level " + f.abLevel + " (" + b.name + ").");
+      });
+    });
+    function wortGueltigRoh(w) { return typeof w === "string" && /^[A-Z]{9}$/.test(w) && new Set(w.split("")).size === 9; }
+  })();
+
   const SPEICHER_SCHLUESSEL = "ntb-sudoku-abenteuer";
   // Version 1: noch "fehler" statt Leben. Version 2: Leben, Münzen, Power-ups.
   // Version 3: dazu Münz-Rest, Verbesserungen und offene Auswahl (damals auch eine Kombo).
@@ -579,7 +590,9 @@ const SudokuRPG = (function () {
   // Version 11: Durchläufe – eine Niederlage beendet den Durchlauf ("ende"
   //             hält die Zusammenfassung fest), dauerhafte "rekorde", Werte
   //             des laufenden Durchlaufs in "lauf".
-  const VERSION = 11;
+  // Version 12: Fähigkeiten statt Eigenheiten und Angriffen – "faehigkeit"
+  //             statt "gegenangriff", ohne "eingeschuechtert".
+  const VERSION = 12;
 
 
   /* ------------------------------------------------------------------------
@@ -634,7 +647,7 @@ const SudokuRPG = (function () {
 
 
   /* ------------------------------------------------------------------------
-     BOSSE, EIGENHEITEN, SCHWIERIGKEIT, POWER-UPS, VERBESSERUNGEN
+     BOSSE, FÄHIGKEITEN, SCHWIERIGKEIT, POWER-UPS, VERBESSERUNGEN
      ------------------------------------------------------------------------ */
 
   /* ---------- Welten und Level ----------
@@ -708,7 +721,7 @@ const SudokuRPG = (function () {
     return nummer % 5 === 0 ? normal * 2 : normal;
   }
 
-  /** Der Boss-Eintrag der Weltdatei (Name, Sprite, Eigenheit, Angriff, Sätze). */
+  /** Der Boss-Eintrag der Weltdatei (Name, Sprite, Fähigkeit, Sätze). */
   function bossEintrag(nummer) {
     const p = position(nummer);
     return p.welt.bosse[p.weltLevel - 1];
@@ -732,66 +745,77 @@ const SudokuRPG = (function () {
     });
   }
 
-  /** Eigenheit über ihre id (oder null). */
-  function eigenheitInfo(id) {
-    return K.eigenheiten.find(function (e) { return e.id === id; }) || null;
+  /** Fähigkeit über ihre id (oder null). */
+  function faehigkeitInfo(id) {
+    return K.faehigkeiten.find(function (f) { return f.id === id; }) || null;
   }
 
-  /** Angriff über seine id (oder null). */
-  function angriffInfo(id) {
-    return K.angriffe.find(function (a) { return a.id === id; }) || null;
+  /** Die Fähigkeit des Bosses mit dieser Nummer (Bosse kehren mit ihrer Fähigkeit zurück). */
+  function faehigkeitVonBoss(nummer) {
+    return faehigkeitInfo(bossEintrag(nummer).faehigkeit);
   }
 
-  /** Der Angriff des Bosses mit dieser Nummer (Bosse kehren mit ihrem Angriff zurück). */
-  function angriffVonBoss(nummer) {
-    return angriffInfo(bossEintrag(nummer).angriff);
+  /** Startwert des Zählers: alle so vielen Züge setzt dieser Boss seine Fähigkeit ein (0 = keine). */
+  function faehigkeitAbstand(nummer) {
+    if (!faehigkeitVonBoss(nummer)) return 0;
+    return Math.max(1, istElite(nummer) ? K.faehigkeit.abstandElite : K.faehigkeit.abstand);
   }
 
-  /** Alle so vielen Züge greift dieser Boss an (Elite-Bosse früher, mindestens 1). */
-  function angriffsAbstand(nummer) {
-    const a = angriffVonBoss(nummer);
-    if (!a) return 0;
-    return Math.max(1, a.abstand - (istElite(nummer) ? K.gegenangriff.eliteKuerzer : 0));
+  /** Beschreibung einer Fähigkeit mit eingesetzten Zahlen. */
+  function faehigkeitBeschreibung(f) {
+    return f.beschreibung.split("{dauer}").join(String(f.dauer))
+      .split("{sekunden}").join(String(f.sekunden)).split("{leben}").join(String(f.leben));
   }
 
-  /** Beschreibung eines Angriffs mit eingesetzten Zahlen. */
-  function angriffBeschreibung(a) {
-    return a.beschreibung.split("{dauer}").join(String(a.dauer)).split("{wert}").join(zahlText(a.wert));
+  /** Fähigkeit für die Anzeige (ohne Funktionen). */
+  function faehigkeitFuerAnzeige(f, nummer) {
+    if (!f) return null;
+    const anzeige = { id: f.id, name: f.name, symbol: f.symbol, farbe: f.farbe, dauer: f.dauer,
+      abstand: nummer ? faehigkeitAbstand(nummer) : K.faehigkeit.abstand, beschreibung: faehigkeitBeschreibung(f) };
+    if (f.sekunden) {
+      anzeige.sekunden = f.sekunden;
+      anzeige.warnungSekunden = f.warnungSekunden;
+    }
+    return anzeige;
   }
 
-  /** Angriff für die Anzeige (ohne Funktionen). */
-  function angriffFuerAnzeige(a, nummer) {
-    if (!a) return null;
-    return { id: a.id, name: a.name, symbol: a.symbol, farbe: a.farbe, dauer: a.dauer,
-      abstand: nummer ? angriffsAbstand(nummer) : a.abstand, beschreibung: angriffBeschreibung(a) };
-  }
-
-  /** Gegenangriff-Stand für einen frischen Kampf gegen diesen Boss. */
-  function neuerGegenangriff(nummer) {
-    return { zaehler: angriffsAbstand(nummer), wirkungen: [] };
+  /** Stand der Fähigkeit für einen frischen Kampf gegen diesen Boss. */
+  function neueFaehigkeit(nummer) {
+    return { zaehler: faehigkeitAbstand(nummer), wirkungen: [] };
   }
 
   /**
-   * Was eine laufende Wirkung mit Feld i macht: "versiegelt", "verdeckt" oder null.
+   * Was eine laufende Wirkung mit Feld i macht: "versiegelt", "verdeckt", "timer" oder null.
    * @param {object[]} wirkungen – [{ id, rest, daten }] aus dem Spielstand (oder der Anzeige)
    */
   function feldWirkung(wirkungen, i) {
     for (const w of wirkungen || []) {
-      const a = angriffInfo(w.id);
-      const art = a && a.feld ? a.feld(w.daten, i) : null;
+      const f = faehigkeitInfo(w.id);
+      const art = f && f.feld ? f.feld(w.daten, i) : null;
       if (art) return art;
     }
     return null;
   }
 
-  /** Was eine laufende Wirkung mit Ziffer z macht: "verflucht" oder null. */
+  /** Was eine laufende Wirkung mit Ziffer z macht: "verflucht" (nicht setzbar) oder null. */
   function zifferWirkung(wirkungen, z) {
     for (const w of wirkungen || []) {
-      const a = angriffInfo(w.id);
-      const art = a && a.ziffer ? a.ziffer(w.daten, z) : null;
+      const f = faehigkeitInfo(w.id);
+      const art = f && f.ziffer ? f.ziffer(w.daten, z) : null;
       if (art) return art;
     }
     return null;
+  }
+
+  /** Das Wort einer laufenden Verwirrung (oder null): Ziffer z wird zum z-ten Buchstaben. */
+  function verwirrungsWort(wirkungen) {
+    const w = (wirkungen || []).find(function (x) { return x.id === "verwirrung"; });
+    return w ? w.daten.wort : null;
+  }
+
+  /** Taugt ein Wort für die Verwirrung? Genau 9 verschiedene Buchstaben A–Z. */
+  function wortGueltig(wort) {
+    return typeof wort === "string" && /^[A-Z]{9}$/.test(wort) && new Set(wort.split("")).size === 9;
   }
 
   /** Buch über seine id (oder null). */
@@ -909,13 +933,12 @@ const SudokuRPG = (function () {
 
   /**
    * Alles über den Boss mit dieser Nummer: Welt, Level, Name, Sprite,
-   * Sätze, Eigenheit und Angriff. Im 2., 3. … Durchlauf kommen dieselben
+   * Sätze und Fähigkeit. Im 2., 3. … Durchlauf kommen dieselben
    * Bosse wieder – mit mehr HP und anderer Farbe (runde = Durchlauf − 1).
    */
   function bossInfo(nummer) {
     const p = position(nummer);
     const b = p.welt.bosse[p.weltLevel - 1];
-    const eigenheit = eigenheitInfo(b.eigenheit);
     return {
       nummer: nummer,
       name: b.name,
@@ -936,10 +959,8 @@ const SudokuRPG = (function () {
       weltboss: p.weltboss,
       bisElite: bisElite(nummer),
       selten: null,          // seltene Eigenschaft – kommt aus dem Spielstand (siehe bossMitStand)
-      // Für die Anzeige: { id, name, farbe, wert, beschreibung (fertiger Text), wirkung }
-      eigenheit: eigenheit ? Object.assign({}, eigenheit, { beschreibung: beschreibungVon(eigenheit) }) : null,
-      // Gegenangriff: { id, name, symbol, farbe, dauer, abstand, beschreibung }
-      angriff: angriffFuerAnzeige(angriffVonBoss(nummer), nummer),
+      // Fähigkeit: { id, name, symbol, farbe, dauer, abstand, beschreibung (, sekunden) }
+      faehigkeit: faehigkeitFuerAnzeige(faehigkeitVonBoss(nummer), nummer),
     };
   }
 
@@ -1036,18 +1057,18 @@ const SudokuRPG = (function () {
        6. doppelt       × doppelschadenFaktor, wenn eine Einheit fertig wurde
        7. reihen        + Extra-Schaden je fertiger Einheit (Reihenbrecher) –
                         kommt NACH der Verdopplung und wird nicht mitverdoppelt
-       8. einschuechtern × 0,5, wenn der Boss eingeschüchtert hat (nur dieser Treffer)
-       9. gift          Giftanteil des bis hierher berechneten Schadens
+       8. gift          Giftanteil des bis hierher berechneten Schadens
        Am Ende wird aufgerundet (Schaden und Gift getrennt).
 
-     Verbesserungen wirken über die Spielwerte (werteVon). Boss-Eigenheiten
-     und Erweiterungen hängen sich als MODIFIKATOR in eine Stufe ein:
+     Verbesserungen wirken über die Spielwerte (werteVon). Seltene
+     Eigenschaften der Elite-Bosse und Erweiterungen hängen sich als
+     MODIFIKATOR in eine Stufe ein:
        { kritisch: function (rechnung, kontext) { … } }
      Ein Modifikator läuft direkt NACH der Grundregel seiner Stufe. Setzt er
      rechnung.ende = true, bleibt es beim aktuellen Wert (z. B. 0).
      ------------------------------------------------------------------------ */
 
-  const SCHADEN_STUFEN = ["wurf", "kritisch", "zuschlag", "buch", "schwierigkeit", "doppelt", "reihen", "einschuechtern", "gift"];
+  const SCHADEN_STUFEN = ["wurf", "kritisch", "zuschlag", "buch", "schwierigkeit", "doppelt", "reihen", "gift"];
 
   // Diese Stufen gelten für JEDEN Würfel einzeln (bei mehreren Würfeln)
   const WUERFEL_STUFEN = ["wurf", "kritisch"];
@@ -1056,8 +1077,8 @@ const SudokuRPG = (function () {
     wurf: function (r, k) {
       r.wert = r.wurf;
       r.schritte.push("Wurf " + r.wurf);
-      // Buch des Fünften: Der Wurf zählt mindestens als … (auch für Immunität,
-      // Rüstung und kritischen Treffer – er zählt eben als diese Zahl)
+      // Buch des Fünften: Der Wurf zählt mindestens als … (auch für Immunität
+      // und kritischen Treffer – er zählt eben als diese Zahl)
       if (k.mindestwurf && r.wurf < k.mindestwurf) {
         r.schritte.push("Mindestwurf +" + (k.mindestwurf - r.wurf));
         r.wurf = k.mindestwurf;
@@ -1116,15 +1137,6 @@ const SudokuRPG = (function () {
         r.schritte.push("Reihenbrecher +" + bonus);
       }
     },
-    // Angriff "Einschüchtern": dieser Treffer macht nur einen Teil des Schadens
-    einschuechtern: function (r, k) {
-      if (k.eingeschuechtert) {
-        const faktor = angriffInfo("einschuechtern").wert;
-        r.wert *= faktor;
-        r.eingeschuechtert = true;
-        r.schritte.push("Eingeschüchtert ×" + zahlText(faktor));
-      }
-    },
     gift: function (r, k) {
       if (k.giftAnteil > 0) r.giftWert = r.wert * k.giftAnteil;
     },
@@ -1136,7 +1148,6 @@ const SudokuRPG = (function () {
    * @param {object} kontext
    *   wurf          – gewürfelte Augenzahl
    *   werte         – Spielwerte (werteVon), Standard: ohne Verbesserungen
-   *   eingeschuechtert – true: der Boss hat eingeschüchtert (halber Schaden)
    *   buchBonus     – Buch-Bonus des laufenden Sudokus INKLUSIVE dieser Zahl (0.15 = +15 %)
    *   wuerfe        – mehrere Würfel (Augenzahlen), die alle zählen (sonst: wurf)
    *   mindestwurf   – der Wurf zählt mindestens als diese Zahl (Buch des Fünften)
@@ -1146,20 +1157,18 @@ const SudokuRPG = (function () {
    *   einheiten     – WIE VIELE Einheiten fertig wurden (0–3, für den Reihenbrecher)
    *   giftAnteil    – 0.5 = die Hälfte als Gift (0 = kein Gift)
    *   modifikatoren – Liste { <stufe>: function (rechnung, kontext) }
-   *   eigenheit     – die Eigenheit des Bosses (für ihre Modifikatoren)
    *   selten        – die seltene Eigenschaft eines Elite-Bosses (oder null)
    *   eliteTreffer  – der wievielte Treffer gegen diesen Elite-Boss
    * @returns {object} rechnung: { wurf, schaden, gift, kritisch, fehlschlag,
-   *   geblockt, immun, abwehrGrund, abwehrArt, buchBonus, eingeschuechtert, schritte, text, ausgeloest }
+   *   immun, abwehrGrund, abwehrArt, buchBonus, schritte, text }
    */
   /** Eine leere Rechnung für einen Würfel. */
   function neueRechnung(wurf, w) {
     const r = {
       wurf: wurf,
       kritischAb: w.wuerfelSeiten - w.kritischeAugen + 1,   // ab dieser Augenzahl kritisch
-      wert: 0, giftWert: 0, buchBonus: 0, eingeschuechtert: false,
-      kritisch: false, fehlschlag: false, geblockt: false, ende: false,
-      ausgeloest: null,          // Text, wenn eine Eigenheit eingegriffen hat
+      wert: 0, giftWert: 0, buchBonus: 0,
+      kritisch: false, fehlschlag: false, ende: false,
       immun: false,              // seltene Eigenschaft hat den Treffer abgewehrt
       abwehrGrund: null,         // z. B. "gerade"
       abwehrArt: null,           // "immun" oder "geblockt"
@@ -1191,7 +1200,7 @@ const SudokuRPG = (function () {
   }
 
   function berechneSchaden(kontext) {
-    kontext = Object.assign({ werte: werteVon({}), eingeschuechtert: false, grad: null, doppelt: false, einheiten: 0,
+    kontext = Object.assign({ werte: werteVon({}), grad: null, doppelt: false, einheiten: 0,
       giftAnteil: 0, modifikatoren: [], selten: null, eliteTreffer: 0, wuerfe: null }, kontext);
     const w = kontext.werte;
     let r;
@@ -1202,8 +1211,8 @@ const SudokuRPG = (function () {
       r.basis = r.wurf;
     } else {
       // Mehrere Würfel (Bücher des Achten und Neunten): Jeder Würfel läuft
-      // einzeln durch "wurf" und "kritisch" (Immunität, Rüstung, kritischer
-      // Treffer, Fehlschlag), dann werden die Werte addiert und die Rechnung
+      // einzeln durch "wurf" und "kritisch" (Immunität, kritischer Treffer,
+      // Fehlschlag), dann werden die Werte addiert und die Rechnung
       // läuft mit der Summe normal weiter.
       const teile = kontext.wuerfe.map(function (wurf) {
         const t = neueRechnung(wurf, w);
@@ -1213,7 +1222,7 @@ const SudokuRPG = (function () {
       r = neueRechnung(kontext.wuerfe[0], w);
       r.wuerfel = teile.map(function (t) {
         return { wurf: t.wurf, wert: t.wert, kritisch: t.kritisch, fehlschlag: t.fehlschlag,
-          immun: t.immun, geblockt: t.geblockt, abwehrArt: t.abwehrArt, verflucht: Boolean(t.verflucht) };
+          immun: t.immun, abwehrArt: t.abwehrArt };
       });
       r.wert = teile.reduce(function (summe, t) { return summe + t.wert; }, 0);
       r.basis = r.wert;
@@ -1221,11 +1230,9 @@ const SudokuRPG = (function () {
       // Nur wenn ALLE Würfel nichts bewirken, endet der Treffer wie bei einem Würfel
       const alle = function (feld) { return teile.every(function (t) { return t[feld]; }); };
       r.fehlschlag = alle("fehlschlag");
-      r.verflucht = alle("verflucht");
       if (alle("immun")) {
         r.immun = true; r.abwehrGrund = teile[0].abwehrGrund; r.abwehrArt = teile[0].abwehrArt;
       }
-      if (alle("geblockt")) { r.geblockt = true; r.ausgeloest = teile[0].ausgeloest; }
       r.schritte.push("Würfel " + teile.map(function (t) { return t.wert; }).join(" + ") + " = " + r.wert);
       if (r.wert === 0) {
         r.ende = true;
@@ -1249,7 +1256,6 @@ const SudokuRPG = (function () {
        plaetze,            ← ids aller Verbesserungen UND Bücher in der Reihenfolge,
                              in der sie dazukamen (höchstens K.plaetze; ein älterer
                              Stand mit mehr → erst auswählen, was bleibt)
-       eingeschuechtert,   ← true: der nächste Treffer macht halben Schaden (Angriff)
        auswahl,            ← null oder ids der angebotenen Verbesserungen
                              (dann muss erst gewählt werden)
        auswahlAnzahl,      ← wie viele davon noch gewählt werden dürfen (0 = keine Auswahl)
@@ -1261,9 +1267,12 @@ const SudokuRPG = (function () {
                              und wie oft er schon getroffen wurde
        vorigeSelten,       ← seltene Eigenschaft des letzten Elite-Bosses
                              (der nächste bekommt eine andere)
-       gegenangriff: {     ← Angriff des aktuellen Bosses (neu in Version 6)
-         zaehler,          ← so viele Züge noch bis zum Angriff
-         wirkungen: [ { id, rest, daten } ]  ← laufende Wirkungen (rest = Züge)
+       faehigkeit: {       ← Fähigkeit des aktuellen Bosses (Version 12; davor "gegenangriff")
+         zaehler,          ← so viele Züge noch bis zum Einsatz
+         wirkungen: [ { id, rest, daten } ]  ← laufende Wirkungen: rest = Züge
+                             (null bei Tick, Tick – daten.restMs ist die Restzeit
+                             des Timers, daten.feld sein Feld); Verwirrung:
+                             daten.wort ist das aktuelle Wort
        },
        buecher,            ← { id: Stufe } der Bücher (höchstens buchGrundwirkung.maxBuecher);
                              leer → beim nächsten Öffnen findet der Buch-Spin statt
@@ -1318,14 +1327,13 @@ const SudokuRPG = (function () {
       rekord: 0,            // höchster besiegter Boss
       verbesserungen: {},
       plaetze: [],          // Reihenfolge der belegten Plätze (das Buch aus dem Spin zuerst)
-      eingeschuechtert: false,
       auswahl: null,
       auswahlAnzahl: 0,
       auswahlGrund: "boss",
       freieWahl: 0,
       elite: null,          // Boss 1 ist nie ein Elite-Boss (abstand ≥ 2)
       vorigeSelten: null,
-      gegenangriff: neuerGegenangriff(1),
+      faehigkeit: neueFaehigkeit(1),
       buecher: {},            // leer → Buch-Spin (siehe buchSpin)
       buchBonus: 0,
       buchSchlaege: [],
@@ -1401,6 +1409,7 @@ const SudokuRPG = (function () {
     const vorV9 = roh.version < 9;
     const vorV10 = roh.version < 10;
     const vorV11 = roh.version < 11;
+    const vorV12 = roh.version < 12;
 
     // Bücher (Version 7: eigene Kategorie bis Stufe 5, Version 8: Teil der
     // Verbesserungen bis Stufe 10). Mehr als maxBuecher → die mit der höchsten
@@ -1547,20 +1556,21 @@ const SudokuRPG = (function () {
       }
     }
 
-    // Gegenangriff (neu in Version 6). Fehlt er oder passt er nicht, beginnt
-    // der Zähler von vorn. Wirkungen gibt es nur in einem laufenden Sudoku.
-    const gegenangriff = neuerGegenangriff(roh.bossNummer);
-    const ga = vorV6 ? null : roh.gegenangriff;
-    if (ga && typeof ga === "object") {
-      const abstand = angriffsAbstand(roh.bossNummer);
-      if (istGanzzahl(ga.zaehler, 1, Math.max(1, abstand))) gegenangriff.zaehler = ga.zaehler;
-      // (Ein früherer Stand mit vorrätigen "paraden" verliert sie – Paraden gibt es nur noch im Zug des Angriffs)
-      if (Array.isArray(ga.wirkungen) && raetsel && !raetsel.geloest) {
-        gegenangriff.wirkungen = ga.wirkungen.filter(function (w) {
-          const a = w && angriffInfo(w.id);
-          return a && a.dauer > 0 && istGanzzahl(w.rest, 1, a.dauer) && w.daten && typeof w.daten === "object" &&
-            (!a.gueltig || a.gueltig(w.daten));
-        }).map(function (w) { return { id: w.id, rest: w.rest, daten: Object.assign({}, w.daten) }; });
+    // Fähigkeit des Bosses (Version 12; Version 6 bis 11: "gegenangriff" mit
+    // den damaligen Angriffen). Zähler, der nicht passt → von vorn. Laufende
+    // Wirkungen nur in einem laufenden Sudoku und nur von der Fähigkeit, die
+    // der Boss JETZT hat – alte Eigenheiten und Angriffe fallen weg.
+    const faehigkeit = neueFaehigkeit(roh.bossNummer);
+    const alt = vorV6 ? null : vorV12 ? roh.gegenangriff : roh.faehigkeit;
+    const eigene = faehigkeitVonBoss(roh.bossNummer);
+    if (alt && typeof alt === "object") {
+      if (istGanzzahl(alt.zaehler, 1, Math.max(1, faehigkeit.zaehler))) faehigkeit.zaehler = alt.zaehler;
+      if (eigene && Array.isArray(alt.wirkungen) && raetsel && !raetsel.geloest) {
+        faehigkeit.wirkungen = alt.wirkungen.filter(function (w) {
+          if (!w || w.id !== eigene.id || !w.daten || typeof w.daten !== "object") return false;
+          const rest = eigene.dauer === null ? w.rest === null : istGanzzahl(w.rest, 1, eigene.dauer);
+          return rest && (!eigene.gueltig || eigene.gueltig(w.daten, eigene));
+        }).slice(0, 1).map(function (w) { return { id: w.id, rest: w.rest, daten: Object.assign({}, w.daten) }; });
       }
     }
     // Plätze: Reihenfolge der Verbesserungen und Bücher (neu in Version 10;
@@ -1598,7 +1608,7 @@ const SudokuRPG = (function () {
 
     return {
       ok: true,
-      ergaenzt: vorV11,
+      ergaenzt: vorV12,
       daten: {
         version: VERSION,
         bossNummer: roh.bossNummer,
@@ -1609,14 +1619,13 @@ const SudokuRPG = (function () {
         rekord: roh.rekord,
         verbesserungen: stufen,
         plaetze: plaetze,
-        eingeschuechtert: !vorV10 && roh.eingeschuechtert === true,
         auswahl: auswahl,
         auswahlAnzahl: auswahlAnzahl,
         auswahlGrund: auswahl ? auswahlGrund : "boss",
         freieWahl: freieWahl,
         elite: elite,
         vorigeSelten: vorigeSelten,
-        gegenangriff: gegenangriff,
+        faehigkeit: faehigkeit,
         buecher: buecher,
         buchBonus: buchBonus,
         buchSchlaege: buchSchlaege,
@@ -1760,10 +1769,9 @@ const SudokuRPG = (function () {
         : null;
     }
 
-    /** Alle Modifikatoren für die Schadensberechnung: Eigenheit, seltene Eigenschaft, Erweiterungen. */
+    /** Alle Modifikatoren für die Schadensberechnung: seltene Eigenschaft, Erweiterungen. */
     function modifikatoren(boss) {
       const liste = [];
-      if (boss.eigenheit && boss.eigenheit.wirkung.schaden) liste.push(boss.eigenheit.wirkung.schaden);
       if (boss.selten && boss.selten.wirkung.schaden) liste.push(boss.selten.wirkung.schaden);
       erweiterungen.forEach(function (erw) { if (erw.schaden) liste.push(erw.schaden); });
       return liste;
@@ -1907,8 +1915,8 @@ const SudokuRPG = (function () {
       };
       zustand.raetsel.powerups = lostPowerups(zustand.raetsel, zufall, werte().powerupAnzahl);
       zustand.raetsel.regenbogen = loseRegenbogen(zustand.raetsel, zufall);
-      // Wirkungen enden mit dem Sudoku, der Angriffszähler läuft weiter
-      zustand.gegenangriff.wirkungen = [];
+      // Wirkungen enden mit dem Sudoku, der Fähigkeitszähler läuft weiter
+      zustand.faehigkeit.wirkungen = [];
       // Buch-Bonus und Buchschläge gelten je Sudoku
       zustand.buchBonus = 0;
       zustand.buchSchlaege = [];
@@ -1940,7 +1948,7 @@ const SudokuRPG = (function () {
     function neuerBossDaten() {
       const boss = bossMitStand(zustand.bossNummer);
       return { boss: boss, hp: zustand.bossHp, leben: zustand.leben, maxLeben: werte().maxLeben, rekord: zustand.rekord,
-        gegenangriff: gegenangriffAnzeige() };
+        faehigkeitStand: faehigkeitAnzeige() };
     }
 
     /* ---------- Bücher ---------- */
@@ -2011,7 +2019,7 @@ const SudokuRPG = (function () {
 
     /**
      * Boss besiegt: Rekord, nächster Boss, Leben auffüllen, Verbesserungen
-     * anbieten, neuer Angriffszähler. Elite-Boss: Extra-Münzen, mehr Wahlen.
+     * anbieten, neuer Fähigkeitszähler. Elite-Boss: Extra-Münzen, mehr Wahlen.
      * @returns {number} – Elite-Bonus (Münzen)
      */
     function bossBesiegtAnwenden(bossVorher) {
@@ -2027,14 +2035,13 @@ const SudokuRPG = (function () {
       eliteAuslosen();
       zustand.bossHp = maxHp(zustand.bossNummer);
       zustand.leben = Math.max(zustand.leben, K.lebenNachBoss);
-      zustand.eingeschuechtert = false;          // gehörte zum besiegten Boss
       zustand.auswahl = loseAngebot();
       zustand.auswahlAnzahl = zustand.auswahl
         ? Math.min(zustand.auswahl.length, bossVorher.elite ? Math.max(1, K.elite.verbesserungenWaehlen) : 1)
         : 0;
-      // Der neue Boss beginnt seinen Angriffszähler von vorn; laufende
+      // Der neue Boss beginnt seinen Fähigkeitszähler von vorn; laufende
       // Wirkungen verfallen mit dem besiegten Boss
-      zustand.gegenangriff = neuerGegenangriff(zustand.bossNummer);
+      zustand.faehigkeit = neueFaehigkeit(zustand.bossNummer);
       return eliteBonus;
     }
 
@@ -2065,40 +2072,47 @@ const SudokuRPG = (function () {
       }
     }
 
-    /* ---------- Gegenangriff ---------- */
+    /* ---------- Fähigkeit des Bosses ---------- */
 
-    /** Der Gegenangriff-Stand für die Anzeige (eine Kopie – Ereignisse bleiben unverändert). */
-    function gegenangriffAnzeige() {
-      const ga = zustand.gegenangriff;
+    /** Stand der Fähigkeit für die Anzeige (eine Kopie – Ereignisse bleiben unverändert). */
+    function faehigkeitAnzeige() {
+      const fs = zustand.faehigkeit;
       return {
-        angriff: angriffFuerAnzeige(angriffVonBoss(zustand.bossNummer), zustand.bossNummer),
-        zaehler: ga.zaehler,
-        warnung: ga.zaehler <= K.gegenangriff.warnungAb,
-        // Der nächste Zug löst den Angriff aus: Eine fertige Einheit in diesem Zug pariert
-        paradeMoeglich: ga.zaehler === 1,
-        wirkungen: ga.wirkungen.map(function (w) {
-          const a = angriffInfo(w.id);
-          return { id: w.id, name: a.name, symbol: a.symbol, farbe: a.farbe, rest: w.rest, daten: Object.assign({}, w.daten) };
+        faehigkeit: faehigkeitFuerAnzeige(faehigkeitVonBoss(zustand.bossNummer), zustand.bossNummer),
+        zaehler: fs.zaehler,
+        warnung: fs.zaehler <= K.faehigkeit.warnungAb,
+        // Der nächste Zug löst die Fähigkeit aus: Eine fertige Einheit in diesem Zug pariert
+        paradeMoeglich: fs.zaehler === 1,
+        wirkungen: fs.wirkungen.map(function (w) {
+          const f = faehigkeitInfo(w.id);
+          return { id: w.id, name: f.name, symbol: f.symbol, farbe: f.farbe, rest: w.rest,
+            sekunden: f.sekunden || null, warnungSekunden: f.warnungSekunden || null,
+            daten: Object.assign({}, w.daten) };
         }),
       };
     }
 
     /** Ist Feld i gerade versiegelt (dort kann man nichts setzen)? */
     function istVersiegelt(i) {
-      return feldWirkung(zustand.gegenangriff.wirkungen, i) === "versiegelt";
+      return feldWirkung(zustand.faehigkeit.wirkungen, i) === "versiegelt";
+    }
+
+    /** Der laufende Timer (eine Wirkung mit daten.restMs) oder null. */
+    function laufenderTimer() {
+      return zustand.faehigkeit.wirkungen.find(function (w) { return w.rest === null && typeof w.daten.restMs === "number"; }) || null;
     }
 
     /**
-     * Ein Zug ist vorbei (richtige oder falsche Zahl): Wirkungen laufen ab,
-     * der Zähler sinkt. Bei 0 greift der Boss an.
+     * Ein Zug ist vorbei (richtige oder falsche Zahl): Wirkungen mit Zugdauer
+     * laufen ab, der Zähler sinkt. Bei 0 setzt der Boss seine Fähigkeit ein.
      * @param {boolean} einheitFertig – hat dieser Zug eine Zeile, Spalte oder einen Block vervollständigt?
-     * @returns {object|null} – Daten für das Ereignis "angriff" (oder null)
+     * @returns {object|null} – Daten für das Ereignis "faehigkeit" (oder null)
      */
     function zugVorbei(boss, einheitFertig) {
-      const ga = zustand.gegenangriff;
+      const fs = zustand.faehigkeit;
       const r = zustand.raetsel;
-      ga.wirkungen.forEach(function (w) { w.rest--; });
-      ga.wirkungen = ga.wirkungen.filter(function (w) { return w.rest > 0; });
+      fs.wirkungen.forEach(function (w) { if (w.rest !== null) w.rest--; });
+      fs.wirkungen = fs.wirkungen.filter(function (w) { return w.rest === null || w.rest > 0; });
       // Sind alle leeren Felder versiegelt, bricht das Siegel – sonst ginge es nicht weiter
       if (r && !r.geloest) {
         let frei = false, leer = false;
@@ -2106,62 +2120,98 @@ const SudokuRPG = (function () {
           if (r.vorgaben[i] === 0 && r.eingaben[i] === 0) { leer = true; if (!istVersiegelt(i)) frei = true; }
         }
         if (leer && !frei) {
-          ga.wirkungen = ga.wirkungen.filter(function (w) { const a = angriffInfo(w.id); return !a.feld; });
+          fs.wirkungen = fs.wirkungen.filter(function (w) {
+            for (let i = 0; i < 81; i++) if (feldWirkung([w], i) === "versiegelt") return false;
+            return true;
+          });
         }
       }
-      const angriff = angriffVonBoss(zustand.bossNummer);
-      if (!angriff) return null;
-      ga.zaehler--;
-      if (ga.zaehler > 0) return null;
-      return angreifen(angriff, boss, einheitFertig);
+      const f = faehigkeitVonBoss(zustand.bossNummer);
+      if (!f) return null;
+      fs.zaehler--;
+      if (fs.zaehler > 0) return null;
+      return einsetzen(f, boss, einheitFertig);
     }
 
     /**
-     * Der Boss greift an. Hat derselbe Zug eine Einheit vervollständigt, pariert
-     * der Held – sonst wirkt der Angriff (oder verpufft).
+     * Der Boss setzt seine Fähigkeit ein. Hat derselbe Zug eine Einheit
+     * vervollständigt, pariert der Held – sonst wirkt sie (oder verpufft).
      */
-    function angreifen(angriff, boss, pariert) {
-      const ga = zustand.gegenangriff;
+    function einsetzen(f, boss, pariert) {
+      const fs = zustand.faehigkeit;
       const r = zustand.raetsel;
-      ga.zaehler = angriffsAbstand(zustand.bossNummer);
+      fs.zaehler = faehigkeitAbstand(zustand.bossNummer);
       const ereignis = {
-        boss: boss, angriff: angriffFuerAnzeige(angriff, zustand.bossNummer),
-        pariert: false, verpufft: false, text: "", wirkung: null, niederlage: false,
-        lebenVorher: zustand.leben,
+        boss: boss, faehigkeit: faehigkeitFuerAnzeige(f, zustand.bossNummer),
+        pariert: false, verpufft: false, text: "", wirkung: null,
       };
       if (pariert) {
         ereignis.pariert = true;
         ereignis.text = "Pariert!";
-      } else if (angriff.dauer > 0 && (!r || r.geloest)) {
+      } else if (!r || r.geloest) {
         ereignis.verpufft = true;                 // ohne laufendes Sudoku gibt es nichts zu treffen
       } else {
+        const leer = function (i) { return r.vorgaben[i] === 0 && r.eingaben[i] === 0; };
         const a = {
-          zustand: zustand, raetsel: r, wert: angriff.wert, dauer: angriff.dauer, zufall: zufall,
+          zustand: zustand, raetsel: r, zufall: zufall, eintrag: f,
           waehle: function (liste) { return liste[Math.floor(zufall() * liste.length)]; },
-          leer: function (i) { return r.vorgaben[i] === 0 && r.eingaben[i] === 0; },
+          leer: leer,
+          frei: function (i) { return leer(i) && feldWirkung(fs.wirkungen, i) === null; },
           blockFelder: function (b) {
             const felder = [];
             for (let k = 0; k < 9; k++) felder.push((Math.floor(b / 3) * 3 + Math.floor(k / 3)) * 9 + (b % 3) * 3 + (k % 3));
             return felder;
           },
         };
-        const ergebnis = angriff.wirkung(a);
+        const ergebnis = f.wirkung(a);
         if (!ergebnis) {
           ereignis.verpufft = true;
         } else {
           ereignis.text = ergebnis.text;
-          if (angriff.dauer > 0 && ergebnis.daten) {
-            // Gleicher Angriff noch aktiv? Dann wird er ersetzt.
-            ga.wirkungen = ga.wirkungen.filter(function (w) { return w.id !== angriff.id; });
-            ga.wirkungen.push({ id: angriff.id, rest: angriff.dauer, daten: ergebnis.daten });
-            ereignis.wirkung = { id: angriff.id, rest: angriff.dauer, daten: Object.assign({}, ergebnis.daten) };
-          }
+          // Dieselbe Wirkung läuft noch? Dann wird sie ersetzt (beginnt von vorn).
+          fs.wirkungen = fs.wirkungen.filter(function (w) { return w.id !== f.id; });
+          fs.wirkungen.push({ id: f.id, rest: f.dauer, daten: ergebnis.daten });
+          ereignis.wirkung = { id: f.id, rest: f.dauer, daten: Object.assign({}, ergebnis.daten) };
         }
       }
-      if (ereignis.verpufft) ereignis.text = angriff.name + " verpufft";
-      ereignis.leben = zustand.leben;
-      ereignis.eingeschuechtert = zustand.eingeschuechtert;
-      ereignis.maxLeben = werte().maxLeben;
+      if (ereignis.verpufft) ereignis.text = f.name + " verpufft";
+      return ereignis;
+    }
+
+    /**
+     * Tick, Tick: Zeit vergeht (die Oberfläche meldet sie nur, solange das
+     * Spiel sichtbar ist und keine Überlagerung offen ist). Gespeichert wird
+     * die Restzeit jede volle Sekunde. Läuft der Timer ab, kostet er Leben –
+     * beim letzten Leben ist der Durchlauf vorbei.
+     * @param {number} ms – vergangene Millisekunden
+     * @returns {object|null} – { restMs } solange er läuft, das Ereignis "timer"
+     *   beim Ablauf, null ohne laufenden Timer
+     */
+    function timerVergeht(ms) {
+      if (zustand.ende || zustand.auswahl || mussBehalten() || !(ms > 0)) return null;
+      const w = laufenderTimer();
+      if (!w) return null;
+      const sekundeVorher = Math.ceil(w.daten.restMs / 1000);
+      w.daten.restMs = Math.max(0, Math.round(w.daten.restMs - ms));
+      if (w.daten.restMs > 0) {
+        if (Math.ceil(w.daten.restMs / 1000) !== sekundeVorher) speichern();
+        return { restMs: w.daten.restMs };
+      }
+      // Abgelaufen: Timer weg, Leben weg
+      const f = faehigkeitInfo(w.id);
+      const boss = bossMitStand(zustand.bossNummer);
+      zustand.faehigkeit.wirkungen = zustand.faehigkeit.wirkungen.filter(function (x) { return x !== w; });
+      const lebenVorher = zustand.leben;
+      zustand.leben = Math.max(0, zustand.leben - f.leben);
+      const ereignis = {
+        boss: boss, faehigkeit: faehigkeitFuerAnzeige(f, zustand.bossNummer), feld: w.daten.feld,
+        lebenVorher: lebenVorher, leben: zustand.leben, maxLeben: werte().maxLeben,
+        niederlage: zustand.leben <= 0, stand: faehigkeitAnzeige(),
+      };
+      const niederlage = ereignis.niederlage ? durchlaufBeenden("niederlage", boss) : null;
+      speichern();
+      melde("timer", ereignis);
+      if (niederlage) melde("niederlage", niederlage);
       return ereignis;
     }
 
@@ -2181,7 +2231,7 @@ const SudokuRPG = (function () {
     /**
      * Beendet den Durchlauf (Niederlage oder aufgegeben): Die Zusammenfassung
      * wird festgehalten, alles andere geht auf Anfang – Welt 1, Level 1,
-     * Boss-HP, Leben und Lebensmaximum, Verbesserungen, Bücher, Angriffszähler,
+     * Boss-HP, Leben und Lebensmaximum, Verbesserungen, Bücher, Fähigkeitszähler,
      * laufende Wirkungen und das Sudoku samt Power-ups. Münzen und Rekorde
      * bleiben. Weiter geht es erst mit neuerDurchlauf() (dann Buch-Spin und
      * Auslosung der Schwierigkeit wie bei einem frischen Abenteuer).
@@ -2264,66 +2314,46 @@ const SudokuRPG = (function () {
       return daten;
     }
 
-    /** Falsche Zahl → Leben weg, Eigenheit des Bosses (Zahl und Power-up bleiben). */
+    /** Falsche Zahl → ein Leben weg (Zahl und Power-up bleiben), der Zug zählt. */
     function falscheZahl(index, ziffer) {
       const boss = bossMitStand(zustand.bossNummer);
-      const hpVorher = zustand.bossHp;
-      const muenzenVorher = zustand.muenzen;
       zustand.leben--;
-
-      // Eigenheit (z. B. Regeneration, Dieb)
-      let eigenheit = null;
-      if (boss.eigenheit && boss.eigenheit.wirkung.beiFehler) {
-        const text = boss.eigenheit.wirkung.beiFehler({ zustand: zustand, boss: boss, wert: boss.eigenheit.wert });
-        if (text) eigenheit = { id: boss.eigenheit.id, name: boss.eigenheit.name, farbe: boss.eigenheit.farbe, text: text };
-      }
-
       const ereignis = {
         index: index, ziffer: ziffer, boss: boss,
         leben: Math.max(0, zustand.leben), startLeben: K.startLeben, maxLeben: werte().maxLeben,
-        eigenheit: eigenheit,
-        hpVorher: hpVorher, hp: zustand.bossHp,
-        muenzenVorher: muenzenVorher, muenzen: zustand.muenzen,
+        hp: zustand.bossHp, muenzen: zustand.muenzen,
       };
 
       if (zustand.leben <= 0) {
-        // Niederlage – der Boss greift dann nicht mehr an
-        ereignis.gegenangriff = gegenangriffAnzeige();
+        // Niederlage – der Boss setzt seine Fähigkeit dann nicht mehr ein
+        ereignis.faehigkeitStand = faehigkeitAnzeige();
         const niederlage = durchlaufBeenden("niederlage", boss);
         speichern();
         melde("fehler", ereignis);
         melde("niederlage", niederlage);
-        return { art: "fehler", niederlage: true, eigenheit: eigenheit, angriff: null };
+        return { art: "fehler", niederlage: true, faehigkeit: null };
       }
-      // Gegenangriff: Der Zug zählt. Ein Hieb kann das letzte Leben kosten.
-      const angriff = zugVorbei(boss, false);      // eine falsche Zahl vervollständigt nichts
-      ereignis.gegenangriff = angriffAnzeigeVorAngriff(angriff);
-      let niederlage = null;
-      if (angriff) {
-        angriff.stand = gegenangriffAnzeige();
-        if (zustand.leben <= 0) {
-          angriff.niederlage = true;
-          niederlage = durchlaufBeenden("niederlage", boss);
-        }
-      }
+      // Fähigkeit: Auch eine falsche Zahl zählt als Zug
+      const einsatz = zugVorbei(boss, false);      // eine falsche Zahl vervollständigt nichts
+      ereignis.faehigkeitStand = anzeigeVorEinsatz(einsatz);
+      if (einsatz) einsatz.stand = faehigkeitAnzeige();
       speichern();
       melde("fehler", ereignis);
-      if (angriff) melde("angriff", angriff);
-      if (niederlage) melde("niederlage", niederlage);
-      return { art: "fehler", niederlage: Boolean(niederlage), eigenheit: eigenheit, angriff: angriff };
+      if (einsatz) melde("faehigkeit", einsatz);
+      return { art: "fehler", niederlage: false, faehigkeit: einsatz };
     }
 
     /**
-     * Stand für die Anzeige direkt nach dem Zug, aber VOR einem Angriff
-     * (Zähler auf 0, damit "jetzt" angezeigt wird, bis der Angriff abgespielt ist).
+     * Stand für die Anzeige direkt nach dem Zug, aber VOR dem Einsatz der
+     * Fähigkeit (Zähler auf 0, damit "jetzt" angezeigt wird, bis sie abgespielt ist).
      */
-    function angriffAnzeigeVorAngriff(angriff) {
-      const stand = gegenangriffAnzeige();
-      if (angriff) {
+    function anzeigeVorEinsatz(einsatz) {
+      const stand = faehigkeitAnzeige();
+      if (einsatz) {
         stand.zaehler = 0;
         stand.warnung = true;
-        // Die neue Wirkung erscheint erst mit dem Angriff
-        if (angriff.wirkung) stand.wirkungen = stand.wirkungen.filter(function (w) { return w.id !== angriff.wirkung.id; });
+        // Die neue Wirkung erscheint erst mit dem Einsatz
+        if (einsatz.wirkung) stand.wirkungen = stand.wirkungen.filter(function (w) { return w.id !== einsatz.wirkung.id; });
       }
       return stand;
     }
@@ -2345,11 +2375,17 @@ const SudokuRPG = (function () {
       if (!istGanzzahl(ziffer, 1, 9)) return { art: "gesperrt" };
       // Siegel des Bosses: Hier kann gerade nichts gesetzt werden (zählt nicht als Zug)
       if (istVersiegelt(index)) return { art: "versiegelt" };
+      // Fluch des Bosses: Diese Ziffer kann gerade nicht gesetzt werden (zählt nicht als Zug)
+      if (zifferWirkung(zustand.faehigkeit.wirkungen, ziffer) === "verflucht") return { art: "verflucht", ziffer: ziffer };
 
       if (ziffer !== r.loesung[index]) return falscheZahl(index, ziffer);
 
       // ---- Richtige Zahl → eintragen (gesperrt)
       r.eingaben[index] = ziffer;
+      // Tick, Tick: Die richtige Zahl im Timerfeld entschärft den Timer
+      const timer = laufenderTimer();
+      const entschaerft = Boolean(timer && timer.daten.feld === index);
+      if (entschaerft) zustand.faehigkeit.wirkungen = zustand.faehigkeit.wirkungen.filter(function (x) { return x !== timer; });
       // Elite-Boss: Treffer zählen (z. B. für "Schildwall")
       const eliteTreffer = zustand.elite ? ++zustand.elite.treffer : 0;
       const w = werte();
@@ -2380,7 +2416,7 @@ const SudokuRPG = (function () {
 
       // 3. Schaden – alles in der zentralen Berechnung.
       //    Regenbogenfeld: kein Wurf – der Boss ist sofort besiegt, egal wie
-      //    viele HP er hat und welche Eigenheiten er besitzt (auch Elite).
+      //    viele HP er hat und welche seltene Eigenschaft er besitzt (auch Elite).
       const regenbogen = r.regenbogen === index;
       if (regenbogen) r.regenbogen = null;
       //    Würfel: einer – oder mehrere (Zusatzwirkung eines Buchs)
@@ -2390,36 +2426,21 @@ const SudokuRPG = (function () {
       const wuerfelModus = anzahlWuerfel > 1 ? zusatz.wuerfel.modus : null;
       // "hoechster": nur der höhere zählt (ein Würfel für die Rechnung)
       const wurf = regenbogen ? null : wuerfelModus === "hoechster" ? Math.max.apply(null, wuerfe) : wuerfe[0];
-      //    Fluch des Bosses: Diese Ziffer macht keinen Schaden (vor allem anderen,
-      //    also auch kein kritischer Treffer). Das Regenbogenfeld wirkt trotzdem.
-      const verflucht = zifferWirkung(zustand.gegenangriff.wirkungen, ziffer) === "verflucht";
       const mods = modifikatoren(bossVorher);
-      if (verflucht) {
-        mods.unshift({ wurf: function (rech) {
-          rech.verflucht = true;
-          rech.wert = 0;
-          rech.ende = true;
-          rech.schritte.push("Fluch ×0");
-        } });
-      }
       const rechnung = regenbogen ? {
-        regenbogen: true, wurf: null, schaden: hpVorher, gift: 0, buchBonus: 0, eingeschuechtert: false,
-        kritisch: false, fehlschlag: false, geblockt: false, immun: false, ausgeloest: null,
+        regenbogen: true, wurf: null, schaden: hpVorher, gift: 0, buchBonus: 0,
+        kritisch: false, fehlschlag: false, immun: false,
         schritte: ["Regenbogenschlag"], text: "Regenbogenschlag = " + hpVorher,
       } : berechneSchaden({
         wurf: wurf, wuerfe: wuerfelModus === "summe" ? wuerfe : null,
         mindestwurf: zusatz.mindestwurf || 0, immerKritisch: Boolean(zusatz.immerKritisch),
-        werte: w, eingeschuechtert: zustand.eingeschuechtert, buchBonus: zustand.buchBonus, grad: r.grad, doppelt: doppelt,
+        werte: w, buchBonus: zustand.buchBonus, grad: r.grad, doppelt: doppelt,
         einheiten: (einheiten.zeile ? 1 : 0) + (einheiten.spalte ? 1 : 0) + (einheiten.block ? 1 : 0),
         giftAnteil: effekt.giftAnteil,
-        modifikatoren: mods, eigenheit: bossVorher.eigenheit,
+        modifikatoren: mods,
         selten: bossVorher.selten, eliteTreffer: eliteTreffer,
       });
       if (!regenbogen) rechnung.regenbogen = false;
-      // Einschüchtern gilt für genau einen Treffer (auch einen abgewehrten)
-      const warEingeschuechtert = zustand.eingeschuechtert;
-      zustand.eingeschuechtert = false;
-      rechnung.verflucht = Boolean(rechnung.verflucht);
       const spruch = rechnung.fehlschlag
         ? K.fehlschlagSprueche[Math.floor(zufall() * K.fehlschlagSprueche.length)]
         : null;
@@ -2489,25 +2510,21 @@ const SudokuRPG = (function () {
         r.geloest = true;
       }
 
-      // 9. Gegenangriff: Der Zug zählt (nicht, wenn der Boss gerade besiegt wurde).
-      //    Hat dieser Zug eine Einheit vervollständigt, pariert der Held.
-      //    Wirkungen enden mit dem Sudoku. Ein Hieb kann das letzte Leben kosten.
-      //    Buch des Vierten: Angriffszähler um 1 Zug zurücksetzen (höchstens auf den vollen Abstand)
-      let buchAngriff = 0;
-      if (!besiegt && zusatz.angriff && angriffVonBoss(zustand.bossNummer)) {
-        const voll = angriffsAbstand(zustand.bossNummer);
-        const vorher = zustand.gegenangriff.zaehler;
-        zustand.gegenangriff.zaehler = Math.min(voll, vorher + zusatz.angriff);
-        buchAngriff = zustand.gegenangriff.zaehler - vorher;
+      // 9. Fähigkeit: Der Zug zählt – nicht, wenn der Treffer den Boss besiegt
+      //    hat (dann setzt er sie nicht mehr ein). Hat dieser Zug eine Einheit
+      //    vervollständigt, pariert der Held. Wirkungen enden mit dem Sudoku.
+      //    Buch des Vierten: Zähler um 1 Zug zurücksetzen (höchstens auf den vollen Abstand)
+      let buchFaehigkeit = 0;
+      if (!besiegt && zusatz.faehigkeit && faehigkeitVonBoss(zustand.bossNummer)) {
+        const voll = faehigkeitAbstand(zustand.bossNummer);
+        const vorher = zustand.faehigkeit.zaehler;
+        zustand.faehigkeit.zaehler = Math.min(voll, vorher + zusatz.faehigkeit);
+        buchFaehigkeit = zustand.faehigkeit.zaehler - vorher;
       }
-      const angriff = besiegt ? null : zugVorbei(bossVorher, doppelt);
-      if (geloest) zustand.gegenangriff.wirkungen = [];
-      const gegenangriff = besiegt ? null : angriffAnzeigeVorAngriff(angriff);
-      let niederlage = null;
-      if (angriff) {
-        angriff.stand = gegenangriffAnzeige();
-        if (zustand.leben <= 0) angriff.niederlage = true;   // Durchlauf endet – unten, nach dem Treffer
-      }
+      const einsatz = besiegt ? null : zugVorbei(bossVorher, doppelt);
+      if (geloest) zustand.faehigkeit.wirkungen = [];
+      const faehigkeitStand = besiegt ? null : anzeigeVorEinsatz(einsatz);
+      if (einsatz) einsatz.stand = faehigkeitAnzeige();
 
       // Alles, was diese Zahl bewirkt hat, in EINEM Ereignis
       const treffer = {
@@ -2516,13 +2533,9 @@ const SudokuRPG = (function () {
         kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, spruch: spruch,
         doppelt: doppelt, einheiten: einheiten,
         schaden: rechnung.schaden, gift: rechnung.gift,
-        eingeschuechtert: warEingeschuechtert && !regenbogen,
+        entschaerft: entschaerft,             // Tick, Tick: Timer entschärft
         // Verbesserungen und Bücher, die bei diesem Treffer gewirkt haben (ihr Platz leuchtet auf)
         wirksam: wirksameVerbesserungen(w, rechnung, einheiten, buchWirkung, powerup),
-        eigenheit: rechnung.ausgeloest ? {
-          id: bossVorher.eigenheit.id, name: bossVorher.eigenheit.name,
-          farbe: bossVorher.eigenheit.farbe, text: rechnung.ausgeloest,
-        } : null,
         // Seltene Eigenschaft hat den Treffer abgewehrt ("immun" oder "geblockt")
         immun: rechnung.immun,
         selten: rechnung.immun ? {
@@ -2536,27 +2549,22 @@ const SudokuRPG = (function () {
         muenzenPlus: muenzenPlus, muenzen: zustand.muenzen - (durchBuch ? eliteBonus : 0), muenzFaktor: muenzFaktor,   // muenzen inkl. eliteBonus
         lebenGewuenscht: effekt.leben, lebenPlus: lebenPlus,
         leben: lebenVorher + lebenPlus, maxLeben: w.maxLeben,
-        verflucht: rechnung.verflucht,
-        // Gegenangriff-Stand nach diesem Zug (vor einem Angriff); null, wenn der Boss besiegt ist
-        gegenangriff: gegenangriff,
+        // Stand der Fähigkeit nach diesem Zug (vor ihrem Einsatz); null, wenn der Boss besiegt ist
+        faehigkeitStand: faehigkeitStand,
         // Bücher: Bonus nach diesem Zug, Anstieg durch diese Zahl, Buch dieser Ziffer
         buchBonus: zustand.buchBonus, buchBonusPlus: buchWirkung.bonus,
         buch: buchWirkung.buch ? Object.assign(buchFuerAnzeige(buchWirkung.buch.id, buchWirkung.stufe), { zusatz: buchWirkung.buch.zusatz }) : null,
         // alle Würfel (bei Büchern mit mehreren Würfeln) und wie sie zählen
         wuerfe: wuerfe, wuerfelModus: wuerfelModus,
-        buchMuenzen: buchMuenzen, buchAngriff: buchAngriff,
+        buchMuenzen: buchMuenzen, buchFaehigkeit: buchFaehigkeit,
       };
-      // Niederlage durch den Angriff: erst jetzt alles zurücksetzen (das
-      // Ereignis oben beschreibt noch den Zug, wie er war), dann speichern
-      if (angriff && angriff.niederlage) niederlage = durchlaufBeenden("niederlage", bossVorher);
       speichern();
       melde("richtig", treffer);
       if (powerup) {
         melde("powerup", { index: index, typ: powerup.typ, effekt: effekt, treffer: treffer });
       }
       buchschlaege.forEach(function (ereignis) { melde("buchschlag", ereignis); });
-      if (angriff) melde("angriff", angriff);
-      if (niederlage) melde("niederlage", niederlage);
+      if (einsatz) melde("faehigkeit", einsatz);
       if (besiegt) {
         melde("bossBesiegt", { boss: bossVorher, rekord: zustand.rekord, elite: bossVorher.elite, eliteBonus: eliteBonus });
         if (zustand.auswahl) {
@@ -2567,7 +2575,7 @@ const SudokuRPG = (function () {
           offeneBuchschlaegeAusfuehren();          // Buchschlag trifft den neuen Boss
         }
       }
-      if (geloest && !niederlage) {
+      if (geloest) {
         // Neues Sudoku nötig – Boss (HP) und Leben bleiben, wie sie sind.
         // Das Rätsel bleibt bis zum nächsten starteRaetsel() zum Anschauen stehen.
         melde("sudokuGeloest", { grad: r.grad, boss: bossMitStand(zustand.bossNummer), hp: zustand.bossHp });
@@ -2577,8 +2585,8 @@ const SudokuRPG = (function () {
         kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, doppelt: doppelt, immun: rechnung.immun,
         eliteBonus: eliteBonus, regenbogen: regenbogen,
         powerup: powerup, muenzenPlus: muenzenPlus, lebenPlus: lebenPlus,
-        besiegt: besiegt, geloest: geloest && !niederlage, auswahl: Boolean(zustand.auswahl),
-        verflucht: rechnung.verflucht, angriff: angriff, niederlage: Boolean(niederlage),
+        besiegt: besiegt, geloest: geloest, auswahl: Boolean(zustand.auswahl),
+        faehigkeit: einsatz, entschaerft: entschaerft, niederlage: false,
         buchschlag: buchWirkung.schlaege.length > 0,
       };
     }
@@ -2689,7 +2697,8 @@ const SudokuRPG = (function () {
       gesammelt: gesammeltAlles,              // Verbesserungen und Bücher (für die Plätze)
       mussBehalten: mussBehalten,
       behalteVerbesserungen: behalteVerbesserungen,
-      gegenangriff: gegenangriffAnzeige,
+      faehigkeitStand: faehigkeitAnzeige,
+      timerVergeht: timerVergeht,
       buchBonus: function () { return zustand.buchBonus; },
       brauchtBuchSpin: brauchtBuchSpin,
       buchSpin: buchSpin,
@@ -2752,7 +2761,10 @@ const SudokuRPG = (function () {
     hpFuer: hpFuer,
     welten: function () { return WELTEN.filter(Boolean).map(function (w) { return Object.assign(weltFuerAnzeige(w), { gebaut: w.bosse.length > 0 }); }); },
     seltenFuerAnzeige: seltenFuerAnzeige,
-    angriffsAbstand: angriffsAbstand,
+    faehigkeitAbstand: faehigkeitAbstand,
+    faehigkeitInfo: faehigkeitInfo,
+    verwirrungsWort: verwirrungsWort,
+    wortGueltig: wortGueltig,
     buchInfo: buchInfo,
     buchFuerAnzeige: buchFuerAnzeige,
     buchBonusFuer: buchBonusFuer,

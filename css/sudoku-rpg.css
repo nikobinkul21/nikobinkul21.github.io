@@ -44,12 +44,8 @@
   --kampf-muenze-rand: #6b4a00;
   --kampf-kritisch: #ff3df0;               /* Kritischer Treffer: Magenta */
   --kampf-kritisch-rand: #4a0050;
-  --kampf-daneben: #d9dde3;                /* Fehlschlag und "Geblockt!" */
+  --kampf-daneben: #d9dde3;                /* Fehlschlag, "Verpufft" */
   --kampf-daneben-rand: #3b4250;
-  --kampf-heilung: #eafff0;                /* Boss heilt sich (Regeneration) */
-  --kampf-heilung-rand: #1f8f4a;
-  --kampf-verlust: #ff6b6b;                /* gestohlene Münzen */
-  --kampf-verlust-rand: #5c0f0f;
 
   /* Panel unter dem Kampffenster (letzter Treffer, Belohnung, Verlauf) */
   --panel-hintergrund: var(--kampf-textbox);
@@ -387,42 +383,6 @@
   opacity: 0.7;
 }
 
-/* Eigenheit des Bosses unter dem Namen (Knopf mit Erklärung) */
-.kampf-eigenheit {
-  display: block;
-  max-width: 100%;
-  margin: 1px 0 0;
-  padding: 0 4px;
-  font: inherit;
-  font-size: 0.65rem;
-  font-weight: 800;
-  line-height: 1.5;
-  color: #fff;
-  background: var(--eigenheit-farbe, #777);
-  border: none;
-  border-radius: 4px;
-  cursor: help;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.kampf-eigenheit.ist-leer {
-  color: inherit;
-  background: none;
-  padding: 0;
-  font-weight: 600;
-  opacity: 0.55;
-  cursor: default;
-}
-
-/* Löst die Eigenheit aus: kurz hell aufleuchten (nur Farbe) */
-.kampf-eigenheit.ausgeloest {
-  color: var(--eigenheit-farbe, #777);
-  background: #fff;
-  box-shadow: 0 0 0 2px var(--eigenheit-farbe, #777);
-}
-
 /* Seltene Eigenschaft eines Elite-Bosses: Kennzeichnung "Selten" + Name */
 .kampf-selten {
   display: flex;
@@ -572,7 +532,7 @@
   display: block;
 }
 
-/* Erklärung der Eigenheit: unter dem Boss-Kasten, so breit wie er */
+/* Erklärung der seltenen Eigenschaft: unter dem Boss-Kasten, so breit wie er */
 .kampf-info--boss .kampf-tipp {
   top: calc(100% + 4px);
   left: -2px;
@@ -709,9 +669,8 @@
   animation-duration: 1s;
 }
 
-/* Fehlschlag und Rüstung: graues Wort am Boss */
-.kampf-schwebezahl--daneben,
-.kampf-schwebezahl--geblockt {
+/* Fehlschlag oder verpuffte Fähigkeit: graues Wort am Boss */
+.kampf-schwebezahl--daneben {
   top: 24%;
   right: 10%;
   font-size: 1.15rem;
@@ -728,24 +687,6 @@
   -webkit-text-stroke: 3px var(--kampf-selten);
 }
 
-
-/* Regeneration: der Boss heilt sich */
-.kampf-schwebezahl--heilung {
-  top: 26%;
-  right: 12%;
-  font-size: 1.35rem;
-  color: var(--kampf-heilung);
-  -webkit-text-stroke: 2px var(--kampf-heilung-rand);
-}
-
-/* Dieb: gestohlene Münzen */
-.kampf-schwebezahl--muenzen-weg {
-  right: 14%;
-  bottom: 30%;
-  font-size: 1.1rem;
-  color: var(--kampf-verlust);
-  -webkit-text-stroke: 2px var(--kampf-verlust-rand);
-}
 
 /* Großer Hinweis mitten auf der Bühne */
 .kampf-banner {
@@ -1000,36 +941,6 @@
 :root[data-theme="dark"] .kampf-buchbonus { color: #e2a76f; }
 :root[data-theme="dark"] .kampf-buchbonus svg { fill: #e2a76f; }
 
-/* Eingeschüchtert (Angriff "Einschüchtern"): "½" beim Helden bis zum nächsten Treffer */
-.kampf-held-status {
-  position: absolute;
-  left: calc(6% + var(--kampf-figur-groesse) * 0.05);
-  bottom: calc(6% + var(--kampf-figur-groesse) * 0.92);
-  z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 1px 6px;
-  font-size: 0.72rem;
-  font-weight: 900;
-  color: #fff;
-  background: #e98a15;
-  border: 2px solid var(--kampf-kasten-rand);
-  border-radius: 999px;
-}
-
-.kampf-held-status[hidden] { display: none; }
-.kampf-held-status svg { width: 11px; height: 11px; fill: #fff; }
-
-/* Der Held duckt sich (Einschüchtern) */
-.kampf-figur--held.duckt-sich { animation: held-duckt-sich 0.65s ease-in-out; }
-
-@keyframes held-duckt-sich {
-  0%, 100% { transform: none; }
-  30%      { transform: translateY(6%) scaleY(0.88); }
-  60%      { transform: translate(-3%, 4%) scaleY(0.92); }
-}
-
 /* Nur für Screenreader: unsichtbar, wird aber vorgelesen */
 .nur-vorlesen {
   position: absolute;
@@ -1180,8 +1091,6 @@
 .panel-summe--fehler .panel-wert { color: var(--panel-fehler); }
 .panel-zeile--daneben,
 .panel-summe--daneben .panel-wert { color: var(--panel-daneben); }
-.panel-zeile--eigenheit,
-.panel-summe--eigenheit .panel-wert,
 .panel-zeile--selten,
 .panel-summe--selten .panel-wert { color: color-mix(in srgb, var(--zeilen-farbe) 55%, #fff); }
 
@@ -1282,7 +1191,6 @@
 .panel-eintrag--daneben { color: var(--panel-daneben); }
 .panel-eintrag--fehler { color: var(--panel-fehler); font-weight: 700; }
 .panel-eintrag--besiegt { color: var(--panel-gold); font-weight: 700; }
-.panel-eintrag--eigenheit,
 .panel-eintrag--selten { color: color-mix(in srgb, var(--zeilen-farbe) 55%, #fff); font-weight: 700; }
 .panel-eintrag--elite { color: var(--kampf-elite); font-weight: 800; }
 
@@ -1399,7 +1307,7 @@
 
 .kampf-figur--held.schlaegt { animation: kampf-schlag 0.26s ease-out; }
 .kampf-figur--boss.getroffen { animation: kampf-getroffen 0.42s steps(1, end); }
-.kampf-figur--boss.greift-an { animation: kampf-angriff 0.38s ease-in-out; }
+.kampf-figur--boss.greift-an { animation: kampf-zuschlag 0.38s ease-in-out; }
 .kampf-figur--held.wird-getroffen { animation: kampf-wackeln 0.3s linear; }
 .kampf-figur--held.faellt { animation: kampf-fallen 0.5s ease-in forwards; }
 .kampf-figur--boss.ist-besiegt { animation: kampf-besiegt 0.9s ease-in forwards; }
@@ -1489,7 +1397,7 @@
   100%     { opacity: 1; transform: none; }
 }
 
-@keyframes kampf-angriff {
+@keyframes kampf-zuschlag {
   0%   { transform: none; }
   45%  { transform: translate(-30px, 22px) scale(1.08); }
   100% { transform: none; }
@@ -2281,7 +2189,7 @@
    sudoku-ui.js hängt in das Feld eine Ebene .sudoku-regenbogen mit zwei
    Schichten: laufende Regenbogenfarben und ein heller Glanz, der in
    Abständen über das Feld streicht. Bunt – klar anders als die einfarbigen
-   Power-up-Felder (rot, grün, gold). Immer sichtbar, auch gegen "Nebel".
+   Power-up-Felder (rot, grün, gold). Immer sichtbar.
    ========================================================================== */
 
 :root {
@@ -2495,9 +2403,10 @@
 
 
 /* ==========================================================================
-   GEGENANGRIFF DER BOSSE
-   Absicht über dem Boss, Schild (Parade) beim Helden, die Animationen der
-   Angriffe – und ihre Wirkungen im Sudoku (Siegel, Finsternis, Fluch).
+   FÄHIGKEITEN DER BOSSE
+   Ansage über dem Boss, Schild (Parade) beim Helden, die Animationen der
+   Fähigkeiten – und ihre Wirkungen im Sudoku (Siegel, Finsternis, Fluch,
+   Tick, Tick, Verwirrung).
    sudoku-battle-ui.js und sudoku-ui.js setzen die Klassen.
    ========================================================================== */
 
@@ -2518,7 +2427,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2px 5px;            /* knapp, damit auch "Einschüchtern" nicht in den Infokasten ragt */
+  padding: 2px 5px;            /* knapp, damit lange Namen nicht in den Infokasten ragen */
   font: inherit;
   font-size: 0.68rem;
   font-weight: 800;
@@ -2527,7 +2436,7 @@
   color: var(--kampf-kasten-text);
   background: var(--kampf-kasten);
   border: 2px solid var(--kampf-kasten-rand);
-  border-top: 4px solid var(--angriff-farbe);
+  border-top: 4px solid var(--faehigkeit-farbe);
   border-radius: 8px;
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
   transform: translateX(50%);
@@ -2549,7 +2458,7 @@
   display: block;
   width: 13px;
   height: 13px;
-  fill: var(--angriff-farbe);
+  fill: var(--faehigkeit-farbe);
 }
 
 /* Die Erklärung klappt nach unten links auf (die Bühne endet rechts) */
@@ -2559,22 +2468,22 @@
   width: min(260px, 70vw);
 }
 
-/* Letzte Züge vor dem Angriff: Warnung pulsiert */
+/* Letzte Züge vor der Fähigkeit: Warnung pulsiert */
 .kampf-absicht.warnt {
   color: #fff;
-  background: var(--angriff-farbe);
+  background: var(--faehigkeit-farbe);
   animation: absicht-warnt 0.9s ease-in-out infinite;
 }
 
 .kampf-absicht.warnt .kampf-absicht-symbol svg { fill: #fff; }
 
 .kampf-absicht.loest-aus {
-  box-shadow: 0 0 0 4px var(--angriff-farbe), 0 0 18px var(--angriff-farbe);
+  box-shadow: 0 0 0 4px var(--faehigkeit-farbe), 0 0 18px var(--faehigkeit-farbe);
 }
 
 @keyframes absicht-warnt {
   0%, 100% { transform: translateX(50%) scale(1); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25); }
-  50%      { transform: translateX(50%) scale(1.1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--angriff-farbe) 45%, transparent), 0 0 14px var(--angriff-farbe); }
+  50%      { transform: translateX(50%) scale(1.1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--faehigkeit-farbe) 45%, transparent), 0 0 14px var(--faehigkeit-farbe); }
 }
 
 /* Platz für die Absicht: der Boss steht etwas tiefer */
@@ -2582,7 +2491,7 @@
 .kampf-buehne.ist-elite .kampf-figur--boss { top: 14%; }
 
 /* Schild beim Helden: matt = gerade keine Parade möglich,
-   blau leuchtend = der nächste Zug löst den Angriff aus – eine fertige
+   blau leuchtend = der nächste Zug löst die Fähigkeit aus – eine fertige
    Zeile, Spalte oder ein fertiger Block in diesem Zug pariert */
 .kampf-parade {
   position: absolute;
@@ -2662,14 +2571,14 @@
   35%, 70% { opacity: 1; }
 }
 
-/* Hieb: roter Blitz */
-.kampf-blitz.an-hieb {
+/* Treffer am Helden (Tick, Tick geht hoch): roter Blitz */
+.kampf-blitz.an-treffer {
   background: radial-gradient(circle at 20% 70%, #fff 0%, #d63a3a 45%, transparent 85%);
   animation: kampf-blitz 0.3s ease-out;
 }
 
-/* Symbol des Angriffs: taucht auf, wächst und verblasst */
-.kampf-angriff-symbol {
+/* Symbol der Fähigkeit: taucht auf, wächst und verblasst */
+.kampf-faehigkeit-symbol {
   position: absolute;
   z-index: 6;
   display: flex;
@@ -2677,32 +2586,32 @@
   gap: 4px;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  animation: angriff-symbol 1s ease-out forwards;
+  animation: faehigkeit-symbol 1s ease-out forwards;
 }
 
-.kampf-angriff-symbol svg {
+.kampf-faehigkeit-symbol svg {
   width: 44px;
   height: 44px;
-  fill: var(--angriff-farbe);
-  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 10px var(--angriff-farbe));
+  fill: var(--faehigkeit-farbe);
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 10px var(--faehigkeit-farbe));
 }
 
-.kampf-angriff-symbol--mitte { top: 48%; left: 50%; }
-.kampf-angriff-symbol--boss { top: 26%; left: 78%; }
-.kampf-angriff-symbol--held { top: 68%; left: 22%; }
-.kampf-angriff-symbol--mitte svg { animation: angriff-drehen 1s ease-out; }
+.kampf-faehigkeit-symbol--mitte { top: 48%; left: 50%; }
+.kampf-faehigkeit-symbol--boss { top: 26%; left: 78%; }
+.kampf-faehigkeit-symbol--held { top: 68%; left: 22%; }
+.kampf-faehigkeit-symbol--mitte svg { animation: faehigkeit-drehen 1s ease-out; }
 
-.kampf-angriff-zusatz {
+.kampf-faehigkeit-zusatz {
   padding: 1px 6px;
   font-size: 1.1rem;
   font-weight: 900;
   color: #fff;
-  background: var(--angriff-farbe);
+  background: var(--faehigkeit-farbe);
   border: 2px solid var(--kampf-kasten-rand);
   border-radius: 6px;
 }
 
-@keyframes angriff-symbol {
+@keyframes faehigkeit-symbol {
   0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
   20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
   35%  { transform: translate(-50%, -50%) scale(1); }
@@ -2710,13 +2619,13 @@
   100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
 }
 
-@keyframes angriff-drehen {
+@keyframes faehigkeit-drehen {
   from { transform: rotate(-90deg); }
   to   { transform: rotate(0); }
 }
 
-/* Banner: Name des Angriffs in seiner Farbe, "Pariert!" groß in Blau */
-.kampf-banner--angriff {
+/* Banner: Name der Fähigkeit in ihrer Farbe, "Pariert!" groß in Blau */
+.kampf-banner--faehigkeit {
   top: 40%;
   font-size: 1.15rem;
 }
@@ -2735,16 +2644,8 @@
   text-shadow: 0 0 14px var(--parade-farbe);
 }
 
-/* Schwebende Wörter: "Verflucht!" und das verlorene Leben */
-.kampf-schwebezahl--fluch {
-  top: 22%;
-  right: 8%;
-  font-size: 1.4rem;
-  color: #fff;
-  -webkit-text-stroke: 3px var(--fluch-farbe);
-}
-
-.kampf-schwebezahl--hieb {
+/* Schwebende Wörter: das verlorene Leben (Tick, Tick) und "Entschärft!" */
+.kampf-schwebezahl--leben {
   top: 48%;
   left: 18%;
   font-size: 1.4rem;
@@ -2753,11 +2654,7 @@
 }
 
 /* Panel und Verlauf */
-.panel-zeile--fluch,
-.panel-summe--fluch .panel-wert,
-.panel-kurz-schaden[data-art="fluch"],
-.panel-eintrag--fluch { color: #5fd88f; font-weight: 700; }
-.panel-eintrag--angriff { color: color-mix(in srgb, var(--zeilen-farbe) 50%, #fff); font-weight: 700; }
+.panel-eintrag--faehigkeit { color: color-mix(in srgb, var(--zeilen-farbe) 50%, #fff); font-weight: 700; }
 .panel-eintrag--parade { color: #7cc0ff; font-weight: 800; }
 
 
@@ -2795,7 +2692,7 @@
   font-weight: 900;
   line-height: 1.35;
   color: #fff;
-  background: var(--angriff-farbe);
+  background: var(--faehigkeit-farbe);
   border-radius: 4px;
   box-shadow: 0 0 0 1.5px #fff, 1px 1px 0 1.5px rgba(0, 0, 0, 0.35);
   pointer-events: none;
@@ -2815,6 +2712,15 @@
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--fluch-farbe) 55%, transparent);
 }
 
+/* Gesperrt: durchgestrichen, kein Klick */
+.sudoku-taste.ist-verflucht {
+  cursor: not-allowed;
+}
+
+.sudoku-taste.ist-verflucht .sudoku-taste-zeichen {
+  text-decoration: line-through 3px;
+}
+
 .sudoku-fluch-marke {
   position: absolute;
   top: 2px;
@@ -2830,6 +2736,135 @@
 
 .sudoku-fluch-marke::before {
   content: "☠ ";
+}
+
+/* Tick, Tick: das Feld mit dem Timer – leuchtender Rahmen (auf einen Blick
+   zu finden), die Zeit groß in der Mitte. Letzte Sekunden: rot und pulsierend. */
+:root {
+  --timer-farbe: #e2541b;
+  --timer-knapp: #e0262b;
+}
+
+.sudoku-feld.hat-timer {
+  container-type: inline-size;
+  background: color-mix(in srgb, var(--timer-farbe) 18%, var(--sudoku-feld, #fff));
+  box-shadow: inset 0 0 0 3px var(--timer-farbe), 0 0 10px color-mix(in srgb, var(--timer-farbe) 60%, transparent);
+  z-index: 1;
+}
+
+.sudoku-timer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 34cqi;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--timer-farbe);
+  pointer-events: none;
+}
+
+.sudoku-feld.hat-timer.timer-knapp {
+  background: color-mix(in srgb, var(--timer-knapp) 24%, var(--sudoku-feld, #fff));
+  box-shadow: inset 0 0 0 3px var(--timer-knapp), 0 0 14px var(--timer-knapp);
+}
+
+.sudoku-feld.timer-knapp .sudoku-timer {
+  color: var(--timer-knapp);
+  animation: timer-puls 0.9s ease-in-out infinite;
+}
+
+@keyframes timer-puls {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+
+/* Verwirrung: Ziffern als Buchstaben (im Gitter und im Zahlenfeld) */
+.sudoku-feld.ist-verwirrt .sudoku-ziffer,
+.sudoku-zahlenfeld.ist-verwirrt .sudoku-taste-zeichen {
+  color: #d13f9a;
+  font-weight: 800;
+}
+
+/* … und zurück zu Ziffern, wenn die Verwirrung abzieht */
+.sudoku-feld.verwandelt-zurueck .sudoku-ziffer {
+  animation: zurueck-verwandeln 0.6s ease-out;
+}
+
+@keyframes zurueck-verwandeln {
+  0%   { transform: rotateY(90deg); opacity: 0.2; }
+  100% { transform: rotateY(0); opacity: 1; }
+}
+
+/* Band über dem Gitter für Wirkungen ohne eigenes Feld (Verwirrung) */
+.sudoku-wirkung-band {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px 2px 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--faehigkeit-farbe);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px #fff, 1px 2px 0 2px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -55%);
+  pointer-events: none;
+}
+
+.sudoku-wirkung-band svg {
+  width: 13px;
+  height: 13px;
+  fill: #fff;
+}
+
+/* Animationen der Fähigkeiten im Kampffenster */
+.kampf-faehigkeit-symbol.tickt svg { animation: bombe-tickt 0.25s ease-in-out 4; }
+.kampf-faehigkeit-symbol.wirbelt svg { animation: fragezeichen-wirbelt 0.8s ease-out; }
+.kampf-faehigkeit-symbol.explodiert svg { animation: bombe-explodiert 0.7s ease-out forwards; }
+
+@keyframes bombe-tickt {
+  0%, 100% { transform: rotate(0); }
+  25%      { transform: rotate(-12deg); }
+  75%      { transform: rotate(12deg); }
+}
+
+@keyframes fragezeichen-wirbelt {
+  from { transform: rotate(-540deg) scale(0.4); }
+  to   { transform: rotate(0) scale(1); }
+}
+
+@keyframes bombe-explodiert {
+  0%   { transform: scale(1); filter: drop-shadow(0 0 2px #fff); }
+  40%  { transform: scale(1.9); filter: drop-shadow(0 0 18px #ffd34d) brightness(1.8); }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* Verwirrung: die Bühne schwankt kurz und verfärbt sich */
+.kampf-buehne.verwirrt .kampf-hintergrund {
+  animation: buehne-schwankt 0.85s ease-in-out;
+}
+
+@keyframes buehne-schwankt {
+  0%, 100% { transform: none; filter: none; }
+  25%      { transform: skewX(4deg); filter: hue-rotate(90deg); }
+  50%      { transform: skewX(-4deg); filter: hue-rotate(200deg); }
+  75%      { transform: skewX(2deg); filter: hue-rotate(300deg); }
+}
+
+/* "Entschärft!" groß in Grün mitten auf der Bühne */
+.kampf-schwebezahl--entschaerft {
+  top: 44%;
+  left: 36%;
+  font-size: 1.4rem;
+  color: #fff;
+  -webkit-text-stroke: 3px #1f8f4a;
 }
 
 @media (max-width: 767px) {
@@ -2857,21 +2892,31 @@
 @media (prefers-reduced-motion: reduce) {
   .kampf-absicht.warnt {
     animation: none !important;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--angriff-farbe) 45%, transparent), 0 0 12px var(--angriff-farbe);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--faehigkeit-farbe) 45%, transparent), 0 0 12px var(--faehigkeit-farbe);
   }
 
-  .kampf-angriff-symbol {
-    animation: angriff-einblenden 1s ease-out forwards !important;
+  .kampf-faehigkeit-symbol {
+    animation: faehigkeit-einblenden 1s ease-out forwards !important;
   }
 
-  .kampf-angriff-symbol svg {
+  .kampf-faehigkeit-symbol svg {
     animation: none !important;
   }
 
   .kampf-platz.leuchtet,
-  .kampf-platz.ist-neu,
-  .kampf-figur--held.duckt-sich {
+  .kampf-platz.ist-neu {
     animation: none !important;
+  }
+
+  /* Fähigkeiten ohne Bewegung: Timer nur rot, Buchstaben ohne Drehen, Bühne nur kurz eingefärbt */
+  .sudoku-feld.timer-knapp .sudoku-timer,
+  .sudoku-feld.verwandelt-zurueck .sudoku-ziffer,
+  .kampf-buehne.verwirrt .kampf-hintergrund {
+    animation: none !important;
+  }
+
+  .kampf-buehne.verwirrt .kampf-hintergrund {
+    filter: hue-rotate(180deg);
   }
 
   .ende-banner {
@@ -2888,7 +2933,7 @@
     opacity: 0.8;
   }
 
-  @keyframes angriff-einblenden {
+  @keyframes faehigkeit-einblenden {
     0%   { opacity: 0; }
     20%, 80% { opacity: 1; }
     100% { opacity: 0; }
@@ -3221,14 +3266,14 @@
 }
 
 /* Boss-Sprites aus dem Baukasten sind nicht quadratisch: ganz zeigen, unten anlegen */
-/* (Die Höhe auf der Bühne – unter der Angriffsanzeige – steht beim Gegenangriff weiter oben) */
+/* (Die Höhe auf der Bühne – unter der Ansage der Fähigkeit – steht bei den Fähigkeiten weiter oben) */
 .kampf-figur--boss {
   width: calc(var(--kampf-figur-groesse) * var(--boss-figur-faktor));
   height: calc(var(--kampf-figur-groesse) * var(--boss-figur-faktor));
   right: 4%;
 }
 
-/* Die Angriffsanzeige steht mittig über dem (größeren) Boss */
+/* Die Ansage der Fähigkeit steht mittig über dem (größeren) Boss */
 .kampf-absicht {
   right: calc(4% + var(--kampf-figur-groesse) * var(--boss-figur-faktor) / 2);
 }
@@ -3248,7 +3293,7 @@
 .kampf-buehne.ist-weltboss .kampf-figur--boss {
   width: calc(var(--kampf-figur-groesse) * var(--weltboss-figur-faktor));
   height: calc(var(--kampf-figur-groesse) * var(--weltboss-figur-faktor));
-  top: 16%;                                /* unter der Angriffsanzeige */
+  top: 16%;                                /* unter der Ansage der Fähigkeit */
   right: 0;
 }
 

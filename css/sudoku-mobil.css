@@ -429,8 +429,7 @@
     right: 6px;
   }
 
-  /* Eigenheit und seltene Eigenschaft: nur als kleine Marken in einer Zeile */
-  .kampf.ist-handy .kampf-eigenheit,
+  /* Seltene Eigenschaft: nur als kleine Marke */
   .kampf.ist-handy .kampf-selten {
     display: inline-flex;
     margin: 1px 3px 0 0;
@@ -439,7 +438,6 @@
     pointer-events: none;
   }
 
-  .kampf.ist-handy .kampf-eigenheit.ist-leer,
   .kampf.ist-handy .kampf-elite-hinweis {
     display: none;
   }
@@ -462,22 +460,21 @@
   }
 
   /* Hoher Streifen: Der Boss steht unten, der Infokasten darf über ihn reichen
-     (bis unter die Angriffsanzeige) */
+     (bis unter die Ansage der Fähigkeit) */
   @container (min-height: 150px) {
     .kampf.ist-handy .kampf-info--boss {
       --info-rechts: 100px;
     }
   }
 
-  /* Sehr flacher Streifen: Eigenheit nur im Blatt, HP-Balken direkt unter dem Namen */
+  /* Sehr flacher Streifen: seltene Eigenschaft nur im Blatt, HP-Balken direkt unter dem Namen */
   @container (max-height: 110px) {
-    .kampf.ist-handy .kampf-eigenheit,
     .kampf.ist-handy .kampf-selten {
       display: none;
     }
   }
 
-  /* Absicht und Angriffszähler: kleines Schild oben rechts über dem Boss */
+  /* Ansage der Fähigkeit mit Zähler: kleines Schild oben rechts über dem Boss */
   .kampf.ist-handy .kampf-absicht {
     top: 3px;
     right: 3px;
@@ -489,7 +486,7 @@
     border-top-width: 3px;
   }
 
-  /* Warnung kurz vor dem Angriff: pulsiert an Ort und Stelle (ohne die Verschiebung des großen Fensters) */
+  /* Warnung kurz vor der Fähigkeit: pulsiert an Ort und Stelle (ohne die Verschiebung des großen Fensters) */
   .kampf.ist-handy .kampf-absicht.warnt {
     animation-name: absicht-warnt-streifen;
     transform-origin: top right;
@@ -497,10 +494,10 @@
 
   @keyframes absicht-warnt-streifen {
     0%, 100% { transform: scale(1); }
-    50%      { transform: scale(1.1); box-shadow: 0 0 0 2px color-mix(in srgb, var(--angriff-farbe) 45%, transparent), 0 0 10px var(--angriff-farbe); }
+    50%      { transform: scale(1.1); box-shadow: 0 0 0 2px color-mix(in srgb, var(--faehigkeit-farbe) 45%, transparent), 0 0 10px var(--faehigkeit-farbe); }
   }
 
-  /* Nur Symbol und Zähler – der Name des Angriffs steht im Blatt */
+  /* Nur Symbol und Zähler – der Name der Fähigkeit steht im Blatt */
   .kampf.ist-handy .kampf-absicht-name {
     display: none;
   }
@@ -579,23 +576,6 @@
     z-index: 30;
     width: auto;
     font-size: 0.72rem;
-  }
-
-  /* Marke "Eingeschüchtert ½": klein, über dem Helden und bündig mit seiner
-     rechten Kante – so bleibt sie links vom Infokasten des Bosses
-     (die Desktop-Lage rechnet mit der großen Figur) */
-  .kampf.ist-handy .kampf-buehne .kampf-held-status {
-    left: auto;
-    right: calc(99% - var(--streifen-held));
-    bottom: calc(3% + var(--streifen-held) * 0.7);
-    padding: 0 4px;
-    font-size: 0.6rem;
-    border-width: 1px;
-  }
-
-  .kampf.ist-handy .kampf-buehne .kampf-held-status svg {
-    width: 9px;
-    height: 9px;
   }
 
   /* Letzter Zug: eine Zeile am unteren Rand der mittleren Spalte */

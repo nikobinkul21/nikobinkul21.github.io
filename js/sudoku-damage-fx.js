@@ -144,8 +144,6 @@ const SudokuSchadenFx = (function () {
       } else if (name === "Zuschlag") {
         eintrag.label = "+" + text;
         eintrag.quelle = "klinge";
-      } else if (name === "Eingeschüchtert") {
-        eintrag.quelle = "boss";                             // Angriff "Einschüchtern"
       } else if (name === "Mindestwurf") {
         eintrag.quelle = "buch";                             // Buch des Fünften
       } else if (name === "Doppelt") {

@@ -2,7 +2,7 @@
    worlds/welt4.js – Welt 4: "Schnee und Berge" (Level 61 bis 80)
    Verschneite Gipfel, Tannen und eisige Pässe.
    Noch leer: Solange "bosse" leer ist, wird die Welt übersprungen – nach
-   der letzten gebauten Welt beginnt der nächste Durchlauf bei Welt 1.
+   der letzten gebauten Welt beginnt die nächste Runde bei Welt 1.
    Aufbau der Bosse wie in worlds/welt1.js (genau 20, Level 5/10/15 Elite,
    Level 20 Weltboss).
    ========================================================================== */
