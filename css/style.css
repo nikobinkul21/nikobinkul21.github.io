@@ -639,11 +639,11 @@ button:focus-visible {
 
 /* ==========================================================================
    6b. MITTELBREITE FENSTER: kompaktere Reiter
-   Mit sechs Reitern wird es in der Leiste eng. Bis 1280 px Breite rücken
+   Mit sieben Reitern wird es in der Leiste eng. Bis 1500 px Breite rücken
    die Reiter deshalb etwas zusammen, damit sie neben NTB passen.
    ========================================================================== */
 
-@media (min-width: 1050px) and (max-width: 1279px) {
+@media (min-width: 1270px) and (max-width: 1499px) {
   .leiste__nav {
     column-gap: 2px;
   }
@@ -660,14 +660,14 @@ button:focus-visible {
 
 
 /* ==========================================================================
-   7. MOBIL / SCHMALE FENSTER (unter 1050 px)
-   Unter 1050 px passen die sechs Reiter nicht mehr links und rechts neben
+   7. MOBIL / SCHMALE FENSTER (unter 1270 px)
+   Unter 1270 px passen die sieben Reiter nicht mehr links und rechts neben
    NTB – dann gibt es das Hamburger-Menü. Diese Grenze steht auch in
    app.js (mobilAbfrage) und muss dort gleich sein.
-   Zwischen 1050 und 1280 px sind die Reiter kompakter (Abschnitt 6b).
+   Zwischen 1270 und 1500 px sind die Reiter kompakter (Abschnitt 6b).
    ========================================================================== */
 
-@media (max-width: 1049px) {
+@media (max-width: 1269px) {
 
   .leiste__nav {
     padding: 0 var(--abstand-m);

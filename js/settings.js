@@ -1,6 +1,6 @@
 /* ==========================================================================
    settings.js – Einstellungen
-   - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Abenteuer)
+   - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer)
      als eine JSON-Datei – Export und Import
    - Sudoku-Abenteuer: Tempo der Kampfanimationen (Würfel und Schadensaufbau)
 
@@ -11,6 +11,7 @@
      erstellt:    "2026-10-10T14:03:00.000Z",
      filmeSerien: { … }    ← Daten aus MediaStore  (js/media-store.js)
      termine:     { … }    ← Daten aus EventsStore (js/events-store.js)
+     zuErledigen: { … }    ← Aufgaben aus TodoStore (js/todo-store.js)
      sudokuAbenteuer: { … } oder null ← Spielstand aus SudokuRPG (js/sudoku-rpg.js)
    }
    Neue Bereiche mit eigenen Daten? Hier in exportieren() und importieren()
@@ -34,7 +35,7 @@ const EinstellungenAnsicht = (function () {
         '<h2 id="sicherung-titel">Daten sichern</h2>' +
         "<p>Deine Daten liegen nur in diesem Browser. Mit einer Sicherung kannst du sie " +
           "auf einem anderen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. " +
-          "Die Datei enthält <strong>Filme/Serien</strong>, <strong>Stundenplan/Termine</strong> und den Spielstand des <strong>Sudoku-Abenteuers</strong>.</p>" +
+          "Die Datei enthält <strong>Filme/Serien</strong>, <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong> und den Spielstand des <strong>Sudoku-Abenteuers</strong>.</p>" +
         '<div class="einstellungen-knoepfe">' +
           '<button type="button" class="knopf" data-aktion="exportieren">Daten exportieren</button>' +
           '<button type="button" class="knopf" data-aktion="importieren">Daten importieren</button>' +
@@ -120,6 +121,7 @@ const EinstellungenAnsicht = (function () {
       erstellt: new Date().toISOString(),
       filmeSerien: MediaStore.alsObjekt(),
       termine: EventsStore.alsObjekt(),
+      zuErledigen: TodoStore.alsObjekt(),
       sudokuAbenteuer: SudokuRPG.alsObjekt(),
     };
     const datei = new Blob([JSON.stringify(sicherung, null, 2)], { type: "application/json" });
@@ -192,13 +194,25 @@ const EinstellungenAnsicht = (function () {
       }
     }
 
+    // Zu erledigen: in älteren Sicherungen fehlt es → bleibt dann unverändert
+    let aufgaben = null;
+    let aufgabenText = "• Zu erledigen: nicht enthalten (bleibt unverändert)\n";
+    if ("zuErledigen" in roh) {
+      const geprueft = TodoStore.pruefeDaten(roh.zuErledigen);
+      if (!geprueft.ok) return { ok: false, fehler: "Zu erledigen: " + geprueft.fehler };
+      aufgaben = geprueft.daten;
+      const erledigt = aufgaben.aufgaben.filter(function (a) { return a.erledigt; }).length;
+      aufgabenText = "• " + aufgaben.aufgaben.length + " Aufgaben (davon " + erledigt + " erledigt)\n";
+    }
+
     const erstellt = typeof roh.erstellt === "string" ? new Date(roh.erstellt) : null;
     const vom = erstellt && !isNaN(erstellt) ? " vom " + erstellt.toLocaleString("de-DE") : "";
     return {
-      ok: true, media: media, termine: termine, abenteuer: abenteuer,
+      ok: true, media: media, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben,
       frage: "Sicherung" + vom + ":\n" +
         "• " + media.anzahl + " Filme/Serien-Einträge\n" +
         "• " + termine.daten.eintraege.length + " Termine/Vorlesungen\n" +
+        aufgabenText +
         abenteuerText + "\n" +
         "ALLE aktuellen Daten werden dadurch ersetzt. Fortfahren?",
     };
@@ -226,6 +240,9 @@ const EinstellungenAnsicht = (function () {
       }
       if (pruefung.termine) {
         EventsStore.ersetzen(pruefung.termine.daten);
+      }
+      if (pruefung.aufgaben) {
+        TodoStore.ersetzen(pruefung.aufgaben);
       }
       zeigeHinweis("Import erfolgreich. Alle Bereiche zeigen jetzt die wiederhergestellten Daten.", "erfolg");
     });

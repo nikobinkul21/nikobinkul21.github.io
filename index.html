@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/sudoku-mobil.css">
   <link rel="stylesheet" href="css/football.css">
   <link rel="stylesheet" href="css/media.css">
+  <link rel="stylesheet" href="css/todo.css">
 
   <!--
     Kleines Skript direkt im <head>:
@@ -79,6 +80,7 @@
 
         <ul class="reiter-gruppe reiter-gruppe--rechts">
           <li><a class="reiter" href="#schedule" data-view="schedule">Stundenplan/Termine</a></li>
+          <li><a class="reiter" href="#todo" data-view="todo">Zu erledigen</a></li>
           <li><a class="reiter" href="#einstellungen" data-view="einstellungen">Einstellungen</a></li>
           <li><a class="reiter" href="#customising" data-view="customising">Customising</a></li>
         </ul>
@@ -129,6 +131,12 @@
       <div id="schedule-root"></div>
     </section>
 
+    <section class="ansicht" id="view-todo" aria-labelledby="titel-todo" hidden>
+      <h1 id="titel-todo" tabindex="-1">Zu erledigen</h1>
+      <!-- todo.js füllt diesen Container mit Skala, Aufgaben und "Erledigt" -->
+      <div id="todo-root"></div>
+    </section>
+
     <section class="ansicht" id="view-einstellungen" aria-labelledby="titel-einstellungen" hidden>
       <h1 id="titel-einstellungen" tabindex="-1">Einstellungen</h1>
       <!-- settings.js füllt diesen Container (u. a. Sicherung aller Daten) -->
@@ -154,6 +162,9 @@
   <script src="js/events-store.js"></script>
   <script src="js/calendar.js"></script>
   <script src="js/schedule.js"></script>
+  <!-- Zu erledigen: erst der Store, dann die Ansicht -->
+  <script src="js/todo-store.js"></script>
+  <script src="js/todo.js"></script>
   <!-- Sudoku: erst die Logik, dann die Effekte, dann die Oberfläche,
        dann die Games-Übersicht, die das Sudoku startet -->
   <script src="js/sudoku-engine.js"></script>

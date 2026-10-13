@@ -1,0 +1,618 @@
+/* ==========================================================================
+   todo.css – "Zu erledigen" (#todo)
+   Links die Skala (Farbverlauf von Rot nach Grün) mit den fünf Stufen,
+   rechts daneben die offenen Aufgaben je Stufe. Darüber "Überfällig",
+   darunter der einklappbare Bereich "Erledigt".
+   Die Farben der Stufen stehen als Variablen hier oben – hell und dunkel.
+   ========================================================================== */
+
+:root {
+  --todo-ueberfaellig: #c81e1e;
+  --todo-sehr-wichtig: #e5383b;
+  --todo-wichtig: #f08a24;
+  --todo-bald: #e9b80f;
+  --todo-entspannt: #8bc34a;
+  --todo-locker: #2e9e4f;
+
+  --todo-erledigt: #2e9e4f;           /* grüner Knopf "Erledigt" */
+  --todo-offen: #d63b3b;              /* roter Knopf "Noch offen" */
+  --todo-ueberfaellig-hintergrund: #fdecec;
+  --todo-skala-breite: 12px;
+  --todo-namen-breite: 10.5rem;       /* Spalte der Skala mit den Beschriftungen */
+}
+
+:root[data-theme="dark"] {
+  --todo-ueberfaellig: #ff5a5a;
+  --todo-sehr-wichtig: #ff6b6b;
+  --todo-wichtig: #ffa04d;
+  --todo-bald: #f5cf3d;
+  --todo-entspannt: #a3d977;
+  --todo-locker: #4cc46d;
+
+  --todo-erledigt: #4cc46d;
+  --todo-offen: #ff6b6b;
+  --todo-ueberfaellig-hintergrund: #3a1d20;
+}
+
+/* Jede Stufe bekommt ihre Farbe über data-stufe */
+[data-stufe="ueberfaellig"] { --stufe-farbe: var(--todo-ueberfaellig); }
+[data-stufe="sehr-wichtig"] { --stufe-farbe: var(--todo-sehr-wichtig); }
+[data-stufe="wichtig"] { --stufe-farbe: var(--todo-wichtig); }
+[data-stufe="bald"] { --stufe-farbe: var(--todo-bald); }
+[data-stufe="entspannt"] { --stufe-farbe: var(--todo-entspannt); }
+[data-stufe="locker"] { --stufe-farbe: var(--todo-locker); }
+
+.todo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-m);
+}
+
+/* ---------- Kopf: Neue Aufgabe ---------- */
+
+.todo-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--abstand-m);
+}
+
+.todo-neu {
+  font-weight: 600;
+}
+
+.todo-zusammenfassung {
+  margin: 0;
+  color: var(--farbe-text-leise);
+}
+
+/* ---------- Überfällig ---------- */
+
+.todo-ueberfaellig {
+  padding: var(--abstand-m);
+  border: 2px solid var(--todo-ueberfaellig);
+  border-radius: var(--radius-m);
+  background: var(--todo-ueberfaellig-hintergrund);
+}
+
+.todo-ueberfaellig[hidden] {
+  display: none;
+}
+
+.todo-ueberfaellig h2 {
+  margin: 0 0 var(--abstand-s);
+  font-size: 1.1rem;
+  color: var(--todo-ueberfaellig);
+}
+
+.todo-ueberfaellig .todo-karte-rest {
+  color: var(--todo-ueberfaellig);
+  font-weight: 700;
+}
+
+/* ---------- Skala und Stufen ---------- */
+
+.todo-raster {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--todo-namen-breite) minmax(0, 1fr);
+  column-gap: var(--abstand-m);
+}
+
+/* Ein durchgehender Farbverlauf über alle fünf Zeilen */
+.todo-skala {
+  grid-column: 1;
+  grid-row: 1 / span 5;
+  justify-self: start;
+  width: var(--todo-skala-breite);
+  border-radius: var(--radius-pille);
+  background: linear-gradient(to bottom,
+    var(--todo-sehr-wichtig) 0%,
+    var(--todo-wichtig) 25%,
+    var(--todo-bald) 50%,
+    var(--todo-entspannt) 75%,
+    var(--todo-locker) 100%);
+}
+
+.todo-stufe-name {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: start;
+  padding: 10px 0 10px calc(var(--todo-skala-breite) + 10px);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.todo-stufe-name.ist-leer {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--farbe-text-leise);
+}
+
+.todo-punkt {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--stufe-farbe);
+}
+
+.todo-gruppe {
+  grid-column: 2;
+  min-width: 0;
+  padding: 6px 0 10px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.todo-gruppe[data-stufe="sehr-wichtig"] {
+  border-top: 0;
+}
+
+/* Leere Stufe: nur eine schmale Zeile */
+.todo-gruppe.ist-leer {
+  min-height: 26px;
+  padding: 0;
+}
+
+/* Der Titel über jeder Gruppe – nur auf dem Handy (dort fehlen die Beschriftungen der Skala) */
+.todo-gruppe-titel {
+  display: none;
+}
+
+.todo-liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-s);
+}
+
+.todo-leer {
+  margin: 0;
+  color: var(--farbe-text-leise);
+}
+
+.todo-leer[hidden] {
+  display: none;
+}
+
+/* ---------- Karte ---------- */
+
+.todo-karte {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-left: 6px solid var(--stufe-farbe, var(--farbe-rand));
+  border-radius: var(--radius-s);
+  box-shadow: var(--schatten);
+}
+
+/* Der Inhalt ist ein Knopf: Klick öffnet die Aufgabe zum Bearbeiten */
+.todo-karte-inhalt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.todo-karte-inhalt:hover .todo-karte-titel {
+  text-decoration: underline;
+}
+
+.todo-karte-inhalt:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: -2px;
+}
+
+.todo-karte-titel {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.todo-karte-text {
+  color: var(--farbe-text-leise);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.todo-karte-faellig {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  color: var(--farbe-text-leise);
+}
+
+.todo-karte-rest {
+  font-weight: 600;
+  color: var(--farbe-text);
+}
+
+.todo-symbol {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Erledigt / Noch offen ---------- */
+
+.todo-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 8px 4px;
+}
+
+.todo-status-knopf {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  background: transparent;
+  border: 2px solid currentColor;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity var(--dauer) ease, background var(--dauer) ease, transform 0.1s ease;
+}
+
+.todo-status-knopf svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.todo-status-knopf--erledigt { color: var(--todo-erledigt); }
+.todo-status-knopf--offen { color: var(--todo-offen); }
+
+.todo-status-knopf:hover,
+.todo-status-knopf:focus-visible {
+  opacity: 1;
+}
+
+.todo-status-knopf:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+
+.todo-status-knopf:active {
+  transform: scale(0.94);
+}
+
+/* Aktiver Zustand: gefüllt, weißes Symbol, voll deckend */
+.todo-status-knopf[aria-pressed="true"] {
+  opacity: 1;
+  color: #fff;
+  cursor: default;
+}
+
+.todo-status-knopf--erledigt[aria-pressed="true"] {
+  background: var(--todo-erledigt);
+  border-color: var(--todo-erledigt);
+}
+
+.todo-status-knopf--offen[aria-pressed="true"] {
+  background: var(--todo-offen);
+  border-color: var(--todo-offen);
+}
+
+.todo-unsichtbar {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Bereich "Erledigt" ---------- */
+
+.todo-erledigt {
+  padding: var(--abstand-s) var(--abstand-m);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+}
+
+.todo-erledigt summary {
+  padding: 6px 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.todo-erledigt-anzahl {
+  color: var(--farbe-text-leise);
+  font-weight: 500;
+}
+
+.todo-erledigt-kopf {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--abstand-s);
+}
+
+.todo-erledigt .todo-liste {
+  padding-bottom: var(--abstand-s);
+}
+
+/* Erledigt: abgeschwächt, Titel durchgestrichen */
+.todo-karte.ist-erledigt {
+  --stufe-farbe: var(--farbe-rand);
+  box-shadow: none;
+}
+
+.todo-karte.ist-erledigt .todo-karte-inhalt {
+  opacity: 0.55;
+}
+
+.todo-karte.ist-erledigt .todo-karte-titel {
+  text-decoration: line-through;
+}
+
+/* ---------- Bewegung: Karte wandert nach "Erledigt" bzw. zurück ---------- */
+
+.todo-karte.geht-runter,
+.todo-karte.geht-hoch {
+  transition: height 0.38s ease, opacity 0.3s ease, transform 0.38s ease, margin 0.38s ease;
+  opacity: 0;
+  margin-bottom: calc(-1 * var(--abstand-s));
+  border-width: 0 0 0 6px;
+}
+
+.todo-karte.geht-runter { transform: translateY(16px) scale(0.98); }
+.todo-karte.geht-hoch { transform: translateY(-16px) scale(0.98); }
+
+.todo-karte.kommt {
+  animation: todo-kommt 0.38s ease-out;
+}
+
+@keyframes todo-kommt {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- Dialog ---------- */
+
+.todo-dialog {
+  width: min(460px, calc(100vw - 2 * var(--abstand-m)));
+  max-height: calc(100dvh - 2 * var(--abstand-m));
+  padding: var(--abstand-l);
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.todo-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.todo-formular {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.todo-dialog-titel {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.todo-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--farbe-text-leise);
+}
+
+.todo-feld[hidden] {
+  display: none;
+}
+
+.todo-optional {
+  font-weight: 400;
+}
+
+.todo-feld input,
+.todo-feld select,
+.todo-feld textarea {
+  min-height: 40px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--farbe-text);
+  background: var(--farbe-hintergrund);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-s);
+}
+
+.todo-feld textarea {
+  resize: vertical;
+}
+
+.todo-feld [aria-invalid="true"],
+.todo-arten[aria-invalid="true"] .todo-art-wahl {
+  border-color: var(--todo-offen);
+  box-shadow: 0 0 0 1px var(--todo-offen);
+}
+
+.todo-arten {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--abstand-s);
+  padding: 0;
+  border: none;
+}
+
+.todo-arten legend {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.todo-art-wahl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  color: var(--farbe-text);
+  font-weight: 500;
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-pille);
+  cursor: pointer;
+}
+
+.todo-art-wahl:has(input:checked) {
+  border-color: var(--farbe-akzent);
+  box-shadow: 0 0 0 1px var(--farbe-akzent);
+}
+
+.todo-fehler {
+  margin: 0;
+  color: var(--todo-offen);
+  font-weight: 500;
+}
+
+.todo-fehler:empty {
+  display: none;
+}
+
+.todo-dialog-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-s);
+  margin-top: 4px;
+}
+
+.todo-platzhalter {
+  flex: 1;
+}
+
+.todo-knopf {
+  height: 40px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.todo-knopf:hover {
+  border-color: var(--farbe-akzent);
+}
+
+.todo-knopf--haupt {
+  color: #fff;
+  background: var(--farbe-akzent);
+  border-color: var(--farbe-akzent);
+}
+
+.todo-knopf--gefahr {
+  color: var(--todo-offen);
+}
+
+.todo-knopf[hidden] {
+  display: none;
+}
+
+/* ---------- Smartphone: Skala als schmale Farbleiste links ---------- */
+
+@media (max-width: 700px) {
+  .todo-raster {
+    grid-template-columns: 6px minmax(0, 1fr);
+    column-gap: var(--abstand-s);
+  }
+
+  .todo-skala {
+    width: 6px;
+  }
+
+  .todo-stufe-name {
+    display: none;
+  }
+
+  .todo-gruppe-titel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .todo-gruppe.ist-leer {
+    min-height: 0;
+    padding: 4px 0;
+  }
+
+  .todo-gruppe.ist-leer .todo-gruppe-titel {
+    margin: 0;
+    font-weight: 500;
+    color: var(--farbe-text-leise);
+  }
+
+  .todo-karte-inhalt {
+    padding: 8px 10px;
+  }
+
+  .todo-status {
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 8px 6px 2px;
+  }
+
+  .todo-status-knopf {
+    width: 34px;
+    height: 34px;
+  }
+
+  .todo-ueberfaellig,
+  .todo-erledigt {
+    padding: var(--abstand-s);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .todo-karte.kommt {
+    animation: none;
+  }
+
+  .todo-status-knopf {
+    transition: none;
+  }
+}
