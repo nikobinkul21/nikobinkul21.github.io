@@ -82,6 +82,8 @@ const SudokuKampf = (function () {
     faehigkeitAnsage: 450,  // Boss holt aus, der Name der Fähigkeit erscheint
     faehigkeitWirkung: 650, // eigene Animation der Fähigkeit
     timerAblauf: 900,       // Tick, Tick: der Timer geht hoch
+    parade: 800,            // Parade: Held hält das Schwert quer, die Fähigkeit zerbricht
+    wirkungEnde: 700,       // eine Sperre (Fluch, Siegel) endet vorzeitig
     // Schlagabtausch (Verteidigungszug)
     bossWurf: 650,          // der Boss holt aus, sein Würfel rollt kurz und zeigt den Angriff
     vergleich: 450,         // beide Würfel stehen nebeneinander, bevor der Ausgang kommt
@@ -1899,15 +1901,21 @@ const SudokuKampf = (function () {
       const f = stand.faehigkeit;
       el.absicht.hidden = !f;
       if (f) {
+        // Entscheidender Zug (Zähler auf 1): Hinweis zur Parade statt des Zählers
+        const parade = Boolean(stand.paradeHinweis);
+        const hinweis = !parade ? "" : stand.paradeMoeglich ? "Jetzt parieren!" : "Keine Parade möglich";
         el.absicht.style.setProperty("--faehigkeit-farbe", f.farbe);
         el.absichtSymbol.innerHTML = symbolSvg(f.symbol);
         el.absichtName.textContent = f.name;
-        el.absichtText.textContent = zaehlerText(stand.zaehler);
-        el.absicht.classList.toggle("warnt", Boolean(stand.warnung));
+        el.absichtText.textContent = parade ? hinweis : zaehlerText(stand.zaehler);
+        el.absicht.classList.toggle("warnt", Boolean(stand.warnung) && !parade);
+        el.absicht.classList.toggle("parade", parade && Boolean(stand.paradeMoeglich));
+        el.absicht.classList.toggle("keine-parade", parade && !stand.paradeMoeglich);
         const erklaerung = f.name + ": " + f.beschreibung + " Kommt alle " + f.abstand +
-          " Züge – jede gesetzte Zahl zählt, im Angriff wie in der Verteidigung.";
+          " Züge – jede gesetzte Zahl zählt, im Angriff wie in der Verteidigung." +
+          " Parieren: Vervollständigt deine richtige Zahl im Zug des Einsatzes eine Zeile, Spalte oder einen Block, hat sie keine Wirkung.";
         el.absichtTipp.textContent = erklaerung;
-        el.absicht.setAttribute("aria-label", absichtText(f, stand.zaehler) + ". " + erklaerung);
+        el.absicht.setAttribute("aria-label", absichtText(f, stand.zaehler) + (hinweis ? ". " + hinweis : "") + ". " + erklaerung);
       }
       if (optionen && optionen.beimFaehigkeit) optionen.beimFaehigkeit(stand);
     }
@@ -1959,8 +1967,39 @@ const SudokuKampf = (function () {
       },
     };
 
+    /**
+     * Parade: Der Held hält das Schwert quer (eigene Pose), die Fähigkeit
+     * zerbricht in Splitter, die Textbox zeigt "Pariert!".
+     */
+    function parade(e) {
+      const f = e.faehigkeit;
+      banner("Pariert!", null, "pariert");
+      SudokuSprites.zeichne(el.heldCanvas, "heldPariert", 0);
+      el.heldFigur.classList.add("pariert");
+      const symbol = faehigkeitSymbol(f, "schwert", null, "zerbricht");   // zerbricht an der Klinge
+      // Splitter in der Farbe der Fähigkeit fliegen auseinander
+      for (let k = 0; k < 8; k++) {
+        const splitter = document.createElement("span");
+        splitter.className = "kampf-splitter";
+        const winkel = (Math.PI * 2 * k) / 8 + 0.3;
+        splitter.style.setProperty("--dx", Math.round(Math.cos(winkel) * 46) + "px");
+        splitter.style.setProperty("--dy", Math.round(Math.sin(winkel) * 34) + "px");
+        symbol.appendChild(splitter);
+      }
+      verlaufEintrag({ text: f.name + " pariert!", wert: "Pariert!", art: "pariert", symbol: "schwert" });
+      return pause(DAUER.parade).then(function () {
+        el.heldFigur.classList.remove("pariert");
+        SudokuSprites.zeichne(el.heldCanvas, "held", 0);
+      }, function (fehler) {
+        el.heldFigur.classList.remove("pariert");
+        SudokuSprites.zeichne(el.heldCanvas, "held", 0);
+        throw fehler;
+      });
+    }
+
     /** Text für Meldung und Verlauf. */
     function faehigkeitMeldung(e) {
+      if (e.pariert) return e.boss.name + " setzt " + e.faehigkeit.name + " ein – pariert!";
       if (e.verpufft) return e.boss.name + " setzt " + e.faehigkeit.name + " ein – verpufft.";
       const dauer = e.wirkung && e.wirkung.rest ? " für " + e.wirkung.rest + " Züge" : "";
       return e.boss.name + " setzt " + e.faehigkeit.name + " ein! " + e.text + dauer + ".";
@@ -1979,6 +2018,7 @@ const SudokuKampf = (function () {
         faerbe(el.absicht, "loest-aus", DAUER.faehigkeitAnsage);
         animiere(el.bossFigur, "holt-aus", DAUER.faehigkeitAnsage);
         return pause(DAUER.faehigkeitAnsage).then(function () {
+          if (e.pariert) return parade(e);
           if (e.verpufft) {
             schwebeZahl("Verpufft", "daneben");
             verlaufEintrag({ text: f.name + " verpufft", wert: "", art: "daneben", symbol: f.symbol });
@@ -1995,6 +2035,24 @@ const SudokuKampf = (function () {
         }).then(function () {
           zeigeFaehigkeit(e.stand);     // Zähler von vorn, Wirkung im Sudoku
         });
+      });
+    }
+
+    /**
+     * Eine Sperre endet vorzeitig, weil sonst keine Zahl mehr setzbar wäre
+     * ("Der Fluch verblasst", "Das Siegel bricht"). Das Spielfeld ist schon
+     * frei (der Stand des Zugs enthält die Wirkung nicht mehr) – hier nur
+     * der kurze Hinweis in der Textbox und auf der Bühne.
+     * @param {object} e – { boss, beendet: [{ id, name, symbol, farbe, text }] }
+     */
+    function wirkungEndet(e) {
+      return einreihen(function () {
+        e.beendet.forEach(function (w) {
+          meldung(w.text + " – sonst könntest du keine Zahl mehr setzen.");
+          verlaufEintrag({ text: w.text, wert: "", art: "daneben", symbol: w.symbol, farbe: w.farbe });
+          banner(w.text, w.farbe, "faehigkeit");
+        });
+        return pause(DAUER.wirkungEnde);
       });
     }
 
@@ -3354,6 +3412,7 @@ const SudokuKampf = (function () {
       ueberladung: ueberladung,
       zeigeUeberladung: zeigeUeberladung,
       timerAbgelaufen: timerAbgelaufen,
+      wirkungEndet: wirkungEndet,
       buchschlag: buchschlag,
       buchSpin: buchSpin,
       zeigeBuchBonus: zeigeBuchBonus,

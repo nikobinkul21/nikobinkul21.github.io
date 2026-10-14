@@ -57,7 +57,39 @@ const SudokuSprites = (function () {
       ],
     },
 
+    /* Der Held pariert: das Schwert quer über dem Kopf, die Hand am Griff (24 × 24) */
+    heldPariert: {
+      palette: null,      // dieselben Farben wie "held" (siehe unten)
+      raster: [
+        "........................",
+        "........................",
+        "........................",
+        "...................kgk..",
+        ".kkkkkkkkkkkkkkkkkkkgkkk",
+        "kWWWWWWWWWWWWWWWWWWkgbbk",
+        "kwwwwwwwwwwwwwwwwwwkgbbk",
+        ".kkkkkkkkkkkkkkkkkkkgksk",
+        "...................kgksk",
+        "......kkkkkk........ksk.",
+        ".....khhhhhhk.......ksk.",
+        "....khhhhhhhhk.....ksk..",
+        "....khhhhhhhhk.....ksk..",
+        "....kshhhhhhsk....ksk...",
+        "...kaakhhhhkaak...ksk...",
+        "..kaaaaccccaaaak.kssk...",
+        "..kaaacccccccaaksk......",
+        "...kacccccccccak........",
+        "...kccccCcccccck........",
+        "...kcccccCccccck........",
+        "...kccccccCcccck........",
+        "....kbbk..kbbk..........",
+        "....kbbk..kbbk..........",
+        "...kbbbk..kbbbk.........",
+      ],
+    },
+
   };
+  FIGUREN.heldPariert.palette = FIGUREN.held.palette;
 
   /* ------------------------------------------------------------------------
      BAUKASTEN FÜR BOSSE

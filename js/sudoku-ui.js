@@ -314,6 +314,7 @@ function initSudoku(container) {
     const spalteA = ausgewaehlt % 9;
     const blockA = SudokuEngine.blockVon(ausgewaehlt);
     const wirkungen = laufendeWirkungen();
+    const paradeFelder = modus === "abenteuer" && angezeigteFaehigkeit && angezeigteFaehigkeit.paradeFelder ? angezeigteFaehigkeit.paradeFelder : [];
     // Verwirrung: Ziffern erscheinen als Buchstaben des Worts (1 → erster Buchstabe …)
     const wort = SudokuRPG.verwirrungsWort(wirkungen);
     // Verdeckte Zahlen dürfen sich auch nicht über "gleiche Zahl" verraten
@@ -334,6 +335,9 @@ function initSudoku(container) {
       feld.classList.toggle("ist-versiegelt", wirkung === "versiegelt");
       feld.classList.toggle("ist-verdeckt", wirkung === "verdeckt");
       feld.classList.toggle("ist-verwirrt", Boolean(wort) && wert !== 0 && !verdeckt);
+      // Parade (Zähler auf 1): dezent markiert, wo die richtige Zahl eine Einheit vervollständigt
+      const parade = paradeFelder.indexOf(i) !== -1;
+      feld.classList.toggle("ist-parade", parade);
       zeichneTimer(feld, wirkung === "timer" && wert === 0);
 
       // CSS-Klassen für die Optik (Farben stehen in css/sudoku.css)
@@ -355,6 +359,7 @@ function initSudoku(container) {
       let beschreibung = "Zeile " + (zeile + 1) + ", Spalte " + (spalte + 1) + ": ";
       beschreibung += wert === 0 ? "leer" : verdeckt ? "verdeckt" : wort ? zeichenFuer(wert, wort) + " (Ziffer " + wert + ")" : wert;
       if (wirkung === "versiegelt") beschreibung += ", versiegelt";
+      if (parade) beschreibung += ", hier ist eine Parade möglich";
       if (wirkung === "timer" && wert === 0) beschreibung += ", Timer: noch " + SudokuKampf.zeitText(timerRestMs());
       if (istVorgabe) beschreibung += ", vorgegeben";
       if (istFalsch) beschreibung += ", falsch";
@@ -807,6 +812,7 @@ function initSudoku(container) {
     abenteuer.an("fehler", function (e) { if (abenteuer === diesesAbenteuer) kampf.fehler(e); });
     // Fähigkeit des Bosses – läuft nach Würfel, Schaden und Treffer dieses Zugs
     abenteuer.an("faehigkeit", function (e) { if (abenteuer === diesesAbenteuer) kampf.faehigkeit(e); });
+    abenteuer.an("wirkungEndet", function (e) { if (abenteuer === diesesAbenteuer) kampf.wirkungEndet(e); });
     // Sudoku gelöst: Welle über das Gitter, die Zahlen fliegen ins Schwert, es ist überladen
     abenteuer.an("ueberladung", function (e) {
       if (abenteuer !== diesesAbenteuer) return;

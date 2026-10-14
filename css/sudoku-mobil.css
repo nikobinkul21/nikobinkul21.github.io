@@ -633,6 +633,17 @@
     transform-origin: top left;
   }
 
+  /* "Jetzt parieren!": pulsiert an Ort und Stelle (ohne die Verschiebung am Computer) */
+  .kampf.ist-handy .kampf-absicht.parade {
+    animation-name: absicht-parade-streifen;
+    transform-origin: top left;
+  }
+
+  @keyframes absicht-parade-streifen {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.14); box-shadow: 0 0 0 3px rgba(242, 193, 78, 0.65), 0 0 12px #f2c14e; }
+  }
+
   @keyframes absicht-warnt-streifen {
     0%, 100% { transform: scale(1); }
     50%      { transform: scale(1.1); box-shadow: 0 0 0 2px color-mix(in srgb, var(--faehigkeit-farbe) 45%, transparent), 0 0 10px var(--faehigkeit-farbe); }
@@ -981,6 +992,19 @@
     0%   { opacity: 0; transform: translateY(4px) scale(0.8); }
     20%  { opacity: 1; transform: translateY(0) scale(1.12); }
     100% { opacity: 0; transform: translateY(-12cqh) scale(1); }
+  }
+
+  /* Parade: die Fähigkeit zerbricht an der Klinge über dem Kopf des Helden */
+  .kampf.ist-handy .kampf-faehigkeit-symbol--schwert {
+    top: auto;
+    left: calc(var(--held-links) + var(--held-groesse) * 0.55);
+    bottom: calc(var(--held-groesse) * 0.7);
+    transform-origin: center;
+  }
+
+  .kampf.ist-handy .kampf-faehigkeit-symbol--schwert svg {
+    width: min(34px, 22cqh);
+    height: min(34px, 22cqh);
   }
 
   .kampf.ist-handy .kampf-banner--geblockt,

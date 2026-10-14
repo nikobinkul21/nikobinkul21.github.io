@@ -2545,6 +2545,29 @@
   50%      { transform: translateX(50%) scale(1.1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--faehigkeit-farbe) 45%, transparent), 0 0 14px var(--faehigkeit-farbe); }
 }
 
+/* Entscheidender Zug (Zähler auf 1): "Jetzt parieren!" – goldener, kräftiger Puls.
+   Keine Parade möglich: ruhig und grau (die Fähigkeit kommt trotzdem). */
+.kampf-absicht.parade {
+  color: #2a1c00;
+  background: linear-gradient(180deg, #ffe58a, #f2c14e);
+  border-color: #8a5a00;
+  animation: absicht-parade 0.7s ease-in-out infinite;
+}
+
+.kampf-absicht.parade .kampf-absicht-symbol svg { fill: #2a1c00; }
+
+.kampf-absicht.keine-parade {
+  color: #fff;
+  background: #6b6f7a;
+}
+
+.kampf-absicht.keine-parade .kampf-absicht-symbol svg { fill: #fff; }
+
+@keyframes absicht-parade {
+  0%, 100% { transform: translateX(50%) scale(1); box-shadow: 0 0 0 2px rgba(242, 193, 78, 0.5), 2px 2px 0 rgba(0, 0, 0, 0.25); }
+  50%      { transform: translateX(50%) scale(1.14); box-shadow: 0 0 0 4px rgba(242, 193, 78, 0.65), 0 0 18px #f2c14e; }
+}
+
 /* Platz für die Absicht: der Boss steht etwas tiefer */
 .kampf-figur--boss { top: 19%; }
 .kampf-buehne.ist-elite .kampf-figur--boss { top: 14%; }
@@ -2936,6 +2959,7 @@
 .kampf-faehigkeit-symbol--mitte { top: 48%; left: 50%; }
 .kampf-faehigkeit-symbol--boss { top: 26%; left: 78%; }
 .kampf-faehigkeit-symbol--held { top: 68%; left: 22%; }
+.kampf-faehigkeit-symbol--schwert { top: 50%; left: 36%; }   /* an der quer gehaltenen Klinge (Parade) */
 .kampf-faehigkeit-symbol--mitte svg { animation: faehigkeit-drehen 1s ease-out; }
 
 .kampf-faehigkeit-zusatz {
@@ -2955,6 +2979,63 @@
   80%  { opacity: 1; }
   100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
 }
+
+/* Parade: der Held hält das Schwert quer und leuchtet kurz auf */
+.kampf-figur--held.pariert {
+  animation: held-pariert 0.8s ease-out;
+}
+
+@keyframes held-pariert {
+  0%   { transform: translateY(4px); filter: none; }
+  25%  { transform: translateY(-6px); filter: drop-shadow(0 0 10px #fff4c2) brightness(1.4); }
+  60%  { transform: translateY(-3px); filter: drop-shadow(0 0 6px #f2c14e); }
+  100% { transform: none; filter: none; }
+}
+
+/* Die parierte Fähigkeit zerbricht: Symbol zittert und fällt auseinander, Splitter fliegen */
+.kampf-faehigkeit-symbol.zerbricht {
+  animation: faehigkeit-zerbricht 0.8s ease-out forwards;
+}
+
+.kampf-faehigkeit-symbol.zerbricht svg {
+  animation: none;
+}
+
+.kampf-splitter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  background: var(--faehigkeit-farbe);
+  border: 1px solid var(--kampf-kasten-rand);
+  opacity: 0;
+  animation: splitter-fliegt 0.6s ease-out 0.22s forwards;
+}
+
+@keyframes faehigkeit-zerbricht {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  22%  { transform: translate(calc(-50% - 3px), -50%) rotate(-6deg); }
+  29%  { transform: translate(calc(-50% + 3px), -50%) rotate(6deg); }
+  36%  { opacity: 1; transform: translate(-50%, -50%) scale(1); clip-path: inset(0); }
+  100% { opacity: 0; transform: translate(-50%, -30%) scale(0.7) rotate(18deg); clip-path: inset(0 0 50% 0); }
+}
+
+@keyframes splitter-fliegt {
+  0%   { opacity: 1; transform: translate(-50%, -50%) rotate(0); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(160deg); }
+}
+
+/* "Pariert!" als großes goldenes Wort */
+.kampf-banner--pariert {
+  color: #2a1c00;
+  background: linear-gradient(90deg, #f2c14e, #fff1b8, #f2c14e);
+  border-color: #8a5a00;
+  box-shadow: 0 0 16px rgba(242, 193, 78, 0.85), 3px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.panel-eintrag--pariert { color: #f2c14e; font-weight: 800; }
 
 @keyframes faehigkeit-drehen {
   from { transform: rotate(-90deg); }
@@ -3016,6 +3097,17 @@
     repeating-linear-gradient(45deg, transparent 0 7px, var(--siegel-kette) 7px 10px, transparent 10px 14px),
     repeating-linear-gradient(-45deg, transparent 0 7px, var(--siegel-kette) 7px 10px, transparent 10px 14px);
   box-shadow: inset 0 0 0 2px rgba(139, 92, 255, 0.55);
+}
+
+/* Parade möglich (Zähler auf 1): dezenter goldener Rahmen im Feld – verrät
+   nur die Lage (letztes Feld einer Einheit), nicht die Zahl */
+.sudoku-feld.ist-parade {
+  box-shadow: inset 0 0 0 2px rgba(214, 160, 30, 0.55);
+  background-image: radial-gradient(circle at 50% 50%, rgba(242, 193, 78, 0.16), transparent 70%);
+}
+
+.sudoku-feld.ist-parade.ist-ausgewaehlt {
+  box-shadow: inset 0 0 0 2px rgba(214, 160, 30, 0.85);
 }
 
 /* Finsternis: Schatten über den Feldern, Zahlen als "?" */
@@ -3244,6 +3336,16 @@
 
 /* "Bewegung reduzieren": nur Einblendungen, nichts bewegt sich */
 @media (prefers-reduced-motion: reduce) {
+  .kampf-absicht.parade,
+  .kampf-figur--held.pariert,
+  .kampf-splitter {
+    animation: none !important;
+  }
+
+  .kampf-faehigkeit-symbol.zerbricht {
+    animation: faehigkeit-einblenden 0.8s ease-out forwards !important;
+  }
+
   .kampf-absicht.warnt {
     animation: none !important;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--faehigkeit-farbe) 45%, transparent), 0 0 12px var(--faehigkeit-farbe);

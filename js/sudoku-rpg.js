@@ -383,6 +383,12 @@ const SUDOKU_RPG_KONFIG = {
     abstand: 5,             // Startwert des Zählers (normale Bosse)
     abstandElite: 6,        // … bei Elite-Bossen (und dem Weltboss)
     warnungAb: 2,           // in den letzten so vielen Zügen pulsiert die Anzeige
+    // Parade: Vervollständigt die richtige Zahl IM ZUG DES EINSATZES (der
+    // Zähler fällt auf 0) eine Zeile, Spalte oder einen 3×3-Block, hat die
+    // Fähigkeit keine Wirkung – der Zähler beginnt normal von vorn. Nur in
+    // diesem einen Zug; nichts wird aufbewahrt. Gegen den Angriff im
+    // Verteidigungszug und einen schon laufenden Timer hilft sie nicht.
+    paradeHinweisBei: 1,    // bei diesem Zählerstand: "Jetzt parieren!" und passende Felder markiert
   },
 
   // Die Fähigkeiten. Neue Fähigkeit? Einfach ein weiterer Eintrag:
@@ -403,6 +409,13 @@ const SUDOKU_RPG_KONFIG = {
   //                         "timer" (Feld mit dem Timer) – sonst null
   //     ziffer(daten, z)  – "verflucht": diese Ziffer kann man nicht setzen
   //     gueltig(daten)    – prüft gespeicherte Daten beim Laden
+  //   endeText     – Hinweis, wenn eine sperrende Wirkung (Siegel, Fluch) vorzeitig
+  //                  endet, weil sonst keine Zahl mehr setzbar wäre
+  //   Keine Blockade: Eine Wirkung, die Felder oder Ziffern sperrt, darf nie
+  //   alle leeren Felder unsetzbar machen. wirkung(a) wählt dafür nur, was
+  //   a.bleibtSetzbar(daten) erlaubt; zusätzlich prüft einsetzen() jede neue
+  //   Wirkung zentral (sonst verpufft sie), und nach jedem Zug löst
+  //   blockadeLoesen() eine Blockade sofort auf.
   faehigkeiten: [
     {
       id: "finsternis", name: "Finsternis", symbol: "finsternis", farbe: "#3b3561",
@@ -423,13 +436,17 @@ const SUDOKU_RPG_KONFIG = {
       id: "fluch", name: "Fluch", symbol: "fluch", farbe: "#2f9e5a",
       dauer: 5,
       beschreibung: "Verflucht für {dauer} Züge eine Ziffer, die im Sudoku noch fehlt. Sie kann in der Zeit nicht gesetzt werden.",
+      endeText: "Der Fluch verblasst",
       wirkung: function (a) {
+        // Nur Ziffern, die noch fehlen – und nach deren Sperre noch ein
+        // anderes leeres Feld setzbar bleibt. Sonst verpufft der Fluch.
         const fehlt = [];
         for (let i = 0; i < 81; i++) {
           if (a.leer(i) && fehlt.indexOf(a.raetsel.loesung[i]) === -1) fehlt.push(a.raetsel.loesung[i]);
         }
-        if (fehlt.length === 0) return null;
-        const ziffer = a.waehle(fehlt.sort());
+        const moeglich = fehlt.sort().filter(function (z) { return a.bleibtSetzbar({ ziffer: z }); });
+        if (moeglich.length === 0) return null;
+        const ziffer = a.waehle(moeglich);
         return { text: "Ziffer " + ziffer + " verflucht", daten: { ziffer: ziffer } };
       },
       ziffer: function (daten, z) { return z === daten.ziffer ? "verflucht" : null; },
@@ -439,15 +456,13 @@ const SUDOKU_RPG_KONFIG = {
       id: "siegel", name: "Siegel", symbol: "siegel", farbe: "#8b5cff",
       dauer: 4,
       beschreibung: "Versiegelt für {dauer} Züge einen 3×3-Block mit leeren Feldern. Dort kannst du nichts setzen.",
+      endeText: "Das Siegel bricht",
       wirkung: function (a) {
-        // Nur Blöcke mit leeren Feldern – und nur, wenn außerhalb noch ein
-        // leeres Feld frei bleibt. Sonst verpufft das Siegel.
-        const leerGesamt = [];
-        for (let i = 0; i < 81; i++) if (a.leer(i)) leerGesamt.push(i);
+        // Nur Blöcke mit leeren Feldern – und nur, wenn nach der Sperre
+        // außerhalb noch ein leeres Feld setzbar bleibt. Sonst verpufft das Siegel.
         const bloecke = [];
         for (let b = 0; b < 9; b++) {
-          const innen = a.blockFelder(b).filter(a.leer).length;
-          if (innen > 0 && leerGesamt.length - innen > 0) bloecke.push(b);
+          if (a.blockFelder(b).some(a.leer) && a.bleibtSetzbar({ block: b })) bloecke.push(b);
         }
         if (bloecke.length === 0) return null;
         const block = a.waehle(bloecke);
@@ -864,6 +879,80 @@ const SudokuRPG = (function () {
       if (art) return art;
     }
     return null;
+  }
+
+  /** Ist Feld i im Rätsel leer (keine Vorgabe, noch keine richtige Zahl)? */
+  function istLeer(raetsel, i) {
+    return raetsel.vorgaben[i] === 0 && raetsel.eingaben[i] === 0;
+  }
+
+  /**
+   * DIE zentrale Prüfung gegen Blockaden: alle leeren Felder, in die man
+   * gerade die richtige Zahl setzen kann – also weder versiegelt noch mit
+   * einer verfluchten Ziffer. Solange das Sudoku läuft, muss es immer
+   * mindestens eines geben.
+   * @param {object[]} wirkungen – laufende Wirkungen ({ id, rest, daten })
+   */
+  function setzbareFelder(raetsel, wirkungen) {
+    const felder = [];
+    if (!raetsel) return felder;
+    for (let i = 0; i < 81; i++) {
+      if (!istLeer(raetsel, i)) continue;
+      if (feldWirkung(wirkungen, i) === "versiegelt") continue;
+      if (zifferWirkung(wirkungen, raetsel.loesung[i]) === "verflucht") continue;
+      felder.push(i);
+    }
+    return felder;
+  }
+
+  /** Sperrt Wirkung w gerade ein leeres Feld (versiegelt) oder dessen Ziffer (verflucht)? */
+  function sperrtFelder(w, raetsel) {
+    for (let i = 0; i < 81; i++) {
+      if (!istLeer(raetsel, i)) continue;
+      if (feldWirkung([w], i) === "versiegelt" || zifferWirkung([w], raetsel.loesung[i]) === "verflucht") return true;
+    }
+    return false;
+  }
+
+  /**
+   * Blockade lösen: Gibt es noch leere Felder, aber keines ist setzbar,
+   * enden alle Wirkungen, die Felder oder Ziffern sperren, sofort. Läuft
+   * nach jedem Zug und beim Laden.
+   * @param {object} faehigkeit – { zaehler, wirkungen } (wird angepasst)
+   * @returns {object[]} die beendeten Wirkungen (leer: keine Blockade)
+   */
+  function blockadeLoesen(raetsel, faehigkeit) {
+    if (!raetsel || raetsel.geloest) return [];
+    let leer = false;
+    for (let i = 0; i < 81 && !leer; i++) leer = istLeer(raetsel, i);
+    if (!leer || setzbareFelder(raetsel, faehigkeit.wirkungen).length > 0) return [];
+    const beendet = faehigkeit.wirkungen.filter(function (w) { return sperrtFelder(w, raetsel); });
+    faehigkeit.wirkungen = faehigkeit.wirkungen.filter(function (w) { return beendet.indexOf(w) === -1; });
+    return beendet;
+  }
+
+  /**
+   * Parade: die leeren Felder, die als letzte in ihrer Zeile, Spalte oder
+   * ihrem 3×3-Block fehlen – die richtige Zahl dort vervollständigt eine
+   * Einheit. Versiegelte Felder fallen weg (dort kann man nichts setzen).
+   * Ob eine Zahl dort stimmt, verrät die Liste nicht.
+   */
+  function paradeFelder(raetsel, wirkungen) {
+    const felder = [];
+    if (!raetsel || raetsel.geloest) return felder;
+    const leerIn = function (liste) { return liste.filter(function (i) { return istLeer(raetsel, i); }).length; };
+    for (let i = 0; i < 81; i++) {
+      if (!istLeer(raetsel, i) || feldWirkung(wirkungen, i) === "versiegelt") continue;
+      const z = Math.floor(i / 9), sp = i % 9, z0 = z - (z % 3), s0 = sp - (sp % 3);
+      const zeile = [], spalte = [], block = [];
+      for (let k = 0; k < 9; k++) {
+        zeile.push(z * 9 + k);
+        spalte.push(k * 9 + sp);
+        block.push((z0 + Math.floor(k / 3)) * 9 + s0 + (k % 3));
+      }
+      if (leerIn(zeile) === 1 || leerIn(spalte) === 1 || leerIn(block) === 1) felder.push(i);
+    }
+    return felder;
   }
 
   /** Das Wort einer laufenden Verwirrung (oder null): Ziffer z wird zum z-ten Buchstaben. */
@@ -1741,6 +1830,8 @@ const SudokuRPG = (function () {
         }).slice(0, 1).map(function (w) { return { id: w.id, rest: w.rest, daten: Object.assign({}, w.daten) }; });
       }
     }
+    // Ein Spielstand, der gerade blockiert ist (keine Zahl setzbar), wird sofort freigegeben
+    const blockadeGeloest = Boolean(raetsel) && blockadeLoesen(raetsel, faehigkeit).length > 0;
     // Plätze: Reihenfolge der Verbesserungen und Bücher (neu in Version 10;
     // ältere Stände: Bücher zuerst – das Buch aus dem Spin –, dann die übrigen)
     const besitzt = function (id) { return istBuch(id) ? buecher[id] > 0 : stufen[id] > 0; };
@@ -1776,7 +1867,7 @@ const SudokuRPG = (function () {
 
     return {
       ok: true,
-      ergaenzt: vorV14,
+      ergaenzt: vorV14 || blockadeGeloest,
       daten: {
         version: VERSION,
         bossNummer: roh.bossNummer,
@@ -2294,10 +2385,19 @@ const SudokuRPG = (function () {
     /** Stand der Fähigkeit für die Anzeige (eine Kopie – Ereignisse bleiben unverändert). */
     function faehigkeitAnzeige() {
       const fs = zustand.faehigkeit;
+      const r = zustand.raetsel;
+      // Entscheidender Zug (Zähler auf 1): Hinweis "Jetzt parieren!" und die
+      // Felder, deren richtige Zahl eine Einheit vervollständigen würde
+      const parade = Boolean(faehigkeitVonBoss(zustand.bossNummer)) && fs.zaehler === K.faehigkeit.paradeHinweisBei &&
+        Boolean(r) && !r.geloest;
+      const felder = parade ? paradeFelder(r, fs.wirkungen) : [];
       return {
         faehigkeit: faehigkeitFuerAnzeige(faehigkeitVonBoss(zustand.bossNummer), zustand.bossNummer),
         zaehler: fs.zaehler,
         warnung: fs.zaehler <= K.faehigkeit.warnungAb,
+        paradeHinweis: parade,                 // "Jetzt parieren!" (bzw. "Keine Parade möglich")
+        paradeFelder: felder,                  // leere Felder, die als letzte ihrer Einheit fehlen
+        paradeMoeglich: felder.length > 0,
         wirkungen: fs.wirkungen.map(function (w) {
           const f = faehigkeitInfo(w.id);
           return { id: w.id, name: f.name, symbol: f.symbol, farbe: f.farbe, rest: w.rest,
@@ -2319,32 +2419,41 @@ const SudokuRPG = (function () {
 
     /**
      * Ein Zug ist vorbei (richtige oder falsche Zahl): Wirkungen mit Zugdauer
-     * laufen ab, der Zähler sinkt. Bei 0 setzt der Boss seine Fähigkeit ein.
-     * @returns {object|null} – Daten für das Ereignis "faehigkeit" (oder null)
+     * laufen ab, eine Blockade wird gelöst, der Zähler sinkt. Bei 0 setzt der
+     * Boss seine Fähigkeit ein – oder sie ist pariert.
+     * @param {boolean} pariert – die richtige Zahl dieses Zugs hat eine Einheit vervollständigt
+     * @returns {{ einsatz: object|null, beendet: object[] }} – Daten für die
+     *   Ereignisse "faehigkeit" und "wirkungEndet"
      */
-    function zugVorbei(boss) {
+    function zugVorbei(boss, pariert) {
       const fs = zustand.faehigkeit;
-      const r = zustand.raetsel;
       fs.wirkungen.forEach(function (w) { if (w.rest !== null) w.rest--; });
       fs.wirkungen = fs.wirkungen.filter(function (w) { return w.rest === null || w.rest > 0; });
-      // Sind alle leeren Felder versiegelt, bricht das Siegel – sonst ginge es nicht weiter
-      if (r && !r.geloest) {
-        let frei = false, leer = false;
-        for (let i = 0; i < 81; i++) {
-          if (r.vorgaben[i] === 0 && r.eingaben[i] === 0) { leer = true; if (!istVersiegelt(i)) frei = true; }
-        }
-        if (leer && !frei) {
-          fs.wirkungen = fs.wirkungen.filter(function (w) {
-            for (let i = 0; i < 81; i++) if (feldWirkung([w], i) === "versiegelt") return false;
-            return true;
-          });
-        }
-      }
+      // Keine Blockade: Sind alle leeren Felder nur noch gesperrt, endet die Sperre sofort
+      const beendet = blockadeLoesen(zustand.raetsel, fs).map(wirkungFuerAnzeige);
       const f = faehigkeitVonBoss(zustand.bossNummer);
-      if (!f) return null;
+      if (!f) return { einsatz: null, beendet: beendet };
       fs.zaehler--;
-      if (fs.zaehler > 0) return null;
-      return einsetzen(f, boss);
+      if (fs.zaehler > 0) return { einsatz: null, beendet: beendet };
+      return { einsatz: pariert ? parieren(f, boss) : einsetzen(f, boss), beendet: beendet };
+    }
+
+    /** Eine Wirkung für Ereignisse und Anzeige (mit Hinweis, falls sie vorzeitig endet). */
+    function wirkungFuerAnzeige(w) {
+      const f = faehigkeitInfo(w.id);
+      return { id: w.id, name: f.name, symbol: f.symbol, farbe: f.farbe, text: f.endeText || f.name + " endet" };
+    }
+
+    /**
+     * Pariert: Die Fähigkeit hat keine Wirkung, der Zähler beginnt von vorn.
+     * Laufende Wirkungen (z. B. ein Timer von Tick, Tick) bleiben, wie sie sind.
+     */
+    function parieren(f, boss) {
+      zustand.faehigkeit.zaehler = faehigkeitAbstand(zustand.bossNummer);
+      return {
+        boss: boss, faehigkeit: faehigkeitFuerAnzeige(f, zustand.bossNummer),
+        pariert: true, verpufft: false, text: "Pariert!", wirkung: null,
+      };
     }
 
     /** Der Boss setzt seine Fähigkeit ein – sie wirkt (oder verpufft, wenn sie nichts findet). */
@@ -2354,13 +2463,21 @@ const SudokuRPG = (function () {
       fs.zaehler = faehigkeitAbstand(zustand.bossNummer);
       const ereignis = {
         boss: boss, faehigkeit: faehigkeitFuerAnzeige(f, zustand.bossNummer),
-        verpufft: false, text: "", wirkung: null,
+        pariert: false, verpufft: false, text: "", wirkung: null,
       };
       if (!r || r.geloest) {
         ereignis.verpufft = true;                 // ohne laufendes Sudoku gibt es nichts zu treffen
       } else {
-        const leer = function (i) { return r.vorgaben[i] === 0 && r.eingaben[i] === 0; };
+        const leer = function (i) { return istLeer(r, i); };
+        // Bleibt nach dieser Wirkung (mit diesen Daten) noch ein leeres Feld setzbar?
+        // Eine laufende Wirkung derselben Fähigkeit wird dabei ersetzt.
+        const bleibtSetzbar = function (daten) {
+          const danach = fs.wirkungen.filter(function (w) { return w.id !== f.id; })
+            .concat([{ id: f.id, rest: f.dauer, daten: daten }]);
+          return setzbareFelder(r, danach).length > 0;
+        };
         const a = {
+          bleibtSetzbar: bleibtSetzbar,
           zustand: zustand, raetsel: r, zufall: zufall, eintrag: f,
           waehle: function (liste) { return liste[Math.floor(zufall() * liste.length)]; },
           leer: leer,
@@ -2372,7 +2489,9 @@ const SudokuRPG = (function () {
           },
         };
         const ergebnis = f.wirkung(a);
-        if (!ergebnis) {
+        // Zentral für jede Fähigkeit (auch künftige): Würde die Wirkung alle
+        // leeren Felder sperren, verpufft sie
+        if (!ergebnis || !bleibtSetzbar(ergebnis.daten)) {
           ereignis.verpufft = true;
         } else {
           ereignis.text = ergebnis.text;
@@ -2546,12 +2665,14 @@ const SudokuRPG = (function () {
         melde("niederlage", niederlage);
         return { art: "fehler", niederlage: true, faehigkeit: null };
       }
-      // Fähigkeit: Auch eine falsche Zahl zählt als Zug
-      const einsatz = zugVorbei(boss);
+      // Fähigkeit: Auch eine falsche Zahl zählt als Zug (pariert ist damit nichts)
+      const zug = zugVorbei(boss, false);
+      const einsatz = zug.einsatz;
       ereignis.faehigkeitStand = anzeigeVorEinsatz(einsatz);
       if (einsatz) einsatz.stand = faehigkeitAnzeige();
       speichern();
       melde("fehler", ereignis);
+      if (zug.beendet.length) melde("wirkungEndet", { boss: boss, beendet: zug.beendet });
       if (einsatz) melde("faehigkeit", einsatz);
       return { art: "fehler", niederlage: false, faehigkeit: einsatz };
     }
@@ -2565,6 +2686,9 @@ const SudokuRPG = (function () {
       if (einsatz) {
         stand.zaehler = 0;
         stand.warnung = true;
+        stand.paradeHinweis = false;
+        stand.paradeFelder = [];
+        stand.paradeMoeglich = false;
         // Die neue Wirkung erscheint erst mit dem Einsatz
         if (einsatz.wirkung) stand.wirkungen = stand.wirkungen.filter(function (w) { return w.id !== einsatz.wirkung.id; });
       }
@@ -2800,7 +2924,10 @@ const SudokuRPG = (function () {
         zustand.faehigkeit.zaehler = Math.min(voll, vorher + zusatz.faehigkeit);
         buchFaehigkeit = zustand.faehigkeit.zaehler - vorher;
       }
-      const einsatz = kampfGeht ? zugVorbei(bossVorher) : null;
+      // Parade: Diese richtige Zahl hat eine Einheit vervollständigt – zählt
+      // nur, wenn die Fähigkeit genau in diesem Zug kommt (siehe zugVorbei)
+      const zug = kampfGeht ? zugVorbei(bossVorher, einheitFertig) : { einsatz: null, beendet: [] };
+      const einsatz = zug.einsatz;
       if (geloest) zustand.faehigkeit.wirkungen = [];
       const faehigkeitStand = kampfGeht ? anzeigeVorEinsatz(einsatz) : null;
       if (einsatz) einsatz.stand = faehigkeitAnzeige();
@@ -2880,6 +3007,7 @@ const SudokuRPG = (function () {
         melde("ueberladung", { index: index, boss: bossVorher, faktor: K.ueberladung.faktor,
           zahlen: r.loesung.slice(), besiegt: besiegt });
       }
+      if (zug.beendet.length && !geloest) melde("wirkungEndet", { boss: bossVorher, beendet: zug.beendet });
       if (einsatz) melde("faehigkeit", einsatz);
       if (bossAngriffEreignis) melde("bossAngriff", bossAngriffEreignis);
       if (besiegt) {
@@ -3084,6 +3212,8 @@ const SudokuRPG = (function () {
     welten: function () { return WELTEN.filter(Boolean).map(function (w) { return Object.assign(weltFuerAnzeige(w), { gebaut: w.bosse.length > 0 }); }); },
     seltenFuerAnzeige: seltenFuerAnzeige,
     faehigkeitAbstand: faehigkeitAbstand,
+    setzbareFelder: setzbareFelder,
+    paradeFelder: paradeFelder,
     faehigkeitInfo: faehigkeitInfo,
     verwirrungsWort: verwirrungsWort,
     wortGueltig: wortGueltig,
