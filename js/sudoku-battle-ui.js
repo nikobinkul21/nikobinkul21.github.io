@@ -20,13 +20,16 @@ const SUDOKU_WUERFEL_KONFIG = {
   speicherSchluessel: "ntb-kampf-animation",
   alterSchluessel: "ntb-wuerfel-animation",   // frühere Einstellung "Würfelanimation"
   standard: "normal",
-  // Würfel in Millisekunden: "gross" = eigene Würfelfläche (Desktop),
-  // "klein" = Smartphone (Würfel über dem Gitter) und schmale Fenster.
-  // "fx" = Tempo des Schadensaufbaus (1 = normal, 0 = aus)
+  // Dauer eines Würfelwurfs in Millisekunden, getrennt für Desktop (eigene
+  // Würfelfläche) und Smartphone (Würfel über dem Gitter; auch schmale
+  // Fenster). Ein kürzerer Flugweg auf dem Smartphone macht den Wurf nicht
+  // kürzer – er wird nur ruhiger.
+  // "fx" = Tempo des Schadensaufbaus (1 = normal, kleiner = schneller, 0 = aus);
+  // seine Dauern (wieder je Desktop/Smartphone): SUDOKU_FX_KONFIG.zeiten
   stufen: [
-    { id: "normal", name: "Normal", gross: 2000, klein: 800, fx: 1 },
-    { id: "schnell", name: "Schnell", gross: 600, klein: 600, fx: 0.4 },
-    { id: "aus", name: "Aus", gross: 0, klein: 0, fx: 0 },
+    { id: "normal", name: "Normal", wuerfel: { desktop: 2000, smartphone: 2000 }, fx: 1 },
+    { id: "schnell", name: "Schnell", wuerfel: { desktop: 600, smartphone: 600 }, fx: 0.4 },
+    { id: "aus", name: "Aus", wuerfel: { desktop: 0, smartphone: 0 }, fx: 0 },
   ],
   landung: 0.2,            // Anteil der Dauer für den Aufprall am Ende
   // Drehen, Kippen und Aufspringen des 3D-Würfels: DICE3D_KONFIG in js/dice3d.js
@@ -92,7 +95,7 @@ const SudokuKampf = (function () {
     vergleich: 450,         // beide Würfel stehen nebeneinander, bevor der Ausgang kommt
     vergleichWurf: 420,     // … und drehen sich dabei kurz auf ihr Ergebnis (3D)
     ausgang: 650,           // Geblockt / Treffer / Konter
-    // Buchschlag (Normal, Desktop; Schnell/Smartphone kürzer): zusammen etwa 2 Sekunden
+    // Buchschlag (Normal; bei "Schnell" kürzer): zusammen etwa 2 Sekunden
     buchFeld: 110,       // Abstand, in dem die neun Felder aufleuchten und ihre Ziffer losschicken
     buchFlug: 320,       // Flugzeit einer Ziffer zum Schwert
     buchAufladen: 180,   // Schwert voll aufgeladen, kurz halten
@@ -214,15 +217,17 @@ const SudokuKampf = (function () {
           '<p class="wuerfel-info"><span class="wuerfel-seiten">W20</span><span class="wuerfel-art"></span></p>' +
         "</div>";
       teileLesen(h, handyPlatz, ".handy-wuerfel");
-      // Ein Tipp auf den Würfel springt zum Ergebnis. Der Tipp geht trotzdem
-      // an das Feld darunter weiter (nichts wird abgefangen).
+      // Ein gezielter Tipp auf den Würfel springt zum Ergebnis – nur auf den
+      // gezeichneten Würfel selbst, nicht auf das Gitter daneben. Der Tipp geht
+      // trotzdem an das Feld darunter weiter (nichts wird abgefangen).
       document.addEventListener("pointerdown", function (event) {
         if (h.flaeche.hidden || h.flaeche.classList.contains("geht")) return;
-        const r = h.koerper.getBoundingClientRect();
-        if (event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom) beimKlick();
+        if (h.wuerfel.some(function (d) { return d.trifft(event.clientX, event.clientY); })) beimKlick();
       }, true);
     }
-    klein.addEventListener("click", beimKlick);
+    // Der kleine Würfel kürzt nur dort ab, wo er wirklich der Würfel ist (schmale
+    // Fenster). Auf dem Smartphone zeigt er nur das letzte Ergebnis – kein Abkürzen.
+    klein.addEventListener("click", function () { if (!handyAktiv()) beimKlick(); });
     // Nebenwürfel auch am kleinen Würfel (Smartphone)
     const kleinMehr = document.createElement("span");
     kleinMehr.className = "kampf-wuerfel-mehr";
@@ -493,7 +498,7 @@ const SudokuKampf = (function () {
       const art = artVon(e);
       const modus = modusJetzt();
       const stufe = wuerfelEinstellung();
-      const normal = modus === "gross" ? stufe.gross : stufe.klein;
+      const normal = modus === "gross" ? stufe.wuerfel.desktop : stufe.wuerfel.smartphone;
       let dauer = normal;
       if (ohneBewegung()) dauer = normal > 0 ? W.pauseReduziert : 0;
       if (sofort) dauer = 0;
@@ -978,7 +983,8 @@ const SudokuKampf = (function () {
     // Antippen des Streifens öffnet das Blatt (der Würfel kürzt weiter die Animationen ab)
     el.buehne.addEventListener("click", function (event) {
       // Würfel kürzt ab, die Plätze zeigen ihr Glas-Panel – alles andere öffnet das Blatt
-      if (!handy.an || event.target.closest(".wuerfel-knopf, .kampf-wuerfel, .kampf-platz")) return;
+      // (die kleine Zahl des letzten Wurfs gehört auf dem Smartphone zum Streifen)
+      if (!handy.an || event.target.closest(".wuerfel-knopf, .kampf-platz")) return;
       event.preventDefault();
       event.stopPropagation();
       oeffneBlatt();
@@ -2240,7 +2246,9 @@ const SudokuKampf = (function () {
       const held = el.heldFigur.getBoundingClientRect();
       return {
         aktiv: stufe.fx > 0,
-        faktor: stufe.fx * (handy ? FX.faktorHandy : 1),
+        // Dauern je Gerät (SUDOKU_FX_KONFIG.zeiten), dazu das Tempo der Einstellung
+        geraet: handy ? "smartphone" : "desktop",
+        faktor: stufe.fx,
         reduziert: ohneBewegung(),
         start: imBild(start),
         daneben: imBild(daneben),
@@ -2676,7 +2684,7 @@ const SudokuKampf = (function () {
      * danach erlischt das Glühen mit einem kurzen Verpuffen.
      */
     function ueberladenerSchlag(e, u, getroffen) {
-      const T = SudokuSchadenFx.KONFIG.ueberladung;
+      const T = SudokuSchadenFx.ueberladungZeiten(u.geraet);
       if (!u.aktiv) banner("Überladung ×" + e.ueberladung + "!", null, "ueberladung");
       if (u.aktiv && !u.reduziert && !eilig() && u.boss) SudokuSchadenFx.regenbogenStrahl(u.schwert, u.boss, T.strahl * u.faktor);
       faerbe(el.blitz, "an-regenbogen", 500);
@@ -2701,8 +2709,8 @@ const SudokuKampf = (function () {
      */
     function ueberladung(e, welle) {
       return einreihen(function () {
-        const T = SudokuSchadenFx.KONFIG.ueberladung;
         const u = fxUmgebung(e);
+        const T = SudokuSchadenFx.ueberladungZeiten(u.geraet);
         const ruhig = ohneBewegung() || !u.aktiv;
         meldung("Sudoku gelöst! Die Zahlen fliegen ins Schwert …");
         const w = welle ? welle() : null;

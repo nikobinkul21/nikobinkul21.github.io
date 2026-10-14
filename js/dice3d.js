@@ -530,7 +530,20 @@ const Dice3D = (function () {
         aufrecht: dreh(m, FORM.flaechen[best].u)[1] };
     }
 
+    /**
+     * Liegt der Punkt (Bildschirmkoordinaten) auf dem Würfel selbst? Gemessen
+     * wird der Kreis um den gezeichneten Würfel – nicht das ganze Canvas.
+     */
+    function trifft(x, y) {
+      const r = canvas.getBoundingClientRect();
+      if (!r.width) return false;
+      const mx = r.left + r.width / 2, my = r.top + r.height * K.mitteY - w.hoehe * 2 * r.width * K.fuellung;
+      const radius = r.width * K.fuellung;
+      return (x - mx) * (x - mx) + (y - my) * (y - my) <= radius * radius;
+    }
+
     const instanz = {
+      trifft: trifft,
       zeige: zeige,
       rolle: rolle,
       ueberspringe: ueberspringe,

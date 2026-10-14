@@ -31,21 +31,44 @@ const SUDOKU_FX_KONFIG = {
     { ab: 100, id: "regenbogen", name: "Regenbogen-Leuchten", funken: 18 },
   ],
 
-  // Dauer der Abschnitte (Millisekunden, Stufe "Normal" auf dem Desktop).
-  // Zusammen mit dem Schlag des Helden höchstens etwa 1,5 Sekunden.
+  // Dauer der Abschnitte in Millisekunden (Stufe "Normal"; "Schnell" kürzt
+  // alle mit dem Tempo der Einstellung). Getrennt für Desktop und Smartphone –
+  // jede Zahl lässt sich einzeln ändern. Auf dem Smartphone sind die Wege
+  // kürzer, die Dauern aber gleich: Die Bewegung ist dort einfach ruhiger.
+  // Zusammen mit dem Schlag des Helden etwa 1,5 Sekunden.
   zeiten: {
-    abloesen: 140,          // Zahl löst sich vom Würfel
-    krit: 200,              // kritischer Treffer: Zahl verdreifacht sich
-    etiketten: 480,         // alle Boni ZUSAMMEN – viele Boni fliegen dichter hintereinander
-    etikettFlug: 240,       // Flugzeit eines Etiketts (sie starten gestaffelt)
-    etikettAbstandMax: 180, // höchstens so viel Zeit zwischen zwei Einschlägen
-    regenbogenAbzug: 160,   // bei der Regenbogen-Stufe kürzer, dafür …
-    zumSchwert: 200,        // Flug ins Schwert
-    aufladen: 100,          // Schwert leuchtet auf
-    aufladenRegenbogen: 300, // … längeres Aufladen bei der Regenbogen-Stufe
-    entladen: 200,          // Einschlag im Boss (beginnt mitten im Schlag des Helden)
-    abprallen: 420,         // Fehlschlag / immun: Zahl zerfällt oder prallt ab
-    reduziertSchritt: 160,  // "Bewegung reduzieren": Pause je Zählschritt
+    desktop: {
+      abloesen: 140,          // Zahl löst sich vom Würfel
+      stehen: 0,              // … und steht so lange für sich, bevor das erste Etikett anfliegt
+      krit: 200,              // kritischer Treffer: Zahl verdreifacht sich
+      etiketten: 480,         // alle Boni ZUSAMMEN – viele Boni fliegen dichter hintereinander
+      etikettFlug: 240,       // Flugzeit eines Etiketts (sie starten gestaffelt)
+      etikettAbstandMax: 180, // höchstens so viel Zeit zwischen zwei Einschlägen
+      etikettAbstandMin: 0,   // mindestens so viel (Zeit, den Zwischenwert zu lesen)
+      regenbogenAbzug: 160,   // bei der Regenbogen-Stufe kürzer, dafür …
+      zumSchwert: 200,        // Flug ins Schwert
+      aufladen: 100,          // Schwert leuchtet auf
+      aufladenRegenbogen: 300, // … längeres Aufladen bei der Regenbogen-Stufe
+      entladen: 200,          // Einschlag im Boss (beginnt mitten im Schlag des Helden)
+      abprallen: 420,         // Fehlschlag / immun: Zahl zerfällt oder prallt ab
+      reduziertSchritt: 160,  // "Bewegung reduzieren": Pause je Zählschritt
+    },
+    smartphone: {
+      abloesen: 160,
+      stehen: 280,            // die Würfelzahl steht kurz für sich
+      krit: 240,
+      etiketten: 480,
+      etikettFlug: 260,
+      etikettAbstandMax: 320,
+      etikettAbstandMin: 260, // zwischen zwei Etiketten: Zeit, jeden Zwischenwert zu lesen
+      regenbogenAbzug: 160,
+      zumSchwert: 220,
+      aufladen: 120,
+      aufladenRegenbogen: 300,
+      entladen: 220,
+      abprallen: 460,
+      reduziertSchritt: 200,
+    },
   },
 
   // Regenbogenschlag (Regenbogenfeld): feste Abschnitte, zusammen etwa 3 Sekunden.
@@ -63,23 +86,26 @@ const SUDOKU_FX_KONFIG = {
   },
 
   // Überladung (gelöstes Sudoku): Welle, Zahlen ins Schwert, Blitz – zusammen
-  // etwa 2,5 Sekunden (Desktop, "Normal"); auf dem Smartphone etwa halb so lang
+  // etwa 2,5 Sekunden ("Normal"); Dauern wieder je Desktop und Smartphone
   ueberladung: {
-    welleMax: 1100,         // so lange höchstens auf die Welle über das Gitter warten
-    staffel: 34,            // Startverzögerung je Feld Abstand zum zuletzt gesetzten Feld
-    flug: 520,              // Flugzeit einer Zahl ins Schwert
-    blitz: 450,             // Lichtblitz: das Schwert ist überladen
-    reduziert: 900,         // "Bewegung reduzieren": Gitter leuchtet, kurz stehen lassen
-    // Der überladene Schlag (im Schadensaufbau, nach den übrigen Boni)
-    etikettFlug: 320,       // "×10" fliegt vom Schwert auf die Zahl
-    sprung: 420,            // die Zahl springt auf das Zehnfache
-    strahl: 420,            // Regenbogenstrahl vom Schwert zum Boss
-    verpuffen: 450,         // danach erlischt das Glühen
     funken: 26,             // bunte Funken beim Sprung und am Boss
+    desktop: {
+      welleMax: 1100,       // so lange höchstens auf die Welle über das Gitter warten
+      staffel: 34,          // Startverzögerung je Feld Abstand zum zuletzt gesetzten Feld
+      flug: 520,            // Flugzeit einer Zahl ins Schwert
+      blitz: 450,           // Lichtblitz: das Schwert ist überladen
+      reduziert: 900,       // "Bewegung reduzieren": Gitter leuchtet, kurz stehen lassen
+      // Der überladene Schlag (im Schadensaufbau, nach den übrigen Boni)
+      etikettFlug: 320,     // "×10" fliegt vom Schwert auf die Zahl
+      sprung: 420,          // die Zahl springt auf das Zehnfache
+      strahl: 420,          // Regenbogenstrahl vom Schwert zum Boss
+      verpuffen: 450,       // danach erlischt das Glühen
+    },
+    smartphone: {
+      welleMax: 1100, staffel: 34, flug: 520, blitz: 450, reduziert: 900,
+      etikettFlug: 320, sprung: 420, strahl: 420, verpuffen: 450,
+    },
   },
-
-  // Auf dem Smartphone sind die Wege kürzer – der Ablauf ist etwa halb so lang
-  faktorHandy: 0.5,
 
   // Wo die große Zahl "daneben" steht: Abstand zur Würfelmitte in Pixeln
   // (desktop; handy = schmales Fenster mit kleinem Würfel), auf dem
@@ -206,13 +232,19 @@ const SudokuSchadenFx = (function () {
     return ["zeile", "spalte", "block"].filter(function (n) { return ein[n]; });
   }
 
-  /** Alle Zeiten mal Faktor (Schnell, Smartphone …). */
-  function zeitenMal(faktor) {
+  /** Die Zeiten des Geräts (u.geraet: "desktop" | "smartphone"), mal Tempo der Einstellung. */
+  function zeitenFuer(u) {
+    const quelle = K.zeiten[u.geraet] || K.zeiten.desktop;
     const t = {};
-    Object.keys(K.zeiten).forEach(function (k) {
-      t[k] = K.zeiten[k] * faktor;
+    Object.keys(quelle).forEach(function (k) {
+      t[k] = quelle[k] * u.faktor;
     });
     return t;
+  }
+
+  /** Zeiten der Überladung für ein Gerät (dazu "funken"). */
+  function ueberladungZeiten(geraet) {
+    return Object.assign({ funken: K.ueberladung.funken }, K.ueberladung[geraet] || K.ueberladung.desktop);
   }
 
   function ebeneHolen() {
@@ -392,7 +424,8 @@ const SudokuSchadenFx = (function () {
        warte(ms)     – Wartezeit, die beim Überspringen sofort endet
        pause(ms)     – wie warte, aber auch bei "Bewegung reduzieren"
        eilig()       – true, wenn übersprungen werden soll
-       faktor        – Tempo (1 = Normal, kleiner = schneller)
+       geraet        – "desktop" oder "smartphone" (welche Zeiten gelten)
+       faktor        – Tempo der Einstellung (1 = Normal, kleiner = schneller)
        reduziert     – "Bewegung reduzieren": nichts fliegt
        beimSchritt(i, wert) – nach jedem Einschlag (für "Letzter Treffer")
      ------------------------------------------------------------------------ */
@@ -405,7 +438,7 @@ const SudokuSchadenFx = (function () {
     const stufe = stufeFuer(e.schaden);
     const schritte = schritteAus(e);
     if (u.eilig()) return Promise.resolve(stufe);
-    const t = zeitenMal(u.faktor);
+    const t = zeitenFuer(u);
     const zahl = element("fx-zahl", u.reduziert ? u.daneben : u.start, '<span class="fx-wert"></span>');
     zeigeWert(zahl, startwert(e));
 
@@ -429,7 +462,8 @@ const SudokuSchadenFx = (function () {
     let index = 0;
     // 1. Ablösen: die Zahl springt vom Würfel und steht groß daneben
     fliege(zahl, u.start, u.daneben, t.abloesen, "cubic-bezier(0.2, 0.9, 0.3, 1.3)");
-    let kette = u.warte(t.abloesen);
+    // … und steht kurz für sich, bevor das erste Etikett anfliegt
+    let kette = u.warte(t.abloesen + t.stehen);
 
     // Kritischer Treffer: verdreifacht sich mit einem Aufplatzen – vor allen anderen
     if (schritte[0] && schritte[0].art === "krit") {
@@ -457,9 +491,11 @@ const SudokuSchadenFx = (function () {
       if (u.eilig() || boni.length === 0) return null;
       const budget = t.etiketten - (stufe.id === "regenbogen" ? t.regenbogenAbzug : 0);
       const flug = Math.min(t.etikettFlug, budget);
-      const abstand = boni.length > 1
+      // Abstand zwischen zwei Einschlägen: dichter bei vielen Boni, aber nie
+      // kürzer als etikettAbstandMin – jeder Zwischenwert bleibt lesbar
+      const abstand = Math.max(t.etikettAbstandMin, boni.length > 1
         ? Math.min(t.etikettAbstandMax, Math.max(0, budget - flug) / (boni.length - 1))
-        : t.etikettAbstandMax * 0.6;
+        : t.etikettAbstandMax * 0.6);
       let folge = Promise.resolve();
       boni.forEach(function (s, i) {
         // Flug startet nach i × abstand …
@@ -491,7 +527,7 @@ const SudokuSchadenFx = (function () {
     // 3b. Überladung: "×10" löst sich vom glühenden Schwert, schlägt in die
     //     Zahl ein – sie springt mit Regenbogenring und Funken auf das Zehnfache
     if (ueberladung) {
-      const T = K.ueberladung;
+      const T = ueberladungZeiten(u.geraet);
       kette = kette.then(function () {
         if (u.eilig()) return null;
         const quelle = u.quelle("ueberladung") || u.schwert;
@@ -540,7 +576,7 @@ const SudokuSchadenFx = (function () {
    */
   function entladen(stufe, u) {
     if (u.eilig() || u.reduziert) return Promise.resolve();
-    const t = zeitenMal(u.faktor);
+    const t = zeitenFuer(u);
     ring(u.boss, "fx-ring--" + stufe.id, t.entladen * 1.6, 1 + stufe.nummer * 0.45);
     if (stufe.funken > 0) funken(u.boss, stufe.funken, stufe.id === "regenbogen", t.entladen * 2);
     return u.warte(t.entladen);
@@ -553,7 +589,7 @@ const SudokuSchadenFx = (function () {
    */
   function abprallen(e, u, art) {
     if (u.eilig()) return Promise.resolve();
-    const t = zeitenMal(u.faktor);
+    const t = zeitenFuer(u);
     const zahl = element("fx-zahl fx-zahl--" + art, u.reduziert ? u.daneben : u.start, '<span class="fx-wert"></span>');
     zeigeWert(zahl, e.wurf);
     zahl.dataset.stufe = "aus";
@@ -676,7 +712,7 @@ const SudokuSchadenFx = (function () {
    * @returns {Promise} – erfüllt, wenn die letzte Zahl angekommen ist
    */
   function ueberladenFlug(zahlen, u) {
-    const T = K.ueberladung;
+    const T = ueberladungZeiten(u.geraet);
     if (u.eilig() || zahlen.length === 0) return Promise.resolve();
     const flug = T.flug * u.faktor, staffel = T.staffel * u.faktor;
     let angekommen = 0, spaeteste = 0;
@@ -710,7 +746,7 @@ const SudokuSchadenFx = (function () {
 
   /** Lichtblitz am Schwert: Es ist überladen. */
   function ueberladenBlitz(u) {
-    const T = K.ueberladung;
+    const T = ueberladungZeiten(u.geraet);
     if (u.eilig()) return;
     ring(u.schwert, "fx-ring--regenbogen", T.blitz * u.faktor * 1.2, 2.6);
     funken(u.schwert, Math.round(T.funken * 0.7), true, T.blitz * u.faktor);
@@ -737,7 +773,7 @@ const SudokuSchadenFx = (function () {
 
   /** Das Glühen erlischt mit einem kurzen Verpuffen (Rauchring und ein paar Funken). */
   function ueberladungVerpuffen(u) {
-    const T = K.ueberladung;
+    const T = ueberladungZeiten(u.geraet);
     schwertUeberladen(u.held, false);
     if (u.eilig() || u.reduziert) return;
     ring(u.schwert, "fx-ring--verpuffen", T.verpuffen * u.faktor, 1.6);
@@ -756,6 +792,7 @@ const SudokuSchadenFx = (function () {
     zifferFlug: zifferFlug,
     aufloesen: aufloesen,
     stufeFuer: stufeFuer,
+    ueberladungZeiten: ueberladungZeiten,
     schritteAus: schritteAus,
     aufbau: aufbau,
     entladen: entladen,

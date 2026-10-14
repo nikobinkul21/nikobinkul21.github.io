@@ -1029,16 +1029,16 @@ function initSudoku(container) {
     const ergebnis = abenteuer.setzeZahl(index, ziffer);   // Regeln → Ereignisse → Kampffenster
 
     if (ergebnis.art === "versiegelt") {
-      // Siegel des Bosses: Hier geht gerade nichts. Läuft noch eine Animation,
-      // springt sie zum Ende – dann sieht man auch das Siegel.
-      if (kampf.laeuft()) kampf.beschleunige();
+      // Siegel des Bosses: Hier geht gerade nichts. Es wurde keine Zahl gesetzt –
+      // eine laufende Animation läuft deshalb weiter (abgekürzt wird nur durch
+      // eine gesetzte Zahl oder einen Tipp auf den Würfel).
       zeigeKurzHinweis("Dieser Block ist versiegelt");
       return;
     }
 
     if (ergebnis.art === "verflucht") {
-      // Fluch des Bosses: Diese Ziffer geht gerade nicht (zählt nicht als Zug)
-      if (kampf.laeuft()) kampf.beschleunige();
+      // Fluch des Bosses: Diese Ziffer geht gerade nicht (zählt nicht als Zug,
+      // keine gesetzte Zahl – die laufende Animation kürzt das nicht ab)
       const wort = SudokuRPG.verwirrungsWort(laufendeWirkungen());
       zeigeKurzHinweis("Die " + zeichenFuer(ergebnis.ziffer, wort) + " ist verflucht");
       return;
