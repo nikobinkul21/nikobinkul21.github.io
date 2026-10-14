@@ -1518,31 +1518,67 @@
 
 .wuerfel-koerper {
   position: relative;
-  display: block;
-  width: var(--wuerfel-groesse);
-  height: var(--wuerfel-groesse);
+  display: inline-flex;
+  justify-content: center;
+  min-width: var(--wuerfel-groesse);
   transform-origin: 50% 55%;
   transition: transform 0.6s ease-in, filter 0.3s;
 }
 
-.wuerfel-form {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+/* Die 3D-Würfel (js/dice3d.js): einer oder – bei Büchern – bis zu drei
+   nebeneinander, dann kleiner (--w3d-faktor setzt js/sudoku-battle-ui.js) */
+.w3d-reihe {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
 }
 
-/* Facetten: Grundfarbe, darüber hellere und dunklere Flächen */
-.wf-grund { fill: var(--wuerfel-farbe); }
-.wf-hell { fill: rgba(255, 255, 255, 0.22); }
-.wf-heller { fill: rgba(255, 255, 255, 0.38); }
-.wf-mittel { fill: rgba(0, 0, 0, 0.12); }
-.wf-dunkel { fill: rgba(0, 0, 0, 0.24); }
-.wf-dunkler { fill: rgba(0, 0, 0, 0.36); }
-.wf-front { fill: rgba(255, 255, 255, 0.1); stroke: rgba(0, 0, 0, 0.35); stroke-width: 1.5; stroke-linejoin: round; }
-.wf-rand { fill: none; stroke: var(--kampf-kasten-rand); stroke-width: 4; stroke-linejoin: round; }
+.wuerfel-koerper .w3d {
+  display: block;
+  width: calc(var(--wuerfel-groesse) * var(--w3d-faktor, 1));
+  height: calc(var(--wuerfel-groesse) * var(--w3d-faktor, 1));
+}
 
-/* Die Zahl sitzt auf der vorderen Fläche */
+/* Farbschemata der 3D-Würfel: deiner (lila) und der des Bosses (rot).
+   Gelesen werden sie vom Canvas (getComputedStyle) – nur Hex oder rgb(a). */
+.w3d {
+  --w3d-farbe: #6c4bd8;
+  --w3d-kante: #241656;
+  --w3d-zahl: #ffffff;
+  --w3d-zahl-rand: rgba(24, 14, 60, 0.85);
+  --w3d-schatten: rgba(20, 16, 40, 0.26);
+}
+
+.w3d[data-schema="boss"] {
+  --w3d-farbe: #c92a2a;
+  --w3d-kante: #4a0c0c;
+  --w3d-zahl-rand: rgba(60, 8, 8, 0.85);
+}
+
+:root[data-theme="dark"] .w3d {
+  --w3d-kante: #120a30;
+  --w3d-schatten: rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="dark"] .w3d[data-schema="boss"] {
+  --w3d-kante: #2e0606;
+}
+
+/* Bei den großen Würfeln stehen die Zahlen auf den 3D-Würfeln selbst –
+   die kleinen Kästchen der Nebenwürfel braucht es dort nicht */
+.wuerfel-flaeche .wuerfel-mehr,
+.handy-wuerfel .wuerfel-mehr {
+  display: none;
+}
+
+/* Einzelne Würfel bei Büchern: zählt nicht (beim höheren Wurf), immun, kritisch */
+.w3d.zaehlt-nicht { opacity: 0.45; filter: grayscale(0.6); }
+.w3d.ist-immun { opacity: 0.55; filter: grayscale(1); }
+.w3d.ist-kritisch { filter: drop-shadow(0 0 6px var(--kampf-kritisch)); }
+
+/* Die Zahl als Text: unsichtbar (die Zahl steht auf dem 3D-Würfel), aber
+   da – für den Schadensaufbau (Startpunkt der Zahl) und für Prüfungen */
 .wuerfel-zahl {
   position: absolute;
   left: 0;
@@ -1552,10 +1588,8 @@
   font-size: calc(var(--wuerfel-groesse) * 0.24);
   font-weight: 900;
   line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--wuerfel-zahl-farbe);
-  -webkit-text-stroke: 3px rgba(0, 0, 0, 0.55);
-  paint-order: stroke fill;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .wuerfel-info {
@@ -1572,12 +1606,6 @@
   opacity: 0.55;
 }
 
-/* Während des Rollens: Zahl leicht durchsichtig, der Würfel ist "in Bewegung" */
-.wuerfel-flaeche.rollt .wuerfel-zahl,
-.handy-wuerfel.rollt .wuerfel-zahl {
-  opacity: 0.75;
-}
-
 /* Bewegung reduziert: kurz abgedunkelt warten */
 .wuerfel-flaeche.wartet .wuerfel-koerper,
 .handy-wuerfel.wartet .wuerfel-koerper {
@@ -1591,17 +1619,9 @@
   animation: wuerfel-aufleuchten 0.5s ease-out;
 }
 
-.wuerfel-flaeche[data-art="kritisch"] .wuerfel-zahl,
-.handy-wuerfel[data-art="kritisch"] .wuerfel-zahl,
 .wuerfel-flaeche[data-art="kritisch"] .wuerfel-art,
 .handy-wuerfel[data-art="kritisch"] .wuerfel-art {
   color: var(--kampf-kritisch);
-}
-
-.wuerfel-flaeche[data-art="kritisch"] .wuerfel-zahl,
-.handy-wuerfel[data-art="kritisch"] .wuerfel-zahl {
-  color: #fff;
-  -webkit-text-stroke-color: var(--kampf-kritisch-rand);
 }
 
 /* Fehlschlag: grau, der Würfel kippt müde um */
@@ -2748,6 +2768,28 @@
 
 .kampf-vergleich-wuerfel--boss { background: var(--boss-angriff-farbe); }
 .kampf-vergleich-wuerfel--held { background: var(--block-farbe); }
+
+/* Mit 3D-Würfeln: heller Kasten, farbiger Rand, darunter die Summe */
+.kampf-vergleich-wuerfel:has(.w3d) {
+  color: var(--kampf-kasten-text);
+  background: var(--kampf-kasten);
+  padding: 2px 4px 3px;
+}
+
+.kampf-vergleich-wuerfel--boss:has(.w3d) { border-color: var(--boss-angriff-farbe); }
+.kampf-vergleich-wuerfel--held:has(.w3d) { border-color: var(--block-farbe); }
+.kampf-vergleich-wuerfel--boss:has(.w3d) .kampf-vergleich-name { color: var(--boss-angriff-farbe); }
+.kampf-vergleich-wuerfel--held:has(.w3d) .kampf-vergleich-name { color: var(--block-farbe); }
+
+.kampf-vergleich-wuerfel .w3d {
+  display: block;
+  width: 48px;
+  height: 48px;
+}
+
+.kampf-vergleich-wuerfel:has(.w3d) .kampf-vergleich-zahl {
+  font-size: 1.05rem;
+}
 
 .kampf-vergleich-name {
   font-size: 0.58rem;

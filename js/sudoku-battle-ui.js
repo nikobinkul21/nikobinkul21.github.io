@@ -29,13 +29,16 @@ const SUDOKU_WUERFEL_KONFIG = {
     { id: "aus", name: "Aus", gross: 0, klein: 0, fx: 0 },
   ],
   landung: 0.2,            // Anteil der Dauer für den Aufprall am Ende
-  umdrehungen: 3,          // so oft dreht sich der große Würfel im Flug
-  ueberschlaege: 5,        // so oft "überschlägt" er sich (Stauchen)
+  // Drehen, Kippen und Aufspringen des 3D-Würfels: DICE3D_KONFIG in js/dice3d.js
   pauseReduziert: 350,     // "Bewegung reduzieren": kurze Pause, dann das Ergebnis
   ab: "(min-width: 1000px)", // ab dieser Breite gibt es die eigene Würfelfläche
-  // Smartphone: Der Würfel fällt über dem Gitter ein – Startversatz in %
-  // seiner Größe (klein genug, dass er über dem Gitter bleibt)
+  // Woher der Würfel hereinfliegt (Startversatz in % seiner Größe):
+  // am Computer von links oben in seine Fläche, auf dem Smartphone nur kurz
+  // (er bleibt über dem Gitter)
+  flugWeite: { x: 150, y: 110 },
   handyWeite: { x: 40, y: 70 },
+  // Mehrere Würfel (Bücher): so groß ist jeder im Verhältnis zu einem einzelnen
+  mehrereGroesse: { 2: 0.72, 3: 0.58 },
 };
 
 
@@ -87,6 +90,7 @@ const SudokuKampf = (function () {
     // Schlagabtausch (Verteidigungszug)
     bossWurf: 650,          // der Boss holt aus, sein Würfel rollt kurz und zeigt den Angriff
     vergleich: 450,         // beide Würfel stehen nebeneinander, bevor der Ausgang kommt
+    vergleichWurf: 420,     // … und drehen sich dabei kurz auf ihr Ergebnis (3D)
     ausgang: 650,           // Geblockt / Treffer / Konter
     // Buchschlag (Normal, Desktop; Schnell/Smartphone kürzer): zusammen etwa 2 Sekunden
     buchFeld: 110,       // Abstand, in dem die neun Felder aufleuchten und ihre Ziffer losschicken
@@ -163,24 +167,6 @@ const SudokuKampf = (function () {
   }
 
 
-  /**
-   * Der große Würfel als SVG: eine stilisierte Form mit Facetten (kein echtes
-   * 3D-Modell – die Seitenzahl ändert sich ja durch Verbesserungen).
-   * Die Farben kommen aus dem CSS (Klassen wf-…).
-   */
-  function wuerfelSvg() {
-    return '<svg class="wuerfel-form" viewBox="0 0 100 100" aria-hidden="true">' +
-      '<polygon class="wf-grund" points="50,4 90,27 90,73 50,96 10,73 10,27"/>' +
-      '<polygon class="wf-hell" points="10,27 50,4 50,22"/>' +
-      '<polygon class="wf-heller" points="50,4 90,27 50,22"/>' +
-      '<polygon class="wf-dunkel" points="90,27 90,73 80,68 50,22"/>' +
-      '<polygon class="wf-mittel" points="10,27 50,22 20,68 10,73"/>' +
-      '<polygon class="wf-dunkler" points="20,68 80,68 90,73 50,96 10,73"/>' +
-      '<polygon class="wf-front" points="50,22 80,68 20,68"/>' +
-      '<polygon class="wf-rand" points="50,4 90,27 90,73 50,96 10,73 10,27"/>' +
-      "</svg>";
-  }
-
   /** Ein Element, das beim Darüberfahren oder Antippen einen Erklärtext zeigt. */
   function tippHtml() {
     return '<span class="kampf-tipp" aria-hidden="true"></span>';
@@ -208,7 +194,7 @@ const SudokuKampf = (function () {
       platz.innerHTML =
         '<div class="wuerfel-flaeche">' +
           '<button type="button" class="wuerfel-knopf" aria-label="Würfel, noch nicht gewürfelt">' +
-            '<span class="wuerfel-koerper">' + wuerfelSvg() + '<span class="wuerfel-zahl">–</span></span>' +
+            '<span class="wuerfel-koerper"><span class="w3d-reihe"></span><span class="wuerfel-zahl">–</span></span>' +
           "</button>" +
           // Bei mehreren Würfeln (Bücher): jeder einzelne Würfel als kleines Kästchen
           '<div class="wuerfel-mehr" aria-hidden="true"></div>' +
@@ -223,7 +209,7 @@ const SudokuKampf = (function () {
       // Kein Knopf: Die Ebene lässt jeden Tipp zum Gitter durch (siehe pointerdown unten)
       handyPlatz.innerHTML =
         '<div class="handy-wuerfel" hidden>' +
-          '<span class="wuerfel-koerper">' + wuerfelSvg() + '<span class="wuerfel-zahl">–</span></span>' +
+          '<span class="wuerfel-koerper"><span class="w3d-reihe"></span><span class="wuerfel-zahl">–</span></span>' +
           '<div class="wuerfel-mehr"></div>' +
           '<p class="wuerfel-info"><span class="wuerfel-seiten">W20</span><span class="wuerfel-art"></span></p>' +
         "</div>";
@@ -247,6 +233,8 @@ const SudokuKampf = (function () {
     function teileLesen(t, wo, flaeche) {
       t.flaeche = wo.querySelector(flaeche);
       t.koerper = wo.querySelector(".wuerfel-koerper");
+      t.reihe = wo.querySelector(".w3d-reihe");
+      t.wuerfel = [];             // die 3D-Würfel (js/dice3d.js) – einer, bei Büchern bis zu drei
       t.zahl = wo.querySelector(".wuerfel-zahl");
       t.seiten = wo.querySelector(".wuerfel-seiten");
       t.art = wo.querySelector(".wuerfel-art");
@@ -255,6 +243,54 @@ const SudokuKampf = (function () {
 
     /** Die vorhandenen großen Würfel (Desktop und/oder Smartphone) – beide zeigen immer dasselbe. */
     const grosse = [g, h].filter(function (t) { return t.flaeche; });
+
+    /**
+     * So viele 3D-Würfel nebeneinander (Bücher mit mehreren Würfeln: 2 oder 3).
+     * Jeder bekommt sein eigenes Canvas und dreht sich für sich.
+     */
+    function wuerfelAnzahl(t, n) {
+      if (t.wuerfel.length === n) return t.wuerfel;
+      t.reihe.innerHTML = "";
+      t.wuerfel = [];
+      for (let k = 0; k < n; k++) {
+        const canvas = document.createElement("canvas");
+        t.reihe.appendChild(canvas);
+        t.wuerfel.push(Dice3D.erstelle(canvas, { schema: "held" }));
+      }
+      t.koerper.dataset.anzahl = String(n);
+      t.koerper.style.setProperty("--w3d-faktor", String(n > 1 ? W.mehrereGroesse[Math.min(3, n)] : 1));
+      return t.wuerfel;
+    }
+
+    /** Die einzelnen Würfe eines Ereignisses (ein Wurf oder mehrere Würfel durch Bücher). */
+    function einzelwuerfe(e) {
+      return e.wuerfe && e.wuerfe.length > 1 ? e.wuerfe : [e.wurf];
+    }
+
+    /** Ergebnis auf den 3D-Würfeln zeigen (ohne Drehung); null = Ruhelage. */
+    function zeige3d(werte) {
+      grosse.forEach(function (t) {
+        const liste = werte || [null];
+        wuerfelAnzahl(t, liste.length).forEach(function (d, k) { d.zeige(liste[k]); });
+      });
+    }
+
+    /** Einzelne Würfel markieren: zählt nicht (beim "höheren Wurf"), immun, Fehlschlag. */
+    function markiere3d(e) {
+      const mehr = e && e.wuerfe && e.wuerfe.length > 1 ? e.wuerfe : [];
+      const hoechster = mehr.length ? mehr.indexOf(Math.max.apply(null, mehr)) : -1;
+      grosse.forEach(function (t) {
+        t.wuerfel.forEach(function (d, k) {
+          const teil = mehr.length && e.rechnung && e.rechnung.wuerfel ? e.rechnung.wuerfel[k] : null;
+          d.canvas.classList.toggle("zaehlt-nicht", mehr.length > 0 && e.wuerfelModus === "hoechster" && k !== hoechster);
+          d.canvas.classList.toggle("ist-immun", Boolean(teil && teil.immun));
+          d.canvas.classList.toggle("ist-kritisch", Boolean(teil && teil.kritisch));
+          d.canvas.classList.toggle("ist-fehlschlag", Boolean(teil && teil.fehlschlag));
+        });
+      });
+    }
+
+    zeige3d(null);      // Ruhelage, bis zum ersten Wurf
 
     let lauf = null;    // der laufende Wurf: { e, art, animationen, zeit, fertig, modus }
     let wegZeit = null; // Ausblenden des Handy-Würfels (geplant)
@@ -327,8 +363,16 @@ const SudokuKampf = (function () {
 
     /** Ergebnis eines Wurfs zeigen (Hauptwürfel und Nebenwürfel). */
     function zeigeErgebnis(e, art) {
-      zeige(hauptwert(e), art, e.wuerfelSeiten);
+      zeige(hauptwert(e), art, e.wuerfelSeiten, true);
       zeigeMehr(e, false);
+      // 3D-Würfel: Ein laufender Wurf endet von selbst genau auf der Ergebnisfläche;
+      // alle anderen (der gerade nicht sichtbare Würfel, ohne Animation) zeigen sie sofort
+      grosse.forEach(function (t) {
+        const werte = einzelwuerfe(e);
+        const d = wuerfelAnzahl(t, werte.length);
+        d.forEach(function (x, k) { if (!x.rollt()) x.zeige(werte[k]); });
+      });
+      markiere3d(e);
       if (e.wuerfe && e.wuerfe.length > 1) {
         grosse.forEach(function (t) {
           t.seiten.textContent = e.wuerfe.length + "×W" + e.wuerfelSeiten + (e.wuerfelModus === "hoechster" ? " · höherer" : " · Summe");
@@ -336,8 +380,15 @@ const SudokuKampf = (function () {
       }
     }
 
-    /** Ergebnis (oder null = noch keins) auf allen Würfeln zeigen. */
-    function zeige(zahl, art, seiten) {
+    /**
+     * Ergebnis (oder null = noch keins) auf allen Würfeln zeigen.
+     * @param {boolean} [ohne3d] – die 3D-Würfel nicht anfassen (zeigeErgebnis kümmert sich)
+     */
+    function zeige(zahl, art, seiten, ohne3d) {
+      if (!ohne3d) {
+        zeige3d(zahl === null ? null : [zahl]);
+        markiere3d(null);
+      }
       const text = zahl === null ? "–" : String(zahl);
       kleinZahl.textContent = text;
       klein.dataset.art = art || "";
@@ -378,23 +429,21 @@ const SudokuKampf = (function () {
     }
 
     /**
-     * Flugbahn des großen Würfels: hineingeworfen von links oben, dreht sich
-     * (immer langsamer) und überschlägt sich (Stauchen in der Höhe).
-     * weiteX/weiteY: Startversatz in % der Würfelgröße. Auf dem Smartphone
-     * kürzer (er rollt in der Mitte des Gitters und bleibt darüber).
+     * Flugbahn des großen Würfels: hereingeworfen von links oben, schnell los,
+     * dann langsamer. Nur Bahn und Größe – das Drehen, Kippen und Aufspringen
+     * zeichnet der 3D-Würfel selbst (js/dice3d.js).
+     * weiteX/weiteY: Startversatz in % der Würfelgröße.
      */
     function flugBilder(weiteX, weiteY) {
       const bilder = [];
-      const anzahl = 40;
+      const anzahl = 24;
       for (let i = 0; i <= anzahl; i++) {
         const t = i / anzahl;
         const p = 1 - Math.pow(1 - t, 3);                  // schnell los, dann langsamer
         const x = -weiteX * (1 - p);
         const y = -weiteY * Math.pow(1 - p, 2);
-        const drehung = 360 * W.umdrehungen * p;
-        const kippen = 0.4 + 0.6 * Math.abs(Math.cos(Math.PI * W.ueberschlaege * p));
-        const groesse = 0.65 + 0.35 * p;
-        bilder.push({ transform: "translate(" + x + "%, " + y + "%) rotate(" + drehung + "deg) scale(" + groesse + ", " + (groesse * kippen) + ")" });
+        const groesse = 0.7 + 0.3 * p;
+        bilder.push({ transform: "translate(" + x + "%, " + y + "%) scale(" + groesse + ")" });
       }
       return bilder;
     }
@@ -478,7 +527,13 @@ const SudokuKampf = (function () {
         const ziel = t ? t.koerper : klein;
         if (t) t.flaeche.classList.add("rollt");
         klein.classList.add("rollt");
-        const bilder = modus === "gross" ? flugBilder(150, 110) : modus === "handy" ? flugBilder(W.handyWeite.x, W.handyWeite.y) : drehBilder();
+        if (t) {
+          // Jeder 3D-Würfel dreht sich für sich und landet genau auf seinem Ergebnis
+          markiere3d(null);
+          const werte = einzelwuerfe(e);
+          wuerfelAnzahl(t, werte.length).forEach(function (d, k) { d.rolle(werte[k], flugDauer); });
+        }
+        const bilder = modus === "gross" ? flugBilder(W.flugWeite.x, W.flugWeite.y) : modus === "handy" ? flugBilder(W.handyWeite.x, W.handyWeite.y) : drehBilder();
         const flug = ziel.animate(bilder,
           { duration: flugDauer, easing: t ? "linear" : "cubic-bezier(0.2, 0.7, 0.3, 1)" });
         lauf.animationen.push(flug);
@@ -523,6 +578,9 @@ const SudokuKampf = (function () {
       lauf = null;
       clearTimeout(l.zeit);
       l.animationen.forEach(function (a) { a.onfinish = null; a.cancel(); });
+      // Abgekürzt: Die 3D-Würfel drehen sich schnell auf ihre Ergebnisfläche
+      const t = teileVon(l.modus);
+      if (t) t.wuerfel.forEach(function (d) { d.ueberspringe(); });
       zeigeErgebnis(l.e, l.art);
       if (!mitAufprall && l.art === "kritisch" && l.modus !== "klein" && !ohneBewegung()) landeVariante(l.art, l.modus);
       l.fertig();
@@ -2380,6 +2438,14 @@ const SudokuKampf = (function () {
         '<span class="kampf-vergleich-wuerfel kampf-vergleich-wuerfel--held"><span class="kampf-vergleich-name">Block</span><span class="kampf-vergleich-zahl"></span></span>';
       v.querySelector(".kampf-vergleich-wuerfel--boss .kampf-vergleich-zahl").textContent = b.angriff;
       v.querySelector(".kampf-vergleich-wuerfel--held .kampf-vergleich-zahl").textContent = b.block;
+      // Beide als 3D-Würfel nebeneinander, jeder mit eigener Drehung: der Wurf
+      // des Bosses (sein Angriffsbonus steht darunter) und der Block
+      const paar = [["boss", b.angriffWurf], ["held", b.block]].map(function (x) {
+        const canvas = document.createElement("canvas");
+        const kasten = v.querySelector(".kampf-vergleich-wuerfel--" + x[0]);
+        kasten.insertBefore(canvas, kasten.querySelector(".kampf-vergleich-zahl"));
+        return { wuerfel: Dice3D.erstelle(canvas, { schema: x[0] }), wert: x[1] };
+      });
       // Mit Angriffsbonus steht unter der Summe, woraus sie besteht ("13 + 2")
       if (b.bonus > 0) {
         const teile = document.createElement("span");
@@ -2396,6 +2462,13 @@ const SudokuKampf = (function () {
       } else {
         el.effekte.appendChild(v);
       }
+      // Erst jetzt (im Dokument, mit Größe) drehen sie sich kurz auf ihr Ergebnis –
+      // ohne Bewegung, bei "Aus" oder beim Abkürzen stehen sie sofort richtig
+      const ruhig = ohneBewegung() || eilig() || wuerfelEinstellung().fx === 0;
+      paar.forEach(function (x) {
+        if (ruhig) x.wuerfel.zeige(x.wert);
+        else x.wuerfel.rolle(x.wert, DAUER.vergleichWurf);
+      });
       // Beim Konter bleiben die Würfel stehen, bis der Schadensaufbau fertig ist (siehe ausgang)
       if (b.ergebnis === "konter") v.classList.add("bleibt");
       else setTimeout(function () { v.remove(); }, DAUER.vergleich + DAUER.ausgang + 400);

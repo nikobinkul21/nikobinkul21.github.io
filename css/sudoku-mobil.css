@@ -418,6 +418,15 @@
     font-size: clamp(1.8rem, 11cqmin, 2.6rem);
   }
 
+  .kampf-vergleich--ebene .kampf-vergleich-wuerfel .w3d {
+    width: clamp(60px, 24cqmin, 100px);
+    height: clamp(60px, 24cqmin, 100px);
+  }
+
+  .kampf-vergleich--ebene .kampf-vergleich-wuerfel:has(.w3d) .kampf-vergleich-zahl {
+    font-size: clamp(1.1rem, 6cqmin, 1.5rem);
+  }
+
   .kampf-vergleich--ebene .kampf-vergleich-teile {
     font-size: 0.7rem;
   }
