@@ -28,8 +28,12 @@
   --m-blatt-hoehe: 78dvh;       /* Blatt mit den Details: höchstens so hoch */
 }
 
-/* Die Kopfzeile gibt es nur auf dem Smartphone */
-.sudoku-kopfzeile {
+/* Die Kopfzeile, die Würfel-Ebene über dem Gitter und die Ecken des
+   Kampfstreifens gibt es nur auf dem Smartphone */
+.sudoku-kopfzeile,
+.sudoku-handy-wuerfel,
+.kampf-ecke,
+.kampf-boden {
   display: none;
 }
 
@@ -63,6 +67,8 @@
   #spiel-sudoku:has(.sudoku:not([hidden])) {
     position: fixed;
     inset: 0;
+    width: auto;                 /* nicht "fit-content" wie am Computer (sudoku.css) – sonst ist es im Querformat zu schmal */
+    margin: 0;
     z-index: 40;
     box-sizing: border-box;
     height: 100dvh;
@@ -339,10 +345,98 @@
   }
 
 
+  /* --- Würfel über dem Gitter ---
+     Eigene Ebene mittig über dem Sudoku (im Rahmen des Gitters, folgt ihm
+     also beim Drehen). Sie fängt keine Klicks ab; ein Tipp auf den Würfel
+     springt trotzdem zum Ergebnis (siehe js/sudoku-battle-ui.js). Sichtbar
+     nur während eines Wurfs – danach steht im Streifen die kleine Zahl. */
+  #spiel-sudoku .sudoku-handy-wuerfel {
+    position: absolute;
+    inset: 0;
+    z-index: 4;                  /* unter Auswahl, Slot und Niederlage (z-index 5) */
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    container-type: size;
+  }
+
+  .handy-wuerfel {
+    --wuerfel-groesse: clamp(76px, 34cqmin, 136px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--kampf-kasten-text);
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+  }
+
+  .handy-wuerfel[hidden] {
+    display: none;
+  }
+
+  .handy-wuerfel .wuerfel-koerper {
+    transform-origin: 50% 55%;
+  }
+
+  .handy-wuerfel .wuerfel-info {
+    min-height: 0;
+    margin: 0;
+    padding: 1px 9px;
+    font-size: 0.72rem;
+    background: var(--kampf-kasten);
+    border: 2px solid var(--kampf-kasten-rand);
+    border-radius: 999px;
+  }
+
+  .handy-wuerfel .wuerfel-art:empty {
+    display: none;
+  }
+
+  .handy-wuerfel .wuerfel-mehr {
+    margin: 0;
+  }
+
+  /* Verteidigungszug: Würfel des Bosses und Block-Würfel mittig über dem Gitter */
+  .kampf-vergleich--ebene {
+    top: 50%;
+    gap: 10px;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+  }
+
+  .kampf-vergleich--ebene .kampf-vergleich-wuerfel {
+    min-width: clamp(58px, 20cqmin, 84px);
+    padding: 4px 8px 6px;
+    border-width: 3px;
+    border-radius: 12px;
+  }
+
+  .kampf-vergleich--ebene .kampf-vergleich-name {
+    font-size: 0.66rem;
+  }
+
+  .kampf-vergleich--ebene .kampf-vergleich-zahl {
+    font-size: clamp(1.8rem, 11cqmin, 2.6rem);
+  }
+
+  .kampf-vergleich--ebene .kampf-vergleich-teile {
+    font-size: 0.7rem;
+  }
+
+  .kampf-vergleich--ebene .kampf-vergleich-gegen {
+    font-size: 1.8rem;
+  }
+
   /* --- Kampfstreifen ---
      Das Kampffenster (SudokuKampf) bekommt im Handy-Aufbau die Klasse
      "ist-handy": Nur die Bühne bleibt sichtbar, als flacher Streifen.
-     Größen richten sich nach der Streifenhöhe (Container-Einheiten cqh). */
+     Aufbau wie in klassischen Rundenkämpfen (und wie am Computer):
+       oben links   Name, HP, Absicht und Fähigkeit des Bosses (.kampf-ecke--boss)
+       hinten rechts der Boss – kleiner und höher
+       vorne links  der Held – etwas größer
+       unten rechts Plätze, Phase und HP des Helden, letzter Zug (.kampf-ecke--held)
+     Beide stehen auf einer angedeuteten Bodenfläche. Alle Größen richten
+     sich nach der Streifenhöhe (Container-Einheiten cqh): Ist der Streifen
+     flach, werden die Figuren kleiner – das Gitter bleibt, wie es ist. */
   .kampf.ist-handy {
     height: 100%;
     gap: 0;
@@ -354,12 +448,31 @@
 
   .kampf.ist-handy .kampf-buehne,
   .kampf.ist-handy .kampf-buehne.ist-elite {
-    --streifen-held: min(78cqh, 104px);
-    --streifen-boss: min(86cqh, 120px);
+    /* Größe und Lage der Figuren (siehe oben) */
+    /* Der Held passt unter den Kasten des Bosses (etwa 44 px hoch) */
+    --held-groesse: min(68cqh, 100cqh - 44px, 116px);
+    --held-links: 1%;
+    /* Der Boss ist etwas kleiner als der Held */
+    --boss-groesse: min(50cqh, 100px, var(--held-groesse) * 0.86);
+    --boss-rechts: 3%;
+    /* So hoch stehen die Füße des Bosses: 30 % der Streifenhöhe; ab 125 px
+       Höhe stehen unten rechts drei Zeilen – dann mindestens 72 px darüber.
+       (Die Stufe ist ausgerechnet: Die Bühne ist selbst der Container, eine
+       @container-Regel würde für sie nicht greifen.) */
+    --boss-unten: max(30cqh, min(72px, max(0px, (100cqh - 124px) * 100)));
     height: 100%;
     aspect-ratio: auto;
     container-type: size;
     cursor: pointer;
+  }
+
+  /* Elite und Weltboss: etwas größer, aber weiter hinten als der Held */
+  .kampf.ist-handy .kampf-buehne.ist-elite {
+    --boss-groesse: min(56cqh, 112px, var(--held-groesse) * 0.95);
+  }
+
+  .kampf.ist-handy .kampf-buehne.ist-weltboss {
+    --boss-groesse: min(62cqh, 124px, var(--held-groesse) * 1.05);
   }
 
   /* Erklärungen gibt es im Blatt – im Streifen keine Tooltips */
@@ -367,38 +480,78 @@
     display: none !important;
   }
 
-  /* Held links unten, Boss rechts unten */
+  /* Angedeutete Bodenfläche: von der Standlinie des Bosses (hinten) bis
+     zum vorderen Rand, nach vorne breiter und dunkler – so entsteht Tiefe */
+  .kampf.ist-handy .kampf-boden {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: calc(100% - var(--boss-unten) - 5cqh);
+    z-index: 0;
+    display: block;
+    pointer-events: none;
+    clip-path: polygon(22% 0, 100% 0, 100% 100%, 0 100%, 0 26%);
+    background:
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 4px),
+      linear-gradient(to bottom, rgba(60, 42, 20, 0.2), rgba(60, 42, 20, 0.45));
+  }
+
+  /* Held vorne links, Boss hinten rechts (kleiner, höher) */
   .kampf.ist-handy .kampf-buehne .kampf-figur--held {
-    left: 1%;
-    bottom: 3%;
-    width: var(--streifen-held);
-    height: var(--streifen-held);
-  }
-
-  .kampf.ist-handy .kampf-buehne .kampf-figur--boss {
     top: auto;
-    right: 1%;
-    bottom: 3%;
-    width: var(--streifen-boss);
-    height: var(--streifen-boss);
+    left: var(--held-links);
+    bottom: 2%;
+    width: var(--held-groesse);
+    height: var(--held-groesse);
   }
 
-  .kampf.ist-handy .kampf-buehne.ist-elite .kampf-figur--boss {
-    width: min(94cqh, 156px);
-    height: min(94cqh, 156px);
-  }
-
+  .kampf.ist-handy .kampf-buehne .kampf-figur--boss,
+  .kampf.ist-handy .kampf-buehne.ist-elite .kampf-figur--boss,
   .kampf.ist-handy .kampf-buehne.ist-weltboss .kampf-figur--boss {
     top: auto;
-    width: min(98cqh, 176px);
-    height: min(98cqh, 176px);
+    right: var(--boss-rechts);
+    bottom: var(--boss-unten);
+    width: var(--boss-groesse);
+    height: var(--boss-groesse);
   }
 
-  /* Mittlere Spalte zwischen Held und Boss: Infokasten, Plätze, letzter Zug */
-  .kampf.ist-handy .kampf-buehne .kampf-info--boss {
-    top: 4px;
-    left: calc(var(--streifen-held) + 4px);
-    right: var(--info-rechts, calc(var(--streifen-boss) + 2px));
+  /* Hinten: kleinerer, blasserer Schatten */
+  .kampf.ist-handy .kampf-figur--boss::after {
+    left: 14%;
+    right: 14%;
+    height: 12%;
+    opacity: 0.75;
+  }
+
+  /* --- Ecke oben links: der Boss --- */
+  .kampf.ist-handy .kampf-ecke {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    pointer-events: none;         /* die Ecke selbst fängt nichts ab – ihr Inhalt schon */
+  }
+
+  .kampf.ist-handy .kampf-ecke > * > * {
+    pointer-events: auto;
+  }
+
+  .kampf.ist-handy .kampf-ecke--boss {
+    top: 3px;
+    left: 3px;
+    width: min(60%, 250px);
+    align-items: flex-start;
+  }
+
+  .kampf.ist-handy .kampf-ecke-boss {
+    align-self: stretch;
+  }
+
+  .kampf.ist-handy .kampf-info--boss {
+    position: relative;
+    inset: auto;
     width: auto;
     padding: 3px 6px 4px;
     font-size: 0.66rem;
@@ -418,6 +571,8 @@
     position: absolute;
     top: 3px;
     right: 6px;
+    margin-top: 0;
+    font-size: 0.62rem;
   }
 
   /* Seltene Eigenschaft: nur als kleine Marke */
@@ -429,10 +584,7 @@
     pointer-events: none;
   }
 
-  .kampf.ist-handy .kampf-elite-hinweis {
-    display: none;
-  }
-
+  .kampf.ist-handy .kampf-elite-hinweis,
   .kampf.ist-handy .kampf-selten-marke {
     display: none;
   }
@@ -441,34 +593,28 @@
     height: 6px;
   }
 
-  .kampf.ist-handy .kampf-hp-zeile {
-    margin-top: 0;
-    font-size: 0.62rem;
-  }
-
   .kampf.ist-handy .kampf-hp {
     margin-top: 2px;
   }
 
-  /* Hoher Streifen: Der Boss steht unten, der Infokasten darf über ihn reichen
-     (bis unter die Ansage der Fähigkeit) */
-  @container (min-height: 150px) {
-    .kampf.ist-handy .kampf-info--boss {
-      --info-rechts: 100px;
-    }
-  }
-
-  /* Sehr flacher Streifen: seltene Eigenschaft nur im Blatt, HP-Balken direkt unter dem Namen */
+  /* Sehr flacher Streifen: seltene Eigenschaft nur im Blatt */
   @container (max-height: 110px) {
     .kampf.ist-handy .kampf-selten {
       display: none;
     }
   }
 
-  /* Ansage der Fähigkeit mit Zähler: kleines Schild oben rechts über dem Boss */
-  .kampf.ist-handy .kampf-absicht {
-    top: 3px;
-    right: 3px;
+  /* Unter dem Kasten: Fähigkeit mit Zähler und (im Verteidigungszug) der Angriff */
+  .kampf.ist-handy .kampf-ecke-ansagen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+
+  .kampf.ist-handy .kampf-absicht,
+  .kampf.ist-handy .kampf-buehne.ist-elite .kampf-absicht {
+    position: relative;
+    inset: auto;
     padding: 0 5px;
     font-size: 0.56rem;
     transform: none;
@@ -477,10 +623,14 @@
     border-top-width: 3px;
   }
 
-  /* Warnung kurz vor der Fähigkeit: pulsiert an Ort und Stelle (ohne die Verschiebung des großen Fensters) */
+  .kampf.ist-handy .kampf-absicht[hidden] {
+    display: none;
+  }
+
+  /* Warnung kurz vor der Fähigkeit: pulsiert an Ort und Stelle */
   .kampf.ist-handy .kampf-absicht.warnt {
     animation-name: absicht-warnt-streifen;
-    transform-origin: top right;
+    transform-origin: top left;
   }
 
   @keyframes absicht-warnt-streifen {
@@ -502,15 +652,97 @@
     height: 9px;
   }
 
-  /* Die fünf Plätze als eine Reihe über der Zeile mit dem letzten Zug
-     (gleiches Aussehen wie am Computer, nur kleiner) */
+  /* Angriff des Bosses (Verteidigungszug) */
+  .kampf.ist-handy .kampf-boss-angriff,
+  .kampf.ist-handy .kampf-buehne.ist-elite .kampf-boss-angriff {
+    position: relative;
+    inset: auto;
+    gap: 3px;
+    padding: 0 4px;
+    font-size: 0.56rem;
+    border-width: 1.5px;
+    transform: none;
+  }
+
+  .kampf.ist-handy .kampf-boss-angriff[hidden] {
+    display: none;
+  }
+
+  .kampf.ist-handy .kampf-boss-angriff-wuerfel {
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.72rem;
+    border-radius: 4px;
+  }
+
+  .kampf.ist-handy .kampf-boss-angriff-bonus {
+    font-size: 0.64rem;
+  }
+
+  /* --- Ecke unten rechts: der Held ---
+     Plätze, darunter Phase, Überladung und HP mit dem letzten Wurf, darunter
+     der letzte Zug. Ist der Streifen flach, steht alles in einer Zeile. */
+  .kampf.ist-handy .kampf-ecke--held {
+    right: 3px;
+    bottom: 3px;
+    max-width: calc(100% - var(--held-groesse) * 0.8 - 6px);
+    align-items: flex-end;
+  }
+
+  .kampf.ist-handy .kampf-ecke-held {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .kampf.ist-handy .kampf-ecke-zug {
+    max-width: 100%;
+  }
+
+  @container (max-height: 124px) {
+    /* Flacher Streifen: Fähigkeit und Angriff rechts neben dem Kasten des
+       Bosses, damit die Ecke oben links nur eine Zeile hoch ist */
+    .kampf.ist-handy .kampf-ecke--boss {
+      flex-direction: row;
+      width: auto;
+      max-width: calc(100% - var(--boss-groesse) - 8px);
+    }
+
+    .kampf.ist-handy .kampf-ecke-boss {
+      flex: none;
+      width: min(46cqw, 190px);
+    }
+
+    .kampf.ist-handy .kampf-ecke-ansagen {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .kampf.ist-handy .kampf-info--boss {
+      padding: 2px 5px 3px;
+    }
+
+    .kampf.ist-handy .kampf-ecke--held {
+      flex-direction: row;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .kampf.ist-handy .kampf-ecke-zug {
+      display: none;              /* der letzte Zug steht im Blatt */
+    }
+
+    .kampf.ist-handy .kampf-buehne .kampf-leiste {
+      --platz-groesse: 19px;
+      --platz-luecke: 2px;
+    }
+  }
+
+  /* Die fünf Plätze (gleiches Aussehen wie am Computer, nur kleiner) */
   .kampf.ist-handy .kampf-buehne .kampf-leiste {
     --platz-groesse: 22px;
     --platz-luecke: 3px;
-    position: absolute;
-    left: calc(var(--streifen-held) + 4px);
-    bottom: 23px;
-    z-index: 3;
+    position: relative;
     gap: 5px;
     min-height: 0;
   }
@@ -569,16 +801,13 @@
     font-size: 0.72rem;
   }
 
-  /* Letzter Zug: eine Zeile am unteren Rand der mittleren Spalte */
+  /* Letzter Zug: eine Zeile unter der HP des Helden */
   .kampf.ist-handy .kampf-buehne .panel-kurz {
-    position: absolute;
-    left: calc(var(--streifen-held) + 4px);
-    right: calc(var(--streifen-boss) + 2px);
-    bottom: 3px;
-    z-index: 3;
+    position: relative;
     display: flex;
     gap: 5px;
     width: auto;
+    max-width: 100%;
     height: 17px;
     padding: 0 6px;
     font-size: 0.62rem;
@@ -600,23 +829,45 @@
     display: none;
   }
 
-  /* Held: oben in seiner Spalte HP-Balken und Würfel, die Phase neben ihm */
+  /* Phase (Schwert/Schild) und Überladung "×10": vor der HP des Helden */
+  .kampf.ist-handy .kampf-buehne .kampf-phase {
+    position: relative;
+    inset: auto;
+    flex: none;
+    width: 22px;
+    height: 22px;
+    padding: 3px;
+  }
+
+  .kampf.ist-handy .kampf-buehne .kampf-ueberladung {
+    position: relative;
+    inset: auto;
+    padding: 0 4px;
+    font-size: 0.66rem;
+    border-width: 1.5px;
+  }
+
+  .kampf.ist-handy .kampf-buehne .kampf-ueberladung[hidden] {
+    display: none;
+  }
+
+  /* HP des Helden: kompakter Balken mit Zahl auf einem kleinen Kasten,
+     daneben das letzte Würfelergebnis als kleine Zahl */
   .kampf.ist-handy .kampf-buehne .kampf-info--held {
-    right: auto;
-    left: 3px;
-    bottom: auto;
-    top: 3px;
-    width: calc(var(--streifen-held) - 2px);
-    padding: 2px;
-    align-items: flex-start;
+    position: relative;
+    inset: auto;
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 3px;
+    padding: 0;
     background: none;
     border: none;
     box-shadow: none;
   }
 
-  /* HP des Helden: kompakter Balken mit Zahl auf einem kleinen Kasten */
   .kampf.ist-handy .kampf-held-hp {
-    width: 100%;
+    width: clamp(92px, 30cqw, 130px);
     gap: 3px;
     padding: 1px 4px;
     font-size: 0.6rem;
@@ -637,83 +888,119 @@
     min-width: 0;
   }
 
+  /* Der Würfel selbst rollt über dem Gitter – hier steht nur das letzte Ergebnis */
   .kampf.ist-handy .kampf-wuerfel {
-    width: 26px;
-    height: 28px;
-    font-size: 0.72rem;
-  }
-
-  .kampf.ist-handy .kampf-buehne .kampf-phase {
-    left: calc(var(--streifen-held) * 0.62);
-    bottom: calc(var(--streifen-held) * 0.45);
-    width: 22px;
-    height: 22px;
-    padding: 3px;
-  }
-
-  /* Überladung: Etikett "×10" klein über dem Phasen-Symbol */
-  .kampf.ist-handy .kampf-buehne .kampf-ueberladung {
-    left: calc(var(--streifen-held) * 0.6);
-    bottom: calc(var(--streifen-held) * 0.45 + 26px);
-    padding: 0 4px;
-    font-size: 0.66rem;
-    border-width: 1.5px;
-  }
-
-  /* Angriff des Bosses: unter der Ansage der Fähigkeit, oben rechts */
-  .kampf.ist-handy .kampf-boss-angriff {
-    top: 22px;
-    right: 3px;
-    gap: 3px;
-    padding: 0 4px;
-    font-size: 0.56rem;
-    border-width: 1.5px;
-    transform: none;
-  }
-
-  .kampf.ist-handy .kampf-boss-angriff-wuerfel {
-    min-width: 16px;
+    width: auto;
     height: 16px;
-    font-size: 0.72rem;
-    border-radius: 4px;
+    min-width: 18px;
+    padding: 0 4px;
+    clip-path: none;
+    font-size: 0.62rem;
+    line-height: 1;
+    color: var(--kampf-kasten-text);
+    background: var(--kampf-kasten);
+    border: 1px solid var(--kampf-kasten-rand);
+    border-radius: 5px;
   }
 
-  .kampf.ist-handy .kampf-boss-angriff-bonus {
-    font-size: 0.64rem;
+  /* Kritisch, Fehlschlag, Block …: farbiger Grund (sudoku-rpg.css), weiße Zahl */
+  .kampf.ist-handy .kampf-wuerfel[data-art]:not([data-art=""]) {
+    color: #fff;
   }
 
-  /* Beide Würfel nebeneinander: kleiner, in der Mitte des Streifens */
-  .kampf.ist-handy .kampf-vergleich {
-    top: 42%;
+  .kampf.ist-handy .kampf-wuerfel-mehr {
+    display: none;                /* die einzelnen Würfel zeigt der Würfel über dem Gitter */
   }
 
-  .kampf.ist-handy .kampf-vergleich-wuerfel {
-    min-width: 32px;
-    padding: 1px 4px 2px;
+  /* --- Schwebende Zahlen: am Boss bzw. am Helden, steigen nur kurz auf
+     (bleiben im Streifen) --- */
+  .kampf.ist-handy .kampf-schwebezahl {
+    animation-name: kampf-aufsteigen-streifen;
+    font-size: min(1.25rem, 20cqh);
+    -webkit-text-stroke-width: 2px;
   }
 
-  .kampf.ist-handy .kampf-vergleich-zahl {
-    font-size: 1.1rem;
+  .kampf.ist-handy .kampf-schwebezahl--boss,
+  .kampf.ist-handy .kampf-schwebezahl--doppelt,
+  .kampf.ist-handy .kampf-schwebezahl--kritisch,
+  .kampf.ist-handy .kampf-schwebezahl--konter,
+  .kampf.ist-handy .kampf-schwebezahl--regenbogen,
+  .kampf.ist-handy .kampf-schwebezahl--buch,
+  .kampf.ist-handy .kampf-schwebezahl--daneben,
+  .kampf.ist-handy .kampf-schwebezahl--immun {
+    top: auto;
+    left: auto;
+    right: calc(var(--boss-rechts) + var(--boss-groesse) * 0.15);
+    bottom: calc(var(--boss-unten) + var(--boss-groesse) * 0.45);
   }
 
-  .kampf.ist-handy .kampf-vergleich-teile {
-    font-size: 0.48rem;
+  .kampf.ist-handy .kampf-schwebezahl--doppelt {
+    font-size: min(1.7rem, 24cqh);
+  }
+
+  /* Große Zahlen (kritisch, Regenbogen, Buch): etwas tiefer am Boss, damit
+     sie beim Aufsteigen oben nicht aus dem Streifen ragen */
+  .kampf.ist-handy .kampf-schwebezahl--kritisch,
+  .kampf.ist-handy .kampf-schwebezahl--regenbogen,
+  .kampf.ist-handy .kampf-schwebezahl--buch {
+    bottom: calc(var(--boss-unten) + var(--boss-groesse) * 0.15);
+    font-size: min(2.2rem, 26cqh);
+    -webkit-text-stroke-width: 3px;
+  }
+
+  /* Gift: etwas tiefer, damit sie die Schadenszahl nicht verdeckt */
+  .kampf.ist-handy .kampf-schwebezahl--gift {
+    top: auto;
+    left: auto;
+    right: var(--boss-rechts);
+    bottom: calc(var(--boss-unten) + var(--boss-groesse) * 0.15);
+  }
+
+  /* Am Helden: über seinem Kopf */
+  .kampf.ist-handy .kampf-schwebezahl--held,
+  .kampf.ist-handy .kampf-schwebezahl--heilung {
+    top: auto;
+    right: auto;
+    left: calc(var(--held-links) + var(--held-groesse) * 0.3);
+    bottom: calc(var(--held-groesse) * 0.62);
+  }
+
+  /* Münzen: steigen über der Ecke des Helden auf (der Zähler steht in der Kopfzeile) */
+  .kampf.ist-handy .kampf-schwebezahl--muenzen {
+    top: auto;
+    right: 10px;
+    bottom: 26cqh;
+  }
+
+  .kampf.ist-handy .kampf-schwebezahl--entschaerft {
+    top: 40%;
+    left: 38%;
+  }
+
+  @keyframes kampf-aufsteigen-streifen {
+    0%   { opacity: 0; transform: translateY(4px) scale(0.8); }
+    20%  { opacity: 1; transform: translateY(0) scale(1.12); }
+    100% { opacity: 0; transform: translateY(-12cqh) scale(1); }
   }
 
   .kampf.ist-handy .kampf-banner--geblockt,
   .kampf.ist-handy .kampf-banner--konter {
-    top: 70%;
+    top: 62%;
     font-size: 1.1rem;
   }
 
-  /* Sprechblasen, Banner, Einblendungen: kleiner, bleiben im Streifen */
+  /* Sprechblasen, Banner, Einblendungen: kleiner, bleiben im Streifen.
+     Die Blase steht links neben dem Kopf des Bosses, die Spitze zeigt auf ihn. */
   .kampf.ist-handy .kampf-sprechblase {
-    top: 3px;
-    right: calc(var(--streifen-boss) * 0.55);
-    width: min(64%, calc(var(--blase-laenge, 30) * 0.4em + 1.6em));
+    top: auto;
+    right: calc(var(--boss-rechts) + var(--boss-groesse) * 0.82);
+    bottom: calc(var(--boss-unten) + var(--boss-groesse) * 0.4);
+    width: min(56%, calc(var(--blase-laenge, 30) * 0.4em + 1.6em));
     min-height: 0;
+    max-height: calc(100% - 6px);
     padding: 2px 6px 3px;
     font-size: 0.62rem;
+    overflow: hidden;
   }
 
   .kampf.ist-handy .kampf-sprechblase-name {
@@ -722,7 +1009,7 @@
 
   .kampf.ist-handy .kampf-sprechblase::after {
     right: -9px;
-    bottom: 40%;
+    bottom: 30%;
     transform: rotate(-90deg);
   }
 

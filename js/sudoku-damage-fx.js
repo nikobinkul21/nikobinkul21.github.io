@@ -81,8 +81,15 @@ const SUDOKU_FX_KONFIG = {
   // Auf dem Smartphone sind die Wege kürzer – der Ablauf ist etwa halb so lang
   faktorHandy: 0.5,
 
-  // Wo die große Zahl "daneben" steht (Abstand zur Würfelmitte, Pixel)
-  daneben: { desktop: { x: -96, y: 0 }, handy: { x: -34, y: -52 } },
+  // Wo die große Zahl "daneben" steht: Abstand zur Würfelmitte in Pixeln
+  // (desktop; handy = schmales Fenster mit kleinem Würfel), auf dem
+  // Smartphone mit Würfel über dem Gitter als Anteil der Würfelgröße
+  // (handyEbene: die Zahl steigt über den Würfel auf, Richtung Kampfstreifen)
+  daneben: { desktop: { x: -96, y: 0 }, handy: { x: -34, y: -52 }, handyEbene: { x: 0, y: -0.75 } },
+
+  // Mindestabstand fliegender Zahlen zum Bildschirmrand (Pixel) – alle
+  // Punkte werden in den sichtbaren Bereich gerückt
+  rand: 28,
 
   // Wo im Bild des Helden das Schwert sitzt (Anteil von Breite und Höhe)
   schwertPunkt: { x: 0.85, y: 0.25 },
@@ -236,6 +243,21 @@ const SudokuSchadenFx = (function () {
     aussen.innerHTML = '<div class="fx-mitte"><div class="fx-inhalt">' + (inhalt || "") + "</div></div>";
     ebeneHolen().appendChild(aussen);
     return aussen;
+  }
+
+  /**
+   * Rückt Punkt p so weit nach innen, dass das Element (mittig an p) ganz
+   * im Bildschirm liegt – z. B. ein breites Etikett, dessen Quelle am Rand
+   * sitzt. Gemessen wird in diesem Moment.
+   */
+  function einpassen(el, p) {
+    const r = el.querySelector(".fx-inhalt").getBoundingClientRect();
+    const breite = document.documentElement.clientWidth || window.innerWidth;
+    const hoehe = window.innerHeight;
+    const halbB = r.width / 2 + 4, halbH = r.height / 2 + 4;
+    const x = Math.min(Math.max(p.x, halbB), Math.max(halbB, breite - halbB));
+    const y = Math.min(Math.max(p.y, halbH), Math.max(halbH, hoehe - halbH));
+    return { x: x, y: y };
   }
 
   /** Fliegt von a nach b (nur transform). */
@@ -443,8 +465,9 @@ const SudokuSchadenFx = (function () {
         // Flug startet nach i × abstand …
         const angekommen = u.warte(i * abstand).then(function () {
           if (u.eilig()) return null;
-          const von = u.quelle(s.quelle, s) || u.start;
-          const etikett = element("fx-etikett fx-etikett--" + s.quelle, von, "<span>" + s.label + "</span>");
+          const quelle = u.quelle(s.quelle, s) || u.start;
+          const etikett = element("fx-etikett fx-etikett--" + s.quelle, quelle, "<span>" + s.label + "</span>");
+          const von = einpassen(etikett, quelle);
           etikett.querySelector(".fx-inhalt").animate([
             { transform: "scale(0.6)", opacity: 0.4 }, { transform: "scale(1)", opacity: 1 },
           ], { duration: Math.max(1, flug * 0.4), fill: "forwards" });
@@ -471,8 +494,9 @@ const SudokuSchadenFx = (function () {
       const T = K.ueberladung;
       kette = kette.then(function () {
         if (u.eilig()) return null;
-        const von = u.quelle("ueberladung") || u.schwert;
-        const etikett = element("fx-etikett fx-etikett--ueberladung", von, "<span>" + ueberladung.label + "</span>");
+        const quelle = u.quelle("ueberladung") || u.schwert;
+        const etikett = element("fx-etikett fx-etikett--ueberladung", quelle, "<span>" + ueberladung.label + "</span>");
+        const von = einpassen(etikett, quelle);
         fliege(etikett, von, u.daneben, T.etikettFlug * u.faktor, "cubic-bezier(0.5, 0, 0.75, 0.6)");
         return u.warte(T.etikettFlug * u.faktor).then(function () { etikett.remove(); });
       }).then(function () {

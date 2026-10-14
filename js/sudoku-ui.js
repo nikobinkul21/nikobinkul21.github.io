@@ -143,6 +143,8 @@ function initSudoku(container) {
         '<div class="sudoku-brett" role="group" aria-label="Sudoku-Gitter. Pfeiltasten zum Bewegen, Ziffern zum Eintragen."></div>' +
         // role="status": Screenreader lesen Änderungen dieses Texts automatisch vor
         '<p class="sudoku-status" role="status"></p>' +
+        // Smartphone: eigene Ebene für den Würfel mittig über dem Gitter (fängt keine Klicks ab)
+        '<div class="sudoku-handy-wuerfel nur-abenteuer" aria-hidden="true"></div>' +
       "</div>" +
       '<div class="sudoku-zahlenfeld" role="group" aria-label="Zahlenfeld"></div>' +
     "</div>";
@@ -154,6 +156,7 @@ function initSudoku(container) {
   const abenteuerGrad = container.querySelector(".sudoku-abenteuer-grad");
   const kampfPlatz = container.querySelector(".sudoku-kampf");
   const wuerfelPlatz = container.querySelector(".sudoku-wuerfel");
+  const handyWuerfelPlatz = container.querySelector(".sudoku-handy-wuerfel");
   const rahmen = container.querySelector(".sudoku-brett-rahmen");
   const status = container.querySelector(".sudoku-status");
   const brett = container.querySelector(".sudoku-brett");
@@ -772,6 +775,7 @@ function initSudoku(container) {
         kopf: { ort: kopfOrt, stand: kopfStand },
         beimAufgeben: durchlaufAufgeben,
         wuerfelPlatz: wuerfelPlatz,
+        handyWuerfelPlatz: handyWuerfelPlatz,
         // Herkunft fliegender Boni beim Schadensaufbau (Doppelschaden, Schwierigkeit)
         gitterFeld: function (i) { return felder[i]; },
         gradAnzeige: abenteuerGrad,

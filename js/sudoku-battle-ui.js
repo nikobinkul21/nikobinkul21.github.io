@@ -21,7 +21,7 @@ const SUDOKU_WUERFEL_KONFIG = {
   alterSchluessel: "ntb-wuerfel-animation",   // frühere Einstellung "Würfelanimation"
   standard: "normal",
   // Würfel in Millisekunden: "gross" = eigene Würfelfläche (Desktop),
-  // "klein" = Würfel im Kampffenster (Smartphone).
+  // "klein" = Smartphone (Würfel über dem Gitter) und schmale Fenster.
   // "fx" = Tempo des Schadensaufbaus (1 = normal, 0 = aus)
   stufen: [
     { id: "normal", name: "Normal", gross: 2000, klein: 800, fx: 1 },
@@ -33,6 +33,9 @@ const SUDOKU_WUERFEL_KONFIG = {
   ueberschlaege: 5,        // so oft "überschlägt" er sich (Stauchen)
   pauseReduziert: 350,     // "Bewegung reduzieren": kurze Pause, dann das Ergebnis
   ab: "(min-width: 1000px)", // ab dieser Breite gibt es die eigene Würfelfläche
+  // Smartphone: Der Würfel fällt über dem Gitter ein – Startversatz in %
+  // seiner Größe (klein genug, dass er über dem Gitter bleibt)
+  handyWeite: { x: 40, y: 70 },
 };
 
 
@@ -182,16 +185,23 @@ const SudokuKampf = (function () {
   }
 
   /**
-   * Der Würfel: auf dem Desktop groß in einer eigenen Fläche, auf dem
-   * Smartphone klein im Kampffenster (welcher sichtbar ist, regelt das CSS).
-   * @param {HTMLElement|null} platz – Platz für den großen Würfel
-   * @param {HTMLElement} klein     – der kleine Würfel im Kampffenster
-   * @param {HTMLElement} kleinZahl – seine Zahl
-   * @param {function} beimKlick    – Klick auf den Würfel (überspringt den Ablauf)
-   * @returns {{ rolle, ueberspringe, zeige, punkt, gross }}
+   * Der Würfel – je nach Bildschirm an einer von drei Stellen:
+   *   "gross": Desktop, eigene Würfelfläche rechts neben dem Sudoku
+   *   "handy": Smartphone, groß und mittig über dem Gitter in einer eigenen
+   *            Ebene (fängt keine Klicks ab; nur während eines Wurfs sichtbar).
+   *            Im Kampfstreifen steht dann nur das letzte Ergebnis als kleine Zahl.
+   *   "klein": alle anderen (schmale Fenster ohne Handy-Aufbau): der kleine
+   *            Würfel im Kampffenster
+   * @param {HTMLElement|null} platz      – Platz für den großen Würfel (Desktop)
+   * @param {HTMLElement} klein          – der kleine Würfel im Kampffenster
+   * @param {HTMLElement} kleinZahl      – seine Zahl
+   * @param {function} beimKlick         – Klick auf den Würfel (überspringt den Ablauf)
+   * @param {HTMLElement|null} handyPlatz – Ebene über dem Gitter (Smartphone)
+   * @returns {{ rolle, ueberspringe, zeige, zeigeLeer, punkt, gross, handy, ebene, ausblenden }}
    */
-  function erstelleWuerfel(platz, klein, kleinZahl, beimKlick) {
-    const g = {};       // Teile des großen Würfels
+  function erstelleWuerfel(platz, klein, kleinZahl, beimKlick, handyPlatz) {
+    const g = {};       // Teile des großen Würfels (Desktop)
+    const h = {};       // Teile des Würfels über dem Gitter (Smartphone)
     if (platz) {
       platz.innerHTML =
         '<div class="wuerfel-flaeche">' +
@@ -202,15 +212,27 @@ const SudokuKampf = (function () {
           '<div class="wuerfel-mehr" aria-hidden="true"></div>' +
           '<p class="wuerfel-info"><span class="wuerfel-seiten">W20</span><span class="wuerfel-art"></span></p>' +
         "</div>";
-      g.flaeche = platz.querySelector(".wuerfel-flaeche");
+      teileLesen(g, platz, ".wuerfel-flaeche");
       g.knopf = platz.querySelector(".wuerfel-knopf");
-      g.koerper = platz.querySelector(".wuerfel-koerper");
-      g.zahl = platz.querySelector(".wuerfel-zahl");
-      g.seiten = platz.querySelector(".wuerfel-seiten");
-      g.art = platz.querySelector(".wuerfel-art");
-      g.mehr = platz.querySelector(".wuerfel-mehr");
       // Ein Klick auf den Würfel überspringt die laufende Animation (Würfel UND Schadensaufbau)
       g.knopf.addEventListener("click", beimKlick);
+    }
+    if (handyPlatz) {
+      // Kein Knopf: Die Ebene lässt jeden Tipp zum Gitter durch (siehe pointerdown unten)
+      handyPlatz.innerHTML =
+        '<div class="handy-wuerfel" hidden>' +
+          '<span class="wuerfel-koerper">' + wuerfelSvg() + '<span class="wuerfel-zahl">–</span></span>' +
+          '<div class="wuerfel-mehr"></div>' +
+          '<p class="wuerfel-info"><span class="wuerfel-seiten">W20</span><span class="wuerfel-art"></span></p>' +
+        "</div>";
+      teileLesen(h, handyPlatz, ".handy-wuerfel");
+      // Ein Tipp auf den Würfel springt zum Ergebnis. Der Tipp geht trotzdem
+      // an das Feld darunter weiter (nichts wird abgefangen).
+      document.addEventListener("pointerdown", function (event) {
+        if (h.flaeche.hidden || h.flaeche.classList.contains("geht")) return;
+        const r = h.koerper.getBoundingClientRect();
+        if (event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom) beimKlick();
+      }, true);
     }
     klein.addEventListener("click", beimKlick);
     // Nebenwürfel auch am kleinen Würfel (Smartphone)
@@ -219,7 +241,21 @@ const SudokuKampf = (function () {
     kleinMehr.setAttribute("aria-hidden", "true");
     klein.parentNode.insertBefore(kleinMehr, klein.nextSibling);   // neben dem Würfel (er ist sechseckig zugeschnitten)
 
-    let lauf = null;    // der laufende Wurf: { e, art, animationen, zeit, fertig }
+    /** Die Teile eines großen Würfels in t eintragen. */
+    function teileLesen(t, wo, flaeche) {
+      t.flaeche = wo.querySelector(flaeche);
+      t.koerper = wo.querySelector(".wuerfel-koerper");
+      t.zahl = wo.querySelector(".wuerfel-zahl");
+      t.seiten = wo.querySelector(".wuerfel-seiten");
+      t.art = wo.querySelector(".wuerfel-art");
+      t.mehr = wo.querySelector(".wuerfel-mehr");
+    }
+
+    /** Die vorhandenen großen Würfel (Desktop und/oder Smartphone) – beide zeigen immer dasselbe. */
+    const grosse = [g, h].filter(function (t) { return t.flaeche; });
+
+    let lauf = null;    // der laufende Wurf: { e, art, animationen, zeit, fertig, modus }
+    let wegZeit = null; // Ausblenden des Handy-Würfels (geplant)
 
     const ART_TEXT = { kritisch: "Kritisch!", fehlschlag: "Fehlschlag", immun: "Immun", geblockt: "Geblockt", block: "Block" };
 
@@ -237,6 +273,22 @@ const SudokuKampf = (function () {
       return Boolean(platz) && window.matchMedia(W.ab).matches;
     }
 
+    /** Würfelt das Smartphone gerade über dem Gitter? (gleiche Bedingung wie css/sudoku-mobil.css) */
+    function handyAktiv() {
+      return Boolean(handyPlatz) && !grossSichtbar() && window.matchMedia(HANDY_MEDIEN).matches;
+    }
+
+    /** Wo gewürfelt wird: "gross", "handy" oder "klein". */
+    function modusJetzt() {
+      if (grossSichtbar()) return "gross";
+      return handyAktiv() ? "handy" : "klein";
+    }
+
+    /** Teile des Würfels, der in diesem Modus rollt. */
+    function teileVon(modus) {
+      return modus === "gross" ? g : modus === "handy" ? h : null;
+    }
+
     /** Was der Würfel zeigt: bei mehreren Würfeln die Summe bzw. den höheren Wurf. */
     function hauptwert(e) {
       if (e.wuerfe && e.wuerfe.length > 1 && e.wuerfelModus === "summe") {
@@ -252,8 +304,7 @@ const SudokuKampf = (function () {
     function zeigeMehr(e, rollend) {
       const mehr = e && e.wuerfe && e.wuerfe.length > 1 ? e.wuerfe : [];
       const hoechster = mehr.length ? mehr.indexOf(Math.max.apply(null, mehr)) : -1;
-      [g.mehr, kleinMehr].forEach(function (ziel) {
-        if (!ziel) return;
+      grosse.map(function (t) { return t.mehr; }).concat([kleinMehr]).forEach(function (ziel) {
         ziel.innerHTML = "";
         mehr.forEach(function (w, k) {
           const kasten = document.createElement("span");
@@ -269,33 +320,38 @@ const SudokuKampf = (function () {
           ziel.appendChild(kasten);
         });
       });
-      if (platz) g.flaeche.classList.toggle("hat-mehr", mehr.length > 0);
+      grosse.forEach(function (t) { t.flaeche.classList.toggle("hat-mehr", mehr.length > 0); });
     }
 
     /** Ergebnis eines Wurfs zeigen (Hauptwürfel und Nebenwürfel). */
     function zeigeErgebnis(e, art) {
       zeige(hauptwert(e), art, e.wuerfelSeiten);
       zeigeMehr(e, false);
-      if (e.wuerfe && e.wuerfe.length > 1 && platz) {
-        g.seiten.textContent = e.wuerfe.length + "×W" + e.wuerfelSeiten + (e.wuerfelModus === "hoechster" ? " · höherer" : " · Summe");
+      if (e.wuerfe && e.wuerfe.length > 1) {
+        grosse.forEach(function (t) {
+          t.seiten.textContent = e.wuerfe.length + "×W" + e.wuerfelSeiten + (e.wuerfelModus === "hoechster" ? " · höherer" : " · Summe");
+        });
       }
     }
 
-    /** Ergebnis (oder null = noch keins) auf beiden Würfeln zeigen. */
+    /** Ergebnis (oder null = noch keins) auf allen Würfeln zeigen. */
     function zeige(zahl, art, seiten) {
       const text = zahl === null ? "–" : String(zahl);
       kleinZahl.textContent = text;
       klein.dataset.art = art || "";
       klein.classList.remove("rollt", "wartet");
       klein.setAttribute("aria-label", zahl === null ? "Noch nicht gewürfelt" : "Letzter Wurf: " + zahl);
-      if (!platz) return;
-      g.zahl.textContent = text;
-      g.flaeche.dataset.art = art || "";
-      g.flaeche.classList.remove("rollt", "wartet");
-      g.art.textContent = art ? ART_TEXT[art] : "";
-      if (seiten) g.seiten.textContent = "W" + seiten;
-      g.knopf.setAttribute("aria-label", zahl === null ? "Würfel, noch nicht gewürfelt"
-        : "Letzter Wurf: " + zahl + (art ? ", " + ART_TEXT[art] : ""));
+      grosse.forEach(function (t) {
+        t.zahl.textContent = text;
+        t.flaeche.dataset.art = art || "";
+        t.flaeche.classList.remove("rollt", "wartet");
+        t.art.textContent = art ? ART_TEXT[art] : "";
+        if (seiten) t.seiten.textContent = "W" + seiten;
+      });
+      if (platz) {
+        g.knopf.setAttribute("aria-label", zahl === null ? "Würfel, noch nicht gewürfelt"
+          : "Letzter Wurf: " + zahl + (art ? ", " + ART_TEXT[art] : ""));
+      }
     }
 
     /**
@@ -313,7 +369,7 @@ const SudokuKampf = (function () {
         } while ((z === ergebnis || z === letzte) && seiten > 2);
         letzte = z;
         kleinZahl.textContent = z;
-        if (platz) g.zahl.textContent = z;
+        grosse.forEach(function (teile) { teile.zahl.textContent = z; });
         if (lauf && t < 1) lauf.zeit = setTimeout(naechste, 45 + 230 * t * t);
       }
       naechste();
@@ -322,15 +378,17 @@ const SudokuKampf = (function () {
     /**
      * Flugbahn des großen Würfels: hineingeworfen von links oben, dreht sich
      * (immer langsamer) und überschlägt sich (Stauchen in der Höhe).
+     * weiteX/weiteY: Startversatz in % der Würfelgröße. Auf dem Smartphone
+     * kürzer (er rollt in der Mitte des Gitters und bleibt darüber).
      */
-    function flugBilder() {
+    function flugBilder(weiteX, weiteY) {
       const bilder = [];
       const anzahl = 40;
       for (let i = 0; i <= anzahl; i++) {
         const t = i / anzahl;
         const p = 1 - Math.pow(1 - t, 3);                  // schnell los, dann langsamer
-        const x = -150 * (1 - p);
-        const y = -110 * Math.pow(1 - p, 2);
+        const x = -weiteX * (1 - p);
+        const y = -weiteY * Math.pow(1 - p, 2);
         const drehung = 360 * W.umdrehungen * p;
         const kippen = 0.4 + 0.6 * Math.abs(Math.cos(Math.PI * W.ueberschlaege * p));
         const groesse = 0.65 + 0.35 * p;
@@ -344,6 +402,34 @@ const SudokuKampf = (function () {
       return [{ transform: "rotate(0deg) scale(0.85)" }, { transform: "rotate(" + (360 * 2) + "deg) scale(1)" }];
     }
 
+    /** Smartphone: Würfel über dem Gitter einblenden (ein geplantes Ausblenden fällt weg). */
+    function handyZeigen() {
+      clearTimeout(wegZeit);
+      wegZeit = null;
+      h.flaeche.getAnimations().forEach(function (a) { a.cancel(); });
+      h.flaeche.classList.remove("geht");
+      h.flaeche.hidden = false;
+    }
+
+    /**
+     * Smartphone: Würfel über dem Gitter ausblenden – sobald die Zahl sich
+     * gelöst hat bzw. der Vergleich der Würfel erscheint. Das Gitter ist
+     * also nur kurz verdeckt.
+     * @param {number} [ms] – Dauer des Ausblendens
+     */
+    function ausblenden(ms) {
+      if (!handyPlatz || h.flaeche.hidden || wegZeit) return;
+      const dauer = ohneBewegung() ? 0 : (ms === undefined ? 220 : ms);
+      h.flaeche.classList.add("geht");
+      if (dauer > 0) h.flaeche.animate([{ opacity: 1 }, { opacity: 0 }], { duration: dauer, fill: "forwards" });
+      wegZeit = setTimeout(function () {
+        wegZeit = null;
+        h.flaeche.getAnimations().forEach(function (a) { a.cancel(); });
+        h.flaeche.classList.remove("geht");
+        h.flaeche.hidden = true;
+      }, dauer);
+    }
+
     /**
      * Würfeln. Das Ergebnis steht schon fest (die Regeln haben gewürfelt) –
      * hier wird es nur gezeigt.
@@ -354,38 +440,45 @@ const SudokuKampf = (function () {
     function rolle(e, sofort) {
       ueberspringe();
       const art = artVon(e);
-      const gross = grossSichtbar();
+      const modus = modusJetzt();
       const stufe = wuerfelEinstellung();
-      const normal = gross ? stufe.gross : stufe.klein;
+      const normal = modus === "gross" ? stufe.gross : stufe.klein;
       let dauer = normal;
       if (ohneBewegung()) dauer = normal > 0 ? W.pauseReduziert : 0;
       if (sofort) dauer = 0;
-      if (platz) {
-        g.seiten.textContent = "W" + e.wuerfelSeiten;
-        g.art.textContent = "";
-      }
+      grosse.forEach(function (t) {
+        t.seiten.textContent = "W" + e.wuerfelSeiten;
+        t.art.textContent = "";
+      });
       if (dauer === 0) {
+        // Ohne Animation erscheint auf dem Smartphone kein Würfel über dem Gitter
+        if (handyPlatz) ausblenden(0);
         zeigeErgebnis(e, art);
         return Promise.resolve();
       }
+      if (modus === "handy") handyZeigen();
+      const t = teileVon(modus);
       zeigeMehr(e, true);
       return new Promise(function (fertig) {
-        lauf = { e: e, art: art, animationen: [], zeit: null, fertig: fertig, gross: gross };
+        lauf = { e: e, art: art, animationen: [], zeit: null, fertig: fertig, modus: modus };
         if (ohneBewegung()) {
           // Nichts dreht sich: kurz abgedunkelt warten, dann das Ergebnis
           klein.classList.add("wartet");
-          if (platz) g.flaeche.classList.add("wartet");
           kleinZahl.textContent = "…";
-          if (platz) g.zahl.textContent = "…";
+          grosse.forEach(function (teile) {
+            teile.flaeche.classList.add("wartet");
+            teile.zahl.textContent = "…";
+          });
           lauf.zeit = setTimeout(function () { lande(false); }, dauer);
           return;
         }
         const flugDauer = dauer * (1 - W.landung);
-        const ziel = gross ? g.koerper : klein;
-        if (gross) g.flaeche.classList.add("rollt");
+        const ziel = t ? t.koerper : klein;
+        if (t) t.flaeche.classList.add("rollt");
         klein.classList.add("rollt");
-        const flug = ziel.animate(gross ? flugBilder() : drehBilder(),
-          { duration: flugDauer, easing: gross ? "linear" : "cubic-bezier(0.2, 0.7, 0.3, 1)" });
+        const bilder = modus === "gross" ? flugBilder(150, 110) : modus === "handy" ? flugBilder(W.handyWeite.x, W.handyWeite.y) : drehBilder();
+        const flug = ziel.animate(bilder,
+          { duration: flugDauer, easing: t ? "linear" : "cubic-bezier(0.2, 0.7, 0.3, 1)" });
         lauf.animationen.push(flug);
         flackern(e.wuerfelSeiten, e.wurf, flugDauer);
         flug.onfinish = function () { aufprall(dauer * W.landung); };
@@ -397,21 +490,22 @@ const SudokuKampf = (function () {
       if (!lauf) return;
       clearTimeout(lauf.zeit);
       zeigeErgebnis(lauf.e, lauf.art);
-      const ziel = lauf.gross ? g.koerper : klein;
-      const stoss = ziel.animate([
+      const t = teileVon(lauf.modus);
+      const stoss = (t ? t.koerper : klein).animate([
         { transform: "scale(1.16, 0.84)" },
         { transform: "scale(0.94, 1.06)" },
         { transform: "none" },
       ], { duration: ms, easing: "ease-out" });
       lauf.animationen.push(stoss);
-      landeVariante(lauf.art, lauf.gross);
+      landeVariante(lauf.art, lauf.modus);
       stoss.onfinish = function () { lande(true); };
     }
 
     /** Je nach Ergebnis: Aufleuchten mit Erschütterung (kritisch), müdes Umkippen (Fehlschlag) … */
-    function landeVariante(art, gross) {
-      if (art === "kritisch" && gross) {
-        g.flaeche.animate([
+    function landeVariante(art, modus) {
+      const t = teileVon(modus);
+      if (art === "kritisch" && t) {
+        t.flaeche.animate([
           { transform: "none" }, { transform: "translate(-6px, 3px)" }, { transform: "translate(5px, -4px)" },
           { transform: "translate(-3px, 2px)" }, { transform: "none" },
         ], { duration: 360, easing: "linear" });
@@ -428,7 +522,7 @@ const SudokuKampf = (function () {
       clearTimeout(l.zeit);
       l.animationen.forEach(function (a) { a.onfinish = null; a.cancel(); });
       zeigeErgebnis(l.e, l.art);
-      if (!mitAufprall && l.art === "kritisch" && l.gross && !ohneBewegung()) landeVariante(l.art, true);
+      if (!mitAufprall && l.art === "kritisch" && l.modus !== "klein" && !ohneBewegung()) landeVariante(l.art, l.modus);
       l.fertig();
     }
 
@@ -437,19 +531,33 @@ const SudokuKampf = (function () {
       if (lauf) lande(false);
     }
 
-    /** Mitte der Zahl auf dem gerade sichtbaren Würfel (Seitenkoordinaten). */
+    /**
+     * Mitte der Zahl auf dem gerade sichtbaren Würfel (Seitenkoordinaten),
+     * dazu die Größe des Würfels (groesse) – gemessen in diesem Moment.
+     */
     function punkt() {
-      const r = (grossSichtbar() ? g.zahl : klein).getBoundingClientRect();
-      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      const modus = modusJetzt();
+      const handySichtbar = modus === "handy" && !h.flaeche.hidden;
+      const zahl = modus === "gross" ? g.zahl : handySichtbar ? h.zahl : klein;
+      const r = zahl.getBoundingClientRect();
+      const k = handySichtbar ? h.koerper.getBoundingClientRect() : r;
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, groesse: k.height };
     }
 
-    /** Würfel zurücksetzen (auch die Nebenwürfel). */
+    /** Würfel zurücksetzen (auch die Nebenwürfel); der Handy-Würfel verschwindet. */
     function zeigeLeer() {
       zeige(null, "");
       zeigeMehr(null, false);
+      if (handyPlatz) ausblenden(0);
     }
 
-    return { rolle: rolle, ueberspringe: ueberspringe, zeige: zeige, zeigeLeer: zeigeLeer, punkt: punkt, gross: grossSichtbar };
+    return {
+      rolle: rolle, ueberspringe: ueberspringe, zeige: zeige, zeigeLeer: zeigeLeer, punkt: punkt,
+      gross: grossSichtbar,
+      handy: handyAktiv,                          // würfelt das Smartphone über dem Gitter?
+      ebene: function () { return handyPlatz; },  // die Ebene über dem Gitter (für den Vergleich der Würfel)
+      ausblenden: ausblenden,
+    };
   }
 
   /**
@@ -594,6 +702,7 @@ const SudokuKampf = (function () {
       hpBalken: container.querySelector(".kampf-hp-balken"),
       hpZahl: container.querySelector(".kampf-hp-zahl"),
       bossInfo: container.querySelector(".kampf-info--boss"),
+      heldInfo: container.querySelector(".kampf-info--held"),
       selten: container.querySelector(".kampf-selten"),
       seltenName: container.querySelector(".kampf-selten-name"),
       seltenTipp: container.querySelector(".kampf-selten .kampf-tipp"),
@@ -647,7 +756,7 @@ const SudokuKampf = (function () {
     SudokuSprites.zeichne(el.heldCanvas, "held", 0);
 
     const wuerfel = erstelleWuerfel(optionen && optionen.wuerfelPlatz, el.wuerfel, el.wuerfelZahl,
-      function () { beschleunige(); });
+      function () { beschleunige(); }, optionen && optionen.handyWuerfelPlatz);
 
     container.querySelector(".kampf-reset").addEventListener("click", function () {
       if (optionen && optionen.beimAufgeben) optionen.beimAufgeben();
@@ -662,15 +771,29 @@ const SudokuKampf = (function () {
 
     /* ---------- Handy-Aufbau ----------
        Auf dem Smartphone (HANDY_MEDIEN, gleiche Bedingung wie in
-       css/sudoku-mobil.css) wird das Kampffenster zu einem flachen Streifen:
-       Boss, Held mit HP-Balken und Phase, angekündigter Angriff, die fünf
-       Plätze, Würfel und eine Zeile mit dem letzten Zug. Welt und
+       css/sudoku-mobil.css) wird das Kampffenster zu einem flachen Streifen
+       mit zwei Ecken: oben links der Boss (Infokasten, Fähigkeit, Angriff),
+       unten rechts der Held (Plätze, Phase, HP mit dem letzten Wurf, letzter
+       Zug). Der Würfel selbst rollt über dem Gitter (siehe erstelleWuerfel). Welt und
        Level sowie die Münzen wandern in die Kopfzeile des Sudokus,
        alles Weitere (letzter Treffer, Belohnung, Verlauf, Erklärungen zu den
        Verbesserungen und zum Boss) in ein Blatt, das von unten einfährt.
        Verschoben werden die Elemente selbst – alle Verweise in "el" bleiben
        gültig, die Anzeige wird also genauso aktualisiert wie sonst. */
     const handy = { an: false, plaetze: [] };
+    // Die beiden Ecken des Streifens (wie in klassischen Rundenkämpfen):
+    // oben links alles zum Boss, unten rechts alles zum Helden
+    const ecken = document.createElement("div");
+    ecken.innerHTML =
+      '<div class="kampf-ecke kampf-ecke--boss"><div class="kampf-ecke-boss"></div><div class="kampf-ecke-ansagen"></div></div>' +
+      '<div class="kampf-ecke kampf-ecke--held"><div class="kampf-ecke-plaetze"></div><div class="kampf-ecke-held"></div><div class="kampf-ecke-zug"></div></div>';
+    while (ecken.firstChild) el.buehne.insertBefore(ecken.firstChild, el.blitz);
+    // Angedeutete Bodenfläche unter Held und Boss (nur im Streifen sichtbar)
+    const boden = document.createElement("div");
+    boden.className = "kampf-boden";
+    boden.setAttribute("aria-hidden", "true");
+    el.hintergrund.after(boden);
+    const ecke = function (name) { return el.buehne.querySelector(".kampf-ecke-" + name); };
     const blatt = document.createElement("div");
     blatt.className = "kampf-blatt";
     blatt.hidden = true;
@@ -711,9 +834,17 @@ const SudokuKampf = (function () {
           verschiebe(el.welt, kopf.ort);
           verschiebe(el.muenzen, kopf.stand);
         }
-        verschiebe(el.leiste, el.buehne);       // die fünf Plätze stehen im Streifen
+        // Oben links: Infokasten des Bosses, darunter Fähigkeit und Angriff
+        verschiebe(el.bossInfo, ecke("boss"));
+        verschiebe(el.absicht, ecke("ansagen"));
+        verschiebe(el.bossAngriff, ecke("ansagen"));
+        // Unten rechts: die fünf Plätze, Phase/Überladung/HP, der letzte Zug
+        verschiebe(el.leiste, ecke("plaetze"));
+        verschiebe(el.phase, ecke("held"));
+        verschiebe(el.ueberladung, ecke("held"));
+        verschiebe(el.heldInfo, ecke("held"));
+        verschiebe(el.kurz, ecke("zug"));
         verschiebe(el.platzInfo, el.kampf);      // ihr Glas-Panel erscheint unter dem Streifen
-        verschiebe(el.kurz, el.buehne);
         verschiebe(panelOben, blattTeile);
         verschiebe(panelVerlauf, blattTeile);
         verschiebe(fuss, blattTeile);
@@ -1952,6 +2083,20 @@ const SudokuKampf = (function () {
      * Münzen, Heilung – kurz nacheinander; wirksame Plätze leuchten auf.
      */
     /**
+     * Hält einen Punkt im sichtbaren Bereich (mit Rand für die große Zahl),
+     * damit nichts außerhalb des Bildschirms landet.
+     */
+    function imBild(p) {
+      const rand = SudokuSchadenFx.KONFIG.rand;
+      const breite = document.documentElement.clientWidth || window.innerWidth;
+      const hoehe = window.innerHeight;
+      return {
+        x: Math.min(Math.max(p.x, rand), breite - rand),
+        y: Math.min(Math.max(p.y, rand), hoehe - rand),
+      };
+    }
+
+    /**
      * Alles, was der Schadensaufbau (js/sudoku-damage-fx.js) über die Seite
      * wissen muss: Punkte, Herkunft der Boni, Tempo, Wartezeiten.
      */
@@ -1965,15 +2110,24 @@ const SudokuKampf = (function () {
         if (r.width === 0 && r.height === 0) return null;      // unsichtbar
         return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
       };
+      // Alle Punkte werden JETZT gemessen (nach Drehen des Geräts oder mit
+      // ein-/ausgeblendeter Browserleiste stimmen sie also immer)
       const start = wuerfel.punkt();
-      const versatz = handy ? FX.daneben.handy : FX.daneben.desktop;
+      let daneben;
+      if (wuerfel.handy()) {
+        // Würfel über dem Gitter: Die Zahl steigt um einen Teil der Würfelgröße auf
+        daneben = { x: start.x + FX.daneben.handyEbene.x * start.groesse, y: start.y + FX.daneben.handyEbene.y * start.groesse };
+      } else {
+        const versatz = handy ? FX.daneben.handy : FX.daneben.desktop;
+        daneben = { x: start.x + versatz.x, y: start.y + versatz.y };
+      }
       const held = el.heldFigur.getBoundingClientRect();
       return {
         aktiv: stufe.fx > 0,
         faktor: stufe.fx * (handy ? FX.faktorHandy : 1),
         reduziert: ohneBewegung(),
-        start: start,
-        daneben: { x: start.x + versatz.x, y: start.y + versatz.y },
+        start: imBild(start),
+        daneben: imBild(daneben),
         schwert: { x: held.left + held.width * FX.schwertPunkt.x, y: held.top + held.height * FX.schwertPunkt.y },
         boss: mitte(el.bossFigur),
         held: el.heldFigur,
@@ -2076,6 +2230,8 @@ const SudokuKampf = (function () {
           meldung(trefferText(e));
           leuchtePlaetze(e.wirksam);          // was bei diesem Treffer wirkt, leuchtet auf
           const u = fxUmgebung(e);
+          // Smartphone: Die Zahl löst sich, der Würfel über dem Gitter verschwindet
+          wuerfel.ausblenden();
           if (e.fehlschlag || e.immun) return keinAufbau(e, u);
           return mitAufbau(e, u);
         }).then(function () {
@@ -2173,7 +2329,15 @@ const SudokuKampf = (function () {
         teile.textContent = SudokuRPG.angriffText(b.angriffWurf, b.bonus);
         v.querySelector(".kampf-vergleich-wuerfel--boss").appendChild(teile);
       }
-      el.effekte.appendChild(v);
+      // Smartphone: mittig über dem Gitter, wo eben der Block-Würfel gerollt ist
+      // (der Würfel macht dem Vergleich Platz)
+      if (wuerfel.handy()) {
+        v.classList.add("kampf-vergleich--ebene");
+        wuerfel.ebene().appendChild(v);
+        wuerfel.ausblenden(120);
+      } else {
+        el.effekte.appendChild(v);
+      }
       // Beim Konter bleiben die Würfel stehen, bis der Schadensaufbau fertig ist (siehe ausgang)
       if (b.ergebnis === "konter") v.classList.add("bleibt");
       else setTimeout(function () { v.remove(); }, DAUER.vergleich + DAUER.ausgang + 400);
@@ -2222,7 +2386,8 @@ const SudokuKampf = (function () {
 
     /**
      * Wo der Konter-Aufbau beginnt: auf dem Block-Würfel, und wo die Zahl
-     * steht: rechts neben den beiden Würfeln (auf dem Handy darunter).
+     * steht: rechts neben den beiden Würfeln (auf dem Handy darüber, Richtung
+     * Kampfstreifen). Gemessen wird in diesem Moment.
      */
     function konterPunkte(v) {
       const held = v.querySelector(".kampf-vergleich-wuerfel--held");
@@ -2231,10 +2396,11 @@ const SudokuKampf = (function () {
       const r = v.getBoundingClientRect();
       if (w.width === 0 || r.width === 0) return null;
       const start = { x: w.left + w.width / 2, y: w.top + w.height / 2 };
-      const daneben = wuerfel.gross()
-        ? { x: r.right + 44, y: r.top + r.height / 2 }
-        : { x: r.left + r.width / 2, y: r.bottom + 22 };
-      return { start: start, daneben: daneben };
+      let daneben;
+      if (wuerfel.gross()) daneben = { x: r.right + 44, y: r.top + r.height / 2 };
+      else if (wuerfel.handy()) daneben = { x: r.left + r.width / 2, y: r.top - 30 };
+      else daneben = { x: r.left + r.width / 2, y: r.bottom + 22 };
+      return { start: imBild(start), daneben: imBild(daneben) };
     }
 
     /**

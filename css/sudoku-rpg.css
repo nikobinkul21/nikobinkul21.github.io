@@ -1480,6 +1480,8 @@
    GROSSER WÜRFEL (Desktop, rechts oben neben dem Sudoku)
    sudoku-battle-ui.js steuert den Wurf; data-art am Rahmen zeigt, wie er
    ausgegangen ist: "kritisch", "fehlschlag", "immun", "geblockt" oder leer.
+   Dieselben Farben gelten für den Würfel über dem Gitter auf dem
+   Smartphone (.handy-wuerfel, Aufbau in css/sudoku-mobil.css).
    ========================================================================== */
 
 .sudoku-wuerfel {
@@ -1571,59 +1573,73 @@
 }
 
 /* Während des Rollens: Zahl leicht durchsichtig, der Würfel ist "in Bewegung" */
-.wuerfel-flaeche.rollt .wuerfel-zahl {
+.wuerfel-flaeche.rollt .wuerfel-zahl,
+.handy-wuerfel.rollt .wuerfel-zahl {
   opacity: 0.75;
 }
 
 /* Bewegung reduziert: kurz abgedunkelt warten */
-.wuerfel-flaeche.wartet .wuerfel-koerper {
+.wuerfel-flaeche.wartet .wuerfel-koerper,
+.handy-wuerfel.wartet .wuerfel-koerper {
   filter: grayscale(0.6) brightness(0.85);
 }
 
 /* Kritisch: Aufleuchten in Magenta (wie die kritische Zahl im Kampffenster) */
-.wuerfel-flaeche[data-art="kritisch"] .wuerfel-koerper {
+.wuerfel-flaeche[data-art="kritisch"] .wuerfel-koerper,
+.handy-wuerfel[data-art="kritisch"] .wuerfel-koerper {
   filter: drop-shadow(0 0 10px var(--kampf-kritisch)) drop-shadow(0 0 22px var(--kampf-kritisch));
   animation: wuerfel-aufleuchten 0.5s ease-out;
 }
 
 .wuerfel-flaeche[data-art="kritisch"] .wuerfel-zahl,
-.wuerfel-flaeche[data-art="kritisch"] .wuerfel-art {
+.handy-wuerfel[data-art="kritisch"] .wuerfel-zahl,
+.wuerfel-flaeche[data-art="kritisch"] .wuerfel-art,
+.handy-wuerfel[data-art="kritisch"] .wuerfel-art {
   color: var(--kampf-kritisch);
 }
 
-.wuerfel-flaeche[data-art="kritisch"] .wuerfel-zahl {
+.wuerfel-flaeche[data-art="kritisch"] .wuerfel-zahl,
+.handy-wuerfel[data-art="kritisch"] .wuerfel-zahl {
   color: #fff;
   -webkit-text-stroke-color: var(--kampf-kritisch-rand);
 }
 
 /* Fehlschlag: grau, der Würfel kippt müde um */
-.wuerfel-flaeche[data-art="fehlschlag"] .wuerfel-koerper {
+.wuerfel-flaeche[data-art="fehlschlag"] .wuerfel-koerper,
+.handy-wuerfel[data-art="fehlschlag"] .wuerfel-koerper {
   filter: grayscale(0.7);
   transform: rotate(24deg) translate(10%, 8%);
 }
 
-.wuerfel-flaeche[data-art="fehlschlag"] .wuerfel-art {
+.wuerfel-flaeche[data-art="fehlschlag"] .wuerfel-art,
+.handy-wuerfel[data-art="fehlschlag"] .wuerfel-art {
   color: var(--kampf-daneben-rand);
 }
 
 /* Immun/geblockt: ausgegraut, Hinweis in Violett (wie "Immun!" im Kampffenster) */
 .wuerfel-flaeche[data-art="immun"] .wuerfel-koerper,
-.wuerfel-flaeche[data-art="geblockt"] .wuerfel-koerper {
+.handy-wuerfel[data-art="immun"] .wuerfel-koerper,
+.wuerfel-flaeche[data-art="geblockt"] .wuerfel-koerper,
+.handy-wuerfel[data-art="geblockt"] .wuerfel-koerper {
   filter: grayscale(1);
   opacity: 0.5;
 }
 
 .wuerfel-flaeche[data-art="immun"] .wuerfel-art,
-.wuerfel-flaeche[data-art="geblockt"] .wuerfel-art {
+.handy-wuerfel[data-art="immun"] .wuerfel-art,
+.wuerfel-flaeche[data-art="geblockt"] .wuerfel-art,
+.handy-wuerfel[data-art="geblockt"] .wuerfel-art {
   color: var(--kampf-selten);
 }
 
 /* Verteidigungszug: der Wurf ist der Block – blauer Schimmer, "Block" darunter */
-.wuerfel-flaeche[data-art="block"] .wuerfel-koerper {
+.wuerfel-flaeche[data-art="block"] .wuerfel-koerper,
+.handy-wuerfel[data-art="block"] .wuerfel-koerper {
   filter: drop-shadow(0 0 8px var(--block-farbe));
 }
 
-.wuerfel-flaeche[data-art="block"] .wuerfel-art {
+.wuerfel-flaeche[data-art="block"] .wuerfel-art,
+.handy-wuerfel[data-art="block"] .wuerfel-art {
   color: var(--block-farbe);
 }
 
@@ -2184,7 +2200,8 @@
     animation: none !important;
   }
 
-  .wuerfel-flaeche[data-art="fehlschlag"] .wuerfel-koerper {
+  .wuerfel-flaeche[data-art="fehlschlag"] .wuerfel-koerper,
+  .handy-wuerfel[data-art="fehlschlag"] .wuerfel-koerper {
     transform: none;
   }
 
