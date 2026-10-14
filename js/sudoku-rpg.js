@@ -380,7 +380,7 @@ const SUDOKU_RPG_KONFIG = {
   // lässt sie sich nicht. Besiegt der Zug den Boss, setzt er sie nicht mehr ein.
   // Alle Wirkungen enden spätestens mit dem Sudoku oder dem Sieg über den Boss.
   faehigkeit: {
-    abstand: 8,             // Startwert des Zählers
+    abstand: 5,             // Startwert des Zählers (normale Bosse)
     abstandElite: 6,        // … bei Elite-Bossen (und dem Weltboss)
     warnungAb: 2,           // in den letzten so vielen Zügen pulsiert die Anzeige
   },
@@ -1723,14 +1723,16 @@ const SudokuRPG = (function () {
     }
 
     // Fähigkeit des Bosses (Version 12; Version 6 bis 11: "gegenangriff" mit
-    // den damaligen Angriffen). Zähler, der nicht passt → von vorn. Laufende
+    // den damaligen Angriffen). Ein laufender Zähler über dem Startwert (z. B.
+    // aus der Zeit, als normale Bosse alle 8 Züge kamen) wird auf den
+    // Startwert begrenzt; ein ungültiger beginnt von vorn. Laufende
     // Wirkungen nur in einem laufenden Sudoku und nur von der Fähigkeit, die
     // der Boss JETZT hat – alte Eigenheiten und Angriffe fallen weg.
     const faehigkeit = neueFaehigkeit(roh.bossNummer);
     const alt = vorV6 ? null : vorV12 ? roh.gegenangriff : roh.faehigkeit;
     const eigene = faehigkeitVonBoss(roh.bossNummer);
     if (alt && typeof alt === "object") {
-      if (istGanzzahl(alt.zaehler, 1, Math.max(1, faehigkeit.zaehler))) faehigkeit.zaehler = alt.zaehler;
+      if (faehigkeit.zaehler > 0 && istGanzzahl(alt.zaehler, 1, Infinity)) faehigkeit.zaehler = Math.min(alt.zaehler, faehigkeit.zaehler);
       if (eigene && Array.isArray(alt.wirkungen) && raetsel && !raetsel.geloest) {
         faehigkeit.wirkungen = alt.wirkungen.filter(function (w) {
           if (!w || w.id !== eigene.id || !w.daten || typeof w.daten !== "object") return false;

@@ -596,7 +596,7 @@ const SudokuKampf = (function () {
             '<div class="kampf-hp-zeile"><span class="kampf-elite-hinweis"></span><span class="kampf-hp-zahl"></span></div>' +
           "</div>" +
           '<div class="kampf-figur kampf-figur--boss"><canvas class="kampf-boss"></canvas></div>' +
-          // Über dem Boss: seine Fähigkeit mit Zähler ("Siegel in 8 Zügen")
+          // Über dem Boss: seine Fähigkeit mit Zähler ("Siegel in 5 Zügen")
           '<button type="button" class="kampf-absicht hat-tipp" hidden>' +
             '<span class="kampf-absicht-kopf"><span class="kampf-absicht-symbol"></span><span class="kampf-absicht-name"></span></span>' +
             '<span class="kampf-absicht-text"></span>' + tippHtml() +
@@ -1875,12 +1875,12 @@ const SudokuKampf = (function () {
 
     /* ---------- Fähigkeit des Bosses: Ansage über ihm ---------- */
 
-    /** "in 8 Zügen", "in 1 Zug", "jetzt!" (die zweite Zeile der Ansage) */
+    /** "in 5 Zügen", "in 1 Zug", "jetzt!" (die zweite Zeile der Ansage) */
     function zaehlerText(zaehler) {
       return zaehler <= 0 ? "jetzt!" : "in " + zaehler + (zaehler === 1 ? " Zug" : " Zügen");
     }
 
-    /** "Siegel in 8 Zügen" bzw. "Siegel jetzt!" (für Screenreader) */
+    /** "Siegel in 5 Zügen" bzw. "Siegel jetzt!" (für Screenreader) */
     function absichtText(f, zaehler) {
       return f.name + " " + zaehlerText(zaehler);
     }
