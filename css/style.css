@@ -87,6 +87,10 @@
   --farbe-flaeche: #fdfbf7;          /* Karten und Dialoge – etwas heller */
   --farbe-flaeche-leise: #f1ebe1;    /* zurückhaltende Flächen: Hover, Umschalter */
   --farbe-flaeche-hell: #ffffff;     /* hellste Fläche: Karte leuchtet beim Hovern auf */
+  /* Glow der Startseiten-Karten (css/home.css) – als "R G B", die Stärke
+     regelt home.css über den Alpha-Wert */
+  --glow-farbe: 255 255 255;         /* heller Schein und Lichtkante */
+  --glow-schatten-farbe: 120 84 48;  /* warmer Schatten nach außen (nur hell sichtbar) */
   --farbe-text: #2b2622;             /* fast schwarz, warm */
   --farbe-text-leise: #6b6158;       /* Nebentext (Kontrast 5,5 : 1 zum Grund) */
   --farbe-rand: #e6dfd4;             /* feine Linien */
@@ -182,6 +186,8 @@
   --farbe-flaeche: #25221f;
   --farbe-flaeche-leise: #2f2b27;
   --farbe-flaeche-hell: #322d28;
+  --glow-farbe: 255 255 255;
+  --glow-schatten-farbe: 0 0 0;
   --farbe-text: #efe8dc;
   --farbe-text-leise: #ada395;
   --farbe-rand: #38332d;
