@@ -39,9 +39,16 @@
   --karte-abheben: 46px;                    /* so weit löst sich die Karte aus ihrer Reihe */
   --karte-zudrehen: 22deg;                  /* so weit dreht sie sich zum Betrachter */
 
-  /* Bewegung */
-  --parallaxe-dreh: 2;                      /* Grad: Drehung bei Maus ganz links/rechts */
-  --parallaxe-neig: 1.2;                    /* Grad: Neigung bei Maus ganz oben/unten */
+  /* Titel auf den Karten (Überschriften-Schrift der Seite) */
+  --karte-titel-groesse: 2.9rem;
+  /* Hintere Karten bekommen einen etwas größeren Titel (je Platz +15 %),
+     damit er trotz der Perspektive lesbar bleibt */
+  --titel-wachstum: 0.15;
+  /* Obergrenze relativ zur Kartenbreite (cqi): so passt auch das längste
+     Wort ("Stundenplan/", "Customising") immer ganz in die Karte */
+  --titel-max: 15cqi;
+
+  /* Bewegung (der Tunnel selbst steht still) */
   --aufbau-schritt: 110ms;                  /* Verzögerung von Karte zu Karte beim Aufbau */
   --fahrt-dauer: 400ms;                     /* Fahrt beim Klick (gleich BEWEGUNG.fahrtMs in home.js) */
 }
@@ -75,12 +82,11 @@
   perspective-origin: 50% var(--fluchtpunkt-y);
 }
 
-/* Die "Welt": Parallaxe und Fahrt setzt home.js als transform auf sie */
+/* Die "Welt": nur die Fahrt beim Klick setzt home.js als transform auf sie */
 .tunnel-welt {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  will-change: transform;                   /* Karten nicht bei jeder Drehung neu rastern */
 }
 
 .tunnel-karten {
@@ -143,10 +149,11 @@
   isolation: isolate;                       /* Lichtschicht (z-index -1) bleibt hinter dem Text */
   flex: 0 0 var(--karte-breite);
   min-width: 0;                             /* nie breiter als vorgesehen, auch bei langen Namen */
+  /* Nur der Titel: groß und ruhig, senkrecht mittig */
+  container-type: inline-size;              /* Bezug für die Obergrenze des Titels (cqi) */
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: var(--abstand-m);
+  justify-content: center;
   padding: var(--karte-innen);
   /* --tiefe: wie weit die Karte nach hinten verblasst (0 = vorne) */
   --tiefe: var(--i);
@@ -215,36 +222,13 @@
   outline-offset: 4px;
 }
 
-.tunnel-karte-symbol {
-  width: 48px;
-  height: 48px;
-  fill: none;
-  stroke: var(--farbe-akzent);
-  stroke-width: 1.5;
-  opacity: calc(1 - var(--tiefe) * 0.2);    /* hinten blasser */
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.tunnel-karte-text {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
 .tunnel-karte-name {
   overflow-wrap: break-word;                /* nur im Notfall mitten im Wort umbrechen (sonst nach "/") */
   font-family: var(--schrift-titel);
-  font-size: 2.3rem;
+  font-size: min(calc(var(--karte-titel-groesse) * (1 + var(--i) * var(--titel-wachstum))), var(--titel-max));
   font-weight: 600;
-  line-height: 1.12;
-}
-
-.tunnel-karte-info {
-  font-size: 1.2rem;
-  line-height: 1.4;
-  color: var(--farbe-text-leise);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
 
@@ -252,7 +236,7 @@
    BEGRÜSSUNG IM FLUCHTPUNKT
    Sie steht im 3D-Raum zwischen den hinteren Karten und wird genau um den
    Faktor vergrößert, um den die Perspektive sie verkleinert – so erscheint
-   sie in normaler Größe und bewegt sich trotzdem mit der Parallaxe.
+   sie in normaler Größe und bewegt sich bei der Fahrt mit dem Tunnel mit.
    ========================================================================== */
 
 .tunnel-ziel {
@@ -449,14 +433,7 @@
     --karte-hoehe: min(340px, calc(var(--tunnel-hoehe) * 0.62));
     --karte-innen: 24px;
     --karte-rundung: 24px;
-  }
-
-  .tunnel-karte-name {
-    font-size: 1.85rem;
-  }
-
-  .tunnel-karte-info {
-    font-size: 1.05rem;
+    --karte-titel-groesse: 2.05rem;
   }
 }
 
@@ -534,8 +511,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    gap: var(--abstand-m);
-    padding: 14px 20px;
+    padding: 14px 24px;
     border-radius: 20px;
     /* --n = Platz in der ganzen Liste (0 = oben, also am weitesten hinten) */
     --tiefe: calc((5 - var(--n)) * var(--handy-blass-anteil));
@@ -547,19 +523,8 @@
     --zudrehen: 0deg;
   }
 
-  .tunnel-karte-symbol {
-    flex: none;
-    width: 30px;
-    height: 30px;
-  }
-
   .tunnel-karte-name {
-    font-size: 1.25rem;
-  }
-
-  .tunnel-karte-info {
-    font-size: 0.9rem;
-    line-height: 1.3;
+    font-size: 1.5rem;
   }
 
   /* Aufbau von oben (hinten) nach unten (vorne) */
@@ -581,7 +546,7 @@
 
 
 /* ==========================================================================
-   BEWEGUNG REDUZIEREN: keine Parallaxe (home.js), kein Aufbau, keine Fahrt.
+   BEWEGUNG REDUZIEREN: kein Aufbau, keine Fahrt (home.js öffnet sofort).
    Die Karten stehen ruhig in ihrer Tiefe.
    ========================================================================== */
 
