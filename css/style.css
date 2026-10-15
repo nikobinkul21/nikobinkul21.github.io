@@ -1,130 +1,332 @@
 /* ==========================================================================
-   0. LOGO-SCHRIFT
-   Eigene Schrift nur für den Schriftzug "NTB".
-   Die Datei liegt im Ordner fonts/ (der Pfad ist relativ zu DIESER CSS-Datei,
-   deshalb "../fonts/"). Fehlt die Datei, nimmt der Browser einfach die
-   nächste Schrift aus --logo-schrift (siehe unten).
+   style.css – Grundlage für ganz NTB
+
+   HIER ÄNDERST DU DAS AUSSEHEN DER GANZEN SEITE:
+     0. Schriften (Dateien im Ordner fonts/)
+     1. Design-Variablen: Farben, Schriften, Abstände, Radien, Linien
+        – zuerst das helle Design, darunter das dunkle
+     1b. Bereichsfarben: Termine, Prioritäten, Kalender, Sudoku-Gitter …
+   Die Bereichs-Stylesheets (home.css, todo.css, …) benutzen nur diese
+   Variablen. Ausnahme mit eigenen Farben: der Pixel-Stil im
+   Sudoku-Abenteuer (sudoku-rpg.css, sudoku-damage-fx.css, sudoku-mobil.css)
+   und im Fußballspiel (football.css).
    ========================================================================== */
 
+
+/* ==========================================================================
+   0. SCHRIFTEN
+   Alle Dateien liegen lokal in fonts/ – es wird nichts aus dem Internet
+   geladen. Die Pfade sind relativ zu DIESER Datei (deshalb "../fonts/").
+   font-display: swap – bis die Schrift geladen ist, steht der Text in der
+   Ersatzschrift da und ist nie unsichtbar.
+   ========================================================================== */
+
+/* Schriftzug "NTB" (fehlt die Datei, greift --logo-schrift auf Impact zurück) */
 @font-face {
   font-family: "NTB Logo";
-  /* Der Browser nimmt die erste Datei, die er findet und versteht:
-     zuerst .woff2 (klein und modern), sonst .ttf */
   src:
     url("../fonts/ntb-logo.woff2") format("woff2"),
     url("../fonts/ntb-logo.ttf") format("truetype");
-  /* swap: Bis die Schrift geladen ist, wird der Fallback gezeigt –
-     der Text ist also nie unsichtbar */
+  font-display: swap;
+}
+
+/* Inter – Fließtext, Navigation, Bedienelemente (SIL Open Font License) */
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 600 übernimmt auch "fett" (700): Es gibt bewusst keinen eigenen 700er-Schnitt */
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-600.woff2") format("woff2");
+  font-weight: 600 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Source Serif 4 – Überschriften (SIL Open Font License) */
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("../fonts/source-serif-4-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("../fonts/source-serif-4-600.woff2") format("woff2");
+  font-weight: 500 900;
+  font-style: normal;
   font-display: swap;
 }
 
 
 /* ==========================================================================
-   1. CSS-VARIABLEN
-   Hier änderst du Farben, Abstände, Radien und den Glas-Effekt an EINER Stelle.
+   1. DESIGN-VARIABLEN
+   Ruhig, warm, minimalistisch: cremefarbener Grund, etwas hellere Karten,
+   feine warmgraue Linien statt Schatten und EINE Akzentfarbe (Terrakotta)
+   für Buttons, Links und aktive Zustände.
    ========================================================================== */
 
 :root {
-  /* Farben – helles Design */
-  --farbe-hintergrund: #f4f5f7;
-  --farbe-flaeche: #ffffff;          /* Karten */
-  --farbe-text: #1f2328;
-  --farbe-text-leise: #5b636d;       /* weniger wichtiger Text */
-  --farbe-rand: #e3e5e8;
-  --farbe-akzent: #4f6ef7;           /* Fokusrahmen */
+  /* ---- Farben: helles Design ---- */
+  --farbe-hintergrund: #f8f4ed;      /* Seite: warmes, leicht cremiges Off-White */
+  --farbe-flaeche: #fdfbf7;          /* Karten und Dialoge – etwas heller */
+  --farbe-flaeche-leise: #f1ebe1;    /* zurückhaltende Flächen: Hover, Umschalter */
+  --farbe-text: #2b2622;             /* fast schwarz, warm */
+  --farbe-text-leise: #6b6158;       /* Nebentext (Kontrast 5,5 : 1 zum Grund) */
+  --farbe-rand: #e6dfd4;             /* feine Linien */
+  --farbe-rand-stark: #d2c8ba;       /* Eingabefelder, Trennlinien mit mehr Gewicht */
 
-  /* Sehr dezenter Farbverlauf im Seitenhintergrund.
-     Ohne ihn hätte der Blur nichts zum Verwischen und wäre kaum sichtbar. */
-  --verlauf-1: rgba(110, 140, 255, 0.20);   /* oben links */
-  --verlauf-2: rgba(255, 140, 190, 0.14);   /* unten rechts */
+  --farbe-akzent: #a8502f;           /* gedämpftes Terrakotta */
+  --farbe-akzent-hover: #8f4227;     /* etwas dunkler beim Hovern */
+  --farbe-akzent-leise: #f4e4da;     /* zarte Tönung, z. B. hinter Bewertungen */
+  --farbe-auf-akzent: #ffffff;       /* Text auf Akzent-Flächen */
+  --farbe-fokus: var(--farbe-akzent);/* Tastaturfokus */
 
-  /* Glas-Effekt (im Stil von Apples "Liquid Glass") */
-  --glas-hintergrund: rgba(255, 255, 255, 0.45);  /* halbtransparente Fläche */
-  --glas-blur: 16px;                              /* Stärke der Unschärfe */
-  --glas-saettigung: 180%;                        /* Farben dahinter etwas kräftiger */
-  --glas-rand: rgba(255, 255, 255, 0.75);         /* feiner heller Rand */
-  --glas-reflex: rgba(255, 255, 255, 0.9);        /* Lichtkante oben */
-  --glas-glanz: rgba(255, 255, 255, 0.35);        /* sanfter Glanz in der oberen Hälfte */
-  --glas-schatten: 0 4px 16px rgba(30, 40, 80, 0.10);
-  --glas-fallback: rgba(255, 255, 255, 0.85);     /* für Browser ohne backdrop-filter */
-  --glas-aktiv-deckkraft: 0.55;                   /* abgeschwächtes Glas beim aktiven Reiter */
+  /* Rückmeldungen (bewusst gedeckt, nicht grell) */
+  --farbe-erfolg: #2f6e3b;
+  --farbe-gefahr: #b02a1f;
+  --farbe-gefahr-leise: #fae6e1;
 
-  /* Glas der Leiste selbst: noch zurückhaltender */
-  --leiste-hintergrund: rgba(255, 255, 255, 0.35);
-  --leiste-rand: rgba(255, 255, 255, 0.6);
-  --leiste-fallback: rgba(244, 245, 247, 0.92);
+  /* Abdunklung hinter Dialogen */
+  --farbe-schleier: rgba(43, 32, 22, 0.32);
 
-  /* Schatten der Karten */
-  --schatten: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.05);
+  /* ---- Schatten: NUR für schwebende Elemente (Menüs, Dialoge) ---- */
+  --schatten: none;                  /* Karten haben eine Linie statt Schatten */
+  --schatten-schwebend: 0 12px 32px rgba(60, 40, 20, 0.10), 0 2px 6px rgba(60, 40, 20, 0.06);
 
-  /* Abstände */
+  /* ---- Linien ---- */
+  --linie-breite: 1px;
+  --linie: var(--linie-breite) solid var(--farbe-rand);
+
+  /* ---- Schriften ---- */
+  --schrift-text: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --schrift-titel: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
+  --schrift: var(--schrift-text);    /* alter Name, zeigt auf die Textschrift */
+  --schrift-groesse: 1.0625rem;      /* Grundschrift: 17 px */
+  --zeilenhoehe: 1.6;
+  --zeilen-max: 68ch;                /* höchstens so lange Zeilen bei Fließtext */
+  --titel-groesse-1: 2rem;           /* h1 */
+  --titel-groesse-2: 1.3rem;         /* h2 */
+
+  /* ---- Abstände ---- */
   --abstand-xs: 4px;
   --abstand-s: 8px;
   --abstand-m: 16px;
   --abstand-l: 24px;
-  --abstand-xl: 40px;
+  --abstand-xl: 48px;
+  --karte-innen: 28px;               /* großzügiger Innenabstand der Karten */
 
-  /* Rundungen */
-  --radius-s: 8px;
-  --radius-m: 12px;
-  --radius-pille: 999px;             /* so groß, dass jede Ecke ganz rund wird */
+  /* ---- Rundungen ---- */
+  --radius-s: 8px;                   /* Buttons, Eingabefelder */
+  --radius-m: 12px;                  /* Karten, Dialoge */
+  --radius-pille: 999px;             /* ganz rund (Pillen, Punkte) */
 
-  /* Logo "NTB" */
+  /* ---- Bedienelemente ---- */
+  --knopf-hoehe: 40px;
+
+  /* ---- Glas-Effekt ----
+     Nur noch im Kalender und in den Spielen (bleibt dort vorerst). */
+  --glas-hintergrund: rgba(253, 251, 247, 0.55);
+  --glas-blur: 16px;
+  --glas-saettigung: 160%;
+  --glas-rand: rgba(255, 255, 255, 0.75);
+  --glas-reflex: rgba(255, 255, 255, 0.9);
+  --glas-glanz: rgba(255, 255, 255, 0.35);
+  --glas-schatten: 0 4px 16px rgba(60, 40, 20, 0.10);
+  --glas-fallback: rgba(253, 251, 247, 0.9);
+
+  /* ---- Logo "NTB" ---- */
   --logo-schrift: "NTB Logo", Impact, "Arial Black", sans-serif;
-  --logo-groesse: 2.4rem;            /* Größe von NTB. 1rem = Größe der Reiter (16px) */
-  --logo-groesse-mobil: 2rem;        /* Größe von NTB auf dem Handy */
+  --logo-groesse: 1.75rem;           /* passend zur ruhigen Leiste */
+  --logo-groesse-mobil: 1.6rem;
   --logo-farbe: #000000;             /* Buchstaben */
   --logo-kontur-farbe: #ffffff;      /* Kontur außen um die Buchstaben */
-  --logo-kontur-staerke: 1.25px;     /* sichtbare Breite der Kontur */
-  /* Feiner dunkler Schatten um die weiße Kontur – damit sie auf hellem
-     Grund erkennbar bleibt. Im dunklen Design ausgeschaltet (siehe unten). */
-  --logo-schatten: 0 0 1px rgba(0, 0, 0, 0.7), 0 0 2px rgba(0, 0, 0, 0.35);
+  --logo-kontur-staerke: 1px;        /* sichtbare Breite der Kontur */
+  /* Feiner Schatten, damit die weiße Kontur auf hellem Grund sichtbar bleibt */
+  --logo-schatten: 0 0 1px rgba(0, 0, 0, 0.6), 0 0 2px rgba(0, 0, 0, 0.25);
 
-  /* Größen */
+  /* ---- Größen ---- */
   --leiste-hoehe: 64px;
+  --leiste-max-breite: 1280px;       /* Inhalt der Leiste wird nie breiter */
   --inhalt-max-breite: 1100px;
 
-  /* Bewegung */
-  --dauer: 200ms;
-  --anheben: -1px;                   /* so weit hebt sich ein Reiter beim Hover */
+  /* ---- Bewegung: kurz und unaufdringlich ---- */
+  --dauer: 150ms;
+  --anheben: 0px;                    /* früher hoben sich Elemente beim Hover – jetzt nicht mehr */
 
-  /* System-Schriftarten: nutzt die Schrift des Betriebssystems, kein Download nötig */
-  --schrift: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-
-  /* Sagt dem Browser, dass Formularelemente & Scrollbalken hell sein sollen */
+  /* Formularelemente und Scrollbalken im hellen Stil */
   color-scheme: light;
 }
 
-/* Dunkles Design: überschreibt nur die Farben.
+/* Dunkles Design: warmes, sehr dunkles Grau statt Schwarz, cremefarbener
+   Text, dieselbe Akzentfarbe leicht aufgehellt.
    Aktiv, wenn <html data-theme="dark"> gesetzt ist (macht app.js). */
 :root[data-theme="dark"] {
-  --farbe-hintergrund: #14161b;
-  --farbe-flaeche: #1f2228;
-  --farbe-text: #e6e8eb;
-  --farbe-text-leise: #a0a7b1;
-  --farbe-rand: #2e323a;
-  --farbe-akzent: #7b93ff;
+  --farbe-hintergrund: #1d1b18;
+  --farbe-flaeche: #25221f;
+  --farbe-flaeche-leise: #2f2b27;
+  --farbe-text: #efe8dc;
+  --farbe-text-leise: #ada395;
+  --farbe-rand: #38332d;
+  --farbe-rand-stark: #4d463e;
 
-  --verlauf-1: rgba(90, 110, 255, 0.16);
-  --verlauf-2: rgba(40, 180, 170, 0.10);
+  --farbe-akzent: #e08a68;
+  --farbe-akzent-hover: #eaa184;
+  --farbe-akzent-leise: #3d2b22;
+  --farbe-auf-akzent: #1d1b18;       /* dunkler Text auf dem hellen Terrakotta */
 
-  --glas-hintergrund: rgba(255, 255, 255, 0.08);
-  --glas-rand: rgba(255, 255, 255, 0.18);
-  --glas-reflex: rgba(255, 255, 255, 0.28);
-  --glas-glanz: rgba(255, 255, 255, 0.06);
+  --farbe-erfolg: #8cc79a;
+  --farbe-gefahr: #f08a7c;
+  --farbe-gefahr-leise: #3e2420;
+
+  --farbe-schleier: rgba(0, 0, 0, 0.55);
+
+  --schatten-schwebend: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+
+  --glas-hintergrund: rgba(255, 245, 230, 0.07);
+  --glas-rand: rgba(255, 245, 230, 0.16);
+  --glas-reflex: rgba(255, 245, 230, 0.24);
+  --glas-glanz: rgba(255, 245, 230, 0.05);
   --glas-schatten: 0 4px 16px rgba(0, 0, 0, 0.40);
-  --glas-fallback: rgba(48, 52, 60, 0.92);
-
-  --leiste-hintergrund: rgba(20, 22, 27, 0.55);
-  --leiste-rand: rgba(255, 255, 255, 0.08);
-  --leiste-fallback: rgba(20, 22, 27, 0.94);
+  --glas-fallback: rgba(47, 43, 39, 0.94);
 
   /* Auf dunklem Grund ist die weiße Kontur gut sichtbar – kein Schatten nötig */
   --logo-schatten: none;
 
-  --schatten: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
-
   color-scheme: dark;
+}
+
+
+/* ==========================================================================
+   1b. BEREICHSFARBEN
+   Farben, die nur einzelne Bereiche brauchen – ebenfalls hier zentral.
+   Prioritäten und Kalender-Markierungen behalten bewusst ihre Farbigkeit.
+   ========================================================================== */
+
+:root {
+  /* Arten von Einträgen (Stundenplan, Startseite, Kalender-Vorschau) */
+  --farbe-termin: #4f6d93;           /* Rand / Strich */
+  --farbe-termin-flaeche: #e7ecf1;
+  --farbe-termin-text: #2c3e55;
+  --farbe-vorlesung: #8a5a7f;
+  --farbe-vorlesung-flaeche: #f1e6ec;
+  --farbe-vorlesung-text: #4f2f47;
+
+  /* Stundenplan-Raster */
+  --sp-linie: rgba(80, 60, 40, 0.08);         /* Stundenlinien */
+  --sp-heute-hintergrund: rgba(168, 80, 47, 0.05); /* Spalte von heute */
+  --sp-heute-akzent: var(--farbe-akzent);     /* Datum von heute */
+  --sp-jetzt-farbe: #c4482f;                  /* Linie für die aktuelle Uhrzeit */
+
+  /* Zu erledigen: Prioritäten (Skala von Rot nach Grün) */
+  --todo-ueberfaellig: #b3261e;
+  --todo-sehr-wichtig: #d9483b;
+  --todo-wichtig: #e48a2e;
+  --todo-bald: #d9ad1f;
+  --todo-entspannt: #8bb352;
+  --todo-locker: #3d8f55;
+  --todo-erledigt: #3d8048;                   /* grüner Knopf "Erledigt" */
+  --todo-offen: #c4413a;                      /* roter Knopf "Noch offen" */
+  --todo-ueberfaellig-hintergrund: #fbe8e2;
+
+  /* Kalender-Markierungen */
+  --kal-vergangen-text: #b8402f;              /* vergangene Tage: rote Zahl … */
+  --kal-vergangen-hintergrund: rgba(196, 64, 40, 0.07); /* … auf blassem Grund */
+  --kal-heute-glas: rgba(56, 160, 84, 0.30);  /* heute: grünes Glas */
+  --kal-heute-glanz: rgba(255, 255, 255, 0.45);
+  --kal-heute-rand: rgba(255, 255, 255, 0.75);
+  --kal-heute-reflex: rgba(255, 255, 255, 0.9);
+  --kal-heute-leuchten: rgba(56, 160, 84, 0.40);
+  --kal-heute-schatten: rgba(60, 40, 20, 0.08);
+  --kal-heute-text: #0f4a20;
+  --kal-heute-fallback: rgba(56, 160, 84, 0.35);
+  --kal-termin-glas: rgba(90, 160, 240, 0.28); /* Tage mit Termin: hellblaues Glas */
+  --kal-termin-rand: rgba(255, 255, 255, 0.75);
+  --kal-termin-leuchten: rgba(90, 160, 240, 0.40);
+  --kal-termin-ring: #5a9ce6;                  /* Ring um "heute", wenn heute ein Termin ist */
+  --kal-termin-glas-vergangen: rgba(90, 160, 240, 0.13);
+  --kal-vorschau-hintergrund: rgba(253, 251, 247, 0.86);
+
+  /* Sudoku-Gitter (freies Spiel und Abenteuer) */
+  --sudoku-linie-duenn-farbe: #e2d9cc;
+  --sudoku-linie-dick-farbe: #5a5047;
+  --sudoku-feld: var(--farbe-flaeche);
+  --sudoku-verwandt: #f3ede4;                 /* gleiche Zeile, Spalte, Block */
+  --sudoku-gleich: #f1ddd1;                   /* Felder mit derselben Zahl */
+  --sudoku-ausgewaehlt: #e7c4b3;              /* das gewählte Feld */
+  --sudoku-vorgabe-farbe: var(--farbe-text);
+  --sudoku-eingabe-farbe: var(--farbe-akzent);
+  --sudoku-fehler-farbe: var(--farbe-gefahr);
+  --sudoku-fehler-hintergrund: var(--farbe-gefahr-leise);
+  --sudoku-erfolg-farbe: var(--farbe-erfolg);
+  --sudoku-fertig-haken-farbe: var(--farbe-erfolg);
+  --sudoku-effekt-farbe: var(--farbe-akzent);
+  --sudoku-effekt-schein: rgba(168, 80, 47, 0.18);
+  --sudoku-effekt-schein-stark: rgba(168, 80, 47, 0.30);
+}
+
+:root[data-theme="dark"] {
+  --farbe-termin: #8fb0d6;
+  --farbe-termin-flaeche: #2a3440;
+  --farbe-termin-text: #dde7f2;
+  --farbe-vorlesung: #c79bbb;
+  --farbe-vorlesung-flaeche: #3a2c36;
+  --farbe-vorlesung-text: #f2e4ee;
+
+  --sp-linie: rgba(255, 240, 220, 0.07);
+  --sp-heute-hintergrund: rgba(224, 138, 104, 0.06);
+  --sp-jetzt-farbe: #f0866c;
+
+  --todo-ueberfaellig: #ff6b5e;
+  --todo-sehr-wichtig: #ff7a6b;
+  --todo-wichtig: #ffa458;
+  --todo-bald: #f2cf4a;
+  --todo-entspannt: #a8d27a;
+  --todo-locker: #6cc487;
+  --todo-erledigt: #6cc487;
+  --todo-offen: #ff7a6b;
+  --todo-ueberfaellig-hintergrund: #3a221e;
+
+  --kal-vergangen-text: #f0907f;
+  --kal-vergangen-hintergrund: rgba(255, 120, 100, 0.07);
+  --kal-heute-glas: rgba(80, 190, 110, 0.28);
+  --kal-heute-glanz: rgba(255, 255, 255, 0.12);
+  --kal-heute-rand: rgba(255, 255, 255, 0.26);
+  --kal-heute-reflex: rgba(255, 255, 255, 0.32);
+  --kal-heute-leuchten: rgba(80, 190, 110, 0.42);
+  --kal-heute-schatten: rgba(0, 0, 0, 0.25);
+  --kal-heute-text: #ebfff0;
+  --kal-heute-fallback: rgba(80, 190, 110, 0.38);
+  --kal-termin-glas: rgba(120, 180, 250, 0.26);
+  --kal-termin-rand: rgba(255, 255, 255, 0.26);
+  --kal-termin-leuchten: rgba(120, 180, 250, 0.38);
+  --kal-termin-ring: #82bbf5;
+  --kal-termin-glas-vergangen: rgba(120, 180, 250, 0.12);
+  --kal-vorschau-hintergrund: rgba(37, 34, 31, 0.88);
+
+  --sudoku-linie-duenn-farbe: #3a352f;
+  --sudoku-linie-dick-farbe: #9a8f80;
+  --sudoku-verwandt: #2f2b27;
+  --sudoku-gleich: #4a3328;
+  --sudoku-ausgewaehlt: #6e4636;
+  --sudoku-eingabe-farbe: #eda688;
+  --sudoku-effekt-schein: rgba(224, 138, 104, 0.22);
+  --sudoku-effekt-schein-stark: rgba(224, 138, 104, 0.36);
 }
 
 
@@ -143,42 +345,88 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: var(--schrift);
-  line-height: 1.5;
+  font-family: var(--schrift-text);
+  font-size: var(--schrift-groesse);
+  line-height: var(--zeilenhoehe);
   color: var(--farbe-text);
-  /* Zwei weiche Farbflecken über der Grundfarbe.
-     "fixed" = der Verlauf bleibt beim Scrollen stehen. */
-  background:
-    radial-gradient(ellipse at 0% 0%, var(--verlauf-1), transparent 60%),
-    radial-gradient(ellipse at 100% 100%, var(--verlauf-2), transparent 60%),
-    var(--farbe-hintergrund);
-  background-attachment: fixed;
+  background: var(--farbe-hintergrund);
+  /* Etwas ruhigere, glattere Schriftdarstellung */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Überschriften in der Serifenschrift, ruhige Hierarchie */
+h1,
+h2 {
+  font-family: var(--schrift-titel);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
 }
 
 h1 {
   margin: 0 0 var(--abstand-l);
-  font-size: 1.75rem;
-  font-weight: 600;
+  font-size: var(--titel-groesse-1);
 }
 
 h2 {
   margin: 0 0 var(--abstand-s);
-  font-size: 1.15rem;
+  font-size: var(--titel-groesse-2);
+}
+
+h3 {
   font-weight: 600;
+}
+
+/* Formularelemente übernehmen die Seitenschrift */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* Links: Akzentfarbe, Unterstreichung erst beim Hovern kräftig */
+a {
+  color: var(--farbe-akzent);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--farbe-akzent-hover);
+}
+
+/* Fließtext nicht endlos breit */
+p {
+  max-width: var(--zeilen-max);
 }
 
 /* Überschriften bekommen per JS den Fokus (für Screenreader),
    sollen dabei aber keinen sichtbaren Rahmen zeigen */
-h1:focus {
+h1:focus,
+h2:focus {
   outline: none;
 }
 
-/* Sichtbarer Fokusrahmen für Tastaturnutzer.
+/* Sichtbarer Fokusrahmen für Tastaturnutzer – für ALLE Elemente.
    :focus-visible erscheint nur bei Tastatur, nicht bei Mausklick. */
-a:focus-visible,
-button:focus-visible {
-  outline: 2px solid var(--farbe-akzent);
+:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
   outline-offset: 2px;
+}
+
+/* Eingabefelder zeigen den Fokus auch beim Klicken (dort tippt man ja) */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 1px;
+}
+
+/* Markierter Text in der Akzent-Tönung */
+::selection {
+  background: var(--farbe-akzent-leise);
+  color: var(--farbe-text);
 }
 
 /* Text nur für Screenreader: unsichtbar, aber vorgelesen
@@ -200,77 +448,39 @@ button:focus-visible {
 
 /* ==========================================================================
    3. NAVIGATIONSLEISTE
+   Links NTB, daneben die Abschnitte in gleichen Abständen, ganz rechts der
+   Dark-Mode-Schalter. Hintergrund wie die Seite, darunter eine feine Linie.
    ========================================================================== */
 
 .leiste {
   position: sticky;                 /* bleibt beim Scrollen oben stehen */
   top: 0;
   z-index: 10;                      /* liegt über dem Inhalt */
+  background: var(--farbe-hintergrund);
+  border-bottom: var(--linie);
 }
 
-/* Das Glas der Leiste liegt auf einem Pseudo-Element (::before) statt auf
-   der Leiste selbst. Grund: Hätte die Leiste selbst einen backdrop-filter,
-   könnten die Glasflächen der Reiter darin nichts mehr dahinter verwischen. */
-.leiste::before {
-  content: "";
-  position: absolute;
-  inset: 0;                         /* füllt die ganze Leiste */
-  z-index: -1;                      /* hinter den Reitern */
-  background: var(--leiste-hintergrund);
-  -webkit-backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung)); /* Safari */
-  backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
-  border-bottom: 1px solid var(--leiste-rand);
-}
-
-/*
-  Das Raster der Leiste: drei Spalten "1fr auto 1fr".
-    - Die mittlere Spalte (auto) ist genau so breit wie NTB.
-    - Die beiden äußeren Spalten (1fr) teilen sich den Rest GLEICHMÄSSIG.
-  Dadurch sitzt NTB immer exakt in der Mitte – egal wie breit die Reiter sind.
-*/
 .leiste__nav {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
-  column-gap: var(--abstand-s);
+  gap: var(--abstand-l);
   height: var(--leiste-hoehe);
+  max-width: var(--leiste-max-breite);
+  margin: 0 auto;
   padding: 0 var(--abstand-l);
 }
 
-/* Auf dem Computer ist das Panel "unsichtbar": Seine Kinder (die zwei Listen
-   und NTB) werden direkt zu Zellen im Raster der Leiste. */
+/* Das Panel nimmt den ganzen Platz zwischen NTB und dem Schalter ein */
 .nav-panel {
-  display: contents;
+  flex: 1;
+  min-width: 0;
 }
 
-/* Wer in welcher Spalte steht. grid-row: 1 hält alle in derselben Zeile. */
-.reiter-gruppe--links {
-  grid-column: 1;
-  grid-row: 1;
-  justify-self: end;                /* rechtsbündig – also direkt neben NTB */
-}
-
-.marke--desktop {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.reiter-gruppe--rechts {
-  grid-column: 3;
-  grid-row: 1;
-  justify-self: start;              /* linksbündig – also direkt neben NTB */
-}
-
-/* Der Dark-Mode-Schalter teilt sich die rechte Spalte mit den rechten
-   Reitern, sitzt aber ganz am rechten Rand. */
-.theme-schalter {
-  grid-column: 3;
-  grid-row: 1;
-  justify-self: end;
-}
-
+/* space-evenly: gleich große Abstände zwischen allen Reitern */
 .reiter-gruppe {
   display: flex;
+  justify-content: space-evenly;
+  align-items: center;
   gap: var(--abstand-xs);
   list-style: none;
   margin: 0;
@@ -279,117 +489,78 @@ button:focus-visible {
 
 
 /* ==========================================================================
-   4. REITER MIT GLAS-EFFEKT
+   4. REITER
+   Ruhiger Text. Hover: dezente, leicht abgerundete Fläche.
+   Aktiv: dunklere Schrift und eine feine Linie darunter.
    ========================================================================== */
 
 .reiter {
-  position: relative;               /* Bezugspunkt für die Glasfläche (::before) */
-  z-index: 0;                       /* damit die Glasfläche (z-index: -1) hinter dem Text bleibt */
+  position: relative;               /* Bezugspunkt für die Markierung (::after) */
   display: block;
-  padding: 8px 18px;
-  border-radius: var(--radius-pille);
+  padding: 8px 12px;
+  border-radius: var(--radius-s);
   color: var(--farbe-text-leise);
+  font-size: 0.95rem;
   font-weight: 500;
   text-decoration: none;
   white-space: nowrap;              /* Reiter nie umbrechen */
   transition:
     color var(--dauer) ease,
-    transform var(--dauer) ease;
+    background-color var(--dauer) ease;
 }
 
-/* Die Handy-Variante von NTB ist auf dem Computer versteckt.
-   (Steht bewusst NACH .reiter, sonst würde dessen display: block gewinnen.) */
-.marke--mobil {
-  display: none;
-}
-
-/*
-  Die Glasfläche hinter dem Reiter. Sie ist immer da, aber unsichtbar
-  (opacity: 0). Beim Hover/Fokus wird sie eingeblendet.
-  Bestandteile:
-    background   – Glanz oben (Verlauf) + halbtransparente Grundfläche
-    backdrop-filter – verwischt und sättigt, was dahinter liegt
-    border       – feiner heller Rand
-    box-shadow   – Lichtreflex an der Oberkante (inset) + weicher Schatten
-*/
-.reiter::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;           /* gleiche Pillenform wie der Reiter */
-  background:
-    linear-gradient(to bottom, var(--glas-glanz), transparent 55%),
-    var(--glas-hintergrund);
-  -webkit-backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
-  backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
-  border: 1px solid var(--glas-rand);
-  box-shadow:
-    inset 0 1px 0 var(--glas-reflex),
-    var(--glas-schatten);
-  opacity: 0;
-  transition: opacity var(--dauer) ease;
-}
-
-/* Hover und Tastaturfokus: Glas einblenden, Reiter minimal anheben */
-.reiter:hover,
-.reiter:focus-visible {
+.reiter:hover {
   color: var(--farbe-text);
-  transform: translateY(var(--anheben));
+  background: var(--farbe-flaeche-leise);
 }
 
-.reiter:hover::before,
-.reiter:focus-visible::before {
-  opacity: 1;
-}
-
-/* Aktiver Reiter (app.js setzt aria-current="page"):
-   Glas dauerhaft sichtbar, aber abgeschwächt */
+/* Aktiver Reiter (app.js setzt aria-current="page") */
 .reiter[aria-current="page"] {
   color: var(--farbe-text);
-  font-weight: 600;
 }
 
-.reiter[aria-current="page"]::before {
-  opacity: var(--glas-aktiv-deckkraft);
-}
-
-/* Aktiver Reiter UND Hover: volle Stärke */
-.reiter[aria-current="page"]:hover::before,
-.reiter[aria-current="page"]:focus-visible::before {
-  opacity: 1;
+/* Die feine Markierung unter dem aktiven Reiter */
+.reiter[aria-current="page"]:not(.marke)::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--farbe-akzent);
 }
 
 /*
-  Der Schriftzug "NTB".
-  Er ist ebenfalls ein .reiter (Glas beim Hover, Link zu Home), sieht aber
-  anders aus. Dieser Block steht bewusst NACH den Hover- und Aktiv-Regeln
-  oben, damit seine Farbe und Schriftstärke dort nicht überschrieben werden.
+  Der Schriftzug "NTB": Link zur Startseite, behält seinen eigenen Stil
+  (Logo-Schrift, schwarz mit weißer Kontur). Steht NACH den Regeln oben,
+  damit Farbe und Größe dort nicht überschrieben werden.
 */
 .reiter.marke {
+  flex: none;
+  padding: 4px 8px;
+  margin-left: -8px;                /* optisch bündig mit dem Seitenrand */
   font-family: var(--logo-schrift);
   font-size: var(--logo-groesse);
   font-weight: 900;
-  /* Kein "künstliches" Fett: Die Logo-Schrift wird genau so gezeigt,
-     wie sie gestaltet ist. */
-  font-synthesis: none;
-  line-height: 1;                   /* damit die Leiste trotz großer Schrift nicht höher wird */
-  padding: 8px 20px;
+  font-synthesis: none;             /* kein künstliches Fett */
+  line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--logo-farbe);
 
   /*
-    Kontur außen:
-    -webkit-text-stroke zeichnet eine Linie MITTIG auf den Buchstabenrand –
-    halb nach außen, halb nach innen. paint-order: stroke fill malt erst die
-    Kontur und DANN die Füllung darüber. Die innere Hälfte verschwindet so
-    unter der schwarzen Füllung, die Buchstaben werden nicht dünner.
-    Deshalb ist die Linie doppelt so breit wie die sichtbare Kontur.
+    Kontur außen: -webkit-text-stroke zeichnet mittig auf den Rand.
+    paint-order: stroke fill malt die Füllung über die innere Hälfte –
+    die Buchstaben werden nicht dünner. Deshalb doppelte Breite.
   */
   -webkit-text-stroke: calc(var(--logo-kontur-staerke) * 2) var(--logo-kontur-farbe);
   paint-order: stroke fill;
   text-shadow: var(--logo-schatten);
+}
+
+.reiter.marke:hover {
+  color: var(--logo-farbe);
 }
 
 /* Fallback für Browser ohne -webkit-text-stroke:
@@ -406,22 +577,29 @@ button:focus-visible {
 
 
 /* ==========================================================================
-   5. RUNDE SYMBOL-BUTTONS (Hamburger, Dark-Mode)
+   5. SYMBOL-BUTTONS (Hamburger, Dark-Mode, Pfeile)
    ========================================================================== */
 
 .icon-button {
-  width: 40px;
-  height: 40px;
+  flex: none;
+  width: var(--knopf-hoehe);
+  height: var(--knopf-hoehe);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--glas-rand);
-  border-radius: var(--radius-pille);
-  background: var(--glas-hintergrund);
-  box-shadow: inset 0 1px 0 var(--glas-reflex), var(--glas-schatten);
+  padding: 0;
+  border: var(--linie);
+  border-radius: var(--radius-s);
+  background: transparent;
   color: var(--farbe-text);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   cursor: pointer;
+  transition: background-color var(--dauer) ease, border-color var(--dauer) ease;
+}
+
+.icon-button:hover {
+  background: var(--farbe-flaeche-leise);
+  border-color: var(--farbe-rand-stark);
 }
 
 /* Hamburger: drei Striche, auf großen Bildschirmen versteckt */
@@ -441,7 +619,7 @@ button:focus-visible {
 
 
 /* ==========================================================================
-   6. HAUPTBEREICH & KARTEN
+   6. HAUPTBEREICH, KARTEN, BUTTONS
    ========================================================================== */
 
 /* Volle Breite, aber der Inhalt wird nicht breiter als --inhalt-max-breite
@@ -452,13 +630,12 @@ button:focus-visible {
   padding: var(--abstand-xl) var(--abstand-l);
 }
 
-/* "Karte": Box mit Rundung und Schatten – Baustein für alle Tools */
+/* "Karte": Fläche mit feiner Linie statt Schatten – Baustein für alle Tools */
 .karte {
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: var(--linie);
   border-radius: var(--radius-m);
-  box-shadow: var(--schatten);
-  padding: var(--abstand-l);
+  padding: var(--karte-innen);
 }
 
 .karte p {
@@ -476,13 +653,18 @@ button:focus-visible {
   display: block;
   color: inherit;
   text-decoration: none;
-  transition: transform var(--dauer) ease, border-color var(--dauer) ease;
+  transition: border-color var(--dauer) ease, background-color var(--dauer) ease;
+}
+
+.link-karte h2 {
+  margin-bottom: var(--abstand-xs);
 }
 
 .link-karte:hover,
 .link-karte:focus-visible {
-  border-color: var(--farbe-akzent);
-  transform: translateY(var(--anheben));
+  color: inherit;
+  border-color: var(--farbe-rand-stark);
+  background: var(--farbe-flaeche-leise);
 }
 
 .link-karte p {
@@ -527,21 +709,35 @@ button:focus-visible {
   outline: none;
 }
 
-/* Einfacher Button (z. B. in den Einstellungen) */
+/* Einfacher Button: schlicht mit feiner Linie */
 .knopf {
-  height: 40px;
+  height: var(--knopf-hoehe);
   padding: 0 16px;
   font: inherit;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: 1px solid var(--farbe-rand-stark);
   border-radius: var(--radius-s);
   cursor: pointer;
+  transition: background-color var(--dauer) ease, border-color var(--dauer) ease;
 }
 
 .knopf:hover {
+  background: var(--farbe-flaeche-leise);
+}
+
+/* Hauptaktion: in der Akzentfarbe */
+.knopf--haupt {
+  color: var(--farbe-auf-akzent);
+  background: var(--farbe-akzent);
   border-color: var(--farbe-akzent);
+}
+
+.knopf--haupt:hover {
+  background: var(--farbe-akzent-hover);
+  border-color: var(--farbe-akzent-hover);
 }
 
 /* Einstellungen */
@@ -578,12 +774,13 @@ button:focus-visible {
 }
 
 .einstellungen-feld select {
-  padding: 6px 10px;
+  height: var(--knopf-hoehe);
+  padding: 0 10px;
   font: inherit;
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
-  border-radius: var(--radius-pille);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
   cursor: pointer;
 }
 
@@ -593,42 +790,26 @@ button:focus-visible {
 
 /* Zwischenüberschrift innerhalb eines Einstellungs-Blocks */
 .einstellungen-unter {
-  margin: 20px 0 4px;
+  margin: var(--abstand-l) 0 var(--abstand-xs);
   font-size: 1rem;
 }
 
 /* Knopf, der etwas unwiderruflich löscht */
 .knopf--gefahr {
-  color: #d1242f;
+  color: var(--farbe-gefahr);
 }
 
 .knopf--gefahr:hover {
-  border-color: #d1242f;
-}
-
-:root[data-theme="dark"] .knopf--gefahr {
-  color: #ff7b72;
-}
-
-:root[data-theme="dark"] .knopf--gefahr:hover {
-  border-color: #ff7b72;
+  border-color: var(--farbe-gefahr);
 }
 
 .einstellungen-hinweis[data-art="erfolg"] {
-  color: #1a7f37;
+  color: var(--farbe-erfolg);
 }
 
 .einstellungen-hinweis[data-art="fehler"] {
-  color: #d1242f;
+  color: var(--farbe-gefahr);
   font-weight: 500;
-}
-
-:root[data-theme="dark"] .einstellungen-hinweis[data-art="erfolg"] {
-  color: #56d364;
-}
-
-:root[data-theme="dark"] .einstellungen-hinweis[data-art="fehler"] {
-  color: #ff7b72;
 }
 
 /* Platzhaltertext der noch leeren Tools */
@@ -636,89 +817,61 @@ button:focus-visible {
   color: var(--farbe-text-leise);
 }
 
+/* Dialoge (Stundenplan, Zu erledigen): schweben über der Seite –
+   deshalb als einzige mit (sehr weichem) Schatten */
+dialog {
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: var(--linie);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten-schwebend);
+}
 
-/* ==========================================================================
-   6b. MITTELBREITE FENSTER: kompaktere Reiter
-   Mit sieben Reitern wird es in der Leiste eng. Bis 1500 px Breite rücken
-   die Reiter deshalb etwas zusammen, damit sie neben NTB passen.
-   ========================================================================== */
-
-@media (min-width: 1270px) and (max-width: 1499px) {
-  .leiste__nav {
-    column-gap: 2px;
-  }
-
-  .reiter-gruppe {
-    gap: 0;
-  }
-
-  .reiter:not(.marke) {
-    padding: 8px 10px;
-    font-size: 0.92rem;
-  }
+dialog::backdrop {
+  background: var(--farbe-schleier);
 }
 
 
 /* ==========================================================================
-   7. MOBIL / SCHMALE FENSTER (unter 1270 px)
-   Unter 1270 px passen die sieben Reiter nicht mehr links und rechts neben
-   NTB – dann gibt es das Hamburger-Menü. Diese Grenze steht auch in
-   app.js (mobilAbfrage) und muss dort gleich sein.
-   Zwischen 1270 und 1500 px sind die Reiter kompakter (Abschnitt 6b).
+   7. SMARTPHONE / SCHMALE FENSTER (unter 1100 px)
+   Dann passen die sieben Reiter nicht mehr in eine Zeile: NTB links,
+   Hamburger und Dark-Mode-Schalter rechts, das Menü klappt als schlichtes
+   Panel aus. Diese Grenze steht auch in app.js (mobilAbfrage).
    ========================================================================== */
 
-@media (max-width: 1269px) {
+@media (max-width: 1099px) {
 
   .leiste__nav {
+    gap: var(--abstand-s);
     padding: 0 var(--abstand-m);
-  }
-
-  /* In der Leiste: Hamburger links, NTB mittig, Schalter rechts */
-  .hamburger {
-    display: inline-flex;
-    grid-column: 1;
-    grid-row: 1;
-    justify-self: start;
-  }
-
-  .marke--mobil {
-    display: block;
-    grid-column: 2;
-    grid-row: 1;
   }
 
   .reiter.marke {
     font-size: var(--logo-groesse-mobil);
   }
 
-  .marke--desktop {
-    display: none;
+  /* Hamburger schiebt sich (und den Schalter) an den rechten Rand */
+  .hamburger {
+    display: inline-flex;
+    margin-left: auto;
   }
 
-  /* Das Panel wird zum echten Kasten, der unter der Leiste schwebt */
+  /* Das Panel liegt direkt unter der Leiste über die ganze Breite */
   .nav-panel {
-    display: block;
     position: absolute;
-    top: calc(100% + var(--abstand-s));   /* knapp unter der Leiste */
-    left: var(--abstand-m);
-    right: var(--abstand-m);
-    padding: var(--abstand-s);
-    border-radius: var(--radius-m);
-    background:
-      linear-gradient(to bottom, var(--glas-glanz), transparent 40%),
-      var(--glas-hintergrund);
-    -webkit-backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
-    backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
-    border: 1px solid var(--glas-rand);
-    box-shadow: inset 0 1px 0 var(--glas-reflex), var(--glas-schatten);
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: var(--abstand-xs) var(--abstand-m) var(--abstand-m);
+    background: var(--farbe-hintergrund);
+    border-bottom: var(--linie);
+    box-shadow: var(--schatten-schwebend);
 
-    /* Geschlossen: unsichtbar und leicht nach oben verschoben.
+    /* Geschlossen: unsichtbar und minimal nach oben verschoben.
        visibility: hidden macht die Links auch für die Tastatur unerreichbar. */
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-8px);
-    /* visibility springt beim Schließen erst NACH dem Ausblenden um
-       (0s Dauer, aber 200 ms Verzögerung) */
+    transform: translateY(-4px);
     transition:
       opacity var(--dauer) ease,
       transform var(--dauer) ease,
@@ -729,26 +882,37 @@ button:focus-visible {
   .nav-panel.offen {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
-    /* Beim Öffnen wird visibility SOFORT sichtbar (ohne Verzögerung),
-       damit app.js den ersten Reiter direkt fokussieren kann */
+    transform: none;
+    /* visibility SOFORT sichtbar, damit app.js den ersten Reiter fokussieren kann */
     transition-delay: 0s;
   }
 
-  /* Im Panel stehen alle Reiter untereinander und linksbündig */
+  /* Untereinander, großzügige Zeilen mit feiner Trennlinie */
   .reiter-gruppe {
     flex-direction: column;
-    justify-self: stretch;
+    align-items: stretch;
+    gap: 0;
+    max-width: var(--leiste-max-breite);
+    margin: 0 auto;
   }
 
-  .reiter-gruppe--links {
-    margin-bottom: var(--abstand-xs);
+  .reiter-gruppe li + li {
+    border-top: var(--linie);
   }
 
-  /* Im Panel nicht anheben, sonst wackelt die Liste */
-  .reiter:hover,
-  .reiter:focus-visible {
-    transform: none;
+  .reiter-gruppe .reiter {
+    padding: 14px 12px;
+    font-size: 1.05rem;
+  }
+
+  /* Aktiv: feine senkrechte Markierung links statt der Linie darunter */
+  .reiter-gruppe .reiter[aria-current="page"]::after {
+    left: 0;
+    right: auto;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    height: auto;
   }
 
   .hauptbereich {
@@ -756,33 +920,22 @@ button:focus-visible {
   }
 }
 
-
-/* ==========================================================================
-   8. FALLBACK & BARRIEREFREIHEIT
-   ========================================================================== */
-
-/* Browser ohne backdrop-filter: einfarbig halbtransparenter Hintergrund,
-   damit Text auf dem Glas trotzdem gut lesbar bleibt */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .leiste::before {
-    background: var(--leiste-fallback);
-  }
-
-  .reiter::before,
-  .nav-panel,
-  .icon-button {
-    background: var(--glas-fallback);
+/* Smartphone: Überschriften etwas kleiner */
+@media (max-width: 599px) {
+  :root {
+    --titel-groesse-1: 1.65rem;
+    --karte-innen: 20px;
   }
 }
 
-/* Wer im System "Bewegung reduzieren" eingestellt hat: keine Bewegung,
-   nur sanftes Ein- und Ausblenden */
+
+/* ==========================================================================
+   8. BARRIEREFREIHEIT
+   ========================================================================== */
+
+/* Wer im System "Bewegung reduzieren" eingestellt hat: keine Bewegung */
 @media (prefers-reduced-motion: reduce) {
-  .reiter:hover,
-  .reiter:focus-visible,
-  .nav-panel,
-  .link-karte:hover,
-  .link-karte:focus-visible {
+  .nav-panel {
     transform: none !important;
   }
 }

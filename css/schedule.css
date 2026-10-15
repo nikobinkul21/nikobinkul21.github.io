@@ -1,6 +1,7 @@
 /* ==========================================================================
    schedule.css – Aussehen von Stundenplan/Termine
-   Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
+   Größen stehen in den Variablen direkt hier oben, alle Farben zentral in
+   style.css (Abschnitt 1b: Termin, Vorlesung, Raster).
    ========================================================================== */
 
 :root {
@@ -10,34 +11,6 @@
   --sp-abstand: var(--abstand-s);         /* allgemeiner Abstand */
   --sp-eintrag-radius: 6px;
   --sp-eintrag-abstand: 2px;              /* Luft zwischen Einträgen und zum Spaltenrand */
-
-  /* Farben der Arten: Hintergrund, Rand links, Text */
-  --sp-termin-hintergrund: #dceaff;
-  --sp-termin-rand: #3b82f6;
-  --sp-termin-text: #1e3a6e;
-  --sp-vorlesung-hintergrund: #efe4ff;
-  --sp-vorlesung-rand: #8b5cf6;
-  --sp-vorlesung-text: #44267a;
-
-  /* Raster */
-  --sp-linie: rgba(0, 0, 0, 0.07);        /* Stundenlinien */
-  --sp-heute-hintergrund: rgba(46, 170, 80, 0.06); /* Spalte von heute */
-  --sp-heute-akzent: #1f8a43;             /* Datum von heute */
-  --sp-jetzt-farbe: #e5484d;              /* Linie für die aktuelle Uhrzeit */
-}
-
-:root[data-theme="dark"] {
-  --sp-termin-hintergrund: #1f3354;
-  --sp-termin-rand: #60a5fa;
-  --sp-termin-text: #dbeafe;
-  --sp-vorlesung-hintergrund: #2f2550;
-  --sp-vorlesung-rand: #a78bfa;
-  --sp-vorlesung-text: #ede9fe;
-
-  --sp-linie: rgba(255, 255, 255, 0.07);
-  --sp-heute-hintergrund: rgba(70, 200, 105, 0.07);
-  --sp-heute-akzent: #5fd884;
-  --sp-jetzt-farbe: #ff6b6f;
 }
 
 
@@ -83,32 +56,44 @@
   font-weight: 600;
 }
 
+/* Gleiches Aussehen wie .knopf aus style.css */
 .sp-knopf {
-  height: 40px;
+  height: var(--knopf-hoehe);
   padding: 0 16px;
   font: inherit;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
-  border-radius: var(--radius-pille);
-  box-shadow: var(--schatten);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color var(--dauer) ease, border-color var(--dauer) ease;
 }
 
 .sp-knopf:hover {
-  border-color: var(--farbe-akzent);
+  background: var(--farbe-flaeche-leise);
 }
 
+/* Hauptaktion in der Akzentfarbe */
 .sp-knopf--haupt {
-  background: var(--sp-termin-rand);
-  border-color: var(--sp-termin-rand);
-  color: #fff;
+  background: var(--farbe-akzent);
+  border-color: var(--farbe-akzent);
+  color: var(--farbe-auf-akzent);
+}
+
+.sp-knopf--haupt:hover {
+  background: var(--farbe-akzent-hover);
+  border-color: var(--farbe-akzent-hover);
 }
 
 .sp-knopf--gefahr {
-  color: var(--sp-jetzt-farbe);
+  color: var(--farbe-gefahr);
+}
+
+.sp-knopf--gefahr:hover {
+  border-color: var(--farbe-gefahr);
 }
 
 
@@ -120,9 +105,8 @@
 
 .sp-woche {
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: var(--linie);
   border-radius: var(--radius-m);
-  box-shadow: var(--schatten);
   overflow: hidden;
 }
 
@@ -305,15 +289,15 @@
 
 /* Farben je Art */
 .art-termin.sp-eintrag {
-  background-color: var(--sp-termin-hintergrund);
-  border-left-color: var(--sp-termin-rand);
-  color: var(--sp-termin-text);
+  background-color: var(--farbe-termin-flaeche);
+  border-left-color: var(--farbe-termin);
+  color: var(--farbe-termin-text);
 }
 
 .art-vorlesung.sp-eintrag {
-  background-color: var(--sp-vorlesung-hintergrund);
-  border-left-color: var(--sp-vorlesung-rand);
-  color: var(--sp-vorlesung-text);
+  background-color: var(--farbe-vorlesung-flaeche);
+  border-left-color: var(--farbe-vorlesung);
+  color: var(--farbe-vorlesung-text);
 }
 
 
@@ -373,12 +357,12 @@
     height: 5px;
     margin-top: 2px;
     border-radius: 50%;
-    background: var(--sp-termin-rand);
+    background: var(--farbe-termin);
   }
 
   .sp-tagwahl-knopf[aria-pressed="true"] {
-    border-color: var(--sp-termin-rand);
-    box-shadow: 0 0 0 1px var(--sp-termin-rand);
+    border-color: var(--farbe-akzent);
+    box-shadow: 0 0 0 1px var(--farbe-akzent);
   }
 
   /* Nur Zeitachse + der gewählte Tag */
@@ -400,22 +384,11 @@
    FORMULAR (Dialog)
    ========================================================================== */
 
+/* Farben, Linie, Schatten und Abdunklung kommen aus style.css (dialog) */
 .sp-dialog {
   width: min(460px, calc(100vw - 2 * var(--abstand-m)));
   max-height: calc(100dvh - 2 * var(--abstand-m));
-  padding: var(--abstand-l);
-  color: var(--farbe-text);
-  background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
-  border-radius: var(--radius-m);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-}
-
-/* Abgedunkelter, leicht verschwommener Hintergrund hinter dem Dialog */
-.sp-dialog::backdrop {
-  background: var(--farbe-overlay, rgba(0, 0, 0, 0.4));
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
+  padding: var(--karte-innen);
 }
 
 .sp-formular {
@@ -425,16 +398,16 @@
 }
 
 .sp-dialog-titel {
-  margin: 0;
-  font-size: 1.2rem;
+  margin: 0 0 var(--abstand-xs);
+  font-size: 1.35rem;
 }
 
 .sp-serien-hinweis {
   margin: 0;
   padding: 8px 10px;
   border-radius: var(--radius-s);
-  background: var(--sp-vorlesung-hintergrund);
-  color: var(--sp-vorlesung-text);
+  background: var(--farbe-vorlesung-flaeche);
+  color: var(--farbe-vorlesung-text);
   font-size: 0.85rem;
 }
 
@@ -452,17 +425,18 @@
   font-weight: 400;
 }
 
+/* Ruhige Eingabefelder; der Fokusrahmen kommt aus style.css */
 .sp-feld input,
 .sp-feld select,
 .sp-feld textarea {
-  min-height: 40px;
+  min-height: var(--knopf-hoehe);
   padding: 6px 10px;
   font: inherit;
   font-size: 1rem;
   font-weight: 400;
   color: var(--farbe-text);
-  background: var(--farbe-hintergrund);
-  border: 1px solid var(--farbe-rand);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand-stark);
   border-radius: var(--radius-s);
 }
 
@@ -471,8 +445,8 @@
 }
 
 .sp-feld [aria-invalid="true"] {
-  border-color: var(--sp-jetzt-farbe);
-  box-shadow: 0 0 0 1px var(--sp-jetzt-farbe);
+  border-color: var(--farbe-gefahr);
+  box-shadow: 0 0 0 1px var(--farbe-gefahr);
 }
 
 /* Art: zwei Auswahl-"Pillen" nebeneinander */
@@ -495,22 +469,22 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: var(--radius-pille);
-  border: 1px solid var(--farbe-rand);
+  border: 1px solid var(--farbe-rand-stark);
   color: var(--farbe-text);
   font-weight: 500;
   cursor: pointer;
 }
 
 .sp-art-wahl.art-termin:has(input:checked) {
-  background: var(--sp-termin-hintergrund);
-  border-color: var(--sp-termin-rand);
-  color: var(--sp-termin-text);
+  background: var(--farbe-termin-flaeche);
+  border-color: var(--farbe-termin);
+  color: var(--farbe-termin-text);
 }
 
 .sp-art-wahl.art-vorlesung:has(input:checked) {
-  background: var(--sp-vorlesung-hintergrund);
-  border-color: var(--sp-vorlesung-rand);
-  color: var(--sp-vorlesung-text);
+  background: var(--farbe-vorlesung-flaeche);
+  border-color: var(--farbe-vorlesung);
+  color: var(--farbe-vorlesung-text);
 }
 
 .sp-haken {
@@ -529,7 +503,7 @@
 
 .sp-fehler {
   margin: 0;
-  color: var(--sp-jetzt-farbe);
+  color: var(--farbe-gefahr);
   font-weight: 500;
 }
 

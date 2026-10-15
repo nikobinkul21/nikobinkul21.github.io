@@ -1,6 +1,7 @@
 /* ==========================================================================
    sudoku.css – Aussehen des Sudokus
-   Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
+   Größen und Zeiten stehen in den Variablen direkt hier oben, die Farben
+   des Gitters zentral in style.css (Abschnitt 1b, "Sudoku-Gitter").
    ========================================================================== */
 
 :root {
@@ -26,67 +27,24 @@
   --sudoku-taste-hoehe-gross: 64px;        /* Höhe der Tasten neben dem Gitter (Computer) */
   --sudoku-zahlenfeld-breite: 216px;       /* Breite des Zahlenfelds neben dem Gitter */
 
-  /* Linien */
+  /* Linien (Farben: style.css) */
   --sudoku-linie-duenn: 1px;               /* zwischen einzelnen Feldern */
   --sudoku-linie-dick: 3px;                /* um die 3×3-Blöcke und außen */
-  --sudoku-linie-duenn-farbe: #d5d9e0;
-  --sudoku-linie-dick-farbe: #3b4250;
-
-  /* Felder */
-  --sudoku-feld: #ffffff;                  /* normaler Hintergrund */
-  --sudoku-verwandt: #eef1f7;              /* gleiche Zeile, Spalte, Block */
-  --sudoku-gleich: #d9e1fb;                /* Felder mit derselben Zahl */
-  --sudoku-ausgewaehlt: #bccafa;           /* das gewählte Feld */
 
   /* Ziffern */
-  --sudoku-vorgabe-farbe: #1f2328;         /* vorgegebene Zahlen */
   --sudoku-vorgabe-gewicht: 700;           /* … in fett */
-  --sudoku-eingabe-farbe: #3f5fe0;         /* deine eigenen Zahlen */
   --sudoku-eingabe-gewicht: 500;
-  --sudoku-fehler-farbe: #d1242f;          /* falsche Eingaben */
-  --sudoku-fehler-hintergrund: #fde8e8;
-
-  /* Meldungen */
-  --sudoku-erfolg-farbe: #1a7f37;
 
   /* Fertige Ziffern im Zahlenfeld (alle 9 richtig gesetzt) */
-  --sudoku-fertig-haken-farbe: #1a7f37;    /* Farbe des Hakens */
   --sudoku-fertig-deckkraft: 0.4;          /* wie stark die Ziffer ausgegraut ist (1 = gar nicht) */
 
   /* Erfolgsanimationen (siehe Abschnitt "ERFOLGSANIMATIONEN" weiter unten) */
-  --sudoku-effekt-farbe: #4f6ef7;                     /* Farbe von Zahl und Rand beim Aufleuchten */
-  --sudoku-effekt-schein: rgba(79, 110, 247, 0.22);   /* Einfärbung des Felds */
-  --sudoku-effekt-schein-stark: rgba(79, 110, 247, 0.34); /* … beim gelösten Rätsel */
   --sudoku-effekt-dauer: 450ms;                       /* so lange leuchtet EIN Feld */
   --sudoku-effekt-dauer-stark: 600ms;                 /* … beim gelösten Rätsel */
   --sudoku-effekt-schritt: 45ms;                      /* Verzögerung pro Feld Abstand = Tempo der Welle */
   --sudoku-effekt-skalierung: 1.25;                   /* so stark wächst die Zahl (1 = gar nicht) */
   --sudoku-effekt-skalierung-stark: 1.45;             /* … beim gelösten Rätsel */
 }
-
-/* Dunkles Design: nur die Farben ändern sich */
-:root[data-theme="dark"] {
-  --sudoku-linie-duenn-farbe: #343944;
-  --sudoku-linie-dick-farbe: #8a93a3;
-
-  --sudoku-feld: #1f2228;
-  --sudoku-verwandt: #2a2f39;
-  --sudoku-gleich: #2f3a5c;
-  --sudoku-ausgewaehlt: #4a5fa8;
-
-  --sudoku-vorgabe-farbe: #e6e8eb;
-  --sudoku-eingabe-farbe: #8fa5ff;
-  --sudoku-fehler-farbe: #ff7b72;
-  --sudoku-fehler-hintergrund: #47262a;
-
-  --sudoku-erfolg-farbe: #56d364;
-  --sudoku-fertig-haken-farbe: #56d364;
-
-  --sudoku-effekt-farbe: #a3b5ff;
-  --sudoku-effekt-schein: rgba(123, 147, 255, 0.26);
-  --sudoku-effekt-schein-stark: rgba(123, 147, 255, 0.40);
-}
-
 
 /* ==========================================================================
    AUFBAU
@@ -130,10 +88,9 @@
   font: inherit;
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: 1px solid var(--farbe-rand-stark);
   border-radius: var(--radius-s);
   padding: 6px 12px;
-  box-shadow: var(--schatten);
 }
 
 .sudoku-knopf {
@@ -142,7 +99,7 @@
 }
 
 .sudoku-knopf:hover:not(:disabled) {
-  border-color: var(--farbe-akzent);
+  background: var(--farbe-flaeche-leise);
 }
 
 .sudoku-auswahl:disabled,
@@ -152,7 +109,7 @@
 }
 
 .sudoku-auswahl:focus-visible {
-  outline: 2px solid var(--farbe-akzent);
+  outline: 2px solid var(--farbe-fokus);
   outline-offset: 2px;
 }
 
@@ -418,14 +375,14 @@
   font-weight: 500;
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: var(--linie);
   border-radius: var(--radius-s);
-  box-shadow: var(--schatten);
   cursor: pointer;
 }
 
 .sudoku-taste:hover:not(:disabled) {
-  border-color: var(--farbe-akzent);
+  background: var(--farbe-flaeche-leise);
+  border-color: var(--farbe-rand-stark);
 }
 
 /* Ziffer ist überall richtig gesetzt: ausgegraut + grüner Haken.

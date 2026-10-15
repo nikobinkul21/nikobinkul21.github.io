@@ -1,6 +1,8 @@
 /* ==========================================================================
    sudoku-rpg.css – Sudoku-Abenteuer: Moduswahl, Kampffenster, Walze
    Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
+   Bewusste Ausnahme vom Design der Seite: Der Pixel-Stil behält seine
+   eigenen Farben. Moduswahl und Gitter nutzen die Variablen aus style.css.
    ========================================================================== */
 
 :root {
@@ -113,7 +115,8 @@
 
 .sudoku-modus h3 {
   margin: 0 0 var(--abstand-s);
-  font-size: 1.15rem;
+  font-family: var(--schrift-titel);
+  font-size: 1.2rem;
 }
 
 .sudoku-modus p {

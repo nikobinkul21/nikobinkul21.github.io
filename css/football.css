@@ -4,8 +4,9 @@
    Erklärung · drei große Knöpfe. Die Höhe setzt darstellung.js
    (--fb-hoehe), damit alles ohne Scrollen auf den Bildschirm passt –
    auch auf dem Smartphone im Hochformat. Farben der Oberfläche kommen
-   aus den Variablen des Hubs (hell und dunkel), die Szene hat ihre
-   eigenen Farben (Arena).
+   aus den Variablen des Hubs (hell und dunkel, style.css), die Szene hat
+   ihre eigenen Farben (Arena) – bewusste Ausnahme: Der Pixel-Stil behält
+   seine Farbigkeit.
    ========================================================================== */
 
 .fb {

@@ -45,14 +45,14 @@ const navPanel = document.getElementById("nav-panel");
 const menuButton = document.getElementById("menu-button");
 const themeButton = document.getElementById("theme-button");
 const themeSymbol = document.getElementById("theme-symbol");
-// Alle Reiter, die zu einer Ansicht führen – auch beide NTB-Links
+// Alle Reiter, die zu einer Ansicht führen – auch der NTB-Link
 const reiterLinks = document.querySelectorAll(".reiter[data-view]");
 // Nur die Reiter im ausklappbaren Panel (für den Fokus auf dem Handy)
 const panelLinks = navPanel.querySelectorAll(".reiter-gruppe .reiter");
 
 // Ab hier gibt es das Hamburger-Menü – dieselbe Grenze wie in style.css
-// (Abschnitt 7: @media max-width: 1269px)
-const mobilAbfrage = window.matchMedia("(max-width: 1269px)");
+// (Abschnitt 7: @media max-width: 1099px)
+const mobilAbfrage = window.matchMedia("(max-width: 1099px)");
 
 
 /* ==========================================================================
@@ -90,7 +90,7 @@ function zeigeAnsicht(name, unterseite, fokusSetzen) {
   }
 
   // Aktiven Reiter markieren. aria-current="page" sagt Screenreadern
-  // "hier bist du gerade" – und das CSS zeigt dafür das abgeschwächte Glas.
+  // "hier bist du gerade" – und das CSS zeigt dafür die feine Markierung.
   reiterLinks.forEach(function (link) {
     if (link.dataset.view === name) {
       link.setAttribute("aria-current", "page");
@@ -199,7 +199,7 @@ document.addEventListener("keydown", function (event) {
   }
 });
 
-// Wird das Fenster breiter als 1270 px, offenes Menü zurücksetzen
+// Wird das Fenster breiter als 1100 px, offenes Menü zurücksetzen
 mobilAbfrage.addEventListener("change", function () {
   if (!mobilAbfrage.matches && menueIstOffen()) {
     menueSchliessen(false);

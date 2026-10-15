@@ -1,7 +1,8 @@
 /* ==========================================================================
    media.css – Aussehen von "Filme/Serien"
-   Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
-   Allgemeine Bausteine (Karten, "← Übersicht", Kopfzeile) kommen aus style.css.
+   Größen stehen in den Variablen direkt hier oben. Farben und Schriften
+   kommen aus style.css, ebenso die allgemeinen Bausteine (Karten,
+   "← Übersicht", Kopfzeile).
    ========================================================================== */
 
 :root {
@@ -9,39 +10,14 @@
   --media-max-breite: 720px;               /* so breit wird eine Kategorie-Seite höchstens */
   --media-abstand: var(--abstand-m);       /* Abstand zwischen den Bereichen */
   --media-eintrag-abstand: var(--abstand-s); /* Abstand zwischen den Listeneinträgen */
-  --media-eintrag-innen: 12px 16px;        /* Innenabstand eines Eintrags (oben/unten links/rechts) */
+  --media-eintrag-innen: 14px 20px;        /* Innenabstand eines Eintrags (oben/unten links/rechts) */
   --media-knopf-hoehe: 40px;               /* Höhe von Buttons, Eingabe und Auswahl */
 
   /* Bewertung (die Zahl links neben dem Titel) */
   --media-bewertung-breite: 3.25rem;
   --media-bewertung-schrift: 1.25rem;
-  --media-bewertung-hintergrund: #eaeefe;
-  --media-bewertung-farbe: #3f5fe0;
-
-  /* Umschalter Watchlist / Watched */
-  --media-tabs-hintergrund: rgba(0, 0, 0, 0.05);
-  --media-tab-aktiv-hintergrund: var(--farbe-flaeche);
-
-  /* Buttons */
-  --media-haupt-hintergrund: #4f6ef7;      /* "Hinzufügen", "Geschaut", "Speichern" */
-  --media-haupt-text: #ffffff;
-  --media-gefahr-farbe: #d1242f;           /* "Löschen" */
-
-  /* Hinweise */
-  --media-erfolg-farbe: #1a7f37;
-  --media-fehler-farbe: #d1242f;
-}
-
-/* Dunkles Design: nur die Farben ändern sich */
-:root[data-theme="dark"] {
-  --media-bewertung-hintergrund: #2f3a5c;
-  --media-bewertung-farbe: #a3b5ff;
-  --media-tabs-hintergrund: rgba(255, 255, 255, 0.06);
-  --media-tab-aktiv-hintergrund: #2e323a;
-  --media-haupt-hintergrund: #5b78f5;
-  --media-gefahr-farbe: #ff7b72;
-  --media-erfolg-farbe: #56d364;
-  --media-fehler-farbe: #ff7b72;
+  --media-bewertung-hintergrund: var(--farbe-akzent-leise);
+  --media-bewertung-farbe: var(--farbe-akzent);
 }
 
 
@@ -76,14 +52,14 @@
   gap: var(--abstand-xs);
   padding: var(--abstand-xs);
   margin: var(--abstand-s) 0 var(--media-abstand);
-  border-radius: var(--radius-pille);
-  background: var(--media-tabs-hintergrund);
+  border-radius: var(--radius-s);
+  background: var(--farbe-flaeche-leise);
 }
 
 .media-tab {
   flex: 1;                                 /* beide gleich breit */
   padding: 8px 12px;
-  border-radius: var(--radius-pille);
+  border-radius: calc(var(--radius-s) - 2px);
   text-align: center;
   color: var(--farbe-text-leise);
   font-weight: 500;
@@ -94,11 +70,11 @@
   color: var(--farbe-text);
 }
 
-/* Aktive Unterseite: helle "Pille" mit Schatten */
+/* Aktive Unterseite: helle Fläche mit feiner Linie */
 .media-tab[aria-current="page"] {
-  background: var(--media-tab-aktiv-hintergrund);
+  background: var(--farbe-flaeche);
   color: var(--farbe-text);
-  box-shadow: var(--schatten);
+  box-shadow: 0 0 0 1px var(--farbe-rand);
 }
 
 /* Formular zum Hinzufügen: Eingabe, (Bewertung), Button */
@@ -124,15 +100,11 @@
   font: inherit;
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: 1px solid var(--farbe-rand-stark);
   border-radius: var(--radius-s);
 }
 
-.media-eingabe:focus-visible,
-.media-auswahl:focus-visible {
-  outline: 2px solid var(--farbe-akzent);
-  outline-offset: 1px;
-}
+/* Der Fokusrahmen der Eingaben kommt aus style.css */
 
 .media-knopf {
   cursor: pointer;
@@ -141,26 +113,27 @@
 }
 
 .media-knopf:hover {
-  border-color: var(--farbe-akzent);
+  background: var(--farbe-flaeche-leise);
 }
 
-/* Hauptaktion: farbig gefüllt */
+/* Hauptaktion: in der Akzentfarbe */
 .media-knopf--haupt {
-  background: var(--media-haupt-hintergrund);
-  border-color: var(--media-haupt-hintergrund);
-  color: var(--media-haupt-text);
+  background: var(--farbe-akzent);
+  border-color: var(--farbe-akzent);
+  color: var(--farbe-auf-akzent);
 }
 
 .media-knopf--haupt:hover {
-  filter: brightness(1.08);
+  background: var(--farbe-akzent-hover);
+  border-color: var(--farbe-akzent-hover);
 }
 
 .media-knopf--gefahr {
-  color: var(--media-gefahr-farbe);
+  color: var(--farbe-gefahr);
 }
 
 .media-knopf--gefahr:hover {
-  border-color: var(--media-gefahr-farbe);
+  border-color: var(--farbe-gefahr);
 }
 
 /* Hinweiszeile (Fehler, Bestätigungen). Ohne Text nimmt sie keinen Platz ein. */
@@ -174,11 +147,11 @@
 }
 
 .media-hinweis[data-art="erfolg"] {
-  color: var(--media-erfolg-farbe);
+  color: var(--farbe-erfolg);
 }
 
 .media-hinweis[data-art="fehler"] {
-  color: var(--media-fehler-farbe);
+  color: var(--farbe-gefahr);
   font-weight: 500;
 }
 
@@ -205,9 +178,8 @@
   gap: var(--abstand-s) var(--abstand-m);
   padding: var(--media-eintrag-innen);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: var(--linie);
   border-radius: var(--radius-m);
-  box-shadow: var(--schatten);
 }
 
 .media-bewertung {
@@ -218,7 +190,7 @@
   background: var(--media-bewertung-hintergrund);
   color: var(--media-bewertung-farbe);
   font-size: var(--media-bewertung-schrift);
-  font-weight: 700;
+  font-weight: 600;
   text-align: center;
   font-variant-numeric: tabular-nums;      /* alle Ziffern gleich breit → saubere Spalte */
 }

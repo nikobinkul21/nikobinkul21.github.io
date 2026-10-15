@@ -3,35 +3,13 @@
    Links die Skala (Farbverlauf von Rot nach Grün) mit den fünf Stufen,
    rechts daneben die offenen Aufgaben je Stufe. Darüber "Überfällig",
    darunter der einklappbare Bereich "Erledigt".
-   Die Farben der Stufen stehen als Variablen hier oben – hell und dunkel.
+   Die Farben der Stufen (Prioritäten) stehen zentral in style.css
+   (Abschnitt 1b) – hell und dunkel. Sie behalten bewusst ihre Farbigkeit.
    ========================================================================== */
 
 :root {
-  --todo-ueberfaellig: #c81e1e;
-  --todo-sehr-wichtig: #e5383b;
-  --todo-wichtig: #f08a24;
-  --todo-bald: #e9b80f;
-  --todo-entspannt: #8bc34a;
-  --todo-locker: #2e9e4f;
-
-  --todo-erledigt: #2e9e4f;           /* grüner Knopf "Erledigt" */
-  --todo-offen: #d63b3b;              /* roter Knopf "Noch offen" */
-  --todo-ueberfaellig-hintergrund: #fdecec;
-  --todo-skala-breite: 12px;
+  --todo-skala-breite: 8px;
   --todo-namen-breite: 10.5rem;       /* Spalte der Skala mit den Beschriftungen */
-}
-
-:root[data-theme="dark"] {
-  --todo-ueberfaellig: #ff5a5a;
-  --todo-sehr-wichtig: #ff6b6b;
-  --todo-wichtig: #ffa04d;
-  --todo-bald: #f5cf3d;
-  --todo-entspannt: #a3d977;
-  --todo-locker: #4cc46d;
-
-  --todo-erledigt: #4cc46d;
-  --todo-offen: #ff6b6b;
-  --todo-ueberfaellig-hintergrund: #3a1d20;
 }
 
 /* Jede Stufe bekommt ihre Farbe über data-stufe */
@@ -57,8 +35,16 @@
   gap: var(--abstand-m);
 }
 
+/* "+ Neue Aufgabe" ist die Hauptaktion: in der Akzentfarbe */
 .todo-neu {
-  font-weight: 600;
+  color: var(--farbe-auf-akzent);
+  background: var(--farbe-akzent);
+  border-color: var(--farbe-akzent);
+}
+
+.todo-neu:hover {
+  background: var(--farbe-akzent-hover);
+  border-color: var(--farbe-akzent-hover);
 }
 
 .todo-zusammenfassung {
@@ -69,8 +55,8 @@
 /* ---------- Überfällig ---------- */
 
 .todo-ueberfaellig {
-  padding: var(--abstand-m);
-  border: 2px solid var(--todo-ueberfaellig);
+  padding: var(--abstand-m) var(--abstand-l);
+  border: 1px solid var(--todo-ueberfaellig);
   border-radius: var(--radius-m);
   background: var(--todo-ueberfaellig-hintergrund);
 }
@@ -186,10 +172,9 @@
   min-width: 0;
   overflow: hidden;
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
-  border-left: 6px solid var(--stufe-farbe, var(--farbe-rand));
+  border: var(--linie);
+  border-left: 4px solid var(--stufe-farbe, var(--farbe-rand));
   border-radius: var(--radius-s);
-  box-shadow: var(--schatten);
 }
 
 /* Der Inhalt ist ein Knopf: Klick öffnet die Aufgabe zum Bearbeiten */
@@ -199,7 +184,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  padding: 10px 12px;
+  padding: 12px 16px;
   font: inherit;
   color: inherit;
   text-align: left;
@@ -213,12 +198,12 @@
 }
 
 .todo-karte-inhalt:focus-visible {
-  outline: 2px solid var(--farbe-akzent);
+  outline: 2px solid var(--farbe-fokus);
   outline-offset: -2px;
 }
 
 .todo-karte-titel {
-  font-weight: 700;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
@@ -271,7 +256,7 @@
   height: 38px;
   padding: 0;
   background: transparent;
-  border: 2px solid currentColor;
+  border: 1.5px solid currentColor;
   border-radius: var(--radius-s);
   cursor: pointer;
   opacity: 0.45;
@@ -297,7 +282,7 @@
 }
 
 .todo-status-knopf:focus-visible {
-  outline: 2px solid var(--farbe-akzent);
+  outline: 2px solid var(--farbe-fokus);
   outline-offset: 2px;
 }
 
@@ -305,10 +290,10 @@
   transform: scale(0.94);
 }
 
-/* Aktiver Zustand: gefüllt, weißes Symbol, voll deckend */
+/* Aktiver Zustand: gefüllt, helles Symbol, voll deckend */
 .todo-status-knopf[aria-pressed="true"] {
   opacity: 1;
-  color: #fff;
+  color: var(--farbe-flaeche);
   cursor: default;
 }
 
@@ -334,9 +319,9 @@
 /* ---------- Bereich "Erledigt" ---------- */
 
 .todo-erledigt {
-  padding: var(--abstand-s) var(--abstand-m);
+  padding: var(--abstand-s) var(--abstand-l);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: var(--linie);
   border-radius: var(--radius-m);
 }
 
@@ -382,7 +367,7 @@
   transition: height 0.38s ease, opacity 0.3s ease, transform 0.38s ease, margin 0.38s ease;
   opacity: 0;
   margin-bottom: calc(-1 * var(--abstand-s));
-  border-width: 0 0 0 6px;
+  border-width: 0 0 0 4px;
 }
 
 .todo-karte.geht-runter { transform: translateY(16px) scale(0.98); }
@@ -399,21 +384,11 @@
 
 /* ---------- Dialog ---------- */
 
+/* Farben, Linie, Schatten und Abdunklung kommen aus style.css (dialog) */
 .todo-dialog {
   width: min(460px, calc(100vw - 2 * var(--abstand-m)));
   max-height: calc(100dvh - 2 * var(--abstand-m));
-  padding: var(--abstand-l);
-  color: var(--farbe-text);
-  background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
-  border-radius: var(--radius-m);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-}
-
-.todo-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.4);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
+  padding: var(--karte-innen);
 }
 
 .todo-formular {
@@ -423,8 +398,8 @@
 }
 
 .todo-dialog-titel {
-  margin: 0;
-  font-size: 1.2rem;
+  margin: 0 0 var(--abstand-xs);
+  font-size: 1.35rem;
 }
 
 .todo-feld {
@@ -445,17 +420,18 @@
   font-weight: 400;
 }
 
+/* Ruhige Eingabefelder; der Fokusrahmen kommt aus style.css */
 .todo-feld input,
 .todo-feld select,
 .todo-feld textarea {
-  min-height: 40px;
+  min-height: var(--knopf-hoehe);
   padding: 6px 10px;
   font: inherit;
   font-size: 1rem;
   font-weight: 400;
   color: var(--farbe-text);
-  background: var(--farbe-hintergrund);
-  border: 1px solid var(--farbe-rand);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand-stark);
   border-radius: var(--radius-s);
 }
 
@@ -465,8 +441,8 @@
 
 .todo-feld [aria-invalid="true"],
 .todo-arten[aria-invalid="true"] .todo-art-wahl {
-  border-color: var(--todo-offen);
-  box-shadow: 0 0 0 1px var(--todo-offen);
+  border-color: var(--farbe-gefahr);
+  box-shadow: 0 0 0 1px var(--farbe-gefahr);
 }
 
 .todo-arten {
@@ -489,7 +465,7 @@
   padding: 6px 12px;
   color: var(--farbe-text);
   font-weight: 500;
-  border: 1px solid var(--farbe-rand);
+  border: 1px solid var(--farbe-rand-stark);
   border-radius: var(--radius-pille);
   cursor: pointer;
 }
@@ -501,7 +477,7 @@
 
 .todo-fehler {
   margin: 0;
-  color: var(--todo-offen);
+  color: var(--farbe-gefahr);
   font-weight: 500;
 }
 
@@ -520,30 +496,42 @@
   flex: 1;
 }
 
+/* Gleiches Aussehen wie .knopf aus style.css */
 .todo-knopf {
-  height: 40px;
+  height: var(--knopf-hoehe);
   padding: 0 16px;
   font: inherit;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: 1px solid var(--farbe-rand-stark);
   border-radius: var(--radius-s);
   cursor: pointer;
+  transition: background-color var(--dauer) ease, border-color var(--dauer) ease;
 }
 
 .todo-knopf:hover {
-  border-color: var(--farbe-akzent);
+  background: var(--farbe-flaeche-leise);
 }
 
 .todo-knopf--haupt {
-  color: #fff;
+  color: var(--farbe-auf-akzent);
   background: var(--farbe-akzent);
   border-color: var(--farbe-akzent);
 }
 
+.todo-knopf--haupt:hover {
+  background: var(--farbe-akzent-hover);
+  border-color: var(--farbe-akzent-hover);
+}
+
 .todo-knopf--gefahr {
-  color: var(--todo-offen);
+  color: var(--farbe-gefahr);
+}
+
+.todo-knopf--gefahr:hover {
+  border-color: var(--farbe-gefahr);
 }
 
 .todo-knopf[hidden] {
@@ -554,12 +542,12 @@
 
 @media (max-width: 700px) {
   .todo-raster {
-    grid-template-columns: 6px minmax(0, 1fr);
+    grid-template-columns: 4px minmax(0, 1fr);
     column-gap: var(--abstand-s);
   }
 
   .todo-skala {
-    width: 6px;
+    width: 4px;
   }
 
   .todo-stufe-name {

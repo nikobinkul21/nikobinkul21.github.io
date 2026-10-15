@@ -1,6 +1,9 @@
 /* ==========================================================================
    calendar.css – Aussehen des Kalenders
-   Alles, was du anpassen willst, steht in den Variablen direkt hier oben.
+   Größen stehen in den Variablen direkt hier oben. Die Farben der
+   Markierungen (vergangene Tage, heute, Termine) stehen zentral in
+   style.css (Abschnitt 1b) – sie behalten bewusst ihre Farbigkeit.
+   Der Glas-Effekt der Markierungen bleibt vorerst erhalten.
    ========================================================================== */
 
 :root {
@@ -11,30 +14,11 @@
   --kal-tag-radius: 7px;                    /* Rundung der roten Tagesfelder */
   --kal-heute-groesse: 2.1em;               /* Durchmesser des grünen Glas-Kreises (relativ zur Zahl) */
 
-  /* Vergangene Tage: rote Zahl auf sehr dezentem rotem Grund */
-  --kal-vergangen-text: #c0383f;
-  --kal-vergangen-hintergrund: rgba(209, 36, 47, 0.07);
-
-  /* Heute: grünes Glas (gleicher Aufbau wie das Glas der Navigation) */
-  --kal-heute-glas: rgba(46, 170, 80, 0.30);          /* halbtransparentes Grün */
-  --kal-heute-glanz: rgba(255, 255, 255, 0.45);       /* Glanz in der oberen Hälfte */
-  --kal-heute-rand: rgba(255, 255, 255, 0.75);        /* feiner heller Rand */
-  --kal-heute-reflex: rgba(255, 255, 255, 0.9);       /* Lichtkante oben */
-  --kal-heute-leuchten: rgba(46, 170, 80, 0.45);      /* weiches grünes Leuchten außen */
-  --kal-heute-text: #0d4a1f;                          /* Zahl: dunkles Grün, gut lesbar */
+  /* Glas der Markierungen */
   --kal-heute-blur: 10px;
   --kal-heute-saettigung: 180%;
-  --kal-heute-fallback: rgba(46, 170, 80, 0.35);      /* Browser ohne backdrop-filter */
-
-  /* Tage mit Termin: hellblauer Glas-Kreis (gleicher Aufbau wie "heute") */
-  --kal-termin-glas: rgba(90, 170, 255, 0.28);
-  --kal-termin-rand: rgba(255, 255, 255, 0.75);
-  --kal-termin-leuchten: rgba(90, 170, 255, 0.45);
-  --kal-termin-ring: #5aa9ff;                         /* Ring um "heute", wenn heute ein Termin ist */
-  --kal-termin-glas-vergangen: rgba(90, 170, 255, 0.13); /* vergangene Termine: Kreis abgeschwächt */
 
   /* Vorschau-Panel beim Hovern / Antippen */
-  --kal-vorschau-hintergrund: rgba(255, 255, 255, 0.78);
   --kal-vorschau-breite: 260px;
 
   /* Desktop: ganzes Jahr ohne Scrollen (siehe Abschnitt "DESKTOP" unten) */
@@ -42,29 +26,6 @@
   --kal-desktop-schrift: clamp(0.7rem, 1.7vh, 1rem);  /* Tageszahlen wachsen mit der Fensterhöhe */
   --kal-desktop-monat-innen: 10px 12px;               /* Innenabstand eines Monats */
 }
-
-/* Dunkles Design: nur die Farben ändern sich */
-:root[data-theme="dark"] {
-  --kal-vergangen-text: #f08a84;
-  --kal-vergangen-hintergrund: rgba(255, 110, 100, 0.07);
-
-  --kal-heute-glas: rgba(70, 200, 105, 0.28);
-  --kal-heute-glanz: rgba(255, 255, 255, 0.14);
-  --kal-heute-rand: rgba(255, 255, 255, 0.28);
-  --kal-heute-reflex: rgba(255, 255, 255, 0.35);
-  --kal-heute-leuchten: rgba(70, 200, 105, 0.45);
-  --kal-heute-text: #eafff0;
-  --kal-heute-fallback: rgba(70, 200, 105, 0.38);
-
-  --kal-termin-glas: rgba(110, 180, 255, 0.26);
-  --kal-termin-rand: rgba(255, 255, 255, 0.28);
-  --kal-termin-leuchten: rgba(110, 180, 255, 0.40);
-  --kal-termin-ring: #7cbcff;
-  --kal-termin-glas-vergangen: rgba(110, 180, 255, 0.12);
-
-  --kal-vorschau-hintergrund: rgba(31, 34, 40, 0.80);
-}
-
 
 /* ==========================================================================
    KOPF: ‹ 2026 ›  [Heute]
@@ -81,7 +42,7 @@
 .kalender-jahreszahl {
   min-width: 4.5ch;                 /* Breite bleibt gleich → Pfeile springen nicht */
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 1.75rem;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -91,22 +52,24 @@
   line-height: 1;
 }
 
+/* Gleiches Aussehen wie .knopf aus style.css */
 .kalender-heute-knopf {
-  height: 40px;
+  height: var(--knopf-hoehe);
   margin-left: var(--abstand-s);
   padding: 0 16px;
   font: inherit;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
-  border-radius: var(--radius-pille);
-  box-shadow: var(--schatten);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
   cursor: pointer;
+  transition: background-color var(--dauer) ease;
 }
 
 .kalender-heute-knopf:hover {
-  border-color: var(--farbe-akzent);
+  background: var(--farbe-flaeche-leise);
 }
 
 
@@ -139,9 +102,8 @@
 
 .kalender-monat {
   background: var(--farbe-flaeche);
-  border: 1px solid var(--farbe-rand);
+  border: var(--linie);
   border-radius: var(--radius-m);
-  box-shadow: var(--schatten);
   padding: var(--abstand-m);
   /* Beim automatischen Scrollen nicht unter der festen Leiste verschwinden */
   scroll-margin-top: calc(var(--leiste-hoehe) + var(--abstand-m));
@@ -149,7 +111,7 @@
 
 .kalender-monatsname {
   margin: 0 0 var(--abstand-s);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
 }
 
@@ -218,7 +180,7 @@
   box-shadow:
     inset 0 1px 0 var(--kal-heute-reflex),      /* Lichtreflex oben */
     0 0 12px var(--kal-heute-leuchten),         /* weiches grünes Leuchten */
-    0 2px 6px rgba(0, 0, 0, 0.08);              /* leichter Schatten nach unten */
+    0 2px 6px var(--kal-heute-schatten);        /* leichter Schatten nach unten */
 }
 
 /* Jeder Tag ist anklickbar (öffnet den Stundenplan mit dieser Woche) */
@@ -227,7 +189,7 @@
 }
 
 .kalender-tag:focus-visible {
-  outline: 2px solid var(--farbe-akzent);
+  outline: 2px solid var(--farbe-fokus);
   outline-offset: 1px;
 }
 
@@ -298,7 +260,7 @@
   backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
   border: 1px solid var(--glas-rand);
   border-radius: var(--radius-m);
-  box-shadow: inset 0 1px 0 var(--glas-reflex), var(--glas-schatten);
+  box-shadow: inset 0 1px 0 var(--glas-reflex), var(--schatten-schwebend);
   pointer-events: none;                     /* Maus: Panel stört nicht beim Weiterfahren */
 }
 
@@ -326,15 +288,15 @@
 /* Jeder Eintrag mit farbigem Strich links (Farbe wie im Stundenplan) */
 .kalender-vorschau-eintrag {
   padding-left: 8px;
-  border-left: 3px solid var(--sp-termin-rand);
+  border-left: 2px solid var(--farbe-termin);
 }
 
 .kalender-vorschau-eintrag.art-vorlesung {
-  border-left-color: var(--sp-vorlesung-rand);
+  border-left-color: var(--farbe-vorlesung);
 }
 
 .kalender-vorschau-titel {
-  font-weight: 600;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 

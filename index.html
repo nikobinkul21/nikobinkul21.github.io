@@ -40,9 +40,18 @@
 </head>
 <body>
 
-  <!-- Navigationsleiste oben. Sie bleibt beim Scrollen stehen (sticky). -->
+  <!--
+    Navigationsleiste oben. Sie bleibt beim Scrollen stehen (sticky).
+    Computer: NTB links, die Reiter in gleichen Abständen daneben,
+              der Dark-Mode-Schalter ganz rechts.
+    Handy:    NTB links, Hamburger und Dark-Mode-Schalter rechts –
+              die Reiter klappen als Panel unter der Leiste aus.
+  -->
   <header class="leiste">
     <nav class="leiste__nav" aria-label="Hauptnavigation">
+
+      <!-- NTB führt zur Startseite -->
+      <a class="reiter marke" href="#home" data-view="home">NTB</a>
 
       <!-- Hamburger-Button: nur auf kleinen Bildschirmen sichtbar -->
       <button class="icon-button hamburger" id="menu-button" type="button"
@@ -53,36 +62,20 @@
       </button>
 
       <!--
-        NTB gibt es zweimal im HTML, weil es auf Handy und Computer an
-        unterschiedlichen Stellen steht:
-          - marke--mobil:   in der Leiste, nur auf dem Handy sichtbar
-          - marke--desktop: zwischen den Reitern, nur auf dem Computer sichtbar
-        Per CSS ist immer genau eins davon mit display: none ausgeblendet.
-        So stimmt die Tab-Reihenfolge immer mit der sichtbaren Reihenfolge überein.
-      -->
-      <a class="reiter marke marke--mobil" href="#home" data-view="home">NTB</a>
-
-      <!--
         Das Panel enthält alle Reiter.
-        Computer: Das Panel ist "unsichtbar" (display: contents), die Reiter
-                  sitzen links und rechts von NTB direkt in der Leiste.
-        Handy:    Das Panel klappt als Glas-Kasten unter der Leiste aus.
+        Computer: eine Zeile zwischen NTB und dem Schalter.
+        Handy:    schlichtes Panel, das unter der Leiste ausklappt.
+        data-view verbindet den Link mit der passenden Ansicht im <main>.
       -->
       <div class="nav-panel" id="nav-panel">
-        <!-- data-view verbindet den Link mit der passenden Ansicht im <main> -->
-        <ul class="reiter-gruppe reiter-gruppe--links">
+        <ul class="reiter-gruppe">
           <li><a class="reiter" href="#kalender" data-view="kalender">Kalender</a></li>
-          <li><a class="reiter" href="#games" data-view="games">Games</a></li>
-          <li><a class="reiter" href="#media" data-view="media">Filme/Serien</a></li>
-        </ul>
-
-        <a class="reiter marke marke--desktop" href="#home" data-view="home">NTB</a>
-
-        <ul class="reiter-gruppe reiter-gruppe--rechts">
           <li><a class="reiter" href="#schedule" data-view="schedule">Stundenplan/Termine</a></li>
           <li><a class="reiter" href="#todo" data-view="todo">Zu erledigen</a></li>
-          <li><a class="reiter" href="#einstellungen" data-view="einstellungen">Einstellungen</a></li>
+          <li><a class="reiter" href="#media" data-view="media">Filme/Serien</a></li>
+          <li><a class="reiter" href="#games" data-view="games">Games</a></li>
           <li><a class="reiter" href="#customising" data-view="customising">Customising</a></li>
+          <li><a class="reiter" href="#einstellungen" data-view="einstellungen">Einstellungen</a></li>
         </ul>
       </div>
 
