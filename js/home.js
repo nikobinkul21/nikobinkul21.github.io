@@ -1,8 +1,9 @@
 /* ==========================================================================
-   home.js – die Startseite als Tunnel
-   Eine nasse Straße führt in den Bildschirm hinein. An den Tunnelwänden
-   hängen sechs leuchtende Werbetafeln – das sind die Abschnitte der Seite.
-   Am Ende des Tunnels liegt der helle Ausgang mit Begrüßung und Datum.
+   home.js – die Startseite als Karten-Tunnel
+   Die Abschnitte der Seite stehen als große, abgerundete Karten in zwei
+   Reihen links und rechts. Beide Reihen sind schräg in die Tiefe gedreht
+   und laufen auf einen gemeinsamen Fluchtpunkt in der Mitte zu – dort
+   steht die Begrüßung. Der Tunnel entsteht nur durch die Karten selbst.
    Darunter steht "Heute" als schlichte Leiste.
 
    Die Startseite speichert selbst NICHTS. Sie liest bei jedem Öffnen alles
@@ -12,13 +13,7 @@
      MediaStore   (js/media-store.js)   – Filme/Serien
      sudokuSpielstandLesen() (js/sudoku-ui.js) – laufendes Sudoku
 
-   Aufbau der Szene (Aussehen und alle Maße: css/home.css):
-     .tunnel-buehne  – Deko (für Screenreader ausgeblendet): Straße, Wände,
-                       Decke mit Lampen, Ausgang, alle Spiegelungen
-     .tunnel-ziel    – Begrüßung und Datum im Ausgang
-     .tunnel-tafeln  – die sechs Tafeln (echte Links)
-   Jede dieser Ebenen hat eine eigene ".tunnel-welt". Alle drei bekommen
-   dieselbe Drehung (Parallaxe) bzw. Kamerafahrt – so passen sie zusammen.
+   Aussehen, Winkel, Größen und Abstände: css/home.css (Variablen oben).
    ========================================================================== */
 
 // Optionaler Name für die Begrüßung, z. B. "Niko" → "Guten Morgen, Niko".
@@ -35,33 +30,26 @@ const StartseiteAnsicht = (function () {
   const SUCHE_TAGE = 366;
 
   /* ------------------------------------------------------------------------
-     EINSTELLUNGEN DER SZENE
-     (Maße, Winkel und Farben stehen als CSS-Variablen in css/home.css
-      bzw. css/style.css – hier nur, was JavaScript wissen muss)
+     EINSTELLUNGEN DER BEWEGUNG
+     (Winkel, Größen und Abstände stehen als CSS-Variablen in css/home.css –
+      hier nur, was JavaScript wissen muss)
      ------------------------------------------------------------------------ */
-  const SZENE = {
-    lampen: 9,            // Deckenlampen hintereinander
-    pfuetzen: [           // Pfützen auf der Straße: Lage quer (%), Tiefe (%), Größe
-      { x: 30, tiefe: 78, b: 220, h: 120 },
-      { x: 62, tiefe: 52, b: 260, h: 140 },
-      { x: 44, tiefe: 30, b: 200, h: 110 },
-    ],
-    // Häuser der Stadt im Ausgang (nur im dunklen Design sichtbar):
-    // Breite und Höhe in Prozent des Ausgangs
-    stadt: [[7, 14], [5, 22], [8, 17], [6, 30], [9, 19], [5, 36], [7, 24], [8, 15], [6, 27], [9, 18], [7, 32], [6, 13], [8, 21]],
-    fahrtMs: 500,         // Dauer der Kamerafahrt bis zum Öffnen des Abschnitts
-    glaettung: 0.12,      // Parallaxe: Anteil, um den sie pro Bild dem Ziel folgt
+  const BEWEGUNG = {
+    fahrtMs: 400,         // Fahrt auf die Karte zu, danach öffnet sich der Abschnitt
+    fahrtAnteil: 0.55,    // so weit rückt die Karte bei der Fahrt Richtung Bildmitte
+    fahrtVor: 260,        // so weit (px) fährt die Ansicht nach vorne
+    glaettung: 0.08,      // Parallaxe: Anteil, um den sie pro Bild dem Ziel folgt (klein = ruhig)
     // Sicherheitsnetz für langsame Geräte: Braucht ein Bild während der
     // Parallaxe im Schnitt länger als zeitGrenzeMs – gemessen über
     // zeitBilder Bilder, und das zeitFenster-mal hintereinander –, schaltet
-    // sich die Parallaxe für diese Sitzung ab. Der Tunnel bleibt dann stehen.
+    // sich die Parallaxe für diese Sitzung ab. Die Karten bleiben dann stehen.
     zeitGrenzeMs: 40,
     zeitBilder: 30,
     zeitFenster: 2,
   };
 
   /* ------------------------------------------------------------------------
-     SYMBOLE für die Tafeln (Inline-SVG, Strichzeichnungen in currentColor)
+     SYMBOLE für die Karten (Inline-SVG, Strichzeichnungen in currentColor)
      ------------------------------------------------------------------------ */
   const SYMBOLE = {
     kalender:
@@ -78,24 +66,29 @@ const StartseiteAnsicht = (function () {
       '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
   };
 
-  // Die sechs Tafeln. seite: Wand ("links" = Studium, "rechts" = Freizeit),
-  // platz: 1 = vorne … 3 = hinten. Reihenfolge = Tab-Reihenfolge.
-  // Der Leuchtton steht in css/style.css (--tafel-<id>).
-  const TAFELN = [
-    { id: "kalender", href: "#kalender", name: "Kalender", seite: "links", platz: 1, info: infoKalender },
-    { id: "stundenplan", href: "#schedule", name: "Stundenplan/Termine", seite: "links", platz: 2, info: infoStundenplan },
-    { id: "todo", href: "#todo", name: "Zu erledigen", seite: "links", platz: 3, info: infoTodo },
-    { id: "media", href: "#media", name: "Filme/Serien", seite: "rechts", platz: 1, info: infoMedia },
-    { id: "games", href: "#games/sudoku", name: "Games", seite: "rechts", platz: 2, info: infoGames },
-    { id: "customising", href: "#customising", name: "Customising", seite: "rechts", platz: 3, info: infoCustomising },
-  ];
+  // Die Karten je Reihe, jeweils von vorne nach hinten. Reihenfolge = Tab-Reihenfolge.
+  // Neue Karte? Hier ergänzen und in css/home.css --karten-pro-seite anpassen
+  // (die Karten werden dann schmaler, die Reihe bleibt gleich lang).
+  const REIHEN = {
+    links: [   // Studium
+      { id: "kalender", href: "#kalender", name: "Kalender", info: infoKalender },
+      { id: "stundenplan", href: "#schedule", name: "Stundenplan/Termine", info: infoStundenplan },
+      { id: "todo", href: "#todo", name: "Zu erledigen", info: infoTodo },
+    ],
+    rechts: [  // Freizeit
+      { id: "media", href: "#media", name: "Filme/Serien", info: infoMedia },
+      { id: "games", href: "#games/sudoku", name: "Games", info: infoGames },
+      { id: "customising", href: "#customising", name: "Customising", info: infoCustomising },
+    ],
+  };
+  const KARTEN = REIHEN.links.concat(REIHEN.rechts);
 
   const el = {};
   let minutenTimer = null;
 
   // Bewegung
   const ruhigAbfrage = window.matchMedia("(prefers-reduced-motion: reduce)");
-  // Parallaxe nur mit echter Maus und nur, wenn die Tafeln an den Wänden hängen
+  // Parallaxe nur mit echter Maus und nur, wenn die Karten in zwei Reihen stehen
   // (dieselbe Grenze wie in css/home.css, Abschnitt "SMARTPHONE")
   const mausAbfrage = window.matchMedia("(hover: hover) and (pointer: fine) and (min-width: 700px)");
   const parallaxe = { zielX: 0, zielY: 0, x: 0, y: 0, laeuft: false, zuLangsam: false, langsameFenster: 0 };
@@ -114,30 +107,16 @@ const StartseiteAnsicht = (function () {
     container.innerHTML =
       '<div class="home">' +
         '<div class="tunnel">' +
-          // Deko: für Screenreader unsichtbar
-          '<div class="tunnel-buehne" aria-hidden="true">' +
-            '<div class="tunnel-welt">' +
-              '<div class="t-flaeche t-boden">' +
-                '<div class="t-asphalt"></div>' +
-                '<div class="t-randlinie t-randlinie--links"></div>' +
-                '<div class="t-randlinie t-randlinie--rechts"></div>' +
-                '<div class="t-mittellinie"></div>' +
-                '<div class="t-spiegel-ausgang"></div>' +
-                '<div class="t-pfuetzen"></div>' +
-                '<div class="t-spiegel-lampen"></div>' +
-                '<div class="t-spiegel-tafeln"></div>' +
-                '<div class="t-schimmer"></div>' +
-              "</div>" +
-              '<div class="t-flaeche t-decke"><div class="t-lampen"></div></div>' +
-              '<div class="t-flaeche t-wand t-wand--links"><div class="t-wandschein"></div></div>' +
-              '<div class="t-flaeche t-wand t-wand--rechts"><div class="t-wandschein"></div></div>' +
-              '<div class="t-ausgang"><div class="t-himmel"></div><div class="t-stadt"></div><div class="t-ausgang-licht"></div></div>' +
-            "</div>" +
+          // Die "Welt": alles darin liegt im selben 3D-Raum. Parallaxe und
+          // Fahrt bewegen nur sie.
+          '<div class="tunnel-welt">' +
+            '<nav class="tunnel-karten" aria-label="Bereiche">' +
+              '<div class="karten-reihe karten-reihe--links"></div>' +
+              '<div class="karten-reihe karten-reihe--rechts"></div>' +
+            "</nav>" +
+            // Begrüßung im Fluchtpunkt
+            '<div class="tunnel-ziel"><p class="home-datum"></p></div>' +
           "</div>" +
-          // Begrüßung im Ausgang
-          '<div class="tunnel-ziel"><div class="tunnel-welt"><div class="tunnel-gruss"><p class="home-datum"></p></div></div></div>' +
-          // Die Tafeln
-          '<nav class="tunnel-tafeln" aria-label="Bereiche"><div class="tunnel-welt"></div></nav>' +
         "</div>" +
 
         '<section class="home-heute" aria-labelledby="home-heute-titel">' +
@@ -150,100 +129,66 @@ const StartseiteAnsicht = (function () {
       "</div>";
 
     el.tunnel = container.querySelector(".tunnel");
-    el.welten = container.querySelectorAll(".tunnel-welt");
+    el.welt = container.querySelector(".tunnel-welt");
     el.gruss = document.getElementById("titel-home");
     el.datum = container.querySelector(".home-datum");
     el.heute = container.querySelector(".home-heute-inhalt");
 
-    // Die Begrüßung (h1 aus index.html) wandert in den Ausgang – vor das Datum.
+    // Die Begrüßung (h1 aus index.html) wandert in den Fluchtpunkt – vor das Datum.
     // Sie behält ihre ID: app.js setzt den Fokus und den Seitentitel darüber.
-    container.querySelector(".tunnel-gruss").insertBefore(el.gruss, el.datum);
+    container.querySelector(".tunnel-ziel").insertBefore(el.gruss, el.datum);
 
-    baueDeko(container);
-    baueTafeln(container.querySelector(".tunnel-tafeln .tunnel-welt"));
+    ["links", "rechts"].forEach(function (seite) {
+      const reihe = container.querySelector(".karten-reihe--" + seite);
+      REIHEN[seite].forEach(function (k, i) {
+        reihe.appendChild(baueKarte(k, seite, i));
+      });
+    });
     bewegungEinrichten();
   }
 
-  /** Lampen, Pfützen, Stadt und die Spiegelungen der Tafeln anlegen. */
-  function baueDeko(container) {
-    const lampen = container.querySelector(".t-lampen");
-    const lampenSpiegel = container.querySelector(".t-spiegel-lampen");
-    for (let i = 0; i < SZENE.lampen; i++) {
-      lampen.appendChild(deko("t-lampe", { "--i": i }));
-      lampenSpiegel.appendChild(deko("t-lampe-spiegel", { "--i": i }));
-    }
-
-    const pfuetzen = container.querySelector(".t-pfuetzen");
-    SZENE.pfuetzen.forEach(function (p) {
-      pfuetzen.appendChild(deko("t-pfuetze", { "--x": p.x + "%", "--tiefe-anteil": p.tiefe / 100, "--b": p.b + "px", "--h": p.h + "px" }));
-    });
-
-    const stadt = container.querySelector(".t-stadt");
-    SZENE.stadt.forEach(function (haus, i) {
-      stadt.appendChild(deko("t-haus", { "--b": haus[0] + "%", "--h": haus[1] + "%", "--i": i }));
-    });
-
-    // Je Tafel: Spiegelung auf der Straße und Lichtschein auf der Wand
-    const tafelSpiegel = container.querySelector(".t-spiegel-tafeln");
-    const schein = {
-      links: container.querySelector(".t-wand--links .t-wandschein"),
-      rechts: container.querySelector(".t-wand--rechts .t-wandschein"),
-    };
-    TAFELN.forEach(function (t) {
-      const stil = { "--tafel-ton": "var(--tafel-" + t.id + ")" };
-      const spiegel = deko("t-tafel-spiegel t-tafel-spiegel--" + t.seite, stil);
-      spiegel.dataset.tafel = t.id;
-      spiegel.dataset.platz = t.platz;
-      tafelSpiegel.appendChild(spiegel);
-      const licht = deko("t-tafel-schein", stil);
-      licht.dataset.tafel = t.id;
-      licht.dataset.platz = t.platz;
-      schein[t.seite].appendChild(licht);
-    });
+  /**
+   * Eine Karte als echter Link. Name und Infozeile bilden die Beschriftung.
+   * --i = Platz in der Reihe (0 = vorne); daraus berechnet das CSS, wie
+   * blass die Karte ist und wann sie beim Aufbau erscheint.
+   */
+  function baueKarte(k, seite, i) {
+    const link = document.createElement("a");
+    link.className = "tunnel-karte";
+    link.href = k.href;
+    link.dataset.karte = k.id;
+    link.dataset.seite = seite;
+    link.style.setProperty("--i", i);
+    // Platz in der ganzen Liste (Smartphone: alle Karten in einer Spalte)
+    link.style.setProperty("--n", (seite === "links" ? 0 : REIHEN.links.length) + i);
+    link.innerHTML =
+      '<svg class="tunnel-karte-symbol" viewBox="0 0 24 24" aria-hidden="true">' + SYMBOLE[k.id] + "</svg>" +
+      '<span class="tunnel-karte-text"><span class="tunnel-karte-name"></span><span class="tunnel-karte-info"></span></span>';
+    setzeName(link.querySelector(".tunnel-karte-name"), k.name);
+    link.addEventListener("click", function (event) { karteGeklickt(event, k, link); });
+    k.element = link;
+    return link;
   }
 
-  /** Die sechs Tafeln als echte Links. Name und Infozeile bilden die Beschriftung. */
-  function baueTafeln(ziel) {
-    TAFELN.forEach(function (t) {
-      const link = document.createElement("a");
-      link.className = "tafel tafel--" + t.seite;
-      link.href = t.href;
-      link.dataset.tafel = t.id;
-      link.dataset.platz = t.platz;
-      link.style.setProperty("--tafel-ton", "var(--tafel-" + t.id + ")");
-      link.innerHTML =
-        // Leuchtfläche: dunkle Grundfläche, darüber das Licht (an/aus) und
-        // der hellere Schein beim Hovern – animiert wird nur deren Deckkraft
-        '<span class="tafel-flaeche" aria-hidden="true"><span class="tafel-licht"></span><span class="tafel-hell"></span></span>' +
-        '<svg class="tafel-symbol" viewBox="0 0 24 24" aria-hidden="true">' + SYMBOLE[t.id] + "</svg>" +
-        '<span class="tafel-text"><span class="tafel-name"></span><span class="tafel-info"></span></span>' +
-        // Kurze Spiegelung unter der Tafel (nur in der Smartphone-Liste sichtbar)
-        '<span class="tafel-spiegel" aria-hidden="true"></span>';
-      link.querySelector(".tafel-name").textContent = t.name;
-      link.addEventListener("click", function (event) { tafelGeklickt(event, t, link); });
-      t.element = link;
-      ziel.appendChild(link);
+  /**
+   * Name als Text; nach jedem "/" darf umbrochen werden (<wbr>), damit
+   * "Stundenplan/Termine" sauber auf zwei Zeilen passt statt mitten im Wort.
+   */
+  function setzeName(ziel, name) {
+    name.split("/").forEach(function (teil, i, teile) {
+      ziel.appendChild(document.createTextNode(teil + (i < teile.length - 1 ? "/" : "")));
+      if (i < teile.length - 1) ziel.appendChild(document.createElement("wbr"));
     });
-  }
-
-  /** Dekoratives <div> mit Klasse und CSS-Variablen. */
-  function deko(klasse, variablen) {
-    const d = document.createElement("div");
-    d.className = klasse;
-    Object.keys(variablen || {}).forEach(function (name) {
-      d.style.setProperty(name, variablen[name]);
-    });
-    return d;
   }
 
   /**
    * Wird von app.js bei JEDEM Öffnen der Startseite aufgerufen:
-   * alles frisch aus den Stores lesen, zeichnen und das Licht einschalten.
+   * alles frisch aus den Stores lesen, zeichnen und die Karten aufbauen.
    */
   function zeige() {
     zeichne();
-    kameraZurueck();
-    einschalten();
+    fahrtZuruecksetzen();
+    aufbauen();
     // Solange die Startseite offen ist, einmal pro Minute auffrischen
     // (Begrüßung, "vergangen"-Markierung, Datum nach Mitternacht)
     clearInterval(minutenTimer);
@@ -263,23 +208,23 @@ const StartseiteAnsicht = (function () {
     el.datum.textContent = WOCHENTAGE[jetzt.getDay()] + ", " + jetzt.getDate() + ". " +
       MONATE[jetzt.getMonth()] + " " + jetzt.getFullYear();
     zeichneHeute(jetzt);
-    TAFELN.forEach(function (t) {
-      t.element.querySelector(".tafel-info").textContent = t.info(jetzt);
+    KARTEN.forEach(function (k) {
+      k.element.querySelector(".tunnel-karte-info").textContent = k.info(jetzt);
     });
   }
 
 
   /* ==========================================================================
-     BEWEGUNG: Einschalten, Parallaxe, Kamerafahrt
+     BEWEGUNG: Aufbau, Parallaxe, Fahrt beim Klick
      Animiert werden nur transform und opacity.
      ========================================================================== */
 
-  /** Lampen und Tafeln gehen von vorne nach hinten nacheinander an (CSS-Animation). */
-  function einschalten() {
-    el.tunnel.classList.remove("geht-an");
+  /** Die Karten bauen sich von hinten nach vorn nacheinander auf (CSS-Animation). */
+  function aufbauen() {
+    el.tunnel.classList.remove("baut-auf");
     if (ruhigAbfrage.matches) return;
     void el.tunnel.offsetWidth;            // Neustart der Animation erzwingen
-    el.tunnel.classList.add("geht-an");
+    el.tunnel.classList.add("baut-auf");
   }
 
   function bewegungEinrichten() {
@@ -296,7 +241,7 @@ const StartseiteAnsicht = (function () {
       parallaxe.zielY = 0;
       if (parallaxeErlaubt()) starteParallaxe();
     });
-    // Wechsel zu reduzierter Bewegung oder schmalem Fenster: Szene gerade stellen
+    // Wechsel zu reduzierter Bewegung oder schmalem Fenster: Karten gerade stellen
     [ruhigAbfrage, mausAbfrage].forEach(function (abfrage) {
       abfrage.addEventListener("change", function () {
         if (!parallaxeErlaubt()) setzeWelt("");
@@ -325,14 +270,14 @@ const StartseiteAnsicht = (function () {
         parallaxe.laeuft = false;
         return;
       }
-      // Bildzeiten messen (Sicherheitsnetz, siehe SZENE.zeitGrenzeMs)
+      // Bildzeiten messen (Sicherheitsnetz, siehe BEWEGUNG.zeitGrenzeMs)
       if (letztes) {
         summe += zeit - letztes;
         bilder++;
-        if (bilder === SZENE.zeitBilder) {
-          parallaxe.langsameFenster = summe / bilder > SZENE.zeitGrenzeMs ? parallaxe.langsameFenster + 1 : 0;
-          if (parallaxe.langsameFenster >= SZENE.zeitFenster) {
-            parallaxe.zuLangsam = true;     // dauerhaft zu langsam: Tunnel bleibt ab jetzt stehen
+        if (bilder === BEWEGUNG.zeitBilder) {
+          parallaxe.langsameFenster = summe / bilder > BEWEGUNG.zeitGrenzeMs ? parallaxe.langsameFenster + 1 : 0;
+          if (parallaxe.langsameFenster >= BEWEGUNG.zeitFenster) {
+            parallaxe.zuLangsam = true;     // dauerhaft zu langsam: Karten bleiben ab jetzt stehen
             parallaxe.laeuft = false;
             setzeWelt("");
             return;
@@ -342,10 +287,11 @@ const StartseiteAnsicht = (function () {
         }
       }
       letztes = zeit;
-      parallaxe.x += (parallaxe.zielX - parallaxe.x) * SZENE.glaettung;
-      parallaxe.y += (parallaxe.zielY - parallaxe.y) * SZENE.glaettung;
-      // Maus nach rechts → Szene dreht leicht, der Fluchtpunkt wandert etwas
-      // zur Gegenseite; Tafeln, Spiegelungen und Ausgang bewegen sich mit.
+
+      parallaxe.x += (parallaxe.zielX - parallaxe.x) * BEWEGUNG.glaettung;
+      parallaxe.y += (parallaxe.zielY - parallaxe.y) * BEWEGUNG.glaettung;
+      // Der Tunnel dreht sich leicht, sodass der Fluchtpunkt ein wenig in
+      // Richtung der Maus wandert (Maus rechts → Fluchtpunkt rechts).
       setzeWelt("rotateX(" + (parallaxe.y * winkelY).toFixed(3) + "deg) rotateY(" +
         (-parallaxe.x * winkelX).toFixed(3) + "deg)");
       const fertig = Math.abs(parallaxe.zielX - parallaxe.x) < 0.001 && Math.abs(parallaxe.zielY - parallaxe.y) < 0.001;
@@ -358,18 +304,17 @@ const StartseiteAnsicht = (function () {
     requestAnimationFrame(schritt);
   }
 
-  /** Dieselbe Bewegung für alle drei Ebenen (Deko, Begrüßung, Tafeln). */
   function setzeWelt(transform) {
-    el.welten.forEach(function (w) { w.style.transform = transform; });
+    el.welt.style.transform = transform;
   }
 
   /**
-   * Klick auf eine Tafel: Die Kamera fährt die Straße entlang auf die Tafel
-   * zu (etwa 500 ms), dann öffnet sich der Abschnitt.
-   * Bei "Bewegung reduzieren" (oder Klick mit Strg/Cmd/Mitteltaste) öffnet
-   * der Link sofort wie gewohnt.
+   * Klick auf eine Karte: Die Ansicht fährt kurz auf die Karte zu (etwa
+   * 400 ms), dann öffnet sich der Abschnitt.
+   * Bei "Bewegung reduzieren" (oder Klick mit Strg/Cmd/Umschalt/Mitteltaste)
+   * öffnet der Link sofort wie gewohnt.
    */
-  function tafelGeklickt(event, tafel, link) {
+  function karteGeklickt(event, karte, link) {
     if (ruhigAbfrage.matches || event.defaultPrevented || event.button !== 0 ||
         event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
       return;
@@ -378,32 +323,29 @@ const StartseiteAnsicht = (function () {
     if (faehrt) return;
     faehrt = true;
 
-    // Ziel der Fahrt: Tiefe der Tafel (aus CSS) und ihre Wand.
-    // Auf dem Smartphone (Tafeln als Liste) fährt die Kamera nur geradeaus.
-    const stil = getComputedStyle(link);
-    const anDerWand = mausAbfrage.matches || window.matchMedia("(min-width: 700px)").matches;
-    const tiefe = parseFloat(stil.getPropertyValue("--z")) || 0;
-    const maxFahrt = parseFloat(getComputedStyle(el.tunnel).getPropertyValue("--fahrt-max")) || 400;
-    const vor = Math.min(tiefe + 260, maxFahrt);   // ein Stück die Straße entlang, höchstens --fahrt-max
-    const richtung = tafel.seite === "links" ? 1 : -1;
-    const seitlich = anDerWand ? richtung * 0.22 * el.tunnel.clientWidth : 0;
-    const drehung = anDerWand ? richtung * 10 : 0;
+    // Wo steht die Karte gerade auf dem Bildschirm? Die Welt rückt so, dass
+    // die Karte Richtung Bildmitte kommt, und fährt dabei nach vorne.
+    const tunnel = el.tunnel.getBoundingClientRect();
+    const r = link.getBoundingClientRect();
+    const dx = (tunnel.left + tunnel.width / 2) - (r.left + r.width / 2);
+    const dy = (tunnel.top + tunnel.height / 2) - (r.top + r.height / 2);
+    const k = BEWEGUNG.fahrtAnteil;
 
     el.tunnel.classList.add("faehrt");
     link.classList.add("ist-ziel");
-    setzeWelt("translate3d(" + seitlich.toFixed(1) + "px, 0, " + vor.toFixed(1) + "px) rotateY(" + drehung + "deg)");
+    setzeWelt("translate3d(" + (dx * k).toFixed(1) + "px, " + (dy * k).toFixed(1) + "px, " + BEWEGUNG.fahrtVor + "px)");
 
     setTimeout(function () {
       faehrt = false;
-      window.location.hash = tafel.href;
-    }, SZENE.fahrtMs);
+      window.location.hash = karte.href;
+    }, BEWEGUNG.fahrtMs);
   }
 
-  /** Nach der Rückkehr zur Startseite steht die Kamera wieder am Anfang. */
-  function kameraZurueck() {
+  /** Nach der Rückkehr zur Startseite steht alles wieder an seinem Platz. */
+  function fahrtZuruecksetzen() {
     faehrt = false;
     el.tunnel.classList.remove("faehrt");
-    TAFELN.forEach(function (t) { t.element.classList.remove("ist-ziel"); });
+    KARTEN.forEach(function (k) { k.element.classList.remove("ist-ziel"); });
     parallaxe.x = parallaxe.zielX;
     parallaxe.y = parallaxe.zielY;
     setzeWelt("");
@@ -509,7 +451,7 @@ const StartseiteAnsicht = (function () {
 
 
   /* ==========================================================================
-     INFO-ZEILEN DER TAFELN
+     INFO-ZEILEN DER KARTEN
      Jede Funktion bekommt das aktuelle Datum und gibt einen kurzen Text zurück.
      ========================================================================== */
 
