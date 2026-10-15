@@ -278,6 +278,43 @@
   --sudoku-effekt-farbe: var(--farbe-akzent);
   --sudoku-effekt-schein: rgba(168, 80, 47, 0.18);
   --sudoku-effekt-schein-stark: rgba(168, 80, 47, 0.30);
+
+  /* Startseite (Tunnel, css/home.css) – helles Design: Tageslicht vom Ausgang */
+  --tunnel-wand-nah: #d6cdbf;                 /* Wand vorne … */
+  --tunnel-wand-fern: #8c8376;                /* … nach hinten dunkler */
+  --tunnel-wand-rippe: rgba(60, 45, 30, 0.10);/* senkrechte Rippen */
+  --tunnel-wand-fuge: rgba(255, 250, 240, 0.22); /* waagrechte Fugen der Kacheln */
+  --tunnel-sockel: #6f675c;                   /* dunkler Streifen unten an der Wand */
+  --tunnel-decke-nah: #c3b9aa;
+  --tunnel-decke-fern: #7a7266;
+  --tunnel-asphalt: #48433e;                  /* nasser Asphalt vorne … */
+  --tunnel-asphalt-fern: #3a3632;             /* … und hinten */
+  --tunnel-koernung-hell: rgba(255, 245, 230, 0.07);
+  --tunnel-koernung-dunkel: rgba(0, 0, 0, 0.22);
+  --tunnel-linie: rgba(244, 238, 226, 0.85);  /* Mittel- und Randlinien */
+  --tunnel-lampe: #fffaf0;
+  --tunnel-lampe-schein: rgba(255, 236, 200, 0.55);
+  --tunnel-ausgang-mitte: #fffefa;            /* Tageslicht */
+  --tunnel-ausgang-rand: #fbe6c4;
+  --tunnel-dunst: rgba(255, 246, 228, 0.55);  /* Lichtschleier um den Ausgang */
+  --tunnel-himmel-oben: #eef1ee;             /* blasser Tageshimmel … */
+  --tunnel-himmel-unten: #fff6e4;             /* … zum Horizont hin warm */
+  --tunnel-horizont: rgba(205, 192, 160, 0.55); /* flaches Land am Horizont */
+  --tunnel-haus: transparent;                 /* Stadt nur nachts sichtbar */
+  --tunnel-fenster: transparent;
+  --tunnel-schimmer: rgba(255, 250, 240, 0.05);
+  --tunnel-pfuetze: rgba(20, 18, 16, 0.35);   /* dunkler, glatter Grund einer Pfütze */
+
+  /* Leuchttöne der Tafeln: dezent, passend zu Terrakotta und Creme */
+  --tafel-kalender: #e0805f;
+  --tafel-stundenplan: #e2aa4f;
+  --tafel-todo: #86b07c;
+  --tafel-media: #c97f97;
+  --tafel-games: #5ea9a0;
+  --tafel-customising: #9490d2;
+  --tafel-text: #2a221c;                      /* Text auf der hellen Leuchtfläche */
+  --tafel-text-leise: #4f453c;
+  --tafel-grund: #3a3530;                     /* Fläche der ausgeschalteten Tafel */
 }
 
 :root[data-theme="dark"] {
@@ -327,6 +364,40 @@
   --sudoku-eingabe-farbe: #eda688;
   --sudoku-effekt-schein: rgba(224, 138, 104, 0.22);
   --sudoku-effekt-schein-stark: rgba(224, 138, 104, 0.36);
+
+  /* Startseite (Tunnel) – dunkles Design: Nacht, Stadt in der Ferne */
+  --tunnel-wand-nah: #3b3631;
+  --tunnel-wand-fern: #141210;
+  --tunnel-wand-rippe: rgba(0, 0, 0, 0.28);
+  --tunnel-wand-fuge: rgba(255, 240, 220, 0.05);
+  --tunnel-sockel: #1c1a17;
+  --tunnel-decke-nah: #2c2824;
+  --tunnel-decke-fern: #0f0e0c;
+  --tunnel-asphalt: #1f1d1b;
+  --tunnel-asphalt-fern: #151412;
+  --tunnel-koernung-hell: rgba(255, 245, 230, 0.05);
+  --tunnel-koernung-dunkel: rgba(0, 0, 0, 0.35);
+  --tunnel-linie: rgba(240, 230, 214, 0.55);
+  --tunnel-lampe: #ffeec8;
+  --tunnel-lampe-schein: rgba(255, 214, 150, 0.75);
+  --tunnel-ausgang-mitte: #ffd9a0;            /* Lichter der Stadt am Horizont */
+  --tunnel-ausgang-rand: #2a2440;
+  --tunnel-dunst: rgba(8, 10, 22, 0.62);      /* dunkler Schleier hinter der Begrüßung (lesbar vor der Stadt) */
+  --tunnel-himmel-oben: #0d1430;
+  --tunnel-himmel-unten: #4a2f3d;
+  --tunnel-horizont: transparent;
+  --tunnel-haus: #0a0c16;
+  --tunnel-fenster: rgba(255, 214, 140, 0.85);
+  --tunnel-schimmer: rgba(255, 240, 220, 0.04);
+  --tunnel-pfuetze: rgba(0, 0, 0, 0.45);
+
+  --tafel-kalender: #f2906b;
+  --tafel-stundenplan: #f2bd5c;
+  --tafel-todo: #9fd08f;
+  --tafel-media: #e996b0;
+  --tafel-games: #72c9be;
+  --tafel-customising: #aaa6f0;
+  --tafel-grund: #1d1a17;
 }
 
 

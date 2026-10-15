@@ -1,64 +1,723 @@
 /* ==========================================================================
-   home.css – Aussehen der Startseite
-   Größen stehen in den Variablen direkt hier oben, Farben und Schriften
-   zentral in style.css (Termin-/Vorlesungsfarbe: Abschnitt 1b).
+   home.css – die Startseite als Tunnel
+   Eine Straße führt in den Bildschirm hinein, an den Wänden hängen sechs
+   Leuchttafeln (die Abschnitte), die nasse Straße spiegelt ihr Licht.
+
+   Umsetzung mit CSS-3D: Boden, Decke, linke und rechte Wand sind eigene,
+   gedrehte Flächen mit einem gemeinsamen Fluchtpunkt. Alle Maße, Winkel
+   und die Stärke der Spiegelung stehen als Variablen direkt hier oben,
+   alle Farben (auch die Leuchttöne) zentral in css/style.css
+   (Abschnitt 1b, "Startseite").
+
+   Koordinaten: "Tiefe" = Abstand vom vorderen Rand des Tunnels in den
+   Bildschirm hinein (0 = vorne, --tunnel-tiefe = Ausgang).
+   Animiert werden nur transform und opacity.
    ========================================================================== */
 
 :root {
-  /* Breite und Abstände */
-  --home-breite: 760px;                     /* maximale Breite der Spalte */
-  --home-abstand: var(--abstand-l);         /* Abstand zwischen den Bereichen */
+  /* Kamera und Tunnel. Zahlen OHNE Einheit, weil damit auch Maßstäbe
+     berechnet werden (z. B. die Größe der Begrüßung im Ausgang). */
+  --tunnel-perspektive-zahl: 900;           /* Abstand der Kamera (px) – kleiner = stärkere Verzerrung */
+  --tunnel-tiefe-zahl: 2100;                /* Länge des Tunnels bis zum Ausgang (px) */
+  --tunnel-perspektive: calc(var(--tunnel-perspektive-zahl) * 1px);
+  --tunnel-tiefe: calc(var(--tunnel-tiefe-zahl) * 1px);
+  --tunnel-vorlauf: 100px;                  /* Flächen reichen etwas vor den Bildrand (für Parallaxe und Fahrt) */
+  --fluchtpunkt-y: 44%;                     /* Höhe des Fluchtpunkts (50 % = Mitte) */
+  --tunnel-hoehe: clamp(460px, calc(100svh - var(--leiste-hoehe) - 140px), 760px);
 
-  /* Kacheln */
-  --home-kachel-min: 280px;                 /* Mindestbreite: so viele passen nebeneinander (760 px → 2 × 2) */
-  --home-kachel-hoehe: 132px;               /* Mindesthöhe einer Kachel */
-  --home-symbol-groesse: 24px;
-  --home-symbol-farbe: var(--farbe-akzent);
+  /* Straße */
+  --strasse-rand: 7%;                       /* Abstand der Randlinien von der Wand */
+  --strassenlinie-breite: 10px;
+  --strich-laenge: 70px;                    /* Mittellinie: Strich … */
+  --strich-luecke: 90px;                    /* … und Lücke */
 
-  /* "Heute" */
-  --home-vorbei-deckkraft: 0.5;             /* vergangene Einträge abgeschwächt */
+  /* Wand */
+  --rippe-abstand: 110px;                   /* Abstand der senkrechten Rippen */
+  --fuge-abstand: 64px;                     /* Höhe der Kachelreihen */
+  --sockel-hoehe: 9%;
+
+  /* Deckenlampen */
+  --lampe-erste: 60px;                      /* Tiefe der ersten Lampe */
+  --lampe-abstand: 170px;                   /* Abstand von Lampe zu Lampe */
+  --lampe-breite: 170px;
+  --lampe-hoehe: 20px;
+
+  /* Tafeln: Neigung von der Wand weg, Höhe an der Wand, Tiefe und Breite je Platz */
+  --tafel-neigung: 16deg;                   /* 0 = flach an der Wand, 90 = quer zur Straße */
+  --tafel-oben: 14%;                        /* Oberkante, gemessen von der Decke */
+  --tafel-tiefe-1: 60px;
+  --tafel-tiefe-2: 480px;
+  --tafel-tiefe-3: 950px;
+  --tafel-breite-1: 280px;                  /* hintere Tafeln etwas größer, damit sie lesbar bleiben */
+  --tafel-breite-2: 300px;
+  --tafel-breite-3: 310px;
+  --tafel-abheben: 34px;                    /* so weit löst sich die Tafel beim Hovern von der Wand */
+
+  /* Spiegelungen auf der nassen Straße */
+  --spiegel-staerke: 0.55;                  /* Deckkraft der Tafel-Spiegelungen (0 … 1) */
+  --spiegel-staerke-hell: 1;                /* … beim Hovern der Tafel */
+  --spiegel-laenge: 420px;                  /* so weit laufen sie Richtung Betrachter aus */
+  --lampen-spiegel-staerke: 0.55;
+  --ausgang-spiegel-staerke: 0.75;
+
+  /* Bewegung */
+  --parallaxe-dreh: 2.4;                    /* Grad: Drehung bei Maus ganz links/rechts */
+  --parallaxe-neig: 1.4;                    /* Grad: Neigung bei Maus ganz oben/unten */
+  --fahrt-max: 420;                         /* Kamerafahrt: höchstens so weit nach vorne (px) */
+  --einschalten-schritt: 70ms;              /* Verzögerung von Lampe zu Lampe */
+}
+
+/* Nachts leuchten Tafeln, Spiegelungen und Lampen stärker */
+:root[data-theme="dark"] {
+  --spiegel-staerke: 0.75;
+  --lampen-spiegel-staerke: 0.8;
+  --ausgang-spiegel-staerke: 0.6;
 }
 
 
 /* ==========================================================================
-   SPALTE
-   Eine zentrierte Spalte mit maximaler Breite. (Kommen später News dazu,
-   wird daraus ein Raster mit zwei Spalten.)
+   SEITE: Tunnel über die volle Breite, "Heute" darunter
    ========================================================================== */
 
-#view-home {
-  max-width: var(--home-breite);
-  margin-inline: auto;
+/* Solange die Startseite offen ist: kein Seitenrand, volle Breite */
+.hauptbereich:has(#view-home:not([hidden])) {
+  max-width: none;
+  padding: 0 0 var(--abstand-xl);
 }
 
 .home {
   display: flex;
   flex-direction: column;
-  gap: var(--home-abstand);
 }
 
 
 /* ==========================================================================
-   BEGRÜSSUNG
+   BÜHNE
+   Drei Ebenen liegen übereinander, alle mit derselben Perspektive:
+   Deko (.tunnel-buehne), Begrüßung (.tunnel-ziel), Tafeln (.tunnel-tafeln).
    ========================================================================== */
 
+.tunnel {
+  position: relative;
+  height: var(--tunnel-hoehe);
+  overflow: hidden;
+  background: var(--tunnel-asphalt);        /* falls am Rand etwas durchblitzt */
+}
+
+.tunnel-buehne,
+.tunnel-ziel,
+.tunnel-tafeln {
+  position: absolute;
+  inset: 0;
+  perspective: var(--tunnel-perspektive);
+  perspective-origin: 50% var(--fluchtpunkt-y);
+}
+
+.tunnel-ziel,
+.tunnel-tafeln {
+  pointer-events: none;                     /* nur die Tafeln selbst sind anklickbar */
+}
+
+/* Die "Welt": alles darin liegt im selben 3D-Raum. Parallaxe und Kamerafahrt
+   setzt home.js als transform auf alle drei Welten gleichzeitig. */
+.tunnel-welt {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  /* Parallaxe ändert laufend die Drehung: will-change sorgt dafür, dass die
+     Flächen dabei nicht jedes Mal neu gerastert werden (nur neu zusammengesetzt) */
+  will-change: transform;
+}
+
+/* Kamerafahrt beim Klick auf eine Tafel (Ziel setzt home.js) */
+.tunnel.faehrt .tunnel-welt {
+  transition: transform 500ms cubic-bezier(0.5, 0, 0.75, 0.6);
+}
+
+.tunnel.faehrt .tunnel-buehne,
+.tunnel.faehrt .tunnel-ziel,
+.tunnel.faehrt .tunnel-tafeln {
+  opacity: 0.35;
+  transition: opacity 420ms ease-in 80ms;
+}
+
+
+/* ==========================================================================
+   DIE VIER FLÄCHEN
+   Jede Fläche wird an einer Kante gedreht und reicht vom vorderen Rand
+   (mit --tunnel-vorlauf etwas davor) bis zum Ausgang.
+   ========================================================================== */
+
+.t-flaeche {
+  position: absolute;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+
+/* Boden: an der Unterkante nach hinten geklappt.
+   Innen gilt: top = --tunnel-tiefe minus Tiefe (oben = am Ausgang). */
+.t-boden {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--tunnel-tiefe) + var(--tunnel-vorlauf));
+  transform-origin: 50% 100%;
+  transform: translateZ(var(--tunnel-vorlauf)) rotateX(90deg);
+}
+
+/* Decke: an der Oberkante nach hinten geklappt. Innen: top = Tiefe + Vorlauf. */
+.t-decke {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(var(--tunnel-tiefe) + var(--tunnel-vorlauf));
+  transform-origin: 50% 0;
+  transform: translateZ(var(--tunnel-vorlauf)) rotateX(-90deg);
+  background: linear-gradient(to bottom, var(--tunnel-decke-nah), var(--tunnel-decke-fern) 82%, var(--tunnel-decke-nah));
+}
+
+/* Wände: an der Außenkante nach hinten gedreht.
+   Links innen: left = Tiefe + Vorlauf. Rechts innen: left = Tiefe-Ende minus Tiefe. */
+.t-wand {
+  top: 0;
+  bottom: 0;
+  width: calc(var(--tunnel-tiefe) + var(--tunnel-vorlauf));
+}
+
+.t-wand--links {
+  left: 0;
+  transform-origin: 0 50%;
+  transform: translateZ(var(--tunnel-vorlauf)) rotateY(90deg);
+  --wand-richtung: to right;
+}
+
+.t-wand--rechts {
+  right: 0;
+  transform-origin: 100% 50%;
+  transform: translateZ(var(--tunnel-vorlauf)) rotateY(-90deg);
+  --wand-richtung: to left;
+}
+
+/* Gerippte, gekachelte Tunnelwand: nach hinten dunkler, ganz hinten etwas
+   aufgehellt vom Licht des Ausgangs. Unten ein dunkler Sockel. */
+.t-wand {
+  background:
+    linear-gradient(to top, var(--tunnel-sockel) 0 var(--sockel-hoehe), transparent var(--sockel-hoehe)),
+    repeating-linear-gradient(var(--wand-richtung), var(--tunnel-wand-rippe) 0 8px, transparent 8px var(--rippe-abstand)),
+    repeating-linear-gradient(to bottom, var(--tunnel-wand-fuge) 0 2px, transparent 2px var(--fuge-abstand)),
+    linear-gradient(var(--wand-richtung), var(--tunnel-wand-nah), var(--tunnel-wand-fern) 80%, var(--tunnel-wand-nah));
+}
+
+/* Ausgang: das helle Ende des Tunnels, genau im Fluchtpunkt */
+.t-ausgang {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform: translateZ(calc(-1 * var(--tunnel-tiefe)));
+}
+
+.t-himmel,
+.t-ausgang-licht {
+  position: absolute;
+  inset: 0;
+}
+
+.t-himmel {
+  background: linear-gradient(to bottom, var(--tunnel-himmel-oben), var(--tunnel-himmel-unten));
+}
+
+/* Helles Zentrum: Tageslicht bzw. die Lichter der Stadt */
+.t-ausgang-licht {
+  background: radial-gradient(ellipse 60% 55% at 50% 62%, var(--tunnel-ausgang-mitte), transparent 75%);
+  opacity: 0.9;
+}
+
+/* Die Stadt in der Ferne (nur im dunklen Design sichtbar) */
+.t-stadt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.t-haus {
+  flex: none;
+  width: var(--b);
+  height: var(--h);
+  margin: 0 0.4%;
+  /* Fenster als kleine Lichtpunkte im Raster */
+  background:
+    radial-gradient(circle, var(--tunnel-fenster) 0 1px, transparent 1.6px) 2px 3px / 6px 8px,
+    var(--tunnel-haus);
+}
+
+/* Jedes dritte Haus: weniger beleuchtete Fenster */
+.t-haus:nth-child(3n) {
+  background:
+    radial-gradient(circle, var(--tunnel-fenster) 0 1px, transparent 1.6px) 4px 5px / 10px 12px,
+    var(--tunnel-haus);
+}
+
+/* Tagsüber: ein heller, flacher Horizont statt der Stadt */
+.t-himmel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 22%;
+  background: linear-gradient(to bottom, var(--tunnel-horizont), transparent);
+}
+
+
+/* ==========================================================================
+   STRASSE
+   ========================================================================== */
+
+/* Asphalt mit feiner Körnung – nur Verläufe, keine Bilddatei */
+.t-asphalt {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 40%, var(--tunnel-koernung-hell) 0 0.8px, transparent 1.3px) 0 0 / 6px 6px,
+    radial-gradient(circle at 70% 70%, var(--tunnel-koernung-dunkel) 0 0.9px, transparent 1.4px) 0 0 / 5px 7px,
+    radial-gradient(circle at 50% 20%, var(--tunnel-koernung-hell) 0 0.7px, transparent 1.2px) 2px 3px / 9px 8px,
+    linear-gradient(to bottom, var(--tunnel-asphalt-fern), var(--tunnel-asphalt));
+}
+
+/* Durchgehende Randlinien und gestrichelte Mittellinie – sie laufen durch
+   die Perspektive von selbst zum Fluchtpunkt zusammen */
+.t-randlinie,
+.t-mittellinie {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--strassenlinie-breite);
+}
+
+.t-randlinie {
+  background: var(--tunnel-linie);
+}
+
+.t-randlinie--links { left: var(--strasse-rand); }
+.t-randlinie--rechts { right: var(--strasse-rand); }
+
+.t-mittellinie {
+  left: 50%;
+  margin-left: calc(var(--strassenlinie-breite) / -2);
+  background: repeating-linear-gradient(to bottom, var(--tunnel-linie) 0 var(--strich-laenge), transparent var(--strich-laenge) calc(var(--strich-laenge) + var(--strich-luecke)));
+}
+
+
+/* ==========================================================================
+   DECKENLAMPEN (werden nach hinten durch die Perspektive kleiner)
+   ========================================================================== */
+
+.t-lampe {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--tunnel-vorlauf) + var(--lampe-erste) + var(--i) * var(--lampe-abstand));
+  width: var(--lampe-breite);
+  height: var(--lampe-hoehe);
+  margin-left: calc(var(--lampe-breite) / -2);
+  border-radius: 6px;
+  background: var(--tunnel-lampe);
+  box-shadow: 0 0 18px 6px var(--tunnel-lampe-schein), 0 0 60px 20px var(--tunnel-lampe-schein);
+}
+
+
+/* ==========================================================================
+   NASSE STRASSE: Spiegelungen
+   Alle Unschärfen sind vorbereitete Verläufe – nichts wird pro Bild neu
+   weichgezeichnet. Masken sind statisch.
+   ========================================================================== */
+
+/* Ausgang: langer heller Streifen vom Ende des Tunnels nach vorne */
+.t-spiegel-ausgang {
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 62%;
+  background: linear-gradient(to bottom, var(--tunnel-ausgang-mitte), color-mix(in srgb, var(--tunnel-ausgang-mitte) 35%, transparent) 30%, transparent);
+  -webkit-mask: linear-gradient(to right, transparent, #000 30%, #000 70%, transparent);
+  mask: linear-gradient(to right, transparent, #000 30%, #000 70%, transparent);
+  opacity: var(--ausgang-spiegel-staerke);
+}
+
+/* Deckenlampen: je ein Lichtstreifen in der Mitte der Straße */
+.t-lampe-spiegel {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--tunnel-tiefe) - var(--lampe-erste) - var(--i) * var(--lampe-abstand) - 20px);
+  width: 120px;
+  height: 320px;
+  margin-left: -60px;
+  /* langer, weicher Lichtstreifen: hell am Ort der Lampe, nach vorne auslaufend */
+  background: radial-gradient(ellipse 26% 50% at 50% 26%, color-mix(in srgb, var(--tunnel-lampe) 80%, transparent), color-mix(in srgb, var(--tunnel-lampe-schein) 35%, transparent) 45%, transparent 100%);
+  opacity: var(--lampen-spiegel-staerke);
+}
+
+/* Pfützen: dunkler, glatter Grund mit klarerer Spiegelung der Lampen */
+.t-pfuetze {
+  position: absolute;
+  left: var(--x);
+  top: calc(var(--tiefe-anteil) * var(--tunnel-tiefe));
+  width: var(--b);
+  height: var(--h);
+  margin-left: calc(var(--b) / -2);
+  border-radius: 50%;
+  background:
+    /* klarere Spiegelung: heller, schärfer begrenzter Widerschein von Ausgang und Lampen */
+    radial-gradient(ellipse 34% 22% at 50% 38%, color-mix(in srgb, var(--tunnel-ausgang-mitte) 38%, transparent) 0 55%, transparent 100%),
+    /* glatte, dunklere Wasserfläche */
+    radial-gradient(ellipse closest-side, var(--tunnel-pfuetze) 0 65%, transparent 100%);
+  -webkit-mask: radial-gradient(ellipse closest-side, #000 70%, transparent);
+  mask: radial-gradient(ellipse closest-side, #000 70%, transparent);
+}
+
+/* Spiegelungen der Tafeln: weiche, nach vorne auslaufende Kopie im Leuchtton,
+   direkt an der Wand unter der jeweiligen Tafel */
+.t-tafel-spiegel {
+  position: absolute;
+  top: calc(var(--tunnel-tiefe) - var(--z) - var(--tafel-b) * 0.85);
+  width: calc(var(--tafel-b) * 0.75);
+  height: calc(var(--tafel-b) * 0.85 + var(--spiegel-laenge));
+  /* Kern: die gespiegelte, verwischte Leuchtfläche; darunter der lange,
+     nach vorne auslaufende Lichtstreifen */
+  background:
+    radial-gradient(ellipse 42% 16% at 50% 16%, color-mix(in srgb, var(--tafel-ton) 65%, #fff) 0%, color-mix(in srgb, var(--tafel-ton) 55%, transparent) 45%, transparent 100%),
+    radial-gradient(ellipse 34% 62% at 50% 34%, color-mix(in srgb, var(--tafel-ton) 45%, transparent) 0%, color-mix(in srgb, var(--tafel-ton) 14%, transparent) 55%, transparent 100%);
+  opacity: var(--spiegel-staerke);
+  transition: opacity 250ms ease;
+}
+
+.t-tafel-spiegel--links { left: 1%; }
+.t-tafel-spiegel--rechts { right: 1%; }
+
+/* Ein sehr langsames, feines Schimmern auf dem nassen Asphalt */
+.t-schimmer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 32%;
+  background: repeating-linear-gradient(176deg, transparent 0 60px, var(--tunnel-schimmer) 60px 74px, transparent 74px 150px);
+  animation: tunnel-schimmern 26s ease-in-out infinite alternate;
+}
+
+@keyframes tunnel-schimmern {
+  from { transform: translateY(-3%); opacity: 0.6; }
+  to   { transform: translateY(3%); opacity: 1; }
+}
+
+
+/* ==========================================================================
+   LICHTSCHEIN DER TAFELN AUF DER WAND
+   ========================================================================== */
+
+.t-wandschein {
+  position: absolute;
+  inset: 0;
+}
+
+.t-tafel-schein {
+  position: absolute;
+  top: calc(var(--tafel-oben) - 12%);
+  height: 58%;
+  width: calc(var(--tafel-b) * 1.5);
+  background: radial-gradient(ellipse closest-side, color-mix(in srgb, var(--tafel-ton) 55%, transparent), transparent);
+  opacity: var(--spiegel-staerke);
+  transition: opacity 250ms ease;
+}
+
+/* links: innen gilt left = Tiefe + Vorlauf */
+.t-wand--links .t-tafel-schein {
+  left: calc(var(--z) + var(--tunnel-vorlauf) - var(--tafel-b) * 0.3);
+}
+
+/* rechts: innen gilt left = Tiefe-Ende minus Tiefe (die Tafel liegt also links davon) */
+.t-wand--rechts .t-tafel-schein {
+  left: calc(var(--tunnel-tiefe) - var(--z) - var(--tafel-b) * 1.2);
+}
+
+
+/* ==========================================================================
+   TIEFE JE PLATZ (für Tafel, Spiegelung und Lichtschein gleich)
+   ========================================================================== */
+
+[data-platz="1"] { --z: var(--tafel-tiefe-1); --tafel-b: var(--tafel-breite-1); --an: 0; }
+[data-platz="2"] { --z: var(--tafel-tiefe-2); --tafel-b: var(--tafel-breite-2); --an: 1; }
+[data-platz="3"] { --z: var(--tafel-tiefe-3); --tafel-b: var(--tafel-breite-3); --an: 2; }
+
+
+/* ==========================================================================
+   BEGRÜSSUNG IM AUSGANG
+   Sie liegt im 3D-Raum am Ende des Tunnels und wird genau um den Faktor
+   vergrößert, um den die Perspektive sie verkleinert – so erscheint sie
+   in normaler Größe und bewegt sich trotzdem mit der Szene.
+   ========================================================================== */
+
+.tunnel-gruss {
+  position: absolute;
+  left: 50%;
+  top: var(--fluchtpunkt-y);
+  width: max-content;
+  max-width: 80vw;
+  transform-origin: 0 0;
+  transform:
+    translateZ(calc(-1 * var(--tunnel-tiefe)))
+    scale(calc((var(--tunnel-perspektive-zahl) + var(--tunnel-tiefe-zahl)) / var(--tunnel-perspektive-zahl)))
+    translate(-50%, -50%);
+  text-align: center;
+  color: var(--tafel-text);
+  pointer-events: auto;
+}
+
+/* Lichtschleier um den Ausgang – liegt hinter dem Text */
+.tunnel-gruss::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 260%;
+  height: 300%;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  background: radial-gradient(ellipse closest-side, var(--tunnel-dunst), transparent);
+  pointer-events: none;
+}
+
 .home-gruss {
-  margin-bottom: 2px;
-  font-size: clamp(1.75rem, 4vw, 2.4rem);
+  margin: 0;
+  font-size: clamp(1.5rem, 2.8vw, 2.4rem);
+  color: var(--tafel-text);
 }
 
 .home-datum {
-  margin: 0 0 calc(var(--home-abstand) * -0.5);   /* rückt etwas näher an die Begrüßung */
+  margin: 2px auto 0;
+  color: var(--tafel-text-leise);
+  font-weight: 500;
+}
+
+/* Nachts: heller Text vor dem dunklen Himmel */
+:root[data-theme="dark"] .home-gruss {
+  color: var(--farbe-text);
+}
+
+:root[data-theme="dark"] .home-datum {
   color: var(--farbe-text-leise);
 }
 
 
 /* ==========================================================================
-   HEUTE
+   DIE TAFELN
+   Jede hängt an ihrer Wand (Drehachse = Wandkante), ist um --tafel-neigung
+   zur Straße hin aufgeklappt und steht in ihrer Tiefe --z.
+   ========================================================================== */
+
+.tafel {
+  --abheben: 0px;
+  position: absolute;
+  top: var(--tafel-oben);
+  width: var(--tafel-b);
+  min-height: calc(var(--tafel-b) * 0.42);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px;
+  color: var(--tafel-text);
+  text-decoration: none;
+  border-radius: 16px;
+  isolation: isolate;                       /* eigene Ebene: die Leuchtfläche (z-index -1) bleibt hinter dem Text */
+  pointer-events: auto;
+  transition: transform 260ms ease;
+}
+
+.tafel--links {
+  left: 0;
+  transform-origin: 0 50%;
+  transform: translateZ(calc(-1 * var(--z))) rotateY(calc(90deg - var(--tafel-neigung))) translateZ(var(--abheben));
+}
+
+.tafel--rechts {
+  right: 0;
+  transform-origin: 100% 50%;
+  transform: translateZ(calc(-1 * var(--z))) rotateY(calc(-90deg + var(--tafel-neigung))) translateZ(var(--abheben));
+}
+
+.tafel:hover,
+.tafel:focus-visible {
+  --abheben: var(--tafel-abheben);
+  color: var(--tafel-text);
+}
+
+.tafel:focus-visible {
+  outline: 3px solid var(--farbe-fokus);
+  outline-offset: 5px;
+}
+
+/* Fläche: ausgeschaltet dunkel; das Licht liegt als eigene Ebene darüber,
+   damit Einschalten und Aufleuchten nur die Deckkraft ändern */
+.tafel-flaeche,
+.tafel-licht,
+.tafel-hell {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.tafel-flaeche {
+  z-index: -1;
+  background: var(--tafel-grund);
+  border: 1px solid color-mix(in srgb, var(--tafel-ton) 50%, var(--tafel-grund));
+}
+
+/* Hinterleuchtete Fläche mit dünnem Rahmen und weichem Leuchten */
+.tafel-licht {
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--tafel-ton) 16%, #fffdf8), color-mix(in srgb, var(--tafel-ton) 38%, #fff4e6));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--tafel-ton) 75%, #fff),
+    inset 0 0 22px color-mix(in srgb, var(--tafel-ton) 30%, transparent),
+    0 0 18px color-mix(in srgb, var(--tafel-ton) 60%, transparent),
+    0 0 40px color-mix(in srgb, var(--tafel-ton) 32%, transparent);
+}
+
+/* Heller beim Hovern: zusätzliche Lichtschicht */
+.tafel-hell {
+  background: radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.12));
+  box-shadow:
+    0 0 26px color-mix(in srgb, var(--tafel-ton) 80%, transparent),
+    0 0 52px color-mix(in srgb, var(--tafel-ton) 45%, transparent);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.tafel:hover .tafel-hell,
+.tafel:focus-visible .tafel-hell {
+  opacity: 1;
+  /* einmal kurz flackern wie eine Leuchtreklame beim Einschalten */
+  animation: tafel-flackern 420ms linear;
+}
+
+@keyframes tafel-flackern {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  22%  { opacity: 0.25; }
+  34%  { opacity: 1; }
+  46%  { opacity: 0.55; }
+  60%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+.tafel-symbol {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: color-mix(in srgb, var(--tafel-ton) 55%, var(--tafel-text));
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tafel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tafel-name {
+  font-family: var(--schrift-titel);
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.tafel-info {
+  font-size: 0.92rem;
+  line-height: 1.35;
+  color: var(--tafel-text-leise);
+}
+
+/* Die kurze Spiegelung unter der Tafel gibt es nur in der Smartphone-Liste */
+.tafel-spiegel {
+  display: none;
+}
+
+/* Beim Hovern/Fokus einer Tafel leuchten auch ihre Spiegelung auf der
+   Straße und ihr Schein auf der Wand heller (beide liegen in der Deko-Ebene) */
+.tunnel:has(.tafel[data-tafel="kalender"]:is(:hover, :focus-visible)) [data-tafel="kalender"]:not(.tafel),
+.tunnel:has(.tafel[data-tafel="stundenplan"]:is(:hover, :focus-visible)) [data-tafel="stundenplan"]:not(.tafel),
+.tunnel:has(.tafel[data-tafel="todo"]:is(:hover, :focus-visible)) [data-tafel="todo"]:not(.tafel),
+.tunnel:has(.tafel[data-tafel="media"]:is(:hover, :focus-visible)) [data-tafel="media"]:not(.tafel),
+.tunnel:has(.tafel[data-tafel="games"]:is(:hover, :focus-visible)) [data-tafel="games"]:not(.tafel),
+.tunnel:has(.tafel[data-tafel="customising"]:is(:hover, :focus-visible)) [data-tafel="customising"]:not(.tafel) {
+  opacity: var(--spiegel-staerke-hell);
+}
+
+
+/* ==========================================================================
+   EINSCHALTEN beim Öffnen: Lampen und Tafeln gehen von vorne nach hinten an
+   (home.js setzt die Klasse "geht-an" bei jedem Öffnen der Startseite)
+   ========================================================================== */
+
+.tunnel.geht-an .t-lampe,
+.tunnel.geht-an .t-lampe-spiegel {
+  /* "backwards": vor dem Start aus, danach gelten wieder die normalen Werte
+     (sonst hielte die Animation die Deckkraft fest und das Aufleuchten
+     beim Hovern hätte keine Wirkung) */
+  animation: tunnel-lampe-an 420ms linear backwards;
+  animation-delay: calc(var(--i) * var(--einschalten-schritt));
+}
+
+.tunnel.geht-an .tafel-licht,
+.tunnel.geht-an .t-tafel-spiegel,
+.tunnel.geht-an .t-tafel-schein {
+  animation: tunnel-tafel-an 520ms linear backwards;
+  /* die Tafeln einer Tiefe gehen zusammen mit den Lampen dort an */
+  animation-delay: calc(120ms + var(--an) * 3 * var(--einschalten-schritt));
+}
+
+@keyframes tunnel-lampe-an {
+  0%   { opacity: 0.08; }
+  40%  { opacity: 1; }
+  55%  { opacity: 0.4; }
+  100% { opacity: var(--endwert, 1); }
+}
+
+@keyframes tunnel-tafel-an {
+  0%   { opacity: 0; }
+  30%  { opacity: 0.9; }
+  42%  { opacity: 0.2; }
+  60%  { opacity: 1; }
+  100% { opacity: var(--endwert, 1); }
+}
+
+/* Spiegelungen enden auf ihrer eigenen Stärke, nicht auf 1 */
+.t-lampe-spiegel { --endwert: var(--lampen-spiegel-staerke); }
+.t-tafel-spiegel,
+.t-tafel-schein { --endwert: var(--spiegel-staerke); }
+
+
+/* ==========================================================================
+   HEUTE: schlichte, kompakte Leiste unter dem Tunnel
    ========================================================================== */
 
 .home-heute {
-  padding: var(--abstand-l) var(--karte-innen) var(--karte-innen);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--abstand-xs) var(--abstand-l);
+  width: min(var(--inhalt-max-breite), 100% - 2 * var(--abstand-l));
+  margin: var(--abstand-l) auto 0;
+  padding: var(--abstand-m) var(--abstand-l);
   background: var(--farbe-flaeche);
   border: var(--linie);
   border-radius: var(--radius-m);
@@ -67,19 +726,19 @@
 .home-abschnitt-kopf {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: var(--abstand-m);
-  margin-bottom: var(--abstand-s);
 }
 
 .home-abschnitt-kopf h2 {
   margin: 0;
+  font-size: 1.15rem;
 }
 
 .home-mehr {
   font-size: 0.9rem;
   color: var(--farbe-text-leise);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .home-mehr:hover {
@@ -87,24 +746,31 @@
   text-decoration: underline;
 }
 
+.home-heute-inhalt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--abstand-xs) var(--abstand-m);
+  min-width: 0;
+}
+
 .home-liste {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: var(--abstand-xs) var(--abstand-l);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* Ein Eintrag: Uhrzeit links (feste Breite), daneben Titel und Ort */
+/* Ein Eintrag: Uhrzeit, Titel, Ort – mit feinem Farbstrich je Art */
 .home-eintrag {
-  display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  gap: var(--abstand-m);
-  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--abstand-s);
+  padding-left: 10px;
   border-left: 2px solid var(--farbe-termin);
-  border-radius: 0 var(--radius-s) var(--radius-s) 0;
-  background: var(--farbe-hintergrund);
 }
 
 .home-eintrag.art-vorlesung {
@@ -112,7 +778,7 @@
 }
 
 .home-eintrag.ist-vorbei {
-  opacity: var(--home-vorbei-deckkraft);
+  opacity: 0.5;
 }
 
 .home-eintrag-zeit {
@@ -145,12 +811,8 @@
   color: var(--farbe-text-leise);
 }
 
-.home-leer a {
-  color: var(--farbe-akzent);
-}
-
 .home-naechster-titel {
-  margin: var(--abstand-s) 0 6px;
+  margin: 0;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--farbe-text-leise);
@@ -158,81 +820,193 @@
 
 
 /* ==========================================================================
-   KACHELN
-   auto-fill + minmax: Es passen so viele nebeneinander, wie Platz ist.
-   Auf dem Smartphone steht dadurch automatisch alles untereinander.
+   MITTLERE BREITE (z. B. 1024 px): Tafeln etwas kleiner
    ========================================================================== */
 
-.home-kacheln {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--home-kachel-min), 1fr));
-  gap: var(--abstand-m);
+@media (max-width: 1199px) {
+  :root {
+    --tafel-breite-1: 220px;
+    --tafel-breite-2: 235px;
+    --tafel-breite-3: 245px;
+    --tafel-tiefe-2: 450px;
+    --tafel-tiefe-3: 850px;
+  }
+
+  .tafel {
+    padding: 14px 18px;
+    gap: 12px;
+  }
+
+  .tafel-name {
+    font-size: 1.25rem;
+  }
+
+  .tafel-info {
+    font-size: 0.86rem;
+  }
 }
 
-.home-kachel {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-height: var(--home-kachel-hoehe);
-  padding: var(--abstand-l) var(--karte-innen);
-  color: var(--farbe-text);
-  text-decoration: none;
-  background: var(--farbe-flaeche);
-  border: var(--linie);
-  border-radius: var(--radius-m);
-  transition: background-color var(--dauer) ease, border-color var(--dauer) ease;
-}
-
-/* Hover / Tastaturfokus: ruhig – etwas kräftigere Linie, leicht getönte Fläche */
-.home-kachel:hover,
-.home-kachel:focus-visible {
-  color: var(--farbe-text);
-  background: var(--farbe-flaeche-leise);
-  border-color: var(--farbe-rand-stark);
-}
-
-.home-kachel-symbol {
-  width: var(--home-symbol-groesse);
-  height: var(--home-symbol-groesse);
-  margin-bottom: 6px;
-  fill: none;
-  stroke: var(--home-symbol-farbe);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.home-kachel-name {
-  font-family: var(--schrift-titel);
-  font-size: 1.15rem;
-  font-weight: 600;
-}
-
-.home-kachel-info {
-  font-size: 0.9rem;
-  color: var(--farbe-text-leise);
-}
 
 /* ==========================================================================
-   SMARTPHONE
+   SMARTPHONE (unter 700 px)
+   Oben bleibt der Tunnel als Bühne (Straße, Lampen, Spiegelungen, Ausgang).
+   Die Tafeln stehen darunter als Liste großer Leuchttafeln, jede mit einer
+   kurzen Spiegelung – als stünden sie auf nassem Boden.
+   Diese Grenze steht auch in home.js (mausAbfrage).
    ========================================================================== */
 
-@media (max-width: 599px) {
+@media (max-width: 699px) {
+  :root {
+    --tunnel-tiefe-zahl: 1000;              /* kürzerer Tunnel → größerer Ausgang */
+    --tunnel-perspektive-zahl: 420;
+    --fluchtpunkt-y: 46%;
+    --tunnel-buehne-hoehe: clamp(260px, 44svh, 400px);
+    --lampe-abstand: 120px;
+    --lampe-breite: 110px;
+    --lampe-hoehe: 14px;
+    --spiegel-laenge: 260px;
+  }
+
+  .tunnel {
+    height: auto;
+    padding-top: var(--tunnel-buehne-hoehe);
+    overflow: visible;
+    /* Unter der Bühne geht die nasse Straße als Boden der Liste weiter */
+    background: linear-gradient(to bottom, var(--tunnel-asphalt), var(--tunnel-asphalt-fern));
+  }
+
+  .tunnel-buehne,
+  .tunnel-ziel {
+    bottom: auto;
+    height: var(--tunnel-buehne-hoehe);
+    overflow: hidden;
+  }
+
+  /* Wandschein und Spiegelungen der Wand-Tafeln gibt es hier nicht */
+  .t-spiegel-tafeln,
+  .t-wandschein {
+    display: none;
+  }
+
+  .home-gruss {
+    font-size: 1.45rem;
+  }
+
+  .home-datum {
+    font-size: 0.9rem;
+  }
+
+  /* Tafeln als Liste */
+  .tunnel-tafeln {
+    position: static;
+    perspective: none;
+    pointer-events: auto;
+  }
+
+  .tunnel-tafeln .tunnel-welt {
+    position: static;
+    transform: none !important;             /* keine Parallaxe/Fahrt für die Liste */
+    transform-style: flat;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: var(--abstand-l) var(--abstand-m) 40px;
+  }
+
+  .tafel,
+  .tafel--links,
+  .tafel--rechts {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: auto;
+    min-height: 0;
+    padding: 18px 20px;
+    transform: none;
+  }
+
+  .tafel:hover,
+  .tafel:focus-visible {
+    transform: none;
+  }
+
+  .tafel-name {
+    font-size: 1.3rem;
+  }
+
+  .tafel-info {
+    font-size: 0.92rem;
+  }
+
+  /* Kurze Spiegelung auf dem nassen Boden unter der Tafel */
+  .tafel-spiegel {
+    display: block;
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    top: calc(100% + 3px);
+    height: 26px;
+    border-radius: 0 0 50% 50%;
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--tafel-ton) 55%, transparent), transparent);
+    -webkit-mask: linear-gradient(to right, transparent, #000 20%, #000 80%, transparent);
+    mask: linear-gradient(to right, transparent, #000 20%, #000 80%, transparent);
+    opacity: var(--spiegel-staerke);
+    pointer-events: none;
+  }
+
+  .tafel:hover .tafel-spiegel,
+  .tafel:focus-visible .tafel-spiegel {
+    opacity: 1;
+  }
+
+  /* In der Liste gehen die Tafeln von oben nach unten an */
+  .tunnel.geht-an .tafel-licht,
+  .tunnel.geht-an .tafel-spiegel {
+    animation: tunnel-tafel-an 520ms linear backwards;
+    animation-delay: calc(120ms + var(--reihe, 0) * 90ms);
+  }
+
+  .tafel:nth-child(2) { --reihe: 1; }
+  .tafel:nth-child(3) { --reihe: 2; }
+  .tafel:nth-child(4) { --reihe: 3; }
+  .tafel:nth-child(5) { --reihe: 4; }
+  .tafel:nth-child(6) { --reihe: 5; }
+
+  .tafel-spiegel { --endwert: var(--spiegel-staerke); }
+
   .home-heute {
+    grid-template-columns: minmax(0, 1fr);
+    width: auto;
+    margin: var(--abstand-m) var(--abstand-m) 0;
     padding: var(--abstand-m);
   }
 
-  /* Uhrzeit über dem Titel statt daneben */
-  .home-eintrag {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
+  .home-abschnitt-kopf {
+    justify-content: space-between;
+  }
+}
+
+
+/* ==========================================================================
+   BEWEGUNG REDUZIEREN: nur der stehende Tunnel
+   Kein Schimmern, kein Flackern, keine Parallaxe (home.js), kein Aufbau,
+   keine Kamerafahrt.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .t-schimmer,
+  .tafel:hover .tafel-hell,
+  .tafel:focus-visible .tafel-hell,
+  .tunnel.geht-an * {
+    animation: none !important;
   }
 
-  .home-eintrag-zeit {
-    font-size: 0.85rem;
-  }
-
-  .home-kachel {
-    min-height: 0;
+  .tafel,
+  .tafel-hell,
+  .t-tafel-spiegel,
+  .t-tafel-schein,
+  .tunnel.faehrt .tunnel-welt {
+    transition: none !important;
   }
 }
