@@ -173,16 +173,19 @@
   /* ---- Bewegung: kurz und unaufdringlich ---- */
   --dauer: 150ms;
 
-  /* ---- Seitenwechsel (js/seitenwechsel.js) ---- */
-  --uebergang-dauer: 460ms;                       /* Karte ↔ Seite */
-  --uebergang-kurve: cubic-bezier(0.22, 1, 0.36, 1); /* schnell los, weich ankommen */
-  --uebergang-inhalt-dauer: 240ms;                /* Inhalt blendet danach ein (bzw. vorher aus) */
-  --uebergang-inhalt-versatz: 14px;               /* … und rückt dabei so weit von unten nach */
-  --uebergang-weichen: 220px;                     /* so weit weichen die übrigen Karten zurück */
+  /* ---- Seitenwechsel (js/seitenwechsel.js) ----
+     Karte → Abschnitt: die Kamera fliegt in die Karte hinein und durch sie
+     hindurch. Drei Phasen, nacheinander ohne Stopp (Rückweg: rückwärts). */
+  --uebergang-fahrt-dauer: 440ms;                 /* 1. Kamerafahrt, bis die Karte den Bildschirm füllt */
+  --uebergang-fahrt-kurve: cubic-bezier(0.4, 0, 0.75, 0.5); /* beschleunigt bis zum Durchgang */
+  --uebergang-durchgang-dauer: 170ms;             /* 2. Durchgang: Karte wird durchsichtig, Schimmer */
+  --uebergang-erscheinen-dauer: 460ms;            /* 3. Seite erscheint (beginnt mit dem Durchgang) */
+  --uebergang-erscheinen-kurve: cubic-bezier(0.25, 0.6, 0.3, 1); /* weich los, ruhig und langsam ankommen */
+  --uebergang-erscheinen-skala: 0.93;             /* so klein ist die Seite, wenn sie aus der Tiefe kommt */
+  --uebergang-ueberfuellen-max: 2.2;              /* höchstens so weit wächst die Karte im Durchgang über den Bildschirm hinaus */
+  --uebergang-schimmer: 0.4;                      /* Stärke des Schimmers im Durchgang (0 = aus; dunkel: unten) */
   --uebergang-wechsel-dauer: 220ms;               /* Abschnitt ↔ Abschnitt: kurze Überblendung */
   --uebergang-ruhig-dauer: 160ms;                 /* "Bewegung reduzieren": nur Überblendung */
-  --uebergang-radius-ende: 0px;                   /* Rundung der fertigen Seite (Inhaltsbereich) */
-  --uebergang-ende-anteil: 0.88;                  /* ab hier ist die Bewegung am Ziel (Rest < 0,5 px): Inhalt blendet ein */
   --anheben: 0px;                    /* früher hoben sich Elemente beim Hover – jetzt nicht mehr */
 
   /* Formularelemente und Scrollbalken im hellen Stil */
@@ -199,6 +202,7 @@
   --farbe-flaeche-hell: #322d28;
   --glow-farbe: 255 255 255;
   --glow-schatten-farbe: 0 0 0;
+  --uebergang-schimmer: 0.16;        /* auf dunklem Grund wirkt der helle Schimmer viel stärker */
   --farbe-text: #efe8dc;
   --farbe-text-leise: #ada395;
   --farbe-rand: #38332d;
@@ -855,8 +859,9 @@ dialog::backdrop {
 
 /* ==========================================================================
    6c. SEITENWECHSEL (js/seitenwechsel.js)
-   Feste Ebene unter der Navigation, in der sich die Kopie der Karte zur
-   neuen Seite verwandelt. Dauer und Kurve: Abschnitt 1, --uebergang-…
+   Feste Ebene unter der Navigation. Darin steht während der Kamerafahrt
+   ein Abbild der Startseite – dessen ganzer 3D-Raum fliegt auf die Karte
+   zu. Dauer und Kurven: Abschnitt 1, --uebergang-…
    ========================================================================== */
 
 .seitenwechsel-ebene {
@@ -869,49 +874,60 @@ dialog::backdrop {
   pointer-events: none;
 }
 
-/* Hinweg: deckt die Seite darunter ab, die schon zum Abschnitt gewechselt hat */
-.seitenwechsel-ebene.ist-deckend {
-  background: var(--farbe-hintergrund);
-}
-
-.seitenwechsel-buehne,
-.seitenwechsel-abbild {
+/* Abbild der Startseite, Seitengrund dahinter und Kartenfläche (Rückweg) */
+.seitenwechsel-abbild,
+.seitenwechsel-grund,
+.seitenwechsel-flaeche,
+.seitenwechsel-schimmer {
   position: absolute;
 }
 
-.seitenwechsel-karte,
-.seitenwechsel-titel {
-  position: absolute;
-  left: 0;
-  top: 0;
-  margin: 0;
-  transform-origin: 0 0;
-  will-change: transform, opacity;
-}
-
-.seitenwechsel-gesicht,
-.seitenwechsel-grund {
-  position: absolute;
+.seitenwechsel-grund,
+.seitenwechsel-flaeche,
+.seitenwechsel-schimmer {
   inset: 0;
 }
 
-.seitenwechsel-gesicht {
-  box-sizing: border-box;
-}
-
-/* Die Fläche, in die die Karte übergeht: der Seitenhintergrund */
+/* Deckt die Seite darunter ab, bis die Karte den Bildschirm füllt */
 .seitenwechsel-grund {
   background: var(--farbe-hintergrund);
-  opacity: 0;
 }
 
-.seitenwechsel-titel {
-  overflow-wrap: break-word;
+/* Im Abbild: Karten, die sich bei der Fahrt wegdrehen, zeigen keine Rückseite */
+.seitenwechsel-abbild .tunnel-karte {
+  backface-visibility: hidden;
+  transition: none;
 }
 
-/* Inhalt des Abschnitts wartet unsichtbar, bis die Karte die Fläche füllt */
-.seitenwechsel-wartet {
+/* Der Schimmer im Durchgang: ein heller Lichtschein in der Farbe des
+   Karten-Glows (wie beim Hovern: weiß mit einem Hauch der Akzentfarbe) */
+.seitenwechsel-schimmer {
+  /* flächig: ein Verlauf würde auf dem ruhigen Grund sichtbare Ringe zeigen */
+  background: color-mix(in srgb, var(--farbe-akzent) var(--glow-hover-akzent, 35%), rgb(var(--glow-farbe)));
   opacity: 0;
+  will-change: opacity;
+}
+
+/* Die angeklickte Karte im Abbild: unsichtbare Hülle an ihrem Platz … */
+.tunnel-karte.ist-huelle {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.tunnel-karte.ist-huelle::before,
+.tunnel-karte.ist-huelle::after,
+.tunnel-karte.ist-huelle > .tunnel-karte-name {
+  display: none;
+}
+
+/* … und darin dieselbe Karte in mehrfacher Auflösung (scharf auch ganz nah) */
+.tunnel-karte.seitenwechsel-riese {
+  position: absolute;
+  margin: 0;
+  flex: none;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* Während des Übergangs: keine Klicks (auch nicht auf die Leiste) */

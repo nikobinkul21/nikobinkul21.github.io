@@ -8,8 +8,8 @@
 
    Jede Karte zeigt nur ihren Titel. Der Tunnel steht still – bewegt
    werden nur die einzelne Karte beim Hovern und der Aufbau beim Öffnen.
-   Ein Klick auf eine Karte verwandelt sie in die neue Seite: siehe
-   js/seitenwechsel.js.
+   Ein Klick auf eine Karte: Die Kamera fliegt durch die Karte hindurch in
+   den Abschnitt – siehe js/seitenwechsel.js.
 
    Die Startseite speichert selbst NICHTS. "Heute" liest bei jedem Öffnen
    frisch aus EventsStore (js/events-store.js) – Termine und Vorlesungen.
@@ -192,8 +192,8 @@ const StartseiteAnsicht = (function () {
   }
 
   /**
-   * Klick auf eine Karte: Die Karte wird selbst zur neuen Seite (Übergang in
-   * js/seitenwechsel.js). Während eines Übergangs sind weitere Klicks
+   * Klick auf eine Karte: Die Kamera fliegt in die Karte hinein und durch
+   * sie hindurch zum Abschnitt (Übergang in js/seitenwechsel.js). Während eines Übergangs sind weitere Klicks
    * gesperrt – ein Doppelklick löst keinen zweiten Übergang aus.
    * Klick mit Strg/Cmd/Umschalt/Alt oder Mitteltaste: wie ein normaler Link.
    */
@@ -203,7 +203,7 @@ const StartseiteAnsicht = (function () {
       return;
     }
     event.preventDefault();
-    Seitenwechsel.karteGeklickt(karte.href);
+    Seitenwechsel.karteGeklickt(karte.href, karte.element);
   }
 
 

@@ -234,28 +234,34 @@
 }
 
 /* Hover und Tastaturfokus: löst sich aus der Reihe, dreht sich zum
-   Betrachter, wird heller und voll deckend */
+   Betrachter, wird heller und voll deckend. "ist-gewaehlt": dasselbe für
+   die angeklickte Karte während der Kamerafahrt (js/seitenwechsel.js). */
 .tunnel-karte:hover,
-.tunnel-karte:focus-visible {
+.tunnel-karte:focus-visible,
+.tunnel-karte.ist-gewaehlt {
   --abheben: var(--karte-abheben);
   --tiefe: 0;
   color: var(--farbe-text);
 }
 
 .tunnel-karte[data-seite="links"]:hover,
-.tunnel-karte[data-seite="links"]:focus-visible {
+.tunnel-karte[data-seite="links"]:focus-visible,
+.tunnel-karte[data-seite="links"].ist-gewaehlt {
   --zudrehen: calc(-1 * var(--karte-zudrehen));
 }
 
 .tunnel-karte[data-seite="rechts"]:hover,
-.tunnel-karte[data-seite="rechts"]:focus-visible {
+.tunnel-karte[data-seite="rechts"]:focus-visible,
+.tunnel-karte[data-seite="rechts"].ist-gewaehlt {
   --zudrehen: var(--karte-zudrehen);
 }
 
 .tunnel-karte:hover::before,
 .tunnel-karte:focus-visible::before,
 .tunnel-karte:hover::after,
-.tunnel-karte:focus-visible::after {
+.tunnel-karte:focus-visible::after,
+.tunnel-karte.ist-gewaehlt::before,
+.tunnel-karte.ist-gewaehlt::after {
   opacity: 1;
 }
 
