@@ -7,8 +7,9 @@
    Darunter steht "Heute" als schlichte Leiste.
 
    Jede Karte zeigt nur ihren Titel. Der Tunnel steht still – bewegt
-   werden nur die einzelne Karte beim Hovern, der Aufbau beim Öffnen und
-   die Fahrt beim Klick.
+   werden nur die einzelne Karte beim Hovern und der Aufbau beim Öffnen.
+   Ein Klick auf eine Karte verwandelt sie in die neue Seite: siehe
+   js/seitenwechsel.js.
 
    Die Startseite speichert selbst NICHTS. "Heute" liest bei jedem Öffnen
    frisch aus EventsStore (js/events-store.js) – Termine und Vorlesungen.
@@ -29,17 +30,6 @@ const StartseiteAnsicht = (function () {
   // Wie lange (Tage) nach dem nächsten Eintrag gesucht wird, wenn heute nichts ansteht
   const SUCHE_TAGE = 366;
 
-  /* ------------------------------------------------------------------------
-     EINSTELLUNGEN DER BEWEGUNG
-     (Winkel, Größen und Abstände stehen als CSS-Variablen in css/home.css –
-      hier nur, was JavaScript wissen muss)
-     ------------------------------------------------------------------------ */
-  const BEWEGUNG = {
-    fahrtMs: 400,         // Fahrt auf die Karte zu, danach öffnet sich der Abschnitt
-    fahrtAnteil: 0.55,    // so weit rückt die Karte bei der Fahrt Richtung Bildmitte
-    fahrtVor: 260,        // so weit (px) fährt die Ansicht nach vorne
-  };
-
   // Die Karten je Reihe, jeweils von vorne nach hinten. Reihenfolge = Tab-Reihenfolge.
   // Neue Karte? Hier ergänzen und in css/home.css --karten-pro-seite anpassen
   // (die Karten werden dann schmaler, die Reihe bleibt gleich lang).
@@ -51,7 +41,7 @@ const StartseiteAnsicht = (function () {
     ],
     rechts: [  // Freizeit
       { id: "media", href: "#media", name: "Filme/Serien" },
-      { id: "games", href: "#games/sudoku", name: "Games" },
+      { id: "games", href: "#games", name: "Games" },
       { id: "customising", href: "#customising", name: "Customising" },
     ],
   };
@@ -62,7 +52,9 @@ const StartseiteAnsicht = (function () {
 
   // Bewegung
   const ruhigAbfrage = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let faehrt = false;
+  // true: beim nächsten Öffnen kein Aufbau von hinten (Rückweg aus einem
+  // Abschnitt – dort kommen die Karten mit dem Übergang zurück)
+  let naechstesOhneAufbau = false;
 
 
   /* ==========================================================================
@@ -77,8 +69,7 @@ const StartseiteAnsicht = (function () {
     container.innerHTML =
       '<div class="home">' +
         '<div class="tunnel">' +
-          // Die "Welt": alles darin liegt im selben 3D-Raum. Die Fahrt
-          // beim Klick bewegt nur sie.
+          // Die "Welt": alles darin liegt im selben 3D-Raum
           '<div class="tunnel-welt">' +
             '<nav class="tunnel-karten" aria-label="Bereiche">' +
               '<div class="karten-reihe karten-reihe--links"></div>' +
@@ -99,7 +90,6 @@ const StartseiteAnsicht = (function () {
       "</div>";
 
     el.tunnel = container.querySelector(".tunnel");
-    el.welt = container.querySelector(".tunnel-welt");
     el.gruss = document.getElementById("titel-home");
     el.datum = container.querySelector(".home-datum");
     el.heute = container.querySelector(".home-heute-inhalt");
@@ -133,7 +123,7 @@ const StartseiteAnsicht = (function () {
     link.style.setProperty("--n", (seite === "links" ? 0 : REIHEN.links.length) + i);
     link.innerHTML = '<span class="tunnel-karte-name"></span>';
     setzeName(link.querySelector(".tunnel-karte-name"), k.name);
-    link.addEventListener("click", function (event) { karteGeklickt(event, k, link); });
+    link.addEventListener("click", function (event) { karteGeklickt(event, k); });
     k.element = link;
     return link;
   }
@@ -155,7 +145,6 @@ const StartseiteAnsicht = (function () {
    */
   function zeige() {
     zeichne();
-    fahrtZuruecksetzen();
     aufbauen();
     // Solange die Startseite offen ist, einmal pro Minute auffrischen
     // (Begrüßung, "vergangen"-Markierung, Datum nach Mitternacht)
@@ -180,7 +169,7 @@ const StartseiteAnsicht = (function () {
 
 
   /* ==========================================================================
-     BEWEGUNG: Aufbau beim Öffnen und Fahrt beim Klick
+     BEWEGUNG: Aufbau beim Öffnen und Klick auf eine Karte
      (Der Hover-Effekt der einzelnen Karte steht ganz in css/home.css.)
      Animiert werden nur transform und opacity.
      ========================================================================== */
@@ -188,54 +177,33 @@ const StartseiteAnsicht = (function () {
   /** Die Karten bauen sich von hinten nach vorn nacheinander auf (CSS-Animation). */
   function aufbauen() {
     el.tunnel.classList.remove("baut-auf");
+    if (naechstesOhneAufbau) {
+      naechstesOhneAufbau = false;
+      return;
+    }
     if (ruhigAbfrage.matches) return;
     void el.tunnel.offsetWidth;            // Neustart der Animation erzwingen
     el.tunnel.classList.add("baut-auf");
   }
 
-  function setzeWelt(transform) {
-    el.welt.style.transform = transform;
+  /** Rückweg aus einem Abschnitt: beim nächsten Öffnen kein Aufbau. */
+  function ohneAufbau() {
+    naechstesOhneAufbau = true;
   }
 
   /**
-   * Klick auf eine Karte: Die Ansicht fährt kurz auf die Karte zu (etwa
-   * 400 ms), dann öffnet sich der Abschnitt.
-   * Bei "Bewegung reduzieren" (oder Klick mit Strg/Cmd/Umschalt/Mitteltaste)
-   * öffnet der Link sofort wie gewohnt.
+   * Klick auf eine Karte: Die Karte wird selbst zur neuen Seite (Übergang in
+   * js/seitenwechsel.js). Während eines Übergangs sind weitere Klicks
+   * gesperrt – ein Doppelklick löst keinen zweiten Übergang aus.
+   * Klick mit Strg/Cmd/Umschalt/Alt oder Mitteltaste: wie ein normaler Link.
    */
-  function karteGeklickt(event, karte, link) {
-    if (ruhigAbfrage.matches || event.defaultPrevented || event.button !== 0 ||
+  function karteGeklickt(event, karte) {
+    if (event.defaultPrevented || event.button !== 0 ||
         event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
       return;
     }
     event.preventDefault();
-    if (faehrt) return;
-    faehrt = true;
-
-    // Wo steht die Karte gerade auf dem Bildschirm? Die Welt rückt so, dass
-    // die Karte Richtung Bildmitte kommt, und fährt dabei nach vorne.
-    const tunnel = el.tunnel.getBoundingClientRect();
-    const r = link.getBoundingClientRect();
-    const dx = (tunnel.left + tunnel.width / 2) - (r.left + r.width / 2);
-    const dy = (tunnel.top + tunnel.height / 2) - (r.top + r.height / 2);
-    const k = BEWEGUNG.fahrtAnteil;
-
-    el.tunnel.classList.add("faehrt");
-    link.classList.add("ist-ziel");
-    setzeWelt("translate3d(" + (dx * k).toFixed(1) + "px, " + (dy * k).toFixed(1) + "px, " + BEWEGUNG.fahrtVor + "px)");
-
-    setTimeout(function () {
-      faehrt = false;
-      window.location.hash = karte.href;
-    }, BEWEGUNG.fahrtMs);
-  }
-
-  /** Nach der Rückkehr zur Startseite steht alles wieder an seinem Platz. */
-  function fahrtZuruecksetzen() {
-    faehrt = false;
-    el.tunnel.classList.remove("faehrt");
-    KARTEN.forEach(function (k) { k.element.classList.remove("ist-ziel"); });
-    setzeWelt("");
+    Seitenwechsel.karteGeklickt(karte.href);
   }
 
 
@@ -353,5 +321,6 @@ const StartseiteAnsicht = (function () {
   return {
     init: init,
     zeige: zeige,
+    ohneAufbau: ohneAufbau,
   };
 })();

@@ -172,6 +172,17 @@
 
   /* ---- Bewegung: kurz und unaufdringlich ---- */
   --dauer: 150ms;
+
+  /* ---- Seitenwechsel (js/seitenwechsel.js) ---- */
+  --uebergang-dauer: 460ms;                       /* Karte ↔ Seite */
+  --uebergang-kurve: cubic-bezier(0.22, 1, 0.36, 1); /* schnell los, weich ankommen */
+  --uebergang-inhalt-dauer: 240ms;                /* Inhalt blendet danach ein (bzw. vorher aus) */
+  --uebergang-inhalt-versatz: 14px;               /* … und rückt dabei so weit von unten nach */
+  --uebergang-weichen: 220px;                     /* so weit weichen die übrigen Karten zurück */
+  --uebergang-wechsel-dauer: 220ms;               /* Abschnitt ↔ Abschnitt: kurze Überblendung */
+  --uebergang-ruhig-dauer: 160ms;                 /* "Bewegung reduzieren": nur Überblendung */
+  --uebergang-radius-ende: 0px;                   /* Rundung der fertigen Seite (Inhaltsbereich) */
+  --uebergang-ende-anteil: 0.88;                  /* ab hier ist die Bewegung am Ziel (Rest < 0,5 px): Inhalt blendet ein */
   --anheben: 0px;                    /* früher hoben sich Elemente beim Hover – jetzt nicht mehr */
 
   /* Formularelemente und Scrollbalken im hellen Stil */
@@ -839,6 +850,76 @@ dialog {
 
 dialog::backdrop {
   background: var(--farbe-schleier);
+}
+
+
+/* ==========================================================================
+   6c. SEITENWECHSEL (js/seitenwechsel.js)
+   Feste Ebene unter der Navigation, in der sich die Kopie der Karte zur
+   neuen Seite verwandelt. Dauer und Kurve: Abschnitt 1, --uebergang-…
+   ========================================================================== */
+
+.seitenwechsel-ebene {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;                        /* top setzt seitenwechsel.js (Unterkante der Leiste) */
+  z-index: 9;                       /* unter der Leiste (z-index 10) */
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Hinweg: deckt die Seite darunter ab, die schon zum Abschnitt gewechselt hat */
+.seitenwechsel-ebene.ist-deckend {
+  background: var(--farbe-hintergrund);
+}
+
+.seitenwechsel-buehne,
+.seitenwechsel-abbild {
+  position: absolute;
+}
+
+.seitenwechsel-karte,
+.seitenwechsel-titel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 0;
+  transform-origin: 0 0;
+  will-change: transform, opacity;
+}
+
+.seitenwechsel-gesicht,
+.seitenwechsel-grund {
+  position: absolute;
+  inset: 0;
+}
+
+.seitenwechsel-gesicht {
+  box-sizing: border-box;
+}
+
+/* Die Fläche, in die die Karte übergeht: der Seitenhintergrund */
+.seitenwechsel-grund {
+  background: var(--farbe-hintergrund);
+  opacity: 0;
+}
+
+.seitenwechsel-titel {
+  overflow-wrap: break-word;
+}
+
+/* Inhalt des Abschnitts wartet unsichtbar, bis die Karte die Fläche füllt */
+.seitenwechsel-wartet {
+  opacity: 0;
+}
+
+/* Während des Übergangs: keine Klicks (auch nicht auf die Leiste) */
+.seitenwechsel-sperre {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  cursor: progress;
 }
 
 

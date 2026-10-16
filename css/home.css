@@ -66,7 +66,6 @@
 
   /* Bewegung (der Tunnel selbst steht still) */
   --aufbau-schritt: 110ms;                  /* Verzögerung von Karte zu Karte beim Aufbau */
-  --fahrt-dauer: 400ms;                     /* Fahrt beim Klick (gleich BEWEGUNG.fahrtMs in home.js) */
 }
 
 /* Dunkles Design: weißer Glow, gut sichtbar, aber zart; Schatten unsichtbar */
@@ -111,7 +110,7 @@
   perspective-origin: 50% var(--fluchtpunkt-y);
 }
 
-/* Die "Welt": nur die Fahrt beim Klick setzt home.js als transform auf sie */
+/* Die "Welt": gemeinsamer 3D-Raum für Karten und Begrüßung */
 .tunnel-welt {
   position: absolute;
   inset: 0;
@@ -337,22 +336,6 @@
     opacity: 0;
     transform: translateZ(-180px);
   }
-}
-
-
-/* ==========================================================================
-   FAHRT beim Klick: die Ansicht fährt auf die Karte zu (Ziel setzt home.js),
-   die übrigen Karten treten zurück
-   ========================================================================== */
-
-.tunnel.faehrt .tunnel-welt {
-  transition: transform var(--fahrt-dauer) cubic-bezier(0.45, 0, 0.75, 0.55);
-}
-
-.tunnel.faehrt .tunnel-karte:not(.ist-ziel),
-.tunnel.faehrt .tunnel-ziel {
-  opacity: 0.15;
-  transition: opacity var(--fahrt-dauer) ease;
 }
 
 
@@ -599,7 +582,7 @@
 
 
 /* ==========================================================================
-   BEWEGUNG REDUZIEREN: kein Aufbau, keine Fahrt (home.js öffnet sofort).
+   BEWEGUNG REDUZIEREN: kein Aufbau (der Seitenwechsel blendet nur kurz über).
    Die Karten stehen ruhig in ihrer Tiefe.
    ========================================================================== */
 
@@ -611,8 +594,7 @@
 
   .tunnel-karte,
   .tunnel-karte::before,
-  .tunnel-karte::after,
-  .tunnel.faehrt .tunnel-welt {
+  .tunnel-karte::after {
     transition: none;
   }
 }

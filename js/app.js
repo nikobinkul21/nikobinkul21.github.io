@@ -36,6 +36,9 @@ const THEME_SCHLUESSEL = "hub-theme"; // Name des Eintrags im localStorage
 // Merkt sich, welche Tools schon gestartet wurden (damit init nur 1x läuft)
 const gestarteteTools = {};
 
+// Die gerade sichtbare Ansicht (für den passenden Übergang, siehe js/seitenwechsel.js)
+let aktuelleAnsicht = null;
+
 
 /* --------------------------------------------------------------------------
    Elemente aus dem HTML holen
@@ -83,6 +86,7 @@ function ansichtAusHash() {
  *                                Screenreader-Nutzern)
  */
 function zeigeAnsicht(name, unterseite, fokusSetzen) {
+  aktuelleAnsicht = name;
   // Alle Ansichten durchgehen: die gewünschte zeigen, den Rest verstecken
   for (const ansichtName in ANSICHTEN) {
     const section = document.getElementById("view-" + ansichtName);
@@ -126,11 +130,16 @@ function zeigeAnsicht(name, unterseite, fokusSetzen) {
   }
 }
 
-// Wenn sich der Hash ändert (Klick auf einen Reiter, Zurück-Button im Browser),
-// die passende Ansicht zeigen.
+// Wenn sich der Hash ändert (Klick auf einen Reiter oder eine Karte, Logo,
+// Zurück-Button im Browser), die passende Ansicht zeigen – mit Übergang:
+// Karte ↔ Abschnitt als Verwandlung, sonst eine kurze Überblendung.
+// Neuladen und direkte Links laufen NICHT hierüber (siehe START unten):
+// sie landen ohne Animation auf der Seite.
 window.addEventListener("hashchange", function () {
   const ziel = ansichtAusHash();
-  zeigeAnsicht(ziel.name, ziel.unterseite, true);
+  Seitenwechsel.wechsle(aktuelleAnsicht, ziel, function () {
+    zeigeAnsicht(ziel.name, ziel.unterseite, true);
+  });
 });
 
 
