@@ -110,6 +110,19 @@ Feedback zu Entwurf 4:
   "gesetzt" statt "Pflicht" ist präziser.
 - Noch offen: dasselbe "genau dann" fehlt bei wochentag und erledigt_am.
 
+**Entwurf 5 (Data Dictionary):** Alle "genau dann"-Regeln vollständig
+(datum, wochentag, erledigt_am). titel VARCHAR2(50 CHAR). erstellt und
+erledigt_am als TIMESTAMP.
+
+Feedback zu Entwurf 5:
+- Constraint-Spalte inhaltlich vollständig.
+- CHAR nur bei titel – bei beschreibung fehlt es (Umlaute), Entscheidung
+  pro Spalte begründen.
+- TIMESTAMP ohne Zeitzone: Konvention "immer UTC" muss festgelegt oder
+  WITH TIME ZONE gewählt werden.
+- Begründungen fehlen noch; Methode erklärt ("Warum das und nicht die
+  Alternative?"), Leitfragen pro Zeile gegeben.
+
 **Entscheidungen:**
 - `faelligkeit_zeit` als VARCHAR2(5) im Format HH:MI (Ortszeit ohne
   Zeitzone, wie in der App; leer = 23:59).
