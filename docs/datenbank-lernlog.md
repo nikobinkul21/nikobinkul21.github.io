@@ -84,7 +84,24 @@ Feedback zu Entwurf 2:
   Frontend begrenzt werden. Stichwort BYTE vs. CHAR (Umlaute in UTF-8).
 - Weiter offen: DATE vs. TIMESTAMP für erstellt/erledigt_am, Begründungen.
 
+**Entwurf 3 (Data Dictionary):** titel VARCHAR2(50); faelligkeit_zeit
+VARCHAR2(5) ohne Pflicht-Regel; faelligkeit_wochentag NUMBER(1) mit Regel
+"> 6 ungültig"; neue Regel "wenn erledigt = wahr, dann erledigt_am gesetzt".
+
+Feedback zu Entwurf 3:
+- Behoben: Uhrzeit optional und als Text HH:MI, Wochentag NUMBER(1),
+  Titel länger, Regel zu erledigt_am.
+- Noch offen: Formatregel für faelligkeit_zeit; Wochentag auch nicht
+  negativ (NUMBER(1) erlaubt -9..9).
+- Hinweis gegeben (2. Versuch): erlaubte Werte für faelligkeit_art als
+  Werteliste; Gegenrichtung ("Abgabe → wochentag leer" usw.); die Regel zu
+  erledigt/erledigt_am gilt in beide Richtungen ("genau dann").
+- Weiter offen: BYTE vs. CHAR, DATE vs. TIMESTAMP, Begründungen, einheitliche
+  Kleinschreibung der Spaltennamen.
+
 **Entscheidungen:**
+- `faelligkeit_zeit` als VARCHAR2(5) im Format HH:MI (Ortszeit ohne
+  Zeitzone, wie in der App; leer = 23:59).
 - Fälligkeit wird in vier Spalten zerlegt (1. Normalform), mit Präfix:
   `faelligkeit_art`, `faelligkeit_datum`, `faelligkeit_zeit`,
   `faelligkeit_wochentag`. Begründung: Die Namen sind ohne Kontext
