@@ -63,6 +63,27 @@ Feedback:
 - zeit ist laut Code bei beiden Arten optional (nicht Pflicht bei Abgabe).
 - Offen: TIMESTAMP für reine Uhrzeit hinterfragen; INTEGER vs. NUMBER(1).
 
+**Entwurf 2 (Data Dictionary):** id VARCHAR2(20) PK, titel VARCHAR2(30),
+beschreibung VARCHAR2(100), faelligkeit_art VARCHAR2(20) NOT NULL,
+faelligkeit_datum DATE, faelligkeit_zeit TIMESTAMP WITH TIME ZONE,
+faelligkeit_wochentag NUMBER(6), erledigt BOOLEAN, erledigt_am DATE,
+erstellt DATE. Bedingte Regeln (datum bei Abgabe, wochentag bei
+wöchentlich) als Constraint-Text notiert.
+
+Feedback zu Entwurf 2:
+- NOT NULL jetzt pro Spalte richtig; bedingte Pflichtfelder richtig erkannt.
+- Hinweis gegeben (2. Versuch): Uhrzeit ist laut App bei beiden Arten
+  optional; TIMESTAMP WITH TIME ZONE passt nicht zu einer reinen
+  Ortszeit-Uhrzeit (Optionen genannt: Text HH:MI, Minuten als Zahl, INTERVAL).
+- Hinweis gegeben (2. Versuch): NUMBER(6) erlaubt 6 Stellen, Wochentag
+  braucht eine Stelle plus Wertebereich 0–6.
+- Fehlende Regeln: erlaubte Werte für faelligkeit_art (Schreibweise wie im
+  Code: "woechentlich"), Gegenrichtung (Abgabe hat keinen Wochentag usw.),
+  erledigt/erledigt_am.
+- Längen: titel 30 knapp; Frontend hat kein maxlength → Länge muss auch im
+  Frontend begrenzt werden. Stichwort BYTE vs. CHAR (Umlaute in UTF-8).
+- Weiter offen: DATE vs. TIMESTAMP für erstellt/erledigt_am, Begründungen.
+
 **Entscheidungen:**
 - Fälligkeit wird in vier Spalten zerlegt (1. Normalform), mit Präfix:
   `faelligkeit_art`, `faelligkeit_datum`, `faelligkeit_zeit`,
