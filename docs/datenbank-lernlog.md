@@ -28,7 +28,7 @@ Frankfurt) umziehen. Zugriff aktuell über Database Actions / SQL-Editor.
 
 ## Schritt 1: Datenmodell für "Zu erledigen"
 
-**Status:** offen – Aufgabe gestellt (2026-10-16)
+**Status:** Modell fertig (2026-10-16), Interview-Fragen laufen
 
 **Analyse von `js/todo-store.js`:** Eine Aufgabe hat `id`, `titel`
 (Pflicht), `beschreibung` (optional), `faelligkeit` (entweder Abgabe mit
@@ -123,7 +123,31 @@ Feedback zu Entwurf 5:
 - Begründungen fehlen noch; Methode erklärt ("Warum das und nicht die
   Alternative?"), Leitfragen pro Zeile gegeben.
 
+**Entwurf 6 = finales Modell (Tabelle `aufgabe`):**
+
+| Spalte | Typ | NOT NULL | Regel |
+|---|---|---|---|
+| id | VARCHAR2(20) | ja | Primärschlüssel (ID aus dem Browser, `neueId()`) |
+| titel | VARCHAR2(50 CHAR) | ja | |
+| beschreibung | VARCHAR2(100 CHAR) | nein | |
+| faelligkeit_art | VARCHAR2(20 CHAR) | ja | nur "abgabe" oder "woechentlich" |
+| faelligkeit_datum | DATE | nein | genau dann gesetzt, wenn art = abgabe |
+| faelligkeit_zeit | VARCHAR2(5) | nein | Format HH:MI (00:00–23:59) |
+| faelligkeit_wochentag | NUMBER(1) | nein | genau dann gesetzt, wenn art = woechentlich; 0–6 |
+| erledigt | BOOLEAN | ja | |
+| erledigt_am | TIMESTAMP WITH TIME ZONE | nein | genau dann gesetzt, wenn erledigt = wahr |
+| erstellt | TIMESTAMP WITH TIME ZONE | ja | |
+
+Begründungsspalte bewusst weggelassen; die Begründungen werden über die
+Interview-Fragen mündlich geübt.
+
+Hinweis für Schritt 3: In Oracle heißt es `WITH TIME ZONE` (zwei Wörter).
+
 **Entscheidungen:**
+- CHAR-Längensemantik für Freitext-Spalten (Umlaute zählen als ein
+  Zeichen); `id` ohne CHAR, da nur ASCII-Zeichen.
+- Zeitpunkte als TIMESTAMP WITH TIME ZONE statt DATE (App liefert UTC mit
+  Millisekunden; die Zeitzone wird mitgespeichert).
 - `faelligkeit_zeit` als VARCHAR2(5) im Format HH:MI (Ortszeit ohne
   Zeitzone, wie in der App; leer = 23:59).
 - Fälligkeit wird in vier Spalten zerlegt (1. Normalform), mit Präfix:
