@@ -38,6 +38,18 @@ Uhrzeit), `erledigt`, `erledigtAm` und `erstellt`.
 **Aufgabe:** Tabellenmodell entwerfen (Tabellen, Spalten, Datentypen,
 NOT NULL, Primärschlüssel, Constraints) und Entscheidungen begründen.
 
+**Entwurf 1 (Data Dictionary in Excel):** ID VARCHAR2 PK, Titel VARCHAR2,
+Beschreibung VARCHAR2 (nullable), Fälligkeit DATE, Erledigt Boolean,
+ErledigtAm DATE (nullable), Erstellt DATE. NOT NULL überall richtig gesetzt.
+
+Feedback zu Entwurf 1:
+- Fälligkeit als ein DATE kann wöchentliche Aufgaben ("jeden Donnerstag")
+  und die Art der Fälligkeit nicht abbilden. Muss überarbeitet werden.
+- Längen für VARCHAR2 fehlen.
+- Spaltennamen: keine Umlaute, Oracle-Konvention snake_case (Großschreibung
+  ohne Anführungszeichen wird ignoriert).
+- Offen: Datenbankversion (wichtig für BOOLEAN), DATE vs. TIMESTAMP.
+
 **Entscheidungen:** _noch keine_
 
 **Interview-Fragen und Bewertung:** _folgen nach dem Schritt_
