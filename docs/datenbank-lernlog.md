@@ -51,6 +51,18 @@ Feedback zu Entwurf 1:
 - Offen: DATE vs. TIMESTAMP.
 - Konzept erklärt: atomare Werte / 1. Normalform (Fälligkeit nicht als zusammengesetzten Text speichern).
 
+**Zerlegungs-Übung (Fälligkeit):** Fälligkeit in vier Spalten aufgeteilt:
+art (VARCHAR2), datum (DATE), zeit (TIMESTAMP), wochentag (Integer).
+Selbst erkannt: datum ist nur bei Abgaben Pflicht, wochentag nur bei
+wöchentlichen Aufgaben.
+
+Feedback:
+- Zerlegung richtig, Abhängigkeit von `art` richtig erkannt.
+- NOT NULL gilt pro Spalte, nicht pro Zeile → bedingte Pflichtfelder
+  brauchen CHECK-Constraints. Konzept erklärt.
+- zeit ist laut Code bei beiden Arten optional (nicht Pflicht bei Abgabe).
+- Offen: TIMESTAMP für reine Uhrzeit hinterfragen; INTEGER vs. NUMBER(1).
+
 **Entscheidungen:** _noch keine_
 
 **Interview-Fragen und Bewertung:** _folgen nach dem Schritt_
