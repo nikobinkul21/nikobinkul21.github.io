@@ -99,6 +99,17 @@ Feedback zu Entwurf 3:
 - Weiter offen: BYTE vs. CHAR, DATE vs. TIMESTAMP, Begründungen, einheitliche
   Kleinschreibung der Spaltennamen.
 
+**Entwurf 4 (Data Dictionary):** Spaltennamen einheitlich klein;
+faelligkeit_art nur "abgabe"/"woechentlich"; Uhrzeit-Format als regulärer
+Ausdruck (aus istZeit()); Wochentag 0–6; datum "genau dann, wenn Abgabe".
+
+Feedback zu Entwurf 4:
+- Behoben: Werteliste für art, Bereich 0–6, Formatregel Uhrzeit,
+  Kleinschreibung.
+- Bei datum mit "genau dann" beide Richtungen abgedeckt – Formulierung
+  "gesetzt" statt "Pflicht" ist präziser.
+- Noch offen: dasselbe "genau dann" fehlt bei wochentag und erledigt_am.
+
 **Entscheidungen:**
 - `faelligkeit_zeit` als VARCHAR2(5) im Format HH:MI (Ortszeit ohne
   Zeitzone, wie in der App; leer = 23:59).
