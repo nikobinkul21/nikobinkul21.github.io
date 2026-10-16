@@ -12,6 +12,20 @@ Frankfurt) umziehen. Zugriff aktuell über Database Actions / SQL-Editor.
   `js/todo-store.js` – das ist später die einzige Stelle im Frontend, die
   auf die Datenbank umgestellt werden muss.
 
+## Fahrplan
+
+0. Orientierung in der OCI-Konsole und in Database Actions (ohne etwas anzulegen)
+1. Datenmodell für "Zu erledigen" auf Papier entwerfen
+2. Eigenen Datenbank-Benutzer (Schema) für die App anlegen, nicht ADMIN verwenden
+3. Tabelle(n) per DDL anlegen
+4. Testdaten einfügen und abfragen
+5. REST-Schnittstelle über ORDS bereitstellen
+6. Frontend (`js/todo-store.js`) auf die REST-Schnittstelle umstellen
+
+## Schritt 0: Orientierung
+
+**Status:** offen – Datenbankversion in der OCI-Konsole nachsehen
+
 ## Schritt 1: Datenmodell für "Zu erledigen"
 
 **Status:** offen – Aufgabe gestellt (2026-10-16)
