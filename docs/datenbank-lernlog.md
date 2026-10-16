@@ -24,7 +24,7 @@ Frankfurt) umziehen. Zugriff aktuell über Database Actions / SQL-Editor.
 
 ## Schritt 0: Orientierung
 
-**Status:** offen – Datenbankversion in der OCI-Konsole nachsehen
+**Status:** erledigt – Datenbankversion: Oracle AI Database 26ai (BOOLEAN-Datentyp verfügbar)
 
 ## Schritt 1: Datenmodell für "Zu erledigen"
 
@@ -48,7 +48,8 @@ Feedback zu Entwurf 1:
 - Längen für VARCHAR2 fehlen.
 - Spaltennamen: keine Umlaute, Oracle-Konvention snake_case (Großschreibung
   ohne Anführungszeichen wird ignoriert).
-- Offen: Datenbankversion (wichtig für BOOLEAN), DATE vs. TIMESTAMP.
+- Offen: DATE vs. TIMESTAMP.
+- Konzept erklärt: atomare Werte / 1. Normalform (Fälligkeit nicht als zusammengesetzten Text speichern).
 
 **Entscheidungen:** _noch keine_
 
