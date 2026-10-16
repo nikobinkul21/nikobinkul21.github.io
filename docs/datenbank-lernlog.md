@@ -1,0 +1,29 @@
+# Datenbank-Lernlog
+
+Lernprojekt: Die Daten der Website sollen von `localStorage` in eine
+Oracle Autonomous Database (Always Free, Transaction Processing, Region
+Frankfurt) umziehen. Zugriff aktuell über Database Actions / SQL-Editor.
+
+## Ausgangslage
+
+- Datenbank angelegt, Verbindung über Database Actions funktioniert.
+- Alle Daten liegen bisher im Browser (`localStorage`).
+- Für "Zu erledigen" laufen alle Lese- und Schreibzugriffe über
+  `js/todo-store.js` – das ist später die einzige Stelle im Frontend, die
+  auf die Datenbank umgestellt werden muss.
+
+## Schritt 1: Datenmodell für "Zu erledigen"
+
+**Status:** offen – Aufgabe gestellt (2026-10-16)
+
+**Analyse von `js/todo-store.js`:** Eine Aufgabe hat `id`, `titel`
+(Pflicht), `beschreibung` (optional), `faelligkeit` (entweder Abgabe mit
+Datum + optionaler Uhrzeit oder wöchentlich mit Wochentag 0–6 + optionaler
+Uhrzeit), `erledigt`, `erledigtAm` und `erstellt`.
+
+**Aufgabe:** Tabellenmodell entwerfen (Tabellen, Spalten, Datentypen,
+NOT NULL, Primärschlüssel, Constraints) und Entscheidungen begründen.
+
+**Entscheidungen:** _noch keine_
+
+**Interview-Fragen und Bewertung:** _folgen nach dem Schritt_
