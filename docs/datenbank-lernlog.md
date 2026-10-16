@@ -63,6 +63,11 @@ Feedback:
 - zeit ist laut Code bei beiden Arten optional (nicht Pflicht bei Abgabe).
 - Offen: TIMESTAMP für reine Uhrzeit hinterfragen; INTEGER vs. NUMBER(1).
 
-**Entscheidungen:** _noch keine_
+**Entscheidungen:**
+- Fälligkeit wird in vier Spalten zerlegt (1. Normalform), mit Präfix:
+  `faelligkeit_art`, `faelligkeit_datum`, `faelligkeit_zeit`,
+  `faelligkeit_wochentag`. Begründung: Die Namen sind ohne Kontext
+  eindeutig und grenzen sich von `erstellt`/`erledigt_am` ab; längere Namen
+  werden dafür in Kauf genommen.
 
 **Interview-Fragen und Bewertung:** _folgen nach dem Schritt_
