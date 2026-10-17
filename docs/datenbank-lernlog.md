@@ -195,7 +195,7 @@ selbst an).
 
 ## Schritt 3: Tabelle anlegen
 
-**Status:** Befehl fertig und geprüft (2026-10-17), Ausführung steht aus.
+**Status:** erledigt (2026-10-17) – Tabelle AUFGABE erfolgreich angelegt.
 Weg A gewählt: Nutzer schreibt `CREATE TABLE` selbst; Aufbau an einem
 Fremdbeispiel (Tabelle `kontakt`) erklärt.
 
@@ -210,3 +210,9 @@ Gelernt / korrigiert unterwegs:
   (ohne `/…/`, in einfachen Anführungszeichen).
 - Falscher Spaltenname → ORA-00904 "invalid identifier".
 - Kein Komma nach dem letzten Constraint.
+
+## Schritt 4: Testdaten einfügen und Regeln testen
+
+**Status:** als Nächstes – gültige Aufgaben einfügen (INSERT), abfragen
+(SELECT) und gezielt ungültige Zeilen probieren, um zu sehen, dass die
+Constraints greifen.
