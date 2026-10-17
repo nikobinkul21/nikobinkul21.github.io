@@ -169,4 +169,11 @@ Hinweis für Schritt 3: In Oracle heißt es `WITH TIME ZONE` (zwei Wörter).
   eindeutig und grenzen sich von `erstellt`/`erledigt_am` ab; längere Namen
   werden dafür in Kauf genommen.
 
-**Interview-Fragen und Bewertung:** _folgen nach dem Schritt_
+**Interview-Fragen und Bewertung:**
+
+1. *Warum vier Spalten statt eines Textes?* – Versuch 1: beschreibt die
+   vier Bestandteile und die Abhängigkeit von `art` (richtig), begründet
+   aber nicht, warum nicht ein Text. Bewertung: 2/5. Fehlt: 1. Normalform /
+   atomare Werte, Typprüfung durch die DB, Abfragen/Sortieren, Constraints.
+2. *Warum Regeln zusätzlich in der Datenbank?* – offen
+3. *VARCHAR2(50 BYTE) vs. (50 CHAR)?* – offen
