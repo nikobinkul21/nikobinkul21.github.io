@@ -138,8 +138,21 @@ Feedback zu Entwurf 5:
 | erledigt_am | TIMESTAMP WITH TIME ZONE | nein | genau dann gesetzt, wenn erledigt = wahr |
 | erstellt | TIMESTAMP WITH TIME ZONE | ja | |
 
-Begründungsspalte bewusst weggelassen; die Begründungen werden über die
-Interview-Fragen mündlich geübt.
+**Begründungen pro Spalte** (auf Wunsch von Claude formuliert und erklärt,
+2026-10-17 – zum Nacharbeiten in eigenen Worten):
+
+| Spalte | Begründung |
+|---|---|
+| id | Text, weil die ID im Browser von `neueId()` erzeugt wird (≈ 14 Zeichen aus a–z/0–9); 20 mit Puffer. Browser-ID statt Datenbank-Zahl, damit bestehende Daten und Sicherungen ihre IDs behalten. Kein CHAR nötig (nur ASCII). |
+| titel | Pflicht, weil die App ohne Titel nicht speichert. 50 CHAR reicht für realistische Titel; CHAR, damit Umlaute als ein Zeichen zählen. |
+| beschreibung | Optional, leer = NULL (Oracle speichert '' ohnehin als NULL). 100 CHAR für eine kurze Notiz. |
+| faelligkeit_art | Lesbarer Text statt Code-Zahl; Werteliste genau wie im Frontend. 20 mit Puffer für spätere Arten. |
+| faelligkeit_datum | DATE, weil nur ein Kalendertag gebraucht wird. Genau-dann-Regel verhindert widersprüchliche Zeilen. |
+| faelligkeit_zeit | Text HH:MI, weil die App eine Uhrzeit ohne Datum und Zeitzone speichert. Leer statt 23:59, damit "keine Uhrzeit" unterscheidbar bleibt. |
+| faelligkeit_wochentag | Zahl 0–6 wie im Code (0 = Montag): sprachunabhängig, sortierbar, rechenbar. NUMBER(1) reicht für eine Stelle. |
+| erledigt | BOOLEAN (ab 23ai), passt direkt zu true/false in JavaScript. Bewusst redundant zu erledigt_am, Konsistenz über Genau-dann-Regel. |
+| erledigt_am | TIMESTAMP WITH TIME ZONE, weil die App UTC mit Millisekunden liefert; DATE kennt weder Bruchteile noch Zeitzone. Grundlage für den Wochenwechsel. |
+| erstellt | Wie erledigt_am; immer gesetzt, daher NOT NULL. |
 
 Hinweis für Schritt 3: In Oracle heißt es `WITH TIME ZONE` (zwei Wörter).
 
