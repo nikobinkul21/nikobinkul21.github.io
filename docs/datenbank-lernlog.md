@@ -175,5 +175,7 @@ Hinweis für Schritt 3: In Oracle heißt es `WITH TIME ZONE` (zwei Wörter).
    vier Bestandteile und die Abhängigkeit von `art` (richtig), begründet
    aber nicht, warum nicht ein Text. Bewertung: 2/5. Fehlt: 1. Normalform /
    atomare Werte, Typprüfung durch die DB, Abfragen/Sortieren, Constraints.
+   Musterantwort auf Wunsch von Claude formuliert (1. Normalform, Typprüfung,
+   Abfragen, Constraints).
 2. *Warum Regeln zusätzlich in der Datenbank?* – offen
 3. *VARCHAR2(50 BYTE) vs. (50 CHAR)?* – offen
