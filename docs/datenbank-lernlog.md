@@ -185,7 +185,15 @@ abgeschlossen. Regeln in `CLAUDE.md` entsprechend angepasst.
 
 ## Schritt 2: Eigener Datenbank-Benutzer
 
-**Status:** offen – Anleitung gegeben (2026-10-17)
+**Status:** erledigt (2026-10-17) – Benutzer im claude.ai-Chat angelegt
+(Nutzungsgruppe LOW, Web Access an). Anmeldung als neuer Benutzer klappt;
+im Schema liegt nur `DBTOOLS$EXECUTION_HISTORY` (legt Database Actions
+selbst an).
 
 **Warum:** ADMIN hat alle Rechte; die App bekommt einen eigenen Benutzer
 (= eigenes Schema) mit nur den nötigen Rechten (Prinzip der minimalen Rechte).
+
+## Schritt 3: Tabelle anlegen
+
+**Status:** offen – Weg A gewählt: Nutzer schreibt `CREATE TABLE` selbst,
+Aufbau an einem Fremdbeispiel (Tabelle `kontakt`) erklärt.
