@@ -28,7 +28,7 @@ Frankfurt) umziehen. Zugriff aktuell über Database Actions / SQL-Editor.
 
 ## Schritt 1: Datenmodell für "Zu erledigen"
 
-**Status:** Modell fertig (2026-10-16), Interview-Fragen laufen
+**Status:** abgeschlossen (2026-10-17)
 
 **Analyse von `js/todo-store.js`:** Eine Aufgabe hat `id`, `titel`
 (Pflicht), `beschreibung` (optional), `faelligkeit` (entweder Abgabe mit
@@ -177,5 +177,15 @@ Hinweis für Schritt 3: In Oracle heißt es `WITH TIME ZONE` (zwei Wörter).
    atomare Werte, Typprüfung durch die DB, Abfragen/Sortieren, Constraints.
    Musterantwort auf Wunsch von Claude formuliert (1. Normalform, Typprüfung,
    Abfragen, Constraints).
-2. *Warum Regeln zusätzlich in der Datenbank?* – offen
-3. *VARCHAR2(50 BYTE) vs. (50 CHAR)?* – offen
+2. und 3. auf später verschoben.
+
+**Kurswechsel (2026-10-17):** Auf Wunsch des Nutzers weniger Theorie und
+Interview-Training, mehr praktische Umsetzung. Schritt 1 mit dem Excel-Modell
+abgeschlossen. Regeln in `CLAUDE.md` entsprechend angepasst.
+
+## Schritt 2: Eigener Datenbank-Benutzer
+
+**Status:** offen – Anleitung gegeben (2026-10-17)
+
+**Warum:** ADMIN hat alle Rechte; die App bekommt einen eigenen Benutzer
+(= eigenes Schema) mit nur den nötigen Rechten (Prinzip der minimalen Rechte).

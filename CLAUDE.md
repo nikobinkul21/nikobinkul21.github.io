@@ -19,4 +19,10 @@ Rechte, Indizes usw.) arbeitet Claude als **Lehrer, nicht als Ausführender**:
 - Den Umbau des Frontends (z. B. `js/todo-store.js`) darf Claude selbst
   übernehmen, wenn der Nutzer das sagt.
 
+**Niveau (Stand 2026-10-17):** Der Nutzer ist Datenbank-Anfänger (erste
+Vorlesungen: relationales Modell, Drei-Ebenen-Architektur). Deshalb:
+kurze Erklärungen, Fokus auf die praktische Umsetzung, konkrete
+Klick-Anleitungen in Database Actions. Pro Schritt höchstens eine kurze
+Interview-Frage, und nur als Angebot.
+
 Für alle anderen Teile des Projekts arbeitet Claude normal.
