@@ -195,5 +195,18 @@ selbst an).
 
 ## Schritt 3: Tabelle anlegen
 
-**Status:** offen – Weg A gewählt: Nutzer schreibt `CREATE TABLE` selbst,
-Aufbau an einem Fremdbeispiel (Tabelle `kontakt`) erklärt.
+**Status:** Befehl fertig und geprüft (2026-10-17), Ausführung steht aus.
+Weg A gewählt: Nutzer schreibt `CREATE TABLE` selbst; Aufbau an einem
+Fremdbeispiel (Tabelle `kontakt`) erklärt.
+
+Der fertige Befehl liegt in `db/01_aufgabe.sql` (Schema unter
+Versionskontrolle).
+
+Gelernt / korrigiert unterwegs:
+- `BETWEEN 0-6` ist eine Rechnung (−6) → richtig `BETWEEN 0 AND 6`.
+- "Genau dann"-Regel als zwei Fälle mit `OR`; BOOLEAN mit `TRUE`/`FALSE`
+  ohne Anführungszeichen vergleichen.
+- Regulärer Ausdruck aus `istZeit()` mit `REGEXP_LIKE` übernommen
+  (ohne `/…/`, in einfachen Anführungszeichen).
+- Falscher Spaltenname → ORA-00904 "invalid identifier".
+- Kein Komma nach dem letzten Constraint.
