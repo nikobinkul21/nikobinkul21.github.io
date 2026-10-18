@@ -303,4 +303,7 @@ Fortschritt 5b:
 - Gelernt: Im normalen Fenster kamen trotzdem Daten, weil der Browser das
   Anmelde-Cookie von Database Actions mitschickt → Sicherheit immer im
   privaten Fenster bzw. ohne Anmeldung testen.
-- Nächster Schritt: OAuth-Client (Client Credentials) anlegen.
+- OAuth-Client `NTBHUB_Website` angelegt (CLIENT_CRED). Secret nur im
+  Passwort-Manager, nie im Repo/Chat.
+- Offen: Rolle prüfen, zulässigen Ursprung (CORS) für
+  `https://nikobinkul21.github.io` eintragen, Token-Test per curl.
