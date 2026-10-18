@@ -467,7 +467,7 @@ const Seitenwechsel = (function () {
 
   /**
    * Animationen im Abbild: Fahrt des Raums, Durchgang durch die Karte,
-   * übrige Karten, Begrüßung und "Heute". Für den Rückweg dieselben
+   * übrige Karten, Begrüßung und Schnellzugriffe. Für den Rückweg dieselben
    * Keyframes rückwärts – nur die Karte selbst bleibt deckend (die
    * Kartenfläche davor hat sie schon ersetzt).
    */
@@ -493,7 +493,7 @@ const Seitenwechsel = (function () {
         { opacity: 0, offset: f * 0.9 }, { opacity: 0, offset: 1 },
       ], zeit));
     });
-    // Begrüßung und "Heute" treten zuerst zurück
+    // Begrüßung und Schnellzugriffe treten zuerst zurück
     szene.umgebung.forEach(function (e) {
       a.push(e.animate([{ opacity: 1, offset: 0 }, { opacity: 0, offset: f * 0.4 }, { opacity: 0, offset: 1 }], zeit));
     });
@@ -647,7 +647,7 @@ const Seitenwechsel = (function () {
       karte: k,
       titel: riese.querySelector(".tunnel-karte-name"),
       andere: karten.filter(function (x) { return x !== k; }),
-      umgebung: [kopie.querySelector(".tunnel-ziel"), kopie.querySelector(".home-heute")],
+      umgebung: [kopie.querySelector(".tunnel-ziel"), kopie.querySelector(".home-links")],
     };
   }
 

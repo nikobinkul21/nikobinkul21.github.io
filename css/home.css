@@ -15,7 +15,8 @@
   --tunnel-perspektive-zahl: 1000;          /* Abstand der Kamera (px) – kleiner = stärkere Tiefe */
   --tunnel-perspektive: calc(var(--tunnel-perspektive-zahl) * 1px);
   --fluchtpunkt-y: 50%;                     /* Höhe des Fluchtpunkts im Tunnel */
-  --tunnel-hoehe: clamp(440px, calc(100svh - var(--leiste-hoehe) - 150px), 700px);
+  /* Höhe: der ganze Bildschirm unter der Leiste, abzüglich Platz für die Links unten */
+  --tunnel-hoehe: clamp(440px, calc(100svh - var(--leiste-hoehe) - var(--links-platz)), 780px);
 
   /* Reihen und Karten */
   --karten-pro-seite: 3;                    /* Karten je Reihe (passend zu REIHEN in home.js) */
@@ -64,13 +65,14 @@
   --glow-hover-groesse: 36px;
   --glow-hover-akzent: 35%;                 /* … mit einem Hauch der Akzentfarbe */
 
-  /* Schnellzugriffe unter der Begrüßung */
-  --schnell-groesse: clamp(1.05rem, 1.35vw, 1.4rem);  /* etwas kleiner als die Begrüßung */
-  --schnell-abstand: 0.75em;                /* Abstand zwischen Name und Mittelpunkt (Platz für den Pfeil) */
-  --schnell-innen: 4px;                     /* Innenabstand oben/unten (Tippfläche) */
-  --schnell-seite: 2px;                     /* Innenabstand links/rechts */
-  --schnell-glow: 10px;                     /* ganz leichter Glow beim Hovern/Fokus … */
-  --schnell-glow-staerke: 30%;              /* … in der Akzentfarbe */
+  /* Schnellzugriffe unten (Claude, Gemini …) */
+  --links-groesse: clamp(1.05rem, 1.35vw, 1.4rem);
+  --links-abstand: 0.75em;                  /* Abstand zwischen Name und Mittelpunkt (Platz für den Pfeil) */
+  --links-innen: 6px;                       /* Innenabstand oben/unten (Tippfläche) */
+  --links-seite: 2px;                       /* Innenabstand links/rechts */
+  --links-oben: 20px;                       /* ruhiger Abstand zum Tunnel */
+  /* So viel Höhe bleibt unter dem Tunnel frei: Abstand + Links + Seitenrand unten */
+  --links-platz: 116px;
 
   /* Bewegung (der Tunnel selbst steht still) */
   --aufbau-schritt: 110ms;                  /* Verzögerung von Karte zu Karte beim Aufbau */
@@ -91,7 +93,7 @@
 
 
 /* ==========================================================================
-   SEITE: Tunnel über die volle Breite, "Heute" darunter
+   SEITE: Tunnel über die volle Breite, Schnellzugriffe darunter
    ========================================================================== */
 
 /* Solange die Startseite offen ist: kein Seitenrand, volle Breite */
@@ -326,88 +328,6 @@
 
 
 /* ==========================================================================
-   SCHNELLZUGRIFFE: schlichte Textlinks unter der Begrüßung
-   Überschriften-Schrift, normale Textfarbe, etwas kleiner als die
-   Begrüßung. Hover/Fokus: Akzentfarbe, feine Linie wächst von der Mitte,
-   ganz leichter Glow und ein kleiner Pfeil nach rechts oben (neuer Tab).
-   ========================================================================== */
-
-.home-schnell {
-  display: flex;
-  justify-content: center;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0 var(--schnell-abstand);
-  margin-top: var(--abstand-s);
-  font-family: var(--schrift-titel);
-  font-size: var(--schnell-groesse);
-  font-weight: 600;
-}
-
-.home-schnell-trenner {
-  color: var(--farbe-text-leise);
-}
-
-.home-schnell-link {
-  position: relative;
-  display: inline-block;
-  padding: var(--schnell-innen) var(--schnell-seite);  /* größere Tippfläche */
-  color: var(--farbe-text);
-  text-decoration: none;
-  transition: color 180ms ease, text-shadow 180ms ease;
-}
-
-/* Feine Linie unter dem Namen: wächst von der Mitte aus */
-.home-schnell-link::after {
-  content: "";
-  position: absolute;
-  left: var(--schnell-seite);
-  right: var(--schnell-seite);
-  bottom: calc(var(--schnell-innen) - 3px);
-  height: 1px;
-  background: currentColor;
-  transform: scaleX(0);
-  transform-origin: 50% 50%;
-  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-/* Kleiner Pfeil nach rechts oben – steht neben dem Namen, verschiebt nichts */
-.home-schnell-pfeil {
-  position: absolute;
-  left: calc(100% - var(--schnell-seite) + 1px);
-  top: calc(var(--schnell-innen) - 0.1em);
-  font-size: 0.6em;
-  line-height: 1;
-  opacity: 0;
-  transform: translate(-3px, 3px);
-  transition: opacity 180ms ease, transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.home-schnell-link:hover,
-.home-schnell-link:focus-visible {
-  color: var(--farbe-akzent);
-  text-shadow: 0 0 var(--schnell-glow) color-mix(in srgb, var(--farbe-akzent) var(--schnell-glow-staerke), transparent);
-}
-
-.home-schnell-link:hover::after,
-.home-schnell-link:focus-visible::after {
-  transform: scaleX(1);
-}
-
-.home-schnell-link:hover .home-schnell-pfeil,
-.home-schnell-link:focus-visible .home-schnell-pfeil {
-  opacity: 1;
-  transform: none;
-}
-
-.home-schnell-link:focus-visible {
-  outline: 2px solid var(--farbe-fokus);
-  outline-offset: 2px;
-  border-radius: var(--radius-s, 4px);
-}
-
-
-/* ==========================================================================
    AUFBAU beim Öffnen: von hinten nach vorn nacheinander
    (home.js setzt die Klasse "baut-auf" bei jedem Öffnen der Startseite)
    "backwards": vor dem Start unsichtbar, danach gelten wieder die normalen
@@ -436,115 +356,83 @@
 
 
 /* ==========================================================================
-   HEUTE: schlichte, kompakte Leiste unter dem Tunnel
+   SCHNELLZUGRIFFE UNTEN: schlichte Textlinks, mittig unter dem Tunnel
+   Überschriften-Schrift, normale Textfarbe, getrennt durch einen feinen
+   Mittelpunkt. Hover/Fokus: Akzentfarbe, feine Linie wächst von der Mitte,
+   kleiner Pfeil nach rechts oben (öffnet in neuem Tab).
    ========================================================================== */
 
-.home-heute {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+.home-links {
+  display: flex;
+  justify-content: center;
   align-items: baseline;
-  gap: var(--abstand-xs) var(--abstand-l);
-  width: min(var(--inhalt-max-breite), 100% - 2 * var(--abstand-l));
-  margin: var(--abstand-l) auto 0;
-  padding: var(--abstand-m) var(--abstand-l);
-  background: var(--farbe-flaeche);
-  border: var(--linie);
-  border-radius: var(--radius-m);
-}
-
-.home-abschnitt-kopf {
-  display: flex;
-  align-items: baseline;
-  gap: var(--abstand-m);
-}
-
-.home-abschnitt-kopf h2 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.home-mehr {
-  font-size: 0.9rem;
-  color: var(--farbe-text-leise);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.home-mehr:hover {
-  color: var(--farbe-akzent);
-  text-decoration: underline;
-}
-
-.home-heute-inhalt {
-  display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--abstand-xs) var(--abstand-m);
-  min-width: 0;
-}
-
-.home-liste {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--abstand-xs) var(--abstand-l);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Ein Eintrag: Uhrzeit, Titel, Ort – mit feinem Farbstrich je Art */
-.home-eintrag {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--abstand-s);
-  padding-left: 10px;
-  border-left: 2px solid var(--farbe-termin);
-}
-
-.home-eintrag.art-vorlesung {
-  border-left-color: var(--farbe-vorlesung);
-}
-
-.home-eintrag.ist-vorbei {
-  opacity: 0.5;
-}
-
-.home-eintrag-zeit {
-  color: var(--farbe-text-leise);
-  font-variant-numeric: tabular-nums;
-}
-
-.home-eintrag-text {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: var(--abstand-s);
-  min-width: 0;
-}
-
-.home-eintrag-titel {
-  font-weight: 500;
-  overflow-wrap: anywhere;
-}
-
-.home-eintrag-ort {
-  color: var(--farbe-text-leise);
-}
-
-.home-eintrag-ort::before {
-  content: "· ";
-}
-
-.home-leer {
-  margin: 0;
-  color: var(--farbe-text-leise);
-}
-
-.home-naechster-titel {
-  margin: 0;
-  font-size: 0.85rem;
+  gap: 0 var(--links-abstand);
+  margin-top: var(--links-oben);
+  font-family: var(--schrift-titel);
+  font-size: var(--links-groesse);
   font-weight: 600;
+}
+
+.home-links-trenner {
   color: var(--farbe-text-leise);
+}
+
+.home-link {
+  position: relative;
+  display: inline-block;
+  padding: var(--links-innen) var(--links-seite);   /* größere Tippfläche */
+  color: var(--farbe-text);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+/* Feine Linie unter dem Namen: wächst von der Mitte aus */
+.home-link::after {
+  content: "";
+  position: absolute;
+  left: var(--links-seite);
+  right: var(--links-seite);
+  bottom: calc(var(--links-innen) - 3px);
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: 50% 50%;
+  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Kleiner Pfeil nach rechts oben – steht neben dem Namen, verschiebt nichts */
+.home-link-pfeil {
+  position: absolute;
+  left: calc(100% - var(--links-seite) + 1px);
+  top: calc(var(--links-innen) - 0.1em);
+  font-size: 0.6em;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(-3px, 3px);
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.home-link:hover,
+.home-link:focus-visible {
+  color: var(--farbe-akzent);
+}
+
+.home-link:hover::after,
+.home-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.home-link:hover .home-link-pfeil,
+.home-link:focus-visible .home-link-pfeil {
+  opacity: 1;
+  transform: none;
+}
+
+.home-link:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 2px;
+  border-radius: var(--radius-s, 4px);
 }
 
 
@@ -617,15 +505,13 @@
     font-size: 1.6rem;
   }
 
-  /* Schnellzugriffe gut antippbar: Tippfläche mindestens 44 px hoch */
+  /* Schnellzugriffe gut antippbar (Tippfläche mindestens 44 px hoch),
+     mit ruhigem Abstand unter den Kacheln */
   :root {
-    --schnell-groesse: 1.15rem;
-    --schnell-innen: 10px;
-    --schnell-seite: 8px;
-  }
-
-  .home-schnell {
-    margin-top: 2px;
+    --links-groesse: 1.15rem;
+    --links-innen: 11px;
+    --links-seite: 10px;
+    --links-oben: var(--abstand-m);
   }
 
   /* Alle Karten in einer Spalte, als Ganzes nach hinten gekippt
@@ -674,17 +560,6 @@
   .tunnel.baut-auf .tunnel-karte {
     animation-delay: calc(100ms + var(--n) * 70ms);
   }
-
-  .home-heute {
-    grid-template-columns: minmax(0, 1fr);
-    width: auto;
-    margin: var(--abstand-m) var(--abstand-m) 0;
-    padding: var(--abstand-m);
-  }
-
-  .home-abschnitt-kopf {
-    justify-content: space-between;
-  }
 }
 
 
@@ -702,9 +577,9 @@
   .tunnel-karte,
   .tunnel-karte::before,
   .tunnel-karte::after,
-  .home-schnell-link,
-  .home-schnell-link::after,
-  .home-schnell-pfeil {
+  .home-link,
+  .home-link::after,
+  .home-link-pfeil {
     transition: none;
   }
 }

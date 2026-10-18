@@ -4,18 +4,16 @@
    Reihen links und rechts. Beide Reihen sind schräg in die Tiefe gedreht
    und laufen auf einen gemeinsamen Fluchtpunkt in der Mitte zu – dort
    steht die Begrüßung. Der Tunnel entsteht nur durch die Karten selbst.
-   Darunter steht "Heute" als schlichte Leiste.
-
-   Unter der Begrüßung stehen die Schnellzugriffe (SCHNELLZUGRIFFE unten)
-   als schlichte Textlinks.
+   Darunter, mittig unten auf der Seite, stehen die Schnellzugriffe
+   (SCHNELLZUGRIFFE unten) als schlichte Textlinks.
 
    Jede Karte zeigt nur ihren Titel. Der Tunnel steht still – bewegt
    werden nur die einzelne Karte beim Hovern und der Aufbau beim Öffnen.
    Ein Klick auf eine Karte: Die Kamera fliegt durch die Karte hindurch in
    den Abschnitt – siehe js/seitenwechsel.js.
 
-   Die Startseite speichert selbst NICHTS. "Heute" liest bei jedem Öffnen
-   frisch aus EventsStore (js/events-store.js) – Termine und Vorlesungen.
+   Die Startseite speichert und liest keine Daten – nur Begrüßung und
+   Datum werden bei jedem Öffnen (und einmal pro Minute) frisch gezeichnet.
 
    Aussehen, Winkel, Größen und Abstände: css/home.css (Variablen oben).
    ========================================================================== */
@@ -24,8 +22,9 @@
 // Leer lassen für eine Begrüßung ohne Namen.
 const BEGRUESSUNG_NAME = "";
 
-// Schnellzugriffe: schlichte Textlinks unter der Begrüßung, jeweils in
+// Schnellzugriffe: schlichte Textlinks unten auf der Startseite, jeweils in
 // einem neuen Tab. Nur Name und Adresse – Reihenfolge = Anzeige.
+// Ein weiterer Link ist nur ein weiterer Eintrag.
 const SCHNELLZUGRIFFE = [
   { name: "Claude", url: "https://claude.ai" },
   { name: "Gemini", url: "https://gemini.google.com" },
@@ -36,9 +35,6 @@ const StartseiteAnsicht = (function () {
   const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
   const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
     "August", "September", "Oktober", "November", "Dezember"];
-
-  // Wie lange (Tage) nach dem nächsten Eintrag gesucht wird, wenn heute nichts ansteht
-  const SUCHE_TAGE = 366;
 
   // Die Karten je Reihe, jeweils von vorne nach hinten. Reihenfolge = Tab-Reihenfolge.
   // Neue Karte? Hier ergänzen und in css/home.css --karten-pro-seite anpassen
@@ -85,31 +81,24 @@ const StartseiteAnsicht = (function () {
               '<div class="karten-reihe karten-reihe--links"></div>' +
               '<div class="karten-reihe karten-reihe--rechts"></div>' +
             "</nav>" +
-            // Begrüßung im Fluchtpunkt, darunter die Schnellzugriffe
-            '<div class="tunnel-ziel"><p class="home-datum"></p>' +
-              '<nav class="home-schnell" aria-label="Schnellzugriffe"></nav></div>' +
+            // Begrüßung im Fluchtpunkt
+            '<div class="tunnel-ziel"><p class="home-datum"></p></div>' +
           "</div>" +
         "</div>" +
 
-        '<section class="home-heute" aria-labelledby="home-heute-titel">' +
-          '<div class="home-abschnitt-kopf">' +
-            '<h2 id="home-heute-titel">Heute</h2>' +
-            '<a class="home-mehr" href="#schedule">Stundenplan →</a>' +
-          "</div>" +
-          '<div class="home-heute-inhalt"></div>' +
-        "</section>" +
+        // Unten: die Schnellzugriffe
+        '<nav class="home-links" aria-label="Schnellzugriffe"></nav>' +
       "</div>";
 
     el.tunnel = container.querySelector(".tunnel");
     el.gruss = document.getElementById("titel-home");
     el.datum = container.querySelector(".home-datum");
-    el.heute = container.querySelector(".home-heute-inhalt");
 
     // Die Begrüßung (h1 aus index.html) wandert in den Fluchtpunkt – vor das Datum.
     // Sie behält ihre ID: app.js setzt den Fokus und den Seitentitel darüber.
     container.querySelector(".tunnel-ziel").insertBefore(el.gruss, el.datum);
 
-    baueSchnellzugriffe(container.querySelector(".home-schnell"));
+    baueSchnellzugriffe(container.querySelector(".home-links"));
 
     ["links", "rechts"].forEach(function (seite) {
       const reihe = container.querySelector(".karten-reihe--" + seite);
@@ -150,20 +139,20 @@ const StartseiteAnsicht = (function () {
     SCHNELLZUGRIFFE.forEach(function (z, i) {
       if (i > 0) {
         const punkt = document.createElement("span");
-        punkt.className = "home-schnell-trenner";
+        punkt.className = "home-links-trenner";
         punkt.setAttribute("aria-hidden", "true");
         punkt.textContent = "·";
         ziel.appendChild(punkt);
       }
       const link = document.createElement("a");
-      link.className = "home-schnell-link";
+      link.className = "home-link";
       link.href = z.url;
       link.target = "_blank";
       link.rel = "noopener";
       link.setAttribute("aria-label", z.name + " in neuem Tab öffnen");
       link.textContent = z.name;
       const pfeil = document.createElement("span");
-      pfeil.className = "home-schnell-pfeil";
+      pfeil.className = "home-link-pfeil";
       pfeil.setAttribute("aria-hidden", "true");
       pfeil.textContent = "↗";
       link.appendChild(pfeil);
@@ -184,13 +173,13 @@ const StartseiteAnsicht = (function () {
 
   /**
    * Wird von app.js bei JEDEM Öffnen der Startseite aufgerufen:
-   * Begrüßung und "Heute" frisch zeichnen und die Karten aufbauen.
+   * Begrüßung und Datum frisch zeichnen und die Karten aufbauen.
    */
   function zeige() {
     zeichne();
     aufbauen();
     // Solange die Startseite offen ist, einmal pro Minute auffrischen
-    // (Begrüßung, "vergangen"-Markierung, Datum nach Mitternacht)
+    // (Begrüßung, Datum nach Mitternacht)
     clearInterval(minutenTimer);
     minutenTimer = setInterval(function () {
       if (document.getElementById("view-home").hidden) {
@@ -207,7 +196,6 @@ const StartseiteAnsicht = (function () {
     el.gruss.textContent = begruessung(jetzt);
     el.datum.textContent = WOCHENTAGE[jetzt.getDay()] + ", " + jetzt.getDate() + ". " +
       MONATE[jetzt.getMonth()] + " " + jetzt.getFullYear();
-    zeichneHeute(jetzt);
   }
 
 
@@ -261,103 +249,6 @@ const StartseiteAnsicht = (function () {
     if (stunde >= 5 && stunde < 11) gruss = "Guten Morgen";
     else if (stunde >= 11 && stunde < 18) gruss = "Guten Tag";
     return BEGRUESSUNG_NAME ? gruss + ", " + BEGRUESSUNG_NAME : gruss;
-  }
-
-
-  /* ==========================================================================
-     HEUTE
-     ========================================================================== */
-
-  function zeichneHeute(jetzt) {
-    const heute = EventsStore.datumText(jetzt);
-    const minuten = jetzt.getHours() * 60 + jetzt.getMinutes();
-    const eintraege = EventsStore.eintraegeAm(heute);   // schon nach Uhrzeit sortiert
-    el.heute.innerHTML = "";
-
-    if (eintraege.length > 0) {
-      const liste = document.createElement("ul");
-      liste.className = "home-liste";
-      eintraege.forEach(function (e) {
-        // Vorbei = Endzeit schon erreicht. Ganztägige sind bis Tagesende aktuell.
-        const vorbei = !e.ganztaegig && EventsStore.inMinuten(e.ende) <= minuten;
-        liste.appendChild(baueEintrag(e, null, vorbei));
-      });
-      el.heute.appendChild(liste);
-      return;
-    }
-
-    // Heute nichts → Hinweis und der nächste anstehende Eintrag
-    el.heute.appendChild(text("p", "home-leer", "Heute steht nichts an."));
-    const naechster = naechsterEintrag(heute);
-    if (naechster) {
-      el.heute.appendChild(text("p", "home-naechster-titel", "Als Nächstes:"));
-      const liste = document.createElement("ul");
-      liste.className = "home-liste";
-      liste.appendChild(baueEintrag(naechster, tagText(naechster.tag, heute), false));
-      el.heute.appendChild(liste);
-    } else {
-      const hinweis = text("p", "home-leer", "Auch danach ist noch nichts eingetragen. ");
-      const link = text("a", "", "Eintrag anlegen");
-      link.href = "#schedule";
-      hinweis.appendChild(link);
-      el.heute.appendChild(hinweis);
-    }
-  }
-
-  /** Erster Eintrag ab morgen (innerhalb von SUCHE_TAGE Tagen) oder null. */
-  function naechsterEintrag(heute) {
-    const ab = EventsStore.plusTage(heute, 1);
-    const bis = EventsStore.plusTage(heute, SUCHE_TAGE);
-    const nachTagen = EventsStore.eintraegeImZeitraum(ab, bis);
-    const ersterTag = Object.keys(nachTagen).sort()[0];
-    return ersterTag ? nachTagen[ersterTag][0] : null;
-  }
-
-  /**
-   * Eine Zeile: [Uhrzeit] Titel · Ort
-   * @param {string|null} tagHinweis – z. B. "Morgen" oder "Mi, 14. Oktober"
-   */
-  function baueEintrag(e, tagHinweis, vorbei) {
-    const li = document.createElement("li");
-    li.className = "home-eintrag art-" + e.art + (vorbei ? " ist-vorbei" : "");
-
-    const zeit = text("span", "home-eintrag-zeit", e.ganztaegig ? "ganztägig" : e.start + "–" + e.ende);
-    if (tagHinweis) {
-      zeit.textContent = tagHinweis + (e.ganztaegig ? "" : ", " + e.start);
-    }
-    li.appendChild(zeit);
-
-    const mitte = text("span", "home-eintrag-text", "");
-    mitte.appendChild(text("span", "home-eintrag-titel", e.titel));
-    if (e.ort) mitte.appendChild(text("span", "home-eintrag-ort", e.ort));
-    li.appendChild(mitte);
-
-    if (vorbei) {
-      li.appendChild(text("span", "nur-screenreader", "(vorbei)"));
-    }
-    return li;
-  }
-
-  /** "Morgen", "Übermorgen" oder "Mi, 14. Oktober" */
-  function tagText(tag, heute) {
-    if (tag === EventsStore.plusTage(heute, 1)) return "Morgen";
-    if (tag === EventsStore.plusTage(heute, 2)) return "Übermorgen";
-    const d = EventsStore.alsDatum(tag);
-    return WOCHENTAGE[d.getDay()].slice(0, 2) + ", " + d.getDate() + ". " + MONATE[d.getMonth()] +
-      (d.getFullYear() !== EventsStore.alsDatum(heute).getFullYear() ? " " + d.getFullYear() : "");
-  }
-
-
-  /* ==========================================================================
-     HELFER
-     ========================================================================== */
-
-  /** Element mit Klasse und reinem Text (nie HTML). */
-  function text(tag, klasse, inhalt) {
-    const e = document.createElement(tag);
-    if (klasse) e.className = klasse;
-    e.textContent = inhalt;
-    return e;
   }
 
 
