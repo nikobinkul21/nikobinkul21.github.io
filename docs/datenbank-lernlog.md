@@ -333,5 +333,11 @@ Fortschritt 5b:
 - Getestet im Browser gegen eine simulierte ORDS-Schnittstelle: falsches
   Secret, Verbinden, Anzeigen, Erledigt (PUT), Neu (POST), Löschen (DELETE),
   Übertragen, abgelehnte Änderung → Fehlermeldung und Rücksetzen.
-- Noch offen: echter Test auf der Website (CORS: zulässiger Ursprung am
-  OAuth-Client), danach test1/test2 löschen und lokale Aufgaben übertragen.
+- Übernommen in den veröffentlichten Branch (nikobinkul21/nikobinkul21.github.io#1).
+- Echter Test auf der Website erfolgreich (2026-10-18): Verbinden auf dem Mac
+  klappt, Aufgaben kommen aus der Datenbank.
+- Weitere Geräte (Handy): dieselbe Client-ID und dasselbe Secret in den
+  Einstellungen eintragen – Übertragung am besten über die geteilte
+  Zwischenablage oder einen Passwort-Manager, nicht per Messenger/E-Mail.
+
+**Status Schritt 5:** abgeschlossen.
