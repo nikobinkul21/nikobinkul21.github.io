@@ -184,6 +184,8 @@ const TodoAnsicht = (function () {
         '<div class="todo-kopf">' +
           '<button type="button" class="knopf todo-neu" data-aktion="neu">+ Neue Aufgabe</button>' +
           '<p class="todo-zusammenfassung" role="status"></p>' +
+          // Nur im Datenbank-Modus: lädt / verbunden / Fehler
+          '<p class="todo-abgleich" role="status"></p>' +
         "</div>" +
         '<section class="todo-ueberfaellig" aria-labelledby="todo-ueberfaellig-titel" hidden>' +
           '<h2 id="todo-ueberfaellig-titel">Überfällig</h2>' +
@@ -204,9 +206,9 @@ const TodoAnsicht = (function () {
         '<dialog class="todo-dialog" aria-labelledby="todo-dialog-titel">' +
           '<form class="todo-formular" novalidate>' +
             '<h2 id="todo-dialog-titel" class="todo-dialog-titel">Neue Aufgabe</h2>' +
-            '<label class="todo-feld">Titel <input type="text" name="titel" autocomplete="off" placeholder="z. B. Software Engineering"></label>' +
+            '<label class="todo-feld">Titel <input type="text" name="titel" autocomplete="off" maxlength="' + Store.MAX_TITEL + '" placeholder="z. B. Software Engineering"></label>' +
             '<label class="todo-feld">Was ist zu tun? <span class="todo-optional">(optional)</span>' +
-              '<textarea name="beschreibung" rows="2" placeholder="z. B. Übungsblatt 3 hochladen"></textarea></label>' +
+              '<textarea name="beschreibung" rows="2" maxlength="' + Store.MAX_BESCHREIBUNG + '" placeholder="z. B. Übungsblatt 3 hochladen"></textarea></label>' +
             '<fieldset class="todo-feld todo-arten"><legend>Fälligkeit</legend>' +
               '<label class="todo-art-wahl"><input type="radio" name="art" value="abgabe"> Abgabe (Datum)</label>' +
               '<label class="todo-art-wahl"><input type="radio" name="art" value="woechentlich"> Wöchentlich</label>' +
@@ -237,6 +239,7 @@ const TodoAnsicht = (function () {
     el.dialog = container.querySelector(".todo-dialog");
     el.formular = container.querySelector(".todo-formular");
     el.fehler = container.querySelector(".todo-fehler");
+    el.abgleich = container.querySelector(".todo-abgleich");
 
     // Alle Klicks an einer Stelle: Buttons der Karten, Neu, Leeren
     el.wurzel.addEventListener("click", function (event) {
@@ -262,16 +265,38 @@ const TodoAnsicht = (function () {
       if (sichtbar()) zeichne();
     }, K.aktualisierenMs);
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden && sichtbar()) zeichne();
+      if (!document.hidden && sichtbar()) {
+        zeichne();
+        Store.aktualisieren();          // auf einem anderen Gerät kann sich etwas geändert haben
+      }
+    });
+
+    // Datenbank: nach dem Laden neu zeichnen, Status und Fehler anzeigen
+    Store.beiAenderung(function (stand) {
+      zeigeAbgleich(stand);
+      if (stand.status !== "laedt" && !el.dialog.open) zeichne();
     });
 
     zeichne();
   }
 
-  /** Bei jedem Öffnen von #todo: neu zeichnen (Zeit ist vergangen). */
+  /** Bei jedem Öffnen von #todo: neu zeichnen (Zeit ist vergangen) und frisch laden. */
   function zeige() {
     zeichne();
+    zeigeAbgleich(Store.status());
+    Store.aktualisieren();
     return null;
+  }
+
+  function zeigeAbgleich(stand) {
+    let text = "";
+    if (stand.modus === "datenbank") {
+      if (stand.status === "laedt") text = "Lädt aus der Datenbank …";
+      else if (stand.status === "fehler") text = stand.text;
+      else text = "Gespeichert in der Datenbank";
+    }
+    el.abgleich.textContent = text;
+    el.abgleich.dataset.art = stand.modus === "datenbank" ? stand.status : "";
   }
 
   function sichtbar() {

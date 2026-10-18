@@ -52,6 +52,22 @@
   color: var(--farbe-text-leise);
 }
 
+/* Datenbank-Modus: "Lädt …", "Gespeichert in der Datenbank" oder ein Fehler */
+.todo-abgleich {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--farbe-text-leise);
+}
+
+.todo-abgleich:empty {
+  display: none;
+}
+
+.todo-abgleich[data-art="fehler"] {
+  color: var(--farbe-gefahr);
+  font-weight: 500;
+}
+
 /* ---------- Überfällig ---------- */
 
 .todo-ueberfaellig {

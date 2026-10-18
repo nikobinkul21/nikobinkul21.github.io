@@ -3,6 +3,7 @@
    - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer)
      als eine JSON-Datei – Export und Import
    - Sudoku-Abenteuer: Tempo der Kampfanimationen (Würfel und Schadensaufbau)
+   - Zu erledigen: Verbindung zur Oracle-Datenbank (js/todo-db.js)
 
    Aufbau einer Sicherungsdatei:
    {
@@ -44,6 +45,28 @@ const EinstellungenAnsicht = (function () {
         "</div>" +
         '<p class="einstellungen-hinweis" role="status"></p>' +
       "</section>" +
+      // Zu erledigen: Zugangsdaten für die Datenbank (OAuth-Client aus Database Actions)
+      '<section class="karte einstellungen-block" aria-labelledby="datenbank-titel">' +
+        '<h2 id="datenbank-titel">Datenbank für „Zu erledigen“</h2>' +
+        '<p class="einstellungen-db-status"></p>' +
+        '<form class="einstellungen-db-formular" autocomplete="off">' +
+          '<label class="einstellungen-feld einstellungen-feld--text"><span>Client-ID</span>' +
+            '<input type="text" name="clientId" spellcheck="false"></label>' +
+          '<label class="einstellungen-feld einstellungen-feld--text"><span>Client-Secret</span>' +
+            '<input type="password" name="secret" spellcheck="false"></label>' +
+          "<p>Die Zugangsdaten werden nur in diesem Browser gespeichert. Trage sie nur auf deinen eigenen Geräten ein.</p>" +
+          '<div class="einstellungen-knoepfe">' +
+            '<button type="submit" class="knopf">Verbinden</button>' +
+          "</div>" +
+        "</form>" +
+        '<div class="einstellungen-db-verbunden">' +
+          '<div class="einstellungen-knoepfe">' +
+            '<button type="button" class="knopf" data-aktion="db-uebertragen">Lokale Aufgaben übertragen</button>' +
+            '<button type="button" class="knopf knopf--gefahr" data-aktion="db-trennen">Trennen</button>' +
+          "</div>" +
+        "</div>" +
+        '<p class="einstellungen-hinweis einstellungen-hinweis--db" role="status"></p>' +
+      "</section>" +
       // Sudoku-Abenteuer: Tempo von Würfel und Schadensaufbau (Werte in js/sudoku-battle-ui.js)
       '<section class="karte einstellungen-block" aria-labelledby="abenteuer-titel">' +
         '<h2 id="abenteuer-titel">Sudoku-Abenteuer</h2>' +
@@ -81,6 +104,12 @@ const EinstellungenAnsicht = (function () {
 
     el.datei = container.querySelector(".einstellungen-datei");
     el.hinweis = container.querySelector(".einstellungen-hinweis");
+    el.dbStatus = container.querySelector(".einstellungen-db-status");
+    el.dbFormular = container.querySelector(".einstellungen-db-formular");
+    el.dbVerbunden = container.querySelector(".einstellungen-db-verbunden");
+    el.dbHinweis = container.querySelector(".einstellungen-hinweis--db");
+    el.dbFormular.addEventListener("submit", datenbankVerbinden);
+    zeigeDatenbank();
 
     container.addEventListener("click", function (event) {
       const knopf = event.target.closest("[data-aktion]");
@@ -88,8 +117,85 @@ const EinstellungenAnsicht = (function () {
       if (knopf.dataset.aktion === "exportieren") exportieren();
       if (knopf.dataset.aktion === "importieren") el.datei.click();
       if (knopf.dataset.aktion === "abenteuer-loeschen") fortschritteLoeschen(container);
+      if (knopf.dataset.aktion === "db-trennen") datenbankTrennen();
+      if (knopf.dataset.aktion === "db-uebertragen") datenbankUebertragen(knopf);
     });
     el.datei.addEventListener("change", importieren);
+  }
+
+
+  /* ------------------------------------------------------------------------
+     DATENBANK FÜR "ZU ERLEDIGEN"
+     ------------------------------------------------------------------------ */
+
+  /** Formular oder Verbunden-Ansicht zeigen, je nachdem ob Zugangsdaten da sind. */
+  function zeigeDatenbank() {
+    const verbunden = TodoDb.verbunden();
+    el.dbFormular.hidden = verbunden;
+    el.dbVerbunden.hidden = !verbunden;
+    const lokal = TodoStore.lokaleAufgaben().length;
+    el.dbStatus.textContent = verbunden
+      ? "Verbunden: Die Aufgaben liegen in der Oracle-Datenbank und sind auf allen verbundenen Geräten gleich. " +
+        "In diesem Browser liegen außerdem noch " + lokal + (lokal === 1 ? " lokale Aufgabe" : " lokale Aufgaben") + "."
+      : "Nicht verbunden: Die Aufgaben liegen nur in diesem Browser. Mit der Client-ID und dem Secret " +
+        "des OAuth-Clients aus Database Actions speicherst du sie in der Datenbank.";
+  }
+
+  /** Zugangsdaten speichern und sofort ausprobieren – bei Fehler wieder entfernen. */
+  function datenbankVerbinden(event) {
+    event.preventDefault();
+    const f = el.dbFormular.elements;
+    if (!f.clientId.value.trim() || !f.secret.value.trim()) {
+      zeigeDbHinweis("Bitte Client-ID und Secret eintragen.", "fehler");
+      return;
+    }
+    TodoDb.setzeZugang(f.clientId.value, f.secret.value);
+    zeigeDbHinweis("Verbinde …");
+    TodoDb.testen().then(function (anzahl) {
+      f.clientId.value = "";
+      f.secret.value = "";
+      zeigeDatenbank();
+      TodoStore.aktualisieren();
+      zeigeDbHinweis("Verbunden. In der Datenbank liegen " + anzahl + (anzahl === 1 ? " Aufgabe." : " Aufgaben."), "erfolg");
+    }, function (fehler) {
+      TodoDb.trennen();
+      zeigeDatenbank();
+      zeigeDbHinweis("Verbindung fehlgeschlagen: " + fehler.message, "fehler");
+    });
+  }
+
+  function datenbankTrennen() {
+    if (!window.confirm("Verbindung zur Datenbank trennen? Die Aufgaben in der Datenbank bleiben erhalten; " +
+      "dieser Browser zeigt danach wieder seine lokalen Aufgaben.")) return;
+    TodoDb.trennen();
+    zeigeDatenbank();
+    zeigeDbHinweis("Getrennt.");
+  }
+
+  function datenbankUebertragen(knopf) {
+    const anzahl = TodoStore.lokaleAufgaben().length;
+    if (!anzahl) {
+      zeigeDbHinweis("In diesem Browser liegen keine lokalen Aufgaben.");
+      return;
+    }
+    if (!window.confirm(anzahl + (anzahl === 1 ? " lokale Aufgabe" : " lokale Aufgaben") + " in die Datenbank übertragen? " +
+      "Aufgaben, die dort schon liegen, werden übersprungen. Die lokalen Daten bleiben unverändert.")) return;
+    knopf.disabled = true;
+    zeigeDbHinweis("Übertrage …");
+    TodoStore.uebertragen().then(function (e) {
+      const text = e.neu + " übertragen, " + e.vorhanden + " waren schon da." +
+        (e.fehler.length ? " Nicht übertragen: " + e.fehler.join("; ") : "");
+      zeigeDbHinweis(text, e.fehler.length ? "fehler" : "erfolg");
+    }, function (fehler) {
+      zeigeDbHinweis("Übertragen fehlgeschlagen: " + fehler.message, "fehler");
+    }).then(function () {
+      knopf.disabled = false;
+    });
+  }
+
+  function zeigeDbHinweis(text, art) {
+    el.dbHinweis.textContent = text;
+    el.dbHinweis.dataset.art = art || "";
   }
 
 

@@ -314,3 +314,24 @@ Fortschritt 5b:
   noch zu bestätigen.
 
 **Status 5b:** erledigt (2026-10-18).
+
+### 5c: Frontend umgebaut (Claude, 2026-10-18)
+
+- Neu: `js/todo-db.js` – Token holen (Client Credentials), GET (seitenweise),
+  POST, PUT, DELETE; Übersetzung Aufgabe ↔ Tabellenzeile.
+- `js/todo-store.js`: zwei Modi. Ohne Zugangsdaten wie bisher localStorage.
+  Mit Zugangsdaten: Lesen aus einer lokalen Kopie der DB-Daten, jede
+  Änderung geht nacheinander (Warteschlange) an die DB; bei Fehler wird der
+  Stand der DB neu geladen. Länge von Titel/Beschreibung wie in der Tabelle
+  (50/100) im Formular geprüft.
+- `js/todo.js`: Statuszeile ("Lädt …", "Gespeichert in der Datenbank",
+  Fehler mit ORA-Nummer), lädt beim Öffnen und beim Zurückkehren zum Tab neu.
+- Einstellungen: Bereich "Datenbank für Zu erledigen" – Client-ID/Secret
+  (nur im Browser gespeichert), Verbinden (testet sofort), Trennen,
+  "Lokale Aufgaben übertragen" (überspringt vorhandene IDs, lokale Daten
+  bleiben).
+- Getestet im Browser gegen eine simulierte ORDS-Schnittstelle: falsches
+  Secret, Verbinden, Anzeigen, Erledigt (PUT), Neu (POST), Löschen (DELETE),
+  Übertragen, abgelehnte Änderung → Fehlermeldung und Rücksetzen.
+- Noch offen: echter Test auf der Website (CORS: zulässiger Ursprung am
+  OAuth-Client), danach test1/test2 löschen und lokale Aufgaben übertragen.

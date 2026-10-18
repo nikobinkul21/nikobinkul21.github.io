@@ -809,6 +809,27 @@ textarea:focus {
   cursor: pointer;
 }
 
+/* Textfeld in einer Einstellung (z. B. Datenbank-Zugang) */
+.einstellungen-feld--text {
+  margin-bottom: var(--abstand-s);
+}
+
+.einstellungen-feld--text span {
+  min-width: 8rem;
+}
+
+.einstellungen-feld input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  height: var(--knopf-hoehe);
+  padding: 0 10px;
+  font: inherit;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
+}
+
 .einstellungen-hinweis:empty {
   display: none;
 }
