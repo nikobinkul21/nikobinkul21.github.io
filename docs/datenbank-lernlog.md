@@ -268,4 +268,13 @@ Testdaten `test1` und `test2` bleiben für Schritt 5 in der Tabelle.
 
 ## Schritt 5: REST-Schnittstelle (ORDS)
 
-**Status:** als Nächstes.
+**Status:** begonnen (2026-10-18).
+
+Plan:
+- 5a: AutoREST für Tabelle AUFGABE per Klick aktivieren und GET im Browser
+  testen. Vorübergehend ohne Anmeldung, nur mit Testdaten.
+- 5b: Absichern, bevor echte Daten oder das Frontend angeschlossen werden
+  (die Website ist öffentlich auf GitHub Pages – ohne Schutz könnte jeder
+  mit der URL Aufgaben lesen, ändern und löschen). Außerdem CORS klären.
+- 5c: Frontend `js/todo-store.js` auf die REST-Schnittstelle umstellen
+  (übernimmt Claude).
