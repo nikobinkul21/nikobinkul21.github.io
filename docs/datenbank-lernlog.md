@@ -213,7 +213,7 @@ Gelernt / korrigiert unterwegs:
 
 ## Schritt 4: Testdaten einfügen und Regeln testen
 
-**Status:** offen – Anleitung gegeben (2026-10-18): INSERT-Aufbau an der
+**Status:** erledigt (2026-10-18). Ablauf: INSERT-Aufbau an der
 Fremdtabelle `kontakt` erklärt, Literale für DATE/TIMESTAMP/BOOLEAN/NULL,
 SELECT, COMMIT/ROLLBACK, Run Statement vs. Run Script.
 
@@ -241,5 +241,23 @@ Fortschritt (2026-10-18):
   schickt jede Ausführung als eigene Anfrage (über REST) und committet sie
   am Ende automatisch. ROLLBACK wirkt nur innerhalb einer Ausführung
   (z. B. mehrere Befehle zusammen mit F5). → Aufräumen per DELETE … WHERE.
+- Doppelte ID `test1` → `ORA-00001: Unique Constraint (NTB_APP.AUFGABE_PK)`.
 - Gelernt: Oracle meldet nur den ersten Fehler; Reihenfolge zwischen
   CHECKs ist nicht festgelegt → pro Test nur einen Fehler einbauen.
+
+Übersicht der Fehlermeldungen:
+
+| Nummer | Bedeutung |
+|---|---|
+| ORA-02290 | CHECK-Constraint verletzt (nennt den Constraint-Namen) |
+| ORA-01400 | NULL in NOT-NULL-Spalte (nennt Schema.Tabelle.Spalte) |
+| ORA-00001 | Primärschlüssel/Unique verletzt (doppelter Wert) |
+| ORA-01438 | Zahl zu groß für den Datentyp |
+| ORA-02293 | neuer Constraint passt nicht zu vorhandenen Daten |
+| ORA-00904 | ungültiger Bezeichner (z. B. falscher Spaltenname) |
+
+Testdaten `test1` und `test2` bleiben für Schritt 5 in der Tabelle.
+
+## Schritt 5: REST-Schnittstelle (ORDS)
+
+**Status:** als Nächstes.
