@@ -228,3 +228,8 @@ Fortschritt (2026-10-18):
   (NTB_APP.AUFGABE_FAELLIGKEIT_WOCHENTAG_CK) verletzt` – Constraint greift.
 - Test Wochentag 10 → scheitert schon am Datentyp `NUMBER(1)` (ORA-01438),
   vor dem CHECK – selbst richtig erklärt.
+- Abgabe ohne Datum → `AUFGABE_FAELLIGKEIT_DATUM_CK` greift.
+- Erledigt ohne erledigt_am → `AUFGABE_ERLEDIGT_AM_CK` greift.
+- Uhrzeit '34:00' → `AUFGABE_FAELLIGKEIT_ZEIT_CK` greift.
+- Gelernt: Oracle meldet nur den ersten Fehler; Reihenfolge zwischen
+  CHECKs ist nicht festgelegt → pro Test nur einen Fehler einbauen.
