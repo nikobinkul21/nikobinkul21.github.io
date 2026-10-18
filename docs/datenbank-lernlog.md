@@ -213,6 +213,10 @@ Gelernt / korrigiert unterwegs:
 
 ## Schritt 4: Testdaten einfügen und Regeln testen
 
-**Status:** als Nächstes – gültige Aufgaben einfügen (INSERT), abfragen
-(SELECT) und gezielt ungültige Zeilen probieren, um zu sehen, dass die
-Constraints greifen.
+**Status:** offen – Anleitung gegeben (2026-10-18): INSERT-Aufbau an der
+Fremdtabelle `kontakt` erklärt, Literale für DATE/TIMESTAMP/BOOLEAN/NULL,
+SELECT, COMMIT/ROLLBACK, Run Statement vs. Run Script.
+
+Aufgabe: zwei gültige Aufgaben einfügen (eine Abgabe, eine wöchentliche),
+mit SELECT prüfen, COMMIT; danach drei absichtlich ungültige Zeilen
+einfügen, vorher vorhersagen, welcher Constraint greift.
