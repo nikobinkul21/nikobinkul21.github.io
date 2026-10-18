@@ -296,3 +296,11 @@ So liefert ORDS die Datentypen (wichtig für 5c):
    AutoREST-Rolle zuordnen. Client-ID/Secret kommen NICHT in den Code,
    sondern werden in den Einstellungen der Website auf den eigenen Geräten
    eingetragen (Website ist öffentlich).
+
+Fortschritt 5b:
+- AutoREST mit "Authentifizierung erforderlich" neu aktiviert (Deaktivieren
+  → Aktivieren). Im privaten Fenster: 401 Unauthorized ✅.
+- Gelernt: Im normalen Fenster kamen trotzdem Daten, weil der Browser das
+  Anmelde-Cookie von Database Actions mitschickt → Sicherheit immer im
+  privaten Fenster bzw. ohne Anmeldung testen.
+- Nächster Schritt: OAuth-Client (Client Credentials) anlegen.
