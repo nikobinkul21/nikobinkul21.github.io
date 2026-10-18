@@ -305,5 +305,12 @@ Fortschritt 5b:
   privaten Fenster bzw. ohne Anmeldung testen.
 - OAuth-Client `NTBHUB_Website` angelegt (CLIENT_CRED). Secret nur im
   Passwort-Manager, nie im Repo/Chat.
-- Offen: Rolle prüfen, zulässigen Ursprung (CORS) für
-  `https://nikobinkul21.github.io` eintragen, Token-Test per curl.
+- Token-Test per curl: `POST …/ords/ntb_app/oauth/token` mit Client-ID und
+  Secret → 200 + access_token (gültig 3600 s); `GET …/aufgabe/` mit
+  `Authorization: Bearer …` → 200 + test1/test2 ✅ (Rolle stimmt).
+- Gelernt: `curl -s` verschluckt Fehler, `-i` zeigt den HTTP-Status;
+  "Could not resolve host: https" = `https://` doppelt in der URL.
+- Zulässiger Ursprung (CORS) `https://nikobinkul21.github.io` – vom Nutzer
+  noch zu bestätigen.
+
+**Status 5b:** erledigt (2026-10-18).
