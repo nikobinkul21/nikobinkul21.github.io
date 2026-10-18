@@ -278,3 +278,7 @@ Plan:
   mit der URL Aufgaben lesen, ändern und löschen). Außerdem CORS klären.
 - 5c: Frontend `js/todo-store.js` auf die REST-Schnittstelle umstellen
   (übernimmt Claude).
+
+Fortschritt 5a: AutoREST für AUFGABE aktiviert (ohne Anmeldung, nur
+Testdaten). URL-Schema: `https://<host>/ords/ntb_app/aufgabe/`. GET im
+Browser liefert JSON. ⚠️ Absicherung (5b) steht noch aus.
