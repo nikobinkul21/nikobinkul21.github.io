@@ -236,5 +236,9 @@ Fortschritt (2026-10-18):
   `''` dagegen wird zu NULL und abgelehnt. Frontend trimmt, die DB nicht.
   Geplante Verbesserung: zusätzlicher CHECK mit `TRIM(titel)` per
   `ALTER TABLE … ADD CONSTRAINT`.
+- ROLLBACK hat `test5` nicht entfernt: Der SQL-Editor in Database Actions
+  schickt jede Ausführung als eigene Anfrage (über REST) und committet sie
+  am Ende automatisch. ROLLBACK wirkt nur innerhalb einer Ausführung
+  (z. B. mehrere Befehle zusammen mit F5). → Aufräumen per DELETE … WHERE.
 - Gelernt: Oracle meldet nur den ersten Fehler; Reihenfolge zwischen
   CHECKs ist nicht festgelegt → pro Test nur einen Fehler einbauen.
