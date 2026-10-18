@@ -234,8 +234,9 @@ Fortschritt (2026-10-18):
 - Titel NULL → `ORA-01400` (NOT NULL, nennt Schema.Tabelle.Spalte).
 - **Lücke gefunden:** Titel `' '` (nur Leerzeichen) wird angenommen –
   `''` dagegen wird zu NULL und abgelehnt. Frontend trimmt, die DB nicht.
-  Geplante Verbesserung: zusätzlicher CHECK mit `TRIM(titel)` per
-  `ALTER TABLE … ADD CONSTRAINT`.
+  Behoben mit `aufgabe_titel_ck` (`TRIM(titel) IS NOT NULL`) per
+  `ALTER TABLE … ADD CONSTRAINT` (Bedingung mit Hilfe von Claude), siehe
+  `db/02_aufgabe_titel_ck.sql`. Test mit `' '` → `AUFGABE_TITEL_CK` greift.
 - ROLLBACK hat `test5` nicht entfernt: Der SQL-Editor in Database Actions
   schickt jede Ausführung als eigene Anfrage (über REST) und committet sie
   am Ende automatisch. ROLLBACK wirkt nur innerhalb einer Ausführung
