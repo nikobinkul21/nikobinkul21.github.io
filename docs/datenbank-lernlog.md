@@ -341,3 +341,18 @@ Fortschritt 5b:
   Zwischenablage oder einen Passwort-Manager, nicht per Messenger/E-Mail.
 
 **Status Schritt 5:** abgeschlossen.
+
+## Ausblick (Stand 2026-10-18)
+
+Offene Ideen für die nächsten Sitzungen:
+- Optional: Während "Zu erledigen" sichtbar ist, alle 30 Sekunden neu aus der
+  Datenbank laden (heute: beim Öffnen, Neuladen und Zurückkehren zum Tab).
+- Mehrere Nutzer: ein gemeinsamer Client-Secret ist dafür ungeeignet (alle
+  wären dieselbe Identität). Nötig wären:
+  1. Login pro Person (z. B. "Mit Google anmelden", Token als JWT; ORDS kann
+     JWTs prüfen),
+  2. Datenmodell: Tabelle `benutzer` und Fremdschlüssel `aufgabe.benutzer_id`
+     (1:n-Beziehung),
+  3. Autorisierung in der Datenbank: eigene ORDS-REST-Handler mit
+     `WHERE benutzer = angemeldeter Nutzer` statt AutoREST,
+  dazu Datenschutz (DSGVO). Guter Einstieg: Baustein 2 (Fremdschlüssel).
