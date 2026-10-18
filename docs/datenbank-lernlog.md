@@ -231,5 +231,10 @@ Fortschritt (2026-10-18):
 - Abgabe ohne Datum → `AUFGABE_FAELLIGKEIT_DATUM_CK` greift.
 - Erledigt ohne erledigt_am → `AUFGABE_ERLEDIGT_AM_CK` greift.
 - Uhrzeit '34:00' → `AUFGABE_FAELLIGKEIT_ZEIT_CK` greift.
+- Titel NULL → `ORA-01400` (NOT NULL, nennt Schema.Tabelle.Spalte).
+- **Lücke gefunden:** Titel `' '` (nur Leerzeichen) wird angenommen –
+  `''` dagegen wird zu NULL und abgelehnt. Frontend trimmt, die DB nicht.
+  Geplante Verbesserung: zusätzlicher CHECK mit `TRIM(titel)` per
+  `ALTER TABLE … ADD CONSTRAINT`.
 - Gelernt: Oracle meldet nur den ersten Fehler; Reihenfolge zwischen
   CHECKs ist nicht festgelegt → pro Test nur einen Fehler einbauen.
