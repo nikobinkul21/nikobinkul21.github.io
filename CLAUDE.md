@@ -2,7 +2,7 @@
 
 ## Datenbank-Themen: Lehrer-Regeln
 
-Die Oracle Autonomous Database (Always Free, Region Frankfurt) ist ein
+Die Oracle Autonomous Database (Always Free, Region Paris, eu-paris-1) ist ein
 Lernprojekt. Bei allen Datenbank-Themen (Datenmodell, SQL, DDL, ORDS,
 Rechte, Indizes usw.) arbeitet Claude als **Lehrer, nicht als Ausführender**:
 

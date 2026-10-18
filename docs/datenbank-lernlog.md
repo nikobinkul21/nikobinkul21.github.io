@@ -2,7 +2,7 @@
 
 Lernprojekt: Die Daten der Website sollen von `localStorage` in eine
 Oracle Autonomous Database (Always Free, Transaction Processing, Region
-Frankfurt) umziehen. Zugriff aktuell über Database Actions / SQL-Editor.
+Paris `eu-paris-1` – laut REST-URL; ursprünglich als Frankfurt notiert) umziehen. Zugriff aktuell über Database Actions / SQL-Editor.
 
 ## Ausgangslage
 
@@ -282,3 +282,17 @@ Plan:
 Fortschritt 5a: AutoREST für AUFGABE aktiviert (ohne Anmeldung, nur
 Testdaten). URL-Schema: `https://<host>/ords/ntb_app/aufgabe/`. GET im
 Browser liefert JSON. ⚠️ Absicherung (5b) steht noch aus.
+
+So liefert ORDS die Datentypen (wichtig für 5c):
+- DATE → `"2026-10-20T00:00:00Z"` (im Frontend nur die ersten 10 Zeichen
+  nehmen, nicht über `new Date()` umrechnen – sonst Zeitzonen-Verschiebung)
+- TIMESTAMP WITH TIME ZONE → ISO-Zeitpunkt in UTC (`…Z`), wie in der App
+- BOOLEAN → `true`/`false`, NUMBER → Zahl, leere Spalten → `null`
+- Liste unter `items`, Paginierung über `limit` (25), `hasMore`, `offset`
+
+5b – Plan zur Absicherung:
+1. "Require Authentication" für AutoREST einschalten → ohne Anmeldung 401.
+2. OAuth-Client (Client Credentials) in Database Actions anlegen und der
+   AutoREST-Rolle zuordnen. Client-ID/Secret kommen NICHT in den Code,
+   sondern werden in den Einstellungen der Website auf den eigenen Geräten
+   eingetragen (Website ist öffentlich).
