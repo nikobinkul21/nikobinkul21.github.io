@@ -256,6 +256,14 @@ Fortschritt (2026-10-18):
 | ORA-02293 | neuer Constraint passt nicht zu vorhandenen Daten |
 | ORA-00904 | ungültiger Bezeichner (z. B. falscher Spaltenname) |
 
+Interview-Frage (optional): *Warum zusätzlich ein Constraint, wenn
+JavaScript schon prüft?* – Antwort mit eigenem Leerzeichen-Experiment
+begründet. Bewertung 3/5: gutes konkretes Beispiel; "redundant" ist der
+falsche Begriff (gemeint: ungültige/inkonsistente Zeile); es fehlte, dass
+Daten auch an der App vorbei in die DB kommen (SQL-Editor, andere Clients,
+Fehler im JS, manipulierte Browser-Anfragen) – die DB als letzte
+Verteidigungslinie.
+
 Testdaten `test1` und `test2` bleiben für Schritt 5 in der Tabelle.
 
 ## Schritt 5: REST-Schnittstelle (ORDS)
