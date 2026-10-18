@@ -226,3 +226,5 @@ Fortschritt (2026-10-18):
   erledigt) selbst geschrieben und eingefügt.
 - Test Wochentag 7 → `ORA-02290: CHECK-Constraint
   (NTB_APP.AUFGABE_FAELLIGKEIT_WOCHENTAG_CK) verletzt` – Constraint greift.
+- Test Wochentag 10 → scheitert schon am Datentyp `NUMBER(1)` (ORA-01438),
+  vor dem CHECK – selbst richtig erklärt.
