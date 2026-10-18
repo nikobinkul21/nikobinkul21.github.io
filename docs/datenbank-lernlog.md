@@ -186,7 +186,7 @@ abgeschlossen. Regeln in `CLAUDE.md` entsprechend angepasst.
 ## Schritt 2: Eigener Datenbank-Benutzer
 
 **Status:** erledigt (2026-10-17) – Benutzer im claude.ai-Chat angelegt
-(Nutzungsgruppe LOW, Web Access an). Anmeldung als neuer Benutzer klappt;
+(Benutzername `NTB_APP`, Nutzungsgruppe LOW, Web Access an). Anmeldung als neuer Benutzer klappt;
 im Schema liegt nur `DBTOOLS$EXECUTION_HISTORY` (legt Database Actions
 selbst an).
 
@@ -220,3 +220,9 @@ SELECT, COMMIT/ROLLBACK, Run Statement vs. Run Script.
 Aufgabe: zwei gültige Aufgaben einfügen (eine Abgabe, eine wöchentliche),
 mit SELECT prüfen, COMMIT; danach drei absichtlich ungültige Zeilen
 einfügen, vorher vorhersagen, welcher Constraint greift.
+
+Fortschritt (2026-10-18):
+- `test1` (Abgabe, offen) und `test2` (wöchentlich, Donnerstag = 3,
+  erledigt) selbst geschrieben und eingefügt.
+- Test Wochentag 7 → `ORA-02290: CHECK-Constraint
+  (NTB_APP.AUFGABE_FAELLIGKEIT_WOCHENTAG_CK) verletzt` – Constraint greift.
