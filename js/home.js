@@ -6,6 +6,9 @@
    steht die Begrüßung. Der Tunnel entsteht nur durch die Karten selbst.
    Darunter steht "Heute" als schlichte Leiste.
 
+   Unter der Begrüßung stehen die Schnellzugriffe (SCHNELLZUGRIFFE unten)
+   als schlichte Textlinks.
+
    Jede Karte zeigt nur ihren Titel. Der Tunnel steht still – bewegt
    werden nur die einzelne Karte beim Hovern und der Aufbau beim Öffnen.
    Ein Klick auf eine Karte: Die Kamera fliegt durch die Karte hindurch in
@@ -20,6 +23,13 @@
 // Optionaler Name für die Begrüßung, z. B. "Niko" → "Guten Morgen, Niko".
 // Leer lassen für eine Begrüßung ohne Namen.
 const BEGRUESSUNG_NAME = "";
+
+// Schnellzugriffe: schlichte Textlinks unter der Begrüßung, jeweils in
+// einem neuen Tab. Nur Name und Adresse – Reihenfolge = Anzeige.
+const SCHNELLZUGRIFFE = [
+  { name: "Claude", url: "https://claude.ai" },
+  { name: "Gemini", url: "https://gemini.google.com" },
+];
 
 const StartseiteAnsicht = (function () {
 
@@ -75,8 +85,9 @@ const StartseiteAnsicht = (function () {
               '<div class="karten-reihe karten-reihe--links"></div>' +
               '<div class="karten-reihe karten-reihe--rechts"></div>' +
             "</nav>" +
-            // Begrüßung im Fluchtpunkt
-            '<div class="tunnel-ziel"><p class="home-datum"></p></div>' +
+            // Begrüßung im Fluchtpunkt, darunter die Schnellzugriffe
+            '<div class="tunnel-ziel"><p class="home-datum"></p>' +
+              '<nav class="home-schnell" aria-label="Schnellzugriffe"></nav></div>' +
           "</div>" +
         "</div>" +
 
@@ -97,6 +108,8 @@ const StartseiteAnsicht = (function () {
     // Die Begrüßung (h1 aus index.html) wandert in den Fluchtpunkt – vor das Datum.
     // Sie behält ihre ID: app.js setzt den Fokus und den Seitentitel darüber.
     container.querySelector(".tunnel-ziel").insertBefore(el.gruss, el.datum);
+
+    baueSchnellzugriffe(container.querySelector(".home-schnell"));
 
     ["links", "rechts"].forEach(function (seite) {
       const reihe = container.querySelector(".karten-reihe--" + seite);
@@ -126,6 +139,36 @@ const StartseiteAnsicht = (function () {
     link.addEventListener("click", function (event) { karteGeklickt(event, k); });
     k.element = link;
     return link;
+  }
+
+  /**
+   * Schnellzugriffe als schlichte Textlinks, getrennt durch einen feinen
+   * Mittelpunkt. Öffnen in einem neuen Tab; der kleine Pfeil (nur beim
+   * Hovern/Fokus sichtbar) zeigt das an. Aussehen: css/home.css.
+   */
+  function baueSchnellzugriffe(ziel) {
+    SCHNELLZUGRIFFE.forEach(function (z, i) {
+      if (i > 0) {
+        const punkt = document.createElement("span");
+        punkt.className = "home-schnell-trenner";
+        punkt.setAttribute("aria-hidden", "true");
+        punkt.textContent = "·";
+        ziel.appendChild(punkt);
+      }
+      const link = document.createElement("a");
+      link.className = "home-schnell-link";
+      link.href = z.url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.setAttribute("aria-label", z.name + " in neuem Tab öffnen");
+      link.textContent = z.name;
+      const pfeil = document.createElement("span");
+      pfeil.className = "home-schnell-pfeil";
+      pfeil.setAttribute("aria-hidden", "true");
+      pfeil.textContent = "↗";
+      link.appendChild(pfeil);
+      ziel.appendChild(link);
+    });
   }
 
   /**

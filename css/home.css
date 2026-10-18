@@ -64,6 +64,14 @@
   --glow-hover-groesse: 36px;
   --glow-hover-akzent: 35%;                 /* … mit einem Hauch der Akzentfarbe */
 
+  /* Schnellzugriffe unter der Begrüßung */
+  --schnell-groesse: clamp(1.05rem, 1.35vw, 1.4rem);  /* etwas kleiner als die Begrüßung */
+  --schnell-abstand: 0.75em;                /* Abstand zwischen Name und Mittelpunkt (Platz für den Pfeil) */
+  --schnell-innen: 4px;                     /* Innenabstand oben/unten (Tippfläche) */
+  --schnell-seite: 2px;                     /* Innenabstand links/rechts */
+  --schnell-glow: 10px;                     /* ganz leichter Glow beim Hovern/Fokus … */
+  --schnell-glow-staerke: 30%;              /* … in der Akzentfarbe */
+
   /* Bewegung (der Tunnel selbst steht still) */
   --aufbau-schritt: 110ms;                  /* Verzögerung von Karte zu Karte beim Aufbau */
 }
@@ -318,6 +326,88 @@
 
 
 /* ==========================================================================
+   SCHNELLZUGRIFFE: schlichte Textlinks unter der Begrüßung
+   Überschriften-Schrift, normale Textfarbe, etwas kleiner als die
+   Begrüßung. Hover/Fokus: Akzentfarbe, feine Linie wächst von der Mitte,
+   ganz leichter Glow und ein kleiner Pfeil nach rechts oben (neuer Tab).
+   ========================================================================== */
+
+.home-schnell {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 var(--schnell-abstand);
+  margin-top: var(--abstand-s);
+  font-family: var(--schrift-titel);
+  font-size: var(--schnell-groesse);
+  font-weight: 600;
+}
+
+.home-schnell-trenner {
+  color: var(--farbe-text-leise);
+}
+
+.home-schnell-link {
+  position: relative;
+  display: inline-block;
+  padding: var(--schnell-innen) var(--schnell-seite);  /* größere Tippfläche */
+  color: var(--farbe-text);
+  text-decoration: none;
+  transition: color 180ms ease, text-shadow 180ms ease;
+}
+
+/* Feine Linie unter dem Namen: wächst von der Mitte aus */
+.home-schnell-link::after {
+  content: "";
+  position: absolute;
+  left: var(--schnell-seite);
+  right: var(--schnell-seite);
+  bottom: calc(var(--schnell-innen) - 3px);
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: 50% 50%;
+  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Kleiner Pfeil nach rechts oben – steht neben dem Namen, verschiebt nichts */
+.home-schnell-pfeil {
+  position: absolute;
+  left: calc(100% - var(--schnell-seite) + 1px);
+  top: calc(var(--schnell-innen) - 0.1em);
+  font-size: 0.6em;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(-3px, 3px);
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.home-schnell-link:hover,
+.home-schnell-link:focus-visible {
+  color: var(--farbe-akzent);
+  text-shadow: 0 0 var(--schnell-glow) color-mix(in srgb, var(--farbe-akzent) var(--schnell-glow-staerke), transparent);
+}
+
+.home-schnell-link:hover::after,
+.home-schnell-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.home-schnell-link:hover .home-schnell-pfeil,
+.home-schnell-link:focus-visible .home-schnell-pfeil {
+  opacity: 1;
+  transform: none;
+}
+
+.home-schnell-link:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 2px;
+  border-radius: var(--radius-s, 4px);
+}
+
+
+/* ==========================================================================
    AUFBAU beim Öffnen: von hinten nach vorn nacheinander
    (home.js setzt die Klasse "baut-auf" bei jedem Öffnen der Startseite)
    "backwards": vor dem Start unsichtbar, danach gelten wieder die normalen
@@ -527,6 +617,17 @@
     font-size: 1.6rem;
   }
 
+  /* Schnellzugriffe gut antippbar: Tippfläche mindestens 44 px hoch */
+  :root {
+    --schnell-groesse: 1.15rem;
+    --schnell-innen: 10px;
+    --schnell-seite: 8px;
+  }
+
+  .home-schnell {
+    margin-top: 2px;
+  }
+
   /* Alle Karten in einer Spalte, als Ganzes nach hinten gekippt
      (Drehachse unten: die unterste Karte ist vorne) */
   .tunnel-karten {
@@ -600,7 +701,10 @@
 
   .tunnel-karte,
   .tunnel-karte::before,
-  .tunnel-karte::after {
+  .tunnel-karte::after,
+  .home-schnell-link,
+  .home-schnell-link::after,
+  .home-schnell-pfeil {
     transition: none;
   }
 }
