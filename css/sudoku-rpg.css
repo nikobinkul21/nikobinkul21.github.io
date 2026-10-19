@@ -63,7 +63,6 @@
   --panel-gold: #f2c94c;
   --panel-fehler: #ff7070;
   --panel-daneben: #b8bec8;
-  --panel-heilung: #7be38f;
 
   /* Großer Würfel (Desktop) */
   --wuerfel-flaeche-hoehe: 200px;          /* feste Höhe der Würfelfläche rechts oben */
@@ -619,18 +618,12 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Schaden: der Balken blitzt rot auf; Heilung: grün */
+/* Schaden: der Balken blitzt rot auf */
 .kampf-held-hp.sinkt .kampf-held-hp-balken { animation: held-hp-sinkt 0.4s ease-out; }
-.kampf-held-hp.steigt .kampf-held-hp-balken { animation: held-hp-steigt 0.5s ease-out; }
 
 @keyframes held-hp-sinkt {
   0%, 100% { box-shadow: none; }
   30%      { box-shadow: 0 0 0 2px var(--kampf-hp-knapp), 0 0 8px var(--kampf-hp-knapp); }
-}
-
-@keyframes held-hp-steigt {
-  0%, 100% { box-shadow: none; }
-  40%      { box-shadow: 0 0 0 2px var(--kampf-hp-voll), 0 0 10px var(--kampf-hp-voll); }
 }
 
 /* Würfel (W20): Sechseck mit der Zahl des letzten Wurfs */
@@ -1124,7 +1117,6 @@
 .panel-zeile--gift { color: var(--kampf-gift); }
 .panel-zeile--gold,
 .panel-summe--gold .panel-wert { color: var(--panel-gold); }
-.panel-zeile--heilung { color: var(--panel-heilung); }
 .panel-zeile--fehler,
 .panel-summe--fehler .panel-wert { color: var(--panel-fehler); }
 .panel-zeile--daneben,
@@ -2616,7 +2608,7 @@
   --block-farbe: #3d9bff;           /* Schild, Block: Verteidigungszug */
   --boss-angriff-farbe: #c92a2a;    /* der Würfel des Bosses */
   --konter-farbe: #ffb400;          /* Konter */
-  --heilung-farbe: #3fbf5f;         /* Heilung (grüne Zahl über dem Helden) */
+  --heilung-farbe: #3fbf5f;         /* Auffüllen nach einem Sieg (grüne Zahl über dem Helden) */
 }
 
 /* Phase beim Helden: rundes Symbol neben dem Schwert, mit Erklärung */
@@ -3093,7 +3085,7 @@
   font-size: 1.15rem;
 }
 
-/* Schwebende Zahlen am Helden: Schaden rot, Heilung grün – und der Konter am Boss */
+/* Schwebende Zahlen am Helden: Schaden rot, Auffüllen nach einem Sieg grün – und der Konter am Boss */
 .kampf-schwebezahl--held {
   top: 48%;
   left: 18%;

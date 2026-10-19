@@ -153,8 +153,6 @@ const SudokuKampf = (function () {
     // Schlagabtausch: Schwert (Angriffszug) und Schild (Verteidigungszug)
     schild: '<path d="M0 0h7v4H6v1H5v1H4v1H3V6H2V5H1V4H0z"/><path fill="rgba(255,255,255,.6)" d="M1 1h2v1H1zM1 2h1v1H1z"/>',
     schwert: '<path d="M5 0h2v2H6v1H5v1H4v1H3V4H2V3h1V2h1V1h1z"/><path d="M1 3h1v1h1v1h1v1H3v1H2V6H1V5H0V4h1z"/><path fill="rgba(255,255,255,.6)" d="M5 1h1v1H5z"/>',
-    // Heilfeld: Herz mit hellem Kreuz
-    heilung: '<path d="M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z"/><path fill="#fff" d="M3 1h1v1h1v1H4v1H3V3H2V2h1z"/>',
     // Buch: Einband mit hellen Seiten am Rand
     buch: '<path d="M0 0h6v1h1v6H1V6H0z"/><path fill="rgba(255,255,255,.75)" d="M1 6h6v1H1zM6 1h1v5H6z"/><path fill="rgba(0,0,0,.3)" d="M1 0h1v6H1z"/>',
     // Glücksfeld: vierblättriges Kleeblatt mit kleinem Stiel
@@ -1328,7 +1326,8 @@ const SudokuKampf = (function () {
 
     /**
      * HP des Helden als Balken mit Zahl – im selben Stil wie der Balken des
-     * Bosses. Der Balken gleitet (CSS) – sinkt bei Schaden, steigt bei Heilung.
+     * Bosses. Der Balken gleitet (CSS) – sinkt bei Schaden, steigt beim
+     * Auffüllen nach einem besiegten Boss.
      */
     function zeigeHeldHp(hp, maxHp) {
       if (maxHp) anzeige.heldMaxHp = maxHp;
@@ -1342,7 +1341,7 @@ const SudokuKampf = (function () {
       el.heldHp.setAttribute("aria-label", "Deine HP: " + wert + " von " + max);
     }
 
-    /** Schwebende Zahl am Helden: Schaden rot ("−3"), Heilung grün ("+5"). */
+    /** Schwebende Zahl am Helden: Schaden rot ("−3"), Auffüllen nach einem Sieg grün ("+40"). */
     function heldZahl(text, art) {
       schwebeZahl(text, art === "heilung" ? "heilung" : "held");
     }
@@ -1811,7 +1810,7 @@ const SudokuKampf = (function () {
       });
     }
 
-    /** Münzen dieses Zugs mit Grund, dazu die Heilung (Heilfeld). */
+    /** Münzen dieses Zugs mit Grund. */
     function belohnungsZeilen(e) {
       const zeilen = [];
       const proZahl = e.werte ? e.werte.muenzenProZahl : K.muenzen.proZahl;
@@ -1833,11 +1832,6 @@ const SudokuKampf = (function () {
         zeilen.push({ key: "buchMuenzen", label: e.buch ? "Buch " + e.buch.ziffer : "Buch", wert: "+" + e.buchMuenzen, art: "gold" });
       }
       if (e.eliteBonus > 0) zeilen.push({ key: "elite", label: "Elite-Bonus", wert: "+" + e.eliteBonus, art: "gold" });
-      if (e.heilung > 0) {
-        zeilen.push({ key: "heilung", label: "Heilfeld", wert: "+" + e.heilung + " HP", art: "heilung" });
-      } else if (e.heilungGewuenscht > 0) {
-        zeilen.push({ key: "heilung", label: "Heilfeld", wert: "HP schon voll", art: "daneben" });
-      }
       return zeilen;
     }
 
@@ -2211,9 +2205,6 @@ const SudokuKampf = (function () {
         if (e.kritisch && e.doppelt) kopf += "Und doppelt! ";
         teile.push(kopf + e.rechnung.text + (e.gift > 0 ? " · Gift +" + e.gift : "") + ".");
       }
-      if (e.powerup && e.heilungGewuenscht > 0) {
-        teile.push(e.heilung > 0 ? "Heilfeld: +" + e.heilung + " HP!" : "HP schon voll (" + e.heldMaxHp + ").");
-      }
       if (e.giftVerpufft) teile.push("Gift wirkt nur im Angriff.");
       if (e.powerup && e.powerup.typ === "gold") teile.push("Goldfeld!");
       teile.push("+" + e.muenzenPlus + (e.muenzenPlus === 1 ? " Münze." : " Münzen."));
@@ -2224,7 +2215,7 @@ const SudokuKampf = (function () {
 
     /**
      * Richtige Zahl: würfeln, zuschlagen (oder stolpern), Schaden, Gift,
-     * Münzen, Heilung – kurz nacheinander; wirksame Plätze leuchten auf.
+     * Münzen – kurz nacheinander; wirksame Plätze leuchten auf.
      */
     /**
      * Hält einen Punkt im sichtbaren Bereich (mit Rand für die große Zahl),
@@ -2358,7 +2349,7 @@ const SudokuKampf = (function () {
     /**
      * Richtige Zahl im Angriffszug: würfeln → Schaden sichtbar aufbauen
      * (Boni fliegen auf die Zahl zu) → ins Schwert → Schlag → Einschlag im
-     * Boss → Gift, Münzen, Heilung. Im Verteidigungszug: siehe verteidigung().
+     * Boss → Gift, Münzen. Im Verteidigungszug: siehe verteidigung().
      */
     function treffer(e) {
       beschleunige();       // ein noch laufender Zug springt sofort zu seinem Ende
@@ -2394,23 +2385,11 @@ const SudokuKampf = (function () {
           faerbe(el.bossFigur, "vergiftet", 520);
           return warte(160);
         }).then(function () {
-          // Münzen und Heilung – jetzt steht auch "Letzter Treffer" komplett
+          // Münzen – jetzt steht auch "Letzter Treffer" komplett
           protokolliereTreffer(e);
-          zeigeHeilung(e);
           return zugEnde(e);
         });
       });
-    }
-
-    /** Heilfeld: grüne Zahl über dem Helden, der Balken steigt (oder: schon voll). */
-    function zeigeHeilung(e) {
-      if (e.heilung > 0) {
-        heldZahl("+" + e.heilung, "heilung");
-        zeigeHeldHp(e.heldHpVorher + e.heilung, e.heldMaxHp);
-        animiere(el.heldHp, "steigt", 500);
-      } else if (e.heilungGewuenscht > 0) {
-        heldZahl("HP voll", "heilung");
-      }
     }
 
     /** Was jeder richtige Zug am Ende zeigt: Münzen, Timer, Fähigkeit, Buch-Bonus. */
@@ -2433,7 +2412,7 @@ const SudokuKampf = (function () {
 
     /**
      * Richtige Zahl im Verteidigungszug: Der Würfel des Helden rollt (sein
-     * Block) → Heilfeld → beide Würfel stehen nebeneinander → Ausgang:
+     * Block) → beide Würfel stehen nebeneinander → Ausgang:
      * Geblockt (Klingen prallen aufeinander), Treffer (die Bühne wackelt,
      * der HP-Balken des Helden sinkt) oder Konter (Schadensaufbau wie bei
      * einem Angriff: die Differenz steht neben den Würfeln, die Boni fliegen
@@ -2445,8 +2424,6 @@ const SudokuKampf = (function () {
         meldung(trefferText(e));
         leuchtePlaetze(e.wirksam);
         straehneImZug(e);
-        // Die Regeln heilen vor dem Vergleich – also auch hier zuerst
-        zeigeHeilung(e);
         const v = vergleichZeigen(e.block);
         return pause(DAUER.vergleich).then(function () { return ausgang(e, v); });
       }).then(function () {

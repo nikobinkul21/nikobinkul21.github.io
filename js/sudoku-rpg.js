@@ -21,11 +21,12 @@
      - Der Held hat HP (100, "Zähes Herz" mehr). Jede falsche Zahl kostet
        10 HP (die Phase bleibt). Bei 0 HP ist der Durchlauf vorbei – es geht
        wieder bei Welt 1, Level 1 los (Münzen und Rekorde bleiben). Nach
-       jedem besiegten Boss werden die HP ganz aufgefüllt.
+       jedem besiegten Boss werden die HP ganz aufgefüllt – das ist die
+       einzige Heilung.
      - Richtige Zahlen und fertige Einheiten bringen Münzen (× Münzfaktor
        des Schwierigkeitsgrads) – in beiden Phasen.
      - Power-up-Felder im Sudoku lösen beim richtigen Ausfüllen eine
-       Wirkung aus (Heilung, Gift, Münzen …).
+       Wirkung aus (Münzen, Gift, Glücksrad, Pakt mit dem Teufel).
      - Überladung: Wer ein Sudoku vollständig löst, überlädt das Schwert –
        der nächste Treffer in einem Angriffszug macht das Zehnfache.
      - Nach jedem besiegten Boss wählt man eine von drei Verbesserungen –
@@ -41,7 +42,7 @@
    Die Regeln MELDEN, was passiert (Ereignisse), statt selbst etwas
    anzuzeigen. Die Oberfläche hört zu und spielt Animationen ab:
      "richtig"        – richtige Zahl: Wurf, Rechnung bzw. Block, Schaden,
-                        Konter, Gift, Münzen, Heilung … (alles, was diese eine
+                        Konter, Gift, Münzen … (alles, was diese eine
                         Zahl bewirkt, in EINEM Ereignis; "phase" sagt, welcher Zug)
      "powerup"        – ein Power-up-Feld wurde ausgelöst
      "fehler"         – falsche Zahl: 10 HP weniger
@@ -119,7 +120,7 @@ const SUDOKU_RPG_KONFIG = {
   ],
 
   // Der Held: HP statt Leben. Nach jedem besiegten Boss werden sie ganz
-  // aufgefüllt – sonst heilt nur das Heilfeld (nie über das Maximum).
+  // aufgefüllt – eine andere Heilung gibt es nicht.
   held: {
     hp: 100,              // HP zu Beginn jedes Durchlaufs = Maximum ohne "Zähes Herz"
     fehlerSchaden: 10,    // jede falsche Zahl (in beiden Phasen; die Phase bleibt)
@@ -179,7 +180,6 @@ const SUDOKU_RPG_KONFIG = {
   // Neuer Typ? Einfach einen weiteren Eintrag – Farbe und Symbol nutzt die
   // Oberfläche (Symbole: siehe SYMBOLE in js/sudoku-battle-ui.js).
   // wirkung(effekt) verändert das Effekt-Objekt dieser Zahl (this = der Typ):
-  //   effekt.heilung    – HP, die der Held geheilt bekommt (nie über das Maximum)
   //   effekt.muenzen    – zusätzliche Münzen
   //   effekt.giftAnteil – Anteil des Schadens, der zusätzlich als Gift trifft
   //                       (nur im Angriffszug)
@@ -193,13 +193,6 @@ const SUDOKU_RPG_KONFIG = {
       id: "gruen", name: "Grün", farbe: "#2fb35a", symbol: "tropfen", gewicht: 30,
       beschreibung: "Gift: die Hälfte des Schadens extra",
       wirkung: function (effekt) { effekt.giftAnteil += 0.5; },
-    },
-    {
-      // Heilfeld (früher "Rot", +1 Leben – alte Spielstände: siehe pruefeDaten)
-      id: "heil", name: "Heil", farbe: "#e2364a", symbol: "heilung", gewicht: 20,
-      heilung: 5,             // so viele HP heilt das Feld
-      beschreibung: "Heilt 5 HP",
-      wirkung: function (effekt) { effekt.heilung += this.heilung; },
     },
     {
       // Glücksfeld: Ein Glücksrad bestimmt die Glücksziffer (Werte: siehe "glueck")
@@ -707,6 +700,8 @@ const SudokuRPG = (function () {
   //             Leben, "phase" und der angekündigte "bossAngriff"; das rote
   //             Power-up "rot" ist jetzt das Heilfeld "heil".
   // Version 14: "ueberladen" – das Schwert ist nach einem gelösten Sudoku überladen.
+  //             (Das Heilfeld "heil" gibt es nicht mehr – liegt noch eins im
+  //             gespeicherten Sudoku, wird es beim Laden zum Goldfeld.)
   const VERSION = 14;
   // Bis Version 12: so viele Leben hatte man zu Beginn – alte Leben werden
   // anteilig zu HP (2 von 3 Leben → 67 % der HP)
@@ -1956,8 +1951,10 @@ const SudokuRPG = (function () {
       }
       let powerups = [];
       if (Array.isArray(r.powerups)) {
-        // Bis Version 12 hieß das Heilfeld "rot" (damals +1 Leben)
-        const typVon = function (p) { return vorV13 && p && p.typ === "rot" ? "heil" : p && p.typ; };
+        // Entfernte Typen: das Heilfeld "heil" (bis Version 12 als "rot", damals
+        // +1 Leben) wird zum Goldfeld – das Feld bleibt, nur seine Wirkung ändert sich
+        const ERSATZ = { heil: "gold", rot: "gold" };
+        const typVon = function (p) { return p && (ERSATZ[p.typ] || p.typ); };
         const gueltig = r.powerups.every(function (p) {
           return p && istGanzzahl(p.index, 0, 80) && powerupTyp(typVon(p)) && r.vorgaben[p.index] === 0;
         });
@@ -3041,7 +3038,7 @@ const SudokuRPG = (function () {
 
       // 2. Power-up auf diesem Feld? (wirkt in beiden Zügen – nur das Gift
       //    des grünen Felds braucht einen Angriff)
-      const effekt = { heilung: 0, muenzen: 0, giftAnteil: 0 };
+      const effekt = { muenzen: 0, giftAnteil: 0 };
       const pIndex = r.powerups.findIndex(function (p) { return p.index === index; });
       let powerup = null;
       if (pIndex !== -1) {
@@ -3181,10 +3178,7 @@ const SudokuRPG = (function () {
       zustand.muenzRest = Math.round((mitRest - Math.floor(mitRest)) * 1e6) / 1e6;
       zustand.muenzen += muenzenPlus;
 
-      // 5. Heilfeld: zuerst die Heilung (nie über das Maximum) …
-      zustand.heldHp = Math.min(zustand.heldMaxHp, zustand.heldHp + effekt.heilung);
-      const heilung = zustand.heldHp - heldHpVorher;
-      //    … dann der Treffer des Bosses, wenn der Block zu niedrig war
+      // 5. Treffer des Bosses, wenn der Block zu niedrig war
       const heldSchaden = block ? Math.min(zustand.heldHp, block.schaden) : 0;
       zustand.heldHp -= heldSchaden;
       const heldHpNachZug = zustand.heldHp;
@@ -3308,7 +3302,6 @@ const SudokuRPG = (function () {
         powerup: powerup,
         muenzenPlus: muenzenPlus, muenzen: zustand.muenzen - (durchBuch ? eliteBonus : 0), muenzFaktor: muenzFaktor,   // muenzen inkl. eliteBonus
         // HP des Helden in diesem Zug (vor dem Auffüllen nach einem Sieg)
-        heilungGewuenscht: effekt.heilung, heilung: heilung,
         heldHpVorher: heldHpVorher, heldHp: heldHpNachZug, heldMaxHp: zustand.heldMaxHp,
         niederlage: niederlage,
         // Stand der Fähigkeit nach diesem Zug (vor ihrem Einsatz); null, wenn der Kampf vorbei ist
@@ -3345,7 +3338,7 @@ const SudokuRPG = (function () {
         melde("niederlage", niederlageDaten);
         return {
           art: "richtig", phase: phase, wurf: wurf, schaden: 0, gift: 0, block: block, konter: 0,
-          heilung: heilung, heldSchaden: heldSchaden, powerup: powerup, muenzenPlus: muenzenPlus,
+          heldSchaden: heldSchaden, powerup: powerup, muenzenPlus: muenzenPlus,
           besiegt: false, geloest: false, auswahl: false, faehigkeit: null, entschaerft: entschaerft,
           niederlage: true, regenbogen: false, buchschlag: false,
         };
@@ -3379,7 +3372,7 @@ const SudokuRPG = (function () {
       return {
         art: "richtig", phase: phase, wurf: wurf, schaden: rechnung.schaden, gift: rechnung.gift,
         kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, doppelt: doppelt, immun: rechnung.immun,
-        block: block, konter: block && block.ergebnis === "konter" ? rechnung.schaden : 0, heldSchaden: heldSchaden, heilung: heilung,
+        block: block, konter: block && block.ergebnis === "konter" ? rechnung.schaden : 0, heldSchaden: heldSchaden,
         eliteBonus: eliteBonus, regenbogen: regenbogen,
         powerup: powerup, muenzenPlus: muenzenPlus,
         besiegt: besiegt, geloest: geloest, auswahl: Boolean(zustand.auswahl),
