@@ -868,6 +868,24 @@
     display: none;
   }
 
+  /* Glückssträhne: kleines Etikett neben Phase und Überladung */
+  .kampf.ist-handy .kampf-buehne .kampf-straehne {
+    position: relative;
+    inset: auto;
+    padding: 0 4px 0 3px;
+    font-size: 0.66rem;
+    border-width: 1.5px;
+  }
+
+  .kampf.ist-handy .kampf-buehne .kampf-straehne svg {
+    width: 9px;
+    height: 9px;
+  }
+
+  .kampf.ist-handy .kampf-buehne .kampf-straehne[hidden] {
+    display: none;
+  }
+
   /* HP des Helden: kompakter Balken mit Zahl auf einem kleinen Kasten,
      daneben das letzte Würfelergebnis als kleine Zahl */
   .kampf.ist-handy .kampf-buehne .kampf-info--held {

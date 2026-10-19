@@ -4102,3 +4102,430 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+
+/* ==========================================================================
+   GLÜCKSFELD UND TEUFELSFELD
+   Glücksfeld: gold-grün mit Kleeblatt – dreht das Glücksrad (Glücksziffer,
+   Glückssträhne beim Helden). Teufelsfeld: tiefes Rotviolett mit kleinen
+   Hörnern – bietet einen Pakt an, danach glüht nach jedem Zug ein Hinweisfeld.
+   Die Zahl im Feld bleibt immer lesbar (sie liegt über der Tönung).
+   ========================================================================== */
+
+:root {
+  --glueck-gold: #f2c230;
+  --glueck-gruen: #46b34a;
+  --glueck-text: #2c6e1f;
+  --teufel-farbe: #8e1a4f;
+  --teufel-glut: #d6286e;
+  --teufel-text: #7a0f3f;
+}
+
+:root[data-theme="dark"] {
+  --glueck-text: #a9e36a;
+  --teufel-text: #ff8fbd;
+}
+
+/* ---------- Die Felder im Gitter ---------- */
+
+/* Glücksfeld: Verlauf von Gold nach Grün, goldener Rand, grünes Kleeblatt */
+.sudoku-powerup[data-typ="gluecksfeld"] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(135deg, color-mix(in srgb, var(--glueck-gold) 42%, transparent),
+      color-mix(in srgb, var(--glueck-gruen) 38%, transparent));
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--glueck-gold) 85%, transparent),
+    inset 0 0 6px color-mix(in srgb, var(--glueck-gruen) 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.sudoku-powerup[data-typ="gluecksfeld"] svg {
+  fill: #2f9b35;
+  filter: drop-shadow(0 0 1px #fff3b0) drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
+}
+
+/* Teufelsfeld: dunkles Rotviolett, glühender Rand, Hörner in Glutrot */
+.sudoku-powerup[data-typ="teufelsfeld"] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 50%),
+    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--teufel-farbe) 26%, transparent),
+      color-mix(in srgb, var(--teufel-farbe) 52%, transparent));
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--teufel-farbe) 90%, transparent),
+    inset 0 0 7px color-mix(in srgb, var(--teufel-glut) 55%, transparent);
+}
+
+.sudoku-powerup[data-typ="teufelsfeld"] svg {
+  fill: var(--teufel-glut);
+  filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.7));
+}
+
+:root[data-theme="dark"] .sudoku-powerup[data-typ="gluecksfeld"] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(135deg, color-mix(in srgb, var(--glueck-gold) 34%, transparent),
+      color-mix(in srgb, var(--glueck-gruen) 34%, transparent));
+}
+
+:root[data-theme="dark"] .sudoku-powerup[data-typ="teufelsfeld"] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 50%),
+    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--teufel-farbe) 40%, transparent),
+      color-mix(in srgb, var(--teufel-farbe) 70%, transparent));
+}
+
+/* ---------- Hinweis des Teufels im Gitter ----------
+   Das Hinweisfeld glüht rotviolett, die vorgeschlagene Zahl flackert leicht. */
+.sudoku-teufel-hinweis {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  font-weight: 800;
+  font-size: 0.9em;
+  color: var(--teufel-text);
+  background: radial-gradient(circle, color-mix(in srgb, var(--teufel-glut) 22%, transparent) 30%,
+    color-mix(in srgb, var(--teufel-farbe) 38%, transparent));
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--teufel-glut) 80%, transparent),
+    inset 0 0 10px color-mix(in srgb, var(--teufel-glut) 60%, transparent),
+    0 0 8px color-mix(in srgb, var(--teufel-glut) 55%, transparent);
+  animation: teufel-glut 1.8s ease-in-out infinite alternate;
+}
+
+.sudoku-teufel-hinweis span {
+  text-shadow: 0 0 6px color-mix(in srgb, var(--teufel-glut) 80%, transparent);
+  animation: teufel-flackern 2.3s steps(1, end) infinite;
+}
+
+.sudoku-teufel-hinweis.erscheint {
+  animation: teufel-erscheinen 0.45s ease-out, teufel-glut 1.8s ease-in-out 0.45s infinite alternate;
+}
+
+@keyframes teufel-glut {
+  from { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--teufel-glut) 70%, transparent), inset 0 0 8px color-mix(in srgb, var(--teufel-glut) 45%, transparent), 0 0 5px color-mix(in srgb, var(--teufel-glut) 40%, transparent); }
+  to   { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--teufel-glut) 95%, transparent), inset 0 0 12px color-mix(in srgb, var(--teufel-glut) 70%, transparent), 0 0 11px color-mix(in srgb, var(--teufel-glut) 70%, transparent); }
+}
+
+/* leichtes, unruhiges Flackern – wie eine Kerze */
+@keyframes teufel-flackern {
+  0%, 100% { opacity: 1; }
+  8%  { opacity: 0.55; }
+  11% { opacity: 1; }
+  47% { opacity: 0.75; }
+  50% { opacity: 1; }
+  71% { opacity: 0.6; }
+  73% { opacity: 0.95; }
+}
+
+@keyframes teufel-erscheinen {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ---------- Glücksziffer im Zahlenfeld: kleines Kleeblatt oben links ---------- */
+.sudoku-glueck-marke {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 11px;
+  height: 11px;
+  pointer-events: none;
+}
+
+.sudoku-glueck-marke svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: #2f9b35;
+  filter: drop-shadow(0 0 1px #fff3b0);
+}
+
+.sudoku-taste.ist-glueck {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--glueck-gold) 75%, transparent);
+}
+
+/* ---------- Textbox über dem Gitter: Flüstern und Lachen des Teufels ---------- */
+.sudoku-status[data-art="teufel"] {
+  color: var(--teufel-text);
+  font-style: italic;
+  font-weight: 700;
+  border-color: color-mix(in srgb, var(--teufel-glut) 60%, transparent);
+  box-shadow: var(--glas-schatten), 0 0 12px color-mix(in srgb, var(--teufel-glut) 35%, transparent);
+}
+
+.sudoku-status[data-art="teufel-lacht"] {
+  color: var(--teufel-text);
+  font-weight: 900;
+  border-color: var(--teufel-glut);
+  box-shadow: var(--glas-schatten), 0 0 16px color-mix(in srgb, var(--teufel-glut) 60%, transparent);
+  animation: teufel-lachen 0.5s ease-in-out 2;
+}
+
+@keyframes teufel-lachen {
+  0%, 100% { transform: translate(-50%, -50%) rotate(0); }
+  20% { transform: translate(-50%, -54%) rotate(-3deg); }
+  40% { transform: translate(-50%, -48%) rotate(2deg); }
+  60% { transform: translate(-50%, -53%) rotate(-2deg); }
+  80% { transform: translate(-50%, -49%) rotate(1deg); }
+}
+
+/* ---------- Glückssträhne beim Helden ("Strähne ×3") ---------- */
+.kampf-straehne {
+  position: absolute;
+  left: calc(6% + var(--kampf-figur-groesse) * 0.78);
+  bottom: calc(6% + var(--kampf-figur-groesse) * 0.62 + 60px);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px 1px 4px;
+  font-size: 0.8rem;
+  font-weight: 900;
+  white-space: nowrap;
+  color: #fff;
+  background: linear-gradient(135deg, #d9a91a, #36a23a);
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 6px;
+  -webkit-text-stroke: 2px rgba(20, 50, 10, 0.75);
+  paint-order: stroke fill;
+  box-shadow: 0 0 8px rgba(242, 194, 48, 0.6);
+}
+
+.kampf-straehne[hidden] {
+  display: none;
+}
+
+.kampf-straehne svg {
+  width: 12px;
+  height: 12px;
+  fill: #eaffd0;
+}
+
+/* Die Strähne steigt: kurz größer und heller */
+.kampf-straehne.steigt { animation: straehne-steigt 0.45s ease-out; }
+
+@keyframes straehne-steigt {
+  0%   { transform: scale(1); filter: brightness(1); }
+  40%  { transform: scale(1.3); filter: brightness(1.5); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Die Strähne zerbricht: wackeln, in Stücke zerfallen, verblassen */
+.kampf-straehne.zerbroeselt {
+  animation: straehne-broeseln 0.65s ease-in forwards;
+}
+
+.kampf-straehne.zerbroeselt::before,
+.kampf-straehne.zerbroeselt::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #d9a91a;
+  border: 1px solid var(--kampf-kasten-rand);
+  animation: straehne-brocken 0.65s ease-in forwards;
+}
+
+.kampf-straehne.zerbroeselt::before { left: 20%; top: 40%; }
+.kampf-straehne.zerbroeselt::after { right: 18%; top: 30%; background: #36a23a; animation-delay: 0.05s; }
+
+@keyframes straehne-broeseln {
+  0%   { transform: none; opacity: 1; filter: none; }
+  25%  { transform: translateX(-3px) rotate(-4deg); }
+  45%  { transform: translateX(3px) rotate(3deg); opacity: 1; filter: grayscale(0.6); }
+  100% { transform: translateY(14px) rotate(8deg) scale(0.7); opacity: 0; filter: grayscale(1) blur(1px); }
+}
+
+@keyframes straehne-brocken {
+  0%   { transform: none; opacity: 1; }
+  100% { transform: translate(-8px, 26px) rotate(140deg); opacity: 0; }
+}
+
+/* ---------- Glücksrad ---------- */
+.slot--glueck .glueck-kasten {
+  border-color: #b8860b;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--glueck-gold) 55%, transparent), 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.glueck-rad-platz {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  margin: 4px auto 0;
+}
+
+.glueck-rad {
+  position: absolute;
+  inset: 8px 0 0;
+  margin: 0 auto;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 4px solid var(--kampf-kasten-rand);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.5), 0 3px 0 rgba(0, 0, 0, 0.25);
+  /* ease-out: schnell los, am Ende immer langsamer – wie ein echtes Glücksrad */
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.12, 0.75, 0.18, 1);
+}
+
+.glueck-rad-zahl {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  margin: -13px 0 0 -13px;
+  line-height: 26px;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #fff;
+  -webkit-text-stroke: 3px rgba(30, 40, 10, 0.8);
+  paint-order: stroke fill;
+  transform: rotate(var(--winkel)) translateY(-56px);
+}
+
+/* Zeiger oben: zeigt auf die Glücksziffer */
+.glueck-zeiger {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  margin-left: -10px;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 18px solid var(--kampf-kasten-rand);
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.25));
+}
+
+/* Nabe mit Kleeblatt */
+.glueck-mitte {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 4px);
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  padding: 6px;
+  border-radius: 50%;
+  background: #fffbea;
+  border: 3px solid var(--kampf-kasten-rand);
+}
+
+.glueck-mitte svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: #2f9b35;
+}
+
+.slot--glueck.ist-fertig .glueck-zeiger {
+  border-top-color: #e6b422;
+  filter: drop-shadow(0 0 6px #ffe27a);
+}
+
+.slot--glueck.ist-fertig .slot-titel {
+  color: var(--glueck-text);
+  font-size: 1.1rem;
+}
+
+/* ---------- Pakt-Abfrage ---------- */
+.auswahl--pakt {
+  background: rgba(30, 6, 20, 0.62);
+}
+
+.pakt-kasten {
+  width: min(360px, 90%);
+  border-color: #3d0a24;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teufel-glut) 55%, transparent),
+    0 0 26px color-mix(in srgb, var(--teufel-glut) 45%, transparent), 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.pakt-symbol {
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 6px;
+}
+
+.pakt-symbol svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: var(--teufel-glut);
+}
+
+.pakt-text {
+  margin: 0 0 6px;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--teufel-text);
+}
+
+.pakt-regel {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.pakt-knoepfe {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.pakt-knopf {
+  min-height: 40px;
+  padding: 6px 14px;
+  font: inherit;
+  font-weight: 800;
+  border: 2px solid var(--kampf-kasten-rand);
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.pakt-knopf--ja {
+  color: #fff;
+  background: linear-gradient(135deg, #6b0f3f, var(--teufel-glut));
+}
+
+.pakt-knopf--nein {
+  color: var(--kampf-kasten-text);
+  background: var(--kampf-kasten);
+}
+
+.pakt-knopf:hover,
+.pakt-knopf:focus-visible {
+  filter: brightness(1.12);
+  outline: 2px solid var(--teufel-glut);
+  outline-offset: 2px;
+}
+
+/* ---------- Panel und Verlauf ---------- */
+.panel-zeile--glueck,
+.panel-eintrag--glueck { color: #9fdc4a; font-weight: 700; }
+.panel-zeile--teufel,
+.panel-eintrag--teufel { color: #ff7fb0; font-weight: 700; }
+
+/* ---------- Bewegung reduzieren: kein Drehen, kein Flackern – nur das Ergebnis ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .glueck-rad { transition: none !important; }
+  .sudoku-teufel-hinweis,
+  .sudoku-teufel-hinweis.erscheint,
+  .sudoku-teufel-hinweis span,
+  .sudoku-status[data-art="teufel-lacht"],
+  .kampf-straehne.steigt,
+  .kampf-straehne.zerbroeselt,
+  .kampf-straehne.zerbroeselt::before,
+  .kampf-straehne.zerbroeselt::after {
+    animation: none !important;
+  }
+}

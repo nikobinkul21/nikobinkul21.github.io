@@ -201,7 +201,51 @@ const SUDOKU_RPG_KONFIG = {
       beschreibung: "Heilt 5 HP",
       wirkung: function (effekt) { effekt.heilung += this.heilung; },
     },
+    {
+      // Glücksfeld: Ein Glücksrad bestimmt die Glücksziffer (Werte: siehe "glueck")
+      id: "gluecksfeld", name: "Glücksfeld", farbe: "#8fc93a", symbol: "klee", gewicht: 10,
+      maxProSudoku: 1,        // höchstens ein Glücksfeld pro Sudoku
+      beschreibung: "Glücksrad: Glücksziffer und Glückssträhne",
+      wirkung: function () { /* Das Rad dreht die Regel selbst (setzeZahl) */ },
+    },
+    {
+      // Teufelsfeld: Der Teufel bietet einen Pakt an (Werte: siehe "teufel")
+      id: "teufelsfeld", name: "Teufelsfeld", farbe: "#8e1a4f", symbol: "hoerner", gewicht: 8,
+      maxProSudoku: 1,        // höchstens ein Teufelsfeld pro Sudoku
+      beschreibung: "Pakt mit dem Teufel: geflüsterte Hinweise",
+      wirkung: function () { /* Den Pakt bietet die Regel selbst an (setzeZahl) */ },
+    },
   ],
+
+  // GLÜCKSFELD: Wer die richtige Zahl ins Glücksfeld setzt, dreht das
+  // Glücksrad. Es bleibt auf einer Ziffer stehen, die noch leere Felder hat –
+  // der Glücksziffer bis zum Ende des Sudokus. Jede richtig gesetzte
+  // Glücksziffer verlängert die Glückssträhne: Der Schaden dieses Zugs (im
+  // Verteidigungszug: der Konter) zählt ×2, dann ×3, ×4, höchstens ×5. Jede
+  // andere richtige Ziffer und jeder Fehler beenden die Strähne.
+  glueck: {
+    faktorStart: 2,         // Faktor der ersten Glücksziffer einer Strähne
+    faktorSchritt: 1,       // jede weitere Glücksziffer der Strähne: +1
+    faktorMax: 5,           // höher steigt der Faktor nie
+    muenzen: 3,             // Münzen je gesetzter Glücksziffer (wie Gold: × Münzfaktor)
+  },
+
+  // TEUFELSFELD: Nach der richtigen Zahl im Teufelsfeld bietet der Teufel
+  // einen Pakt an. Abgelehnt → nichts passiert. Angenommen → bis zum Ende
+  // des Sudokus flüstert er nach jedem Zug einen Hinweis: ein leeres Feld mit
+  // einer Zahl. Wahr oder gelogen entscheidet sich beim Erzeugen.
+  //   Wahr und genau so gesetzt → dreifacher Schaden (im Verteidigungszug am Konter)
+  //   Gelogen und so gesetzt    → ein ganz normaler Fehler
+  // Eine Lüge ist immer eine falsche Zahl ohne sichtbaren Konflikt in Zeile,
+  // Spalte und Block. Versiegelte, verdeckte und vom Fluch gesperrte Felder
+  // bekommen nie einen Hinweis.
+  teufel: {
+    faktor: 3,              // Schaden für einen befolgten wahren Hinweis
+    wahrChance: 0.5,        // so oft ist ein Hinweis wahr (0.5 = genau die Hälfte im Mittel)
+    paktText: "Ein kleiner Pakt? Ich flüstere dir, wo es weitergeht …",
+    fluestern: ["Vertrau mir …", "Hier, ganz sicher …", "Psst … diese hier …", "Nimm die, Kleiner …", "Glaub mir doch …"],
+    lachen: ["Hehehe … reingefallen!", "Muahaha!", "Hihi … Teufel lügen eben."],
+  },
 
   // Verbesserungen: Nach jedem besiegten Boss werden so viele zur Wahl gestellt
   verbesserungAngebot: 3,
@@ -1263,7 +1307,7 @@ const SudokuRPG = (function () {
      rechnung.ende = true, bleibt es beim aktuellen Wert (z. B. 0).
      ------------------------------------------------------------------------ */
 
-  const SCHADEN_STUFEN = ["wurf", "kritisch", "zuschlag", "buch", "schwierigkeit", "doppelt", "reihen", "gift", "ueberladung"];
+  const SCHADEN_STUFEN = ["wurf", "kritisch", "zuschlag", "buch", "schwierigkeit", "doppelt", "straehne", "teufel", "reihen", "gift", "ueberladung"];
 
   // Diese Stufen gelten für JEDEN Würfel einzeln (bei mehreren Würfeln)
   const WUERFEL_STUFEN = ["wurf", "kritisch"];
@@ -1324,6 +1368,20 @@ const SudokuRPG = (function () {
         r.schritte.push("Doppelt ×" + zahlText(K.doppelschadenFaktor));
       }
     },
+    // Glücksfeld: Glückssträhne (×2 bis ×5) für eine gesetzte Glücksziffer
+    straehne: function (r, k) {
+      if (k.glueckFaktor > 1) {
+        r.wert *= k.glueckFaktor;
+        r.schritte.push("Glückssträhne ×" + zahlText(k.glueckFaktor));
+      }
+    },
+    // Teufelsfeld: ein befolgter wahrer Hinweis des Teufels
+    teufel: function (r, k) {
+      if (k.teufelFaktor > 1) {
+        r.wert *= k.teufelFaktor;
+        r.schritte.push("Teufelsflüstern ×" + zahlText(k.teufelFaktor));
+      }
+    },
     reihen: function (r, k) {
       // Jede fertige Einheit zählt einzeln (Zeile + Block = 2 × Extra-Schaden)
       const bonus = k.werte.reihenSchaden * (k.einheiten || 0);
@@ -1357,6 +1415,8 @@ const SudokuRPG = (function () {
    *   immerKritisch – der Treffer ist automatisch kritisch (Buch des Siebten)
    *   grad          – id des Schwierigkeitsgrads (oder null)
    *   doppelt       – true, wenn eine Zeile/Spalte/Block fertig wurde
+   *   glueckFaktor  – Faktor der Glückssträhne (0 oder 1 = keine Strähne)
+   *   teufelFaktor  – Faktor eines befolgten wahren Teufelshinweises (1 = keiner)
    *   einheiten     – WIE VIELE Einheiten fertig wurden (0–3, für den Reihenbrecher)
    *   giftAnteil    – 0.5 = die Hälfte als Gift (0 = kein Gift)
    *   modifikatoren – Liste { <stufe>: function (rechnung, kontext) }
@@ -1411,7 +1471,7 @@ const SudokuRPG = (function () {
 
   function berechneSchaden(kontext) {
     kontext = Object.assign({ werte: werteVon({}), grad: null, doppelt: false, einheiten: 0,
-      giftAnteil: 0, modifikatoren: [], selten: null, eliteTreffer: 0, wuerfe: null, ueberladung: 1 }, kontext);
+      glueckFaktor: 1, teufelFaktor: 1, giftAnteil: 0, modifikatoren: [], selten: null, eliteTreffer: 0, wuerfe: null, ueberladung: 1 }, kontext);
     const w = kontext.werte;
     let r;
     if (kontext.konter > 0) {
@@ -1509,7 +1569,12 @@ const SudokuRPG = (function () {
                              (der normale Treffer hat den Boss schon besiegt)
        raetsel: null | { grad, vorgaben, loesung, eingaben, geloest,
                          powerups: [ { index, typ } ],
-                         regenbogen: null | Index des Regenbogenfelds },
+                         regenbogen: null | Index des Regenbogenfelds,
+                         glueck: { ziffer, faktor }      ← nur nach dem Glücksfeld:
+                                   Glücksziffer und Faktor der Strähne (0 = keine)
+                         teufel: { pakt, hinweis }       ← nur nach dem Teufelsfeld:
+                                   pakt "offen" | "angenommen" | "abgelehnt",
+                                   hinweis null | { index, zahl, wahr } },
        rekorde: {         ← dauerhaft, überstehen jedes Ende eines Durchlaufs
          level,           ← höchstes erreichtes Level (Bossnummer, über alle Welten)
          treffer,         ← höchster Einzeltreffer (Würfeltreffer inkl. Gift)
@@ -1586,6 +1651,8 @@ const SudokuRPG = (function () {
 
   /**
    * Wählt Power-up-Felder: zufällige LEERE Felder, Typ je Feld nach Gewicht.
+   * Typen mit "maxProSudoku" (Glücks- und Teufelsfeld) kommen höchstens so
+   * oft vor – ist die Grenze erreicht, wird nur noch unter den übrigen gelost.
    * @returns {{index, typ}[]}
    */
   function lostPowerups(r, zufall, anzahl) {
@@ -1593,9 +1660,108 @@ const SudokuRPG = (function () {
     for (let i = 0; i < 81; i++) {
       if (r.vorgaben[i] === 0 && r.eingaben[i] === 0) leer.push(i);
     }
+    const gezogen = {};
     return mische(leer, zufall).slice(0, anzahl).sort(function (a, b) { return a - b; }).map(function (index) {
-      return { index: index, typ: ziehe(K.powerupTypen, function (t) { return t.gewicht; }, zufall).id };
+      const moeglich = K.powerupTypen.filter(function (t) {
+        return t.maxProSudoku === undefined || (gezogen[t.id] || 0) < t.maxProSudoku;
+      });
+      const typ = ziehe(moeglich, function (t) { return t.gewicht; }, zufall);
+      gezogen[typ.id] = (gezogen[typ.id] || 0) + 1;
+      return { index: index, typ: typ.id };
     });
+  }
+
+  /** Steht in Feld i (vorgaben + richtige Eingaben) schon eine Zahl? Sonst 0. */
+  function zahlIm(raetsel, i) {
+    return raetsel.vorgaben[i] || raetsel.eingaben[i];
+  }
+
+  /**
+   * Sichtbarer Konflikt: Steht Ziffer z schon in Zeile, Spalte oder Block
+   * von Feld i (im aktuellen Gitter)?
+   */
+  function hatKonflikt(raetsel, i, z) {
+    const zeile = Math.floor(i / 9), spalte = i % 9;
+    const bz = Math.floor(zeile / 3) * 3, bs = Math.floor(spalte / 3) * 3;
+    for (let k = 0; k < 9; k++) {
+      if (zahlIm(raetsel, zeile * 9 + k) === z) return true;
+      if (zahlIm(raetsel, k * 9 + spalte) === z) return true;
+      if (zahlIm(raetsel, (bz + Math.floor(k / 3)) * 9 + bs + (k % 3)) === z) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Glücksrad: alle Ziffern 1–9, die noch mindestens ein leeres Feld haben
+   * (nur unter ihnen darf das Rad stehen bleiben).
+   */
+  function glueckKandidaten(raetsel) {
+    const ziffern = [];
+    for (let z = 1; z <= 9; z++) {
+      for (let i = 0; i < 81; i++) {
+        if (zahlIm(raetsel, i) === 0 && raetsel.loesung[i] === z) { ziffern.push(z); break; }
+      }
+    }
+    return ziffern;
+  }
+
+  /**
+   * Felder, die einen Teufelshinweis bekommen dürfen: leer, nicht versiegelt,
+   * nicht verdeckt und nicht vom Fluch gesperrt (ihre richtige Ziffer ist
+   * gerade nicht verflucht).
+   */
+  function hinweisFelder(raetsel, wirkungen) {
+    const felder = [];
+    for (let i = 0; i < 81; i++) {
+      if (zahlIm(raetsel, i) !== 0) continue;
+      const art = feldWirkung(wirkungen, i);
+      if (art === "versiegelt" || art === "verdeckt") continue;
+      if (zifferWirkung(wirkungen, raetsel.loesung[i]) === "verflucht") continue;
+      felder.push(i);
+    }
+    return felder;
+  }
+
+  /**
+   * Erzeugt einen Hinweis des Teufels – ohne Spielstand, deshalb einzeln
+   * testbar.
+   *   Wahr:    ein erlaubtes Feld mit seiner richtigen Zahl.
+   *   Gelogen: ein erlaubtes Feld mit einer FALSCHEN Zahl, die im aktuellen
+   *            Gitter keinen sichtbaren Konflikt (Zeile, Spalte, Block) hat und
+   *            nicht verflucht ist. Hat ein Feld keine solche Zahl, kommt nur
+   *            ein anderes Feld in Frage.
+   * Ob er wahr ist, entscheidet sich beim Erzeugen (teufel.wahrChance). Damit
+   * das Verhältnis wirklich stimmt, flüstert der Teufel nur, wenn BEIDES
+   * möglich ist: Gibt es kein erlaubtes Feld oder nirgends eine plausible
+   * Lüge (z. B. kurz vor Schluss), gibt es in diesem Zug keinen Hinweis.
+   * @param {object} raetsel – { vorgaben, loesung, eingaben }
+   * @param {object[]} wirkungen – laufende Wirkungen des Bosses
+   * @param {function} zufall – Zahl von 0 bis unter 1
+   * @returns {{index, zahl, wahr}|null}
+   */
+  function erzeugeHinweis(raetsel, wirkungen, zufall) {
+    const felder = hinweisFelder(raetsel, wirkungen);
+    // Für jedes erlaubte Feld die plausiblen Lügen
+    const luegenVon = {};
+    const mitLuege = felder.filter(function (index) {
+      const luegen = [];
+      for (let z = 1; z <= 9; z++) {
+        if (z === raetsel.loesung[index]) continue;                        // das wäre die Wahrheit
+        if (zifferWirkung(wirkungen, z) === "verflucht") continue;         // könnte man nicht setzen
+        if (hatKonflikt(raetsel, index, z)) continue;                      // sofort als Lüge erkennbar
+        luegen.push(z);
+      }
+      luegenVon[index] = luegen;
+      return luegen.length > 0;
+    });
+    if (mitLuege.length === 0) return null;
+    if (zufall() < K.teufel.wahrChance) {
+      const index = felder[Math.floor(zufall() * felder.length)];
+      return { index: index, zahl: raetsel.loesung[index], wahr: true };
+    }
+    const index = mitLuege[Math.floor(zufall() * mitLuege.length)];
+    const luegen = luegenVon[index];
+    return { index: index, zahl: luegen[Math.floor(zufall() * luegen.length)], wahr: false };
   }
 
   /**
@@ -1805,6 +1971,12 @@ const SudokuRPG = (function () {
         r.eingaben[r.regenbogen] === 0 ? r.regenbogen : null;
       raetsel = { grad: r.grad, vorgaben: r.vorgaben.slice(), loesung: r.loesung.slice(),
         eingaben: r.eingaben.slice(), geloest: r.geloest === true, powerups: powerups, regenbogen: regenbogen };
+      // Glücksfeld und Teufelsfeld (später dazugekommen, ohne neue Version):
+      // fehlen sie oder sind sie unbrauchbar, gilt einfach "noch nichts passiert"
+      const glueck = pruefeGlueck(r.glueck);
+      if (glueck) raetsel.glueck = glueck;
+      const teufel = pruefeTeufel(r.teufel, raetsel);
+      if (teufel) raetsel.teufel = teufel;
       // Gilt auch beim Import einer alten Sicherung (settings.js)
       if (ohnePowerups && !raetsel.geloest) {
         raetsel.powerups = lostPowerups(raetsel, zufall || Math.random, werte.powerupAnzahl);
@@ -1908,6 +2080,29 @@ const SudokuRPG = (function () {
    * beschädigt, aus Bossnummer und Rekord (höchster besiegter Boss) ableiten.
    * Nie kleiner als das, was der Stand selbst zeigt.
    */
+  /** Glücksfeld im Spielstand: { ziffer (1–9), faktor (0 = keine Strähne) } oder null. */
+  function pruefeGlueck(g) {
+    if (!g || typeof g !== "object" || !istGanzzahl(g.ziffer, 1, 9)) return null;
+    const faktor = istGanzzahl(g.faktor, 0, K.glueck.faktorMax) ? g.faktor : 0;
+    return { ziffer: g.ziffer, faktor: faktor };
+  }
+
+  /**
+   * Teufelsfeld im Spielstand: { pakt: "offen" | "angenommen" | "abgelehnt",
+   * hinweis: null | { index, zahl, wahr } } oder null. Ein Hinweis auf einem
+   * schon gefüllten Feld fällt weg.
+   */
+  function pruefeTeufel(t, raetsel) {
+    if (!t || typeof t !== "object" || ["offen", "angenommen", "abgelehnt"].indexOf(t.pakt) === -1) return null;
+    const h = t.hinweis;
+    const hinweis = t.pakt === "angenommen" && h && typeof h === "object" &&
+      istGanzzahl(h.index, 0, 80) && istGanzzahl(h.zahl, 1, 9) && typeof h.wahr === "boolean" &&
+      zahlIm(raetsel, h.index) === 0 &&
+      (h.zahl === raetsel.loesung[h.index]) === h.wahr          // die Wahrheit muss zum Rätsel passen
+      ? { index: h.index, zahl: h.zahl, wahr: h.wahr } : null;
+    return { pakt: t.pakt, hinweis: hinweis };
+  }
+
   function pruefeRekorde(r, bossNummer, rekord) {
     const zahl = function (wert, standard) { return istGanzzahl(wert, 0, 1e9) ? wert : standard; };
     const gueltig = r && typeof r === "object";
@@ -2648,12 +2843,22 @@ const SudokuRPG = (function () {
      */
     function falscheZahl(index, ziffer) {
       const boss = bossMitStand(zustand.bossNummer);
+      const r = zustand.raetsel;
+      // Glücksfeld: Jeder Fehler beendet die Glückssträhne
+      const straehneGebrochen = straehneBrechen(r);
+      // Teufelsfeld: Genau die gelogene Zahl im Hinweisfeld befolgt? Dann lacht
+      // der Teufel – sonst ist es ein ganz normaler Fehler (so oder so verfällt der Hinweis)
+      const h = r.teufel ? r.teufel.hinweis : null;
+      const gelogen = Boolean(h && !h.wahr && h.index === index && h.zahl === ziffer);
+      if (r.teufel) r.teufel.hinweis = null;
       const hpVorher = zustand.heldHp;
       zustand.heldHp = Math.max(0, zustand.heldHp - K.held.fehlerSchaden);
       const ereignis = {
         index: index, ziffer: ziffer, boss: boss,
         heldHpVorher: hpVorher, schaden: hpVorher - zustand.heldHp, heldHp: zustand.heldHp, heldMaxHp: zustand.heldMaxHp,
         hp: zustand.bossHp, muenzen: zustand.muenzen, phase: phaseStand(),
+        straehneGebrochen: straehneGebrochen,  // Faktor der Strähne, die gerade zerbrochen ist (0 = keine)
+        gelogen: gelogen,                      // der Teufel hat gelogen – und man hat ihm geglaubt
       };
 
       if (zustand.heldHp <= 0) {
@@ -2662,19 +2867,106 @@ const SudokuRPG = (function () {
         const niederlage = durchlaufBeenden("niederlage", boss);
         speichern();
         melde("fehler", ereignis);
+        meldeGlueckUndTeufel(ereignis, null);
         melde("niederlage", niederlage);
-        return { art: "fehler", niederlage: true, faehigkeit: null };
+        return { art: "fehler", niederlage: true, faehigkeit: null, gelogen: gelogen };
       }
       // Fähigkeit: Auch eine falsche Zahl zählt als Zug (pariert ist damit nichts)
       const zug = zugVorbei(boss, false);
       const einsatz = zug.einsatz;
       ereignis.faehigkeitStand = anzeigeVorEinsatz(einsatz);
       if (einsatz) einsatz.stand = faehigkeitAnzeige();
+      // Teufelsfeld: nach dem Zug (und der Fähigkeit) der nächste Hinweis
+      const hinweis = neuerHinweis();
       speichern();
       melde("fehler", ereignis);
+      meldeGlueckUndTeufel(ereignis, null);
       if (zug.beendet.length) melde("wirkungEndet", { boss: boss, beendet: zug.beendet });
       if (einsatz) melde("faehigkeit", einsatz);
-      return { art: "fehler", niederlage: false, faehigkeit: einsatz };
+      if (hinweis) melde("teufelHinweis", hinweis);
+      return { art: "fehler", niederlage: false, faehigkeit: einsatz, gelogen: gelogen };
+    }
+
+    /**
+     * Glücksfeld: beendet eine laufende Glückssträhne.
+     * @returns {number} – Faktor der zerbrochenen Strähne (0 = es lief keine)
+     */
+    function straehneBrechen(r) {
+      if (!r || !r.glueck || !(r.glueck.faktor > 0)) return 0;
+      const vorher = r.glueck.faktor;
+      r.glueck.faktor = 0;
+      return vorher;
+    }
+
+    /**
+     * Teufelsfeld: Ist der Pakt angenommen und läuft das Sudoku noch, flüstert
+     * der Teufel einen neuen Hinweis (höchstens einer zur Zeit – der alte ist
+     * damit ersetzt). Gibt die Daten für das Ereignis "teufelHinweis" zurück –
+     * OHNE die Wahrheit, die bleibt im Spielstand.
+     */
+    function neuerHinweis() {
+      const r = zustand.raetsel;
+      if (!r || r.geloest || zustand.ende || !r.teufel || r.teufel.pakt !== "angenommen") return null;
+      r.teufel.hinweis = erzeugeHinweis(r, zustand.faehigkeit.wirkungen, zufall);
+      return hinweisFuerAnzeige(true);
+    }
+
+    /**
+     * Der laufende Hinweis für die Anzeige: { index, zahl } oder null – mit
+     * "flüstern" dazu ein zufälliger Satz des Teufels (text).
+     */
+    function hinweisFuerAnzeige(fluestern) {
+      const r = zustand.raetsel;
+      const h = r && r.teufel && r.teufel.pakt === "angenommen" ? r.teufel.hinweis : null;
+      if (!h) return null;
+      const anzeige = { index: h.index, zahl: h.zahl };
+      if (fluestern) {
+        const texte = K.teufel.fluestern;
+        anzeige.text = texte[Math.floor(zufall() * texte.length)];
+      }
+      return anzeige;
+    }
+
+    /**
+     * Ereignisse zu Glücks- und Teufelsfeld nach "richtig" bzw. "fehler":
+     * Lüge aufgeflogen (der Teufel lacht), Strähne zerbrochen.
+     */
+    function meldeGlueckUndTeufel(ereignis, treffer) {
+      const daten = treffer || ereignis;
+      if (daten.gelogen) {
+        const texte = K.teufel.lachen;
+        melde("teufelLacht", { index: daten.index, ziffer: daten.ziffer, text: texte[Math.floor(zufall() * texte.length)] });
+      }
+      if (daten.straehneGebrochen > 0) melde("straehneBricht", { faktor: daten.straehneGebrochen });
+    }
+
+    /**
+     * Teufelsfeld: den angebotenen Pakt annehmen oder ablehnen. Solange er
+     * offen ist, kann keine Zahl gesetzt werden. Abgelehnt → das Feld ist
+     * ohne Wirkung verschwunden. Angenommen → sofort der erste Hinweis.
+     * @param {boolean} annehmen
+     * @returns {object} { art: "pakt", angenommen, hinweis } oder { art: "kein-pakt" }
+     */
+    function teufelsPakt(annehmen) {
+      const r = zustand.raetsel;
+      if (!r || !r.teufel || r.teufel.pakt !== "offen") return { art: "kein-pakt" };
+      r.teufel.pakt = annehmen ? "angenommen" : "abgelehnt";
+      const hinweis = annehmen ? neuerHinweis() : null;
+      speichern();
+      melde("pakt", { angenommen: Boolean(annehmen) });
+      if (hinweis) melde("teufelHinweis", hinweis);
+      return { art: "pakt", angenommen: Boolean(annehmen), hinweis: hinweis };
+    }
+
+    /** Stand von Glücks- und Teufelsfeld für die Anzeige (ohne die Wahrheit des Hinweises). */
+    function feldStand() {
+      const r = zustand.raetsel;
+      return {
+        glueck: r && r.glueck ? { ziffer: r.glueck.ziffer, faktor: r.glueck.faktor } : null,
+        pakt: r && r.teufel ? r.teufel.pakt : null,
+        paktText: K.teufel.paktText,
+        hinweis: hinweisFuerAnzeige(),
+      };
     }
 
     /**
@@ -2710,6 +3002,8 @@ const SudokuRPG = (function () {
       if (zustand.auswahl) return { art: "auswahl-offen" };     // erst eine Verbesserung wählen
       if (mussBehalten()) return { art: "auswahl-offen" };      // erst wählen, welche Verbesserungen bleiben
       if (!r || r.geloest) return { art: "kein-raetsel" };
+      // Teufelsfeld: Erst den Pakt annehmen oder ablehnen (zählt nicht als Zug)
+      if (r.teufel && r.teufel.pakt === "offen") return { art: "pakt-offen" };
       // Vorgaben und schon richtig gesetzte Zahlen sind gesperrt
       if (r.vorgaben[index] !== 0 || r.eingaben[index] !== 0) return { art: "gesperrt" };
       if (!istGanzzahl(ziffer, 1, 9)) return { art: "gesperrt" };
@@ -2757,6 +3051,28 @@ const SudokuRPG = (function () {
         powerup = { index: index, typ: typ.id, name: typ.name };
       }
 
+      // 2a. Glücksfeld: Die Glücksziffer verlängert die Strähne (×2, ×3 … höchstens
+      //     ×faktorMax) und bringt Münzen – in beiden Zügen. Jede andere Ziffer
+      //     beendet sie. Das Rad selbst dreht sich erst danach (siehe 8b), die
+      //     Zahl im Glücksfeld zählt also noch nicht für die Strähne.
+      let glueckFaktor = 0;
+      let straehneGebrochen = 0;
+      if (r.glueck && ziffer === r.glueck.ziffer) {
+        const g = K.glueck;
+        r.glueck.faktor = r.glueck.faktor > 0 ? Math.min(g.faktorMax, r.glueck.faktor + g.faktorSchritt) : g.faktorStart;
+        glueckFaktor = r.glueck.faktor;
+        effekt.muenzen += g.muenzen;
+      } else {
+        straehneGebrochen = straehneBrechen(r);
+      }
+      //     Teufelsfeld: Genau die geflüsterte Zahl im Hinweisfeld – und der
+      //     Hinweis war wahr (eine richtige Zahl ist nie die Lüge)? Dann zählt der
+      //     Schaden ×teufel.faktor. So oder so verfällt der Hinweis mit diesem Zug.
+      const h = r.teufel ? r.teufel.hinweis : null;
+      const teufelGefolgt = Boolean(h && h.wahr && h.index === index && h.zahl === ziffer);
+      const teufelFaktor = teufelGefolgt ? K.teufel.faktor : 1;
+      if (r.teufel) r.teufel.hinweis = null;
+
       // 2b. Bücher: Buch-Bonus steigt in beiden Zügen (wirkt aber nur im
       //     Angriff, gilt dort schon für diese Zahl), Zusatzwirkung, Buchschlag?
       const buchWirkung = buchWirkungenFuer(r, ziffer);
@@ -2790,6 +3106,7 @@ const SudokuRPG = (function () {
           wurf: wurf, wuerfe: wuerfelModus === "summe" ? wuerfe : null,
           mindestwurf: zusatz.mindestwurf || 0, immerKritisch: Boolean(zusatz.immerKritisch),
           werte: w, buchBonus: zustand.buchBonus, grad: r.grad, doppelt: doppelt,
+          glueckFaktor: glueckFaktor, teufelFaktor: teufelFaktor,
           einheiten: anzahlEinheiten,
           giftAnteil: effekt.giftAnteil,
           modifikatoren: modifikatoren(bossVorher),
@@ -2810,6 +3127,7 @@ const SudokuRPG = (function () {
           rechnung = berechneSchaden({
             konter: block.konter, werte: w, buchBonus: zustand.buchBonus, grad: r.grad,
             doppelt: doppelt, einheiten: anzahlEinheiten, giftAnteil: effekt.giftAnteil,
+            glueckFaktor: glueckFaktor, teufelFaktor: teufelFaktor,
             modifikatoren: modifikatoren(bossVorher), selten: bossVorher.selten, eliteTreffer: eliteTreffer,
             ueberladung: 1,
           });
@@ -2913,6 +3231,25 @@ const SudokuRPG = (function () {
         zustand.ueberladen = true;
       }
 
+      // 8b. Glücksfeld: Das Rad dreht sich und bleibt auf einer Ziffer stehen,
+      //     die noch leere Felder hat (ist keine mehr übrig, dreht es nicht).
+      //     Teufelsfeld: Der Teufel bietet seinen Pakt an – nur, solange das
+      //     Sudoku läuft und der Held noch steht.
+      let glueckRad = null;
+      let paktAngebot = false;
+      if (powerup && powerup.typ === "gluecksfeld") {
+        const kandidaten = glueckKandidaten(r);
+        if (kandidaten.length > 0) {
+          const gewaehlt = kandidaten[Math.floor(zufall() * kandidaten.length)];
+          r.glueck = { ziffer: gewaehlt, faktor: 0 };
+          glueckRad = { index: index, ziffer: gewaehlt, kandidaten: kandidaten };
+        }
+      }
+      if (powerup && powerup.typ === "teufelsfeld" && !geloest && !niederlage) {
+        r.teufel = { pakt: "offen", hinweis: null };
+        paktAngebot = true;
+      }
+
       // 9. Fähigkeit: Der Zug zählt – nicht, wenn der Zug den Boss oder den
       //    Helden besiegt hat. Wirkungen enden mit dem Sudoku.
       //    Buch des Vierten: Zähler um 1 Zug zurücksetzen (höchstens auf den vollen Abstand)
@@ -2940,6 +3277,9 @@ const SudokuRPG = (function () {
         if (angriff) bossAngriffEreignis = verteidigungBeginnt(bossMitStand(zustand.bossNummer));
         else angriffBeginnt();
       }
+
+      // 11. Teufelsfeld: nach dem Zug der nächste Hinweis (nicht bei einer Niederlage)
+      const hinweis = niederlage ? null : neuerHinweis();
 
       // Alles, was diese Zahl bewirkt hat, in EINEM Ereignis
       const treffer = {
@@ -2983,6 +3323,13 @@ const SudokuRPG = (function () {
         // und ob das Schwert nach diesem Zug überladen ist
         ueberladung: ueberladungVerbraucht ? K.ueberladung.faktor : null,
         ueberladen: zustand.ueberladen,
+        // Glücksfeld: Faktor der Strähne bei diesem Treffer (0 = keine), Glücksziffer,
+        // zerbrochene Strähne (ihr Faktor), das Rad (nur im Zug auf dem Glücksfeld)
+        glueckFaktor: glueckFaktor, glueckZiffer: r.glueck ? r.glueck.ziffer : null,
+        glueckMuenzen: glueckFaktor > 0 ? K.glueck.muenzen : 0,
+        straehneGebrochen: straehneGebrochen, glueckRad: glueckRad,
+        // Teufelsfeld: wahrer Hinweis befolgt (Faktor), Pakt gerade angeboten
+        teufelFaktor: teufelGefolgt ? teufelFaktor : 0, paktAngebot: paktAngebot,
       };
       // Niederlage: Der Boss hat den Helden im Verteidigungszug besiegt
       const niederlageDaten = niederlage ? durchlaufBeenden("niederlage", bossVorher) : null;
@@ -2991,6 +3338,9 @@ const SudokuRPG = (function () {
       if (powerup) {
         melde("powerup", { index: index, typ: powerup.typ, effekt: effekt, treffer: treffer });
       }
+      meldeGlueckUndTeufel(null, treffer);
+      if (glueckRad) melde("glueckRad", glueckRad);
+      if (paktAngebot) melde("teufelPakt", { index: index, text: K.teufel.paktText });
       if (niederlageDaten) {
         melde("niederlage", niederlageDaten);
         return {
@@ -3025,6 +3375,7 @@ const SudokuRPG = (function () {
         // Das Rätsel bleibt bis zum nächsten starteRaetsel() zum Anschauen stehen.
         melde("sudokuGeloest", { grad: r.grad, boss: bossMitStand(zustand.bossNummer), hp: zustand.bossHp });
       }
+      if (hinweis) melde("teufelHinweis", hinweis);
       return {
         art: "richtig", phase: phase, wurf: wurf, schaden: rechnung.schaden, gift: rechnung.gift,
         kritisch: rechnung.kritisch, fehlschlag: rechnung.fehlschlag, doppelt: doppelt, immun: rechnung.immun,
@@ -3035,6 +3386,8 @@ const SudokuRPG = (function () {
         faehigkeit: einsatz, entschaerft: entschaerft, niederlage: false,
         buchschlag: buchWirkung.schlaege.length > 0,
         ueberladung: ueberladungVerbraucht ? K.ueberladung.faktor : null, ueberladen: zustand.ueberladen,
+        glueckFaktor: glueckFaktor, glueckRad: glueckRad, straehneGebrochen: straehneGebrochen,
+        teufelFaktor: treffer.teufelFaktor, paktAngebot: paktAngebot, hinweis: hinweis,
       };
     }
 
@@ -3159,6 +3512,8 @@ const SudokuRPG = (function () {
       loseGrad: loseGrad,
       starteRaetsel: starteRaetsel,
       setzeZahl: setzeZahl,
+      teufelsPakt: teufelsPakt,               // Teufelsfeld: Pakt annehmen (true) oder ablehnen (false)
+      feldStand: feldStand,                   // Glücksziffer, Strähne, Pakt und Hinweis für die Anzeige
       waehleVerbesserung: waehleVerbesserung,
       brauchtRaetsel: brauchtRaetsel,
       // Durchläufe und Rekorde
@@ -3228,6 +3583,9 @@ const SudokuRPG = (function () {
     werteVon: werteVon,
     gesammelteVerbesserungen: gesammelteVerbesserungen,
     berechneSchaden: berechneSchaden,
+    erzeugeHinweis: erzeugeHinweis,
+    glueckKandidaten: glueckKandidaten,
+    hatKonflikt: hatKonflikt,
     berechneBlock: berechneBlock,
     angriffsBonus: angriffsBonus,
     angriffText: angriffText,

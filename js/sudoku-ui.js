@@ -71,11 +71,21 @@ function initSudoku(container) {
   let letztesWort = null;       // Wort der zuletzt angezeigten Verwirrung (für "Das Wort war: …")
   let statusZeit = 0;           // Zeitgeber für kurze Hinweise über dem Gitter
   let buchSpinLaeuft = null;    // Promise, solange der Buch-Spin läuft bzw. darauf wartet
+  // Glücksfeld und Teufelsfeld – so, wie es gerade ANGEZEIGT wird (die Regeln
+  // sind schon weiter; sichtbar wird es erst in der Abfolge des Kampffensters)
+  let angezeigterHinweis = null;    // { index, zahl } des Teufelshinweises oder null
+  let hinweisErscheint = false;     // der Hinweis ist gerade neu → kurz einblenden
+  let angezeigteGlueckZiffer = null; // Glücksziffer (Kleeblatt im Zahlenfeld) oder null
 
   // Wird gerade ein Rätsel erzeugt/ausgelost? (je Modus getrennt)
   const beschaeftigt = { frei: false, abenteuer: false };
   function wirdErzeugt() {
-    return Boolean(modus && beschaeftigt[modus]) || waehltVerbesserung() || regenbogenLaeuft;
+    return Boolean(modus && beschaeftigt[modus]) || waehltVerbesserung() || regenbogenLaeuft || paktOffen();
+  }
+  /** Im Abenteuer wartet der Teufel auf eine Antwort (Pakt annehmen oder ablehnen) → keine Eingabe. */
+  function paktOffen() {
+    const r = modus === "abenteuer" && abenteuer ? abenteuer.zustand.raetsel : null;
+    return Boolean(r && r.teufel && r.teufel.pakt === "offen");
   }
   /** Im Abenteuer ist gerade eine Verbesserungsauswahl offen → keine Eingabe. */
   function waehltVerbesserung() {
@@ -368,10 +378,15 @@ function initSudoku(container) {
       // Regenbogenfeld: besiegt den Boss sofort
       const regenbogen = modus === "abenteuer" && spiel.regenbogen === i;
       if (regenbogen) beschreibung += ", Regenbogenfeld: besiegt den Boss sofort";
+      // Teufelsfeld: Hinweis des Teufels (glüht, die Zahl flackert)
+      const hinweis = hinweisAuf(i, wert);
+      if (hinweis) beschreibung += ", der Teufel flüstert: " + zeichenFuer(hinweis.zahl, wort);
       feld.setAttribute("aria-label", beschreibung);
       zeichnePowerup(feld, powerup);
       zeichneRegenbogen(feld, regenbogen);
+      zeichneHinweis(feld, hinweis, wort);
     }
+    hinweisErscheint = false;
     zeichneWirkungsMarken(wirkungen);
 
     brett.classList.toggle("ist-geloest", spiel.geloest);
@@ -534,6 +549,41 @@ function initSudoku(container) {
     }
   }
 
+  /** Der angezeigte Teufelshinweis, wenn er auf dem (noch leeren) Feld i liegt – sonst null. */
+  function hinweisAuf(i, wert) {
+    if (modus !== "abenteuer" || !angezeigterHinweis || angezeigterHinweis.index !== i || wert !== 0) return null;
+    return angezeigterHinweis;
+  }
+
+  /**
+   * Teufelshinweis im Feld: rotviolettes Glühen mit der vorgeschlagenen Zahl
+   * (Aussehen: css/sudoku-rpg.css). Ohne Hinweis wird die Ebene entfernt.
+   */
+  function zeichneHinweis(feld, hinweis, wort) {
+    let ebene = feld.querySelector(".sudoku-teufel-hinweis");
+    feld.classList.toggle("hat-hinweis", Boolean(hinweis));
+    if (!hinweis) {
+      if (ebene) ebene.remove();
+      return;
+    }
+    if (!ebene) {
+      ebene = document.createElement("span");
+      ebene.className = "sudoku-teufel-hinweis";
+      ebene.setAttribute("aria-hidden", "true");
+      ebene.appendChild(document.createElement("span"));
+      feld.appendChild(ebene);
+      if (hinweisErscheint) ebene.classList.add("erscheint");
+    }
+    ebene.firstChild.textContent = zeichenFuer(hinweis.zahl, wort);
+  }
+
+  /** Kurzer Text in der Textbox über dem Gitter (z. B. das Flüstern des Teufels). */
+  function zeigeTextbox(text, art, ms) {
+    zeigeStatus(text, art);
+    clearTimeout(statusZeit);
+    statusZeit = setTimeout(function () { if (status.textContent === text) zeigeStatus(""); }, ms);
+  }
+
   /** Ausgelöstes Power-up: Markierung leuchtet kurz auf und verschwindet. */
   function loesePowerupAus(index, typId) {
     let ebene = felder[index].querySelector(".sudoku-powerup");
@@ -599,6 +649,20 @@ function initSudoku(container) {
         if (buchMarke) buchMarke.remove();
         taste.classList.remove("hat-buch");
       }
+      // Glücksfeld: Die Glücksziffer trägt ein kleines Kleeblatt
+      const glueck = modus === "abenteuer" && angezeigteGlueckZiffer === ziffer && !fertig;
+      let kleeMarke = taste.querySelector(".sudoku-glueck-marke");
+      if (glueck && !kleeMarke) {
+        kleeMarke = document.createElement("span");
+        kleeMarke.className = "sudoku-glueck-marke";
+        kleeMarke.setAttribute("aria-hidden", "true");
+        kleeMarke.innerHTML = SudokuKampf.symbolSvg("klee");
+        taste.appendChild(kleeMarke);
+      } else if (!glueck && kleeMarke) {
+        kleeMarke.remove();
+      }
+      taste.classList.toggle("ist-glueck", glueck);
+      if (glueck) taste.setAttribute("aria-label", taste.getAttribute("aria-label") + ", Glücksziffer");
       taste.classList.toggle("ist-verflucht", verflucht);
       let marke = taste.querySelector(".sudoku-fluch-marke");
       if (verflucht) {
@@ -638,6 +702,8 @@ function initSudoku(container) {
 
   /** Trägt eine Ziffer ins gewählte Feld ein (0 = löschen). */
   function setze(ziffer) {
+    // Glücksrad oder Pakt-Abfrage sichtbar: Die Eingabe ist gesperrt (nichts wird abgekürzt)
+    if (modus === "abenteuer" && kampf && kampf.overlayOffen()) return;
     if (spiel && wirdErzeugt() && modus === "abenteuer" && kampf && kampf.laeuft()) {
       // Der Zug ist schon entschieden (Boss besiegt, Niederlage, Sudoku gelöst),
       // die Animation läuft aber noch: Sie springt zum Ergebnis, die Eingabe verfällt.
@@ -856,6 +922,42 @@ function initSudoku(container) {
     abenteuer.an("sudokuGeloest", function () {
       if (abenteuer === diesesAbenteuer) kampf.text("Sudoku gelöst!");
     });
+    // Glücksfeld: Das Rad dreht sich – danach trägt die Glücksziffer ihr Kleeblatt
+    abenteuer.an("glueckRad", function (e) {
+      if (abenteuer !== diesesAbenteuer) return;
+      kampf.glueckRad(rahmen, e, function (z) { return zeichenFuer(z, SudokuRPG.verwirrungsWort(laufendeWirkungen())); })
+        .then(function () {
+          if (abenteuer !== diesesAbenteuer) return;
+          angezeigteGlueckZiffer = e.ziffer;
+          if (spiel) zeichneZahlenfeld();
+        });
+    });
+    // Glückssträhne zerbrochen (andere Ziffer oder Fehler): die Anzeige zerbröselt
+    abenteuer.an("straehneBricht", function (e) { if (abenteuer === diesesAbenteuer) kampf.straehneBricht(e); });
+    // Teufelsfeld: Pakt-Abfrage nach den Animationen des Zugs
+    abenteuer.an("teufelPakt", function (e) { if (abenteuer === diesesAbenteuer) zeigePakt(e); });
+    // Neuer Hinweis: Das Feld glüht auf, der Teufel flüstert in der Textbox
+    abenteuer.an("teufelHinweis", function (e) {
+      if (abenteuer !== diesesAbenteuer) return;
+      kampf.danach(function () {
+        if (abenteuer !== diesesAbenteuer || modus !== "abenteuer") return;
+        angezeigterHinweis = { index: e.index, zahl: e.zahl };
+        hinweisErscheint = true;
+        if (spiel) zeichne();
+        zeigeTextbox(e.text, "teufel", 1800);
+      });
+    });
+    // Lüge aufgeflogen: Der Teufel lacht in der Textbox
+    abenteuer.an("teufelLacht", function (e) {
+      if (abenteuer !== diesesAbenteuer) return;
+      kampf.danach(function () {
+        if (abenteuer !== diesesAbenteuer || modus !== "abenteuer") return null;
+        zeigeTextbox(e.text, "teufel-lacht", 1900);
+        // Das Lachen bleibt kurz stehen, bevor der Teufel weiterflüstert
+        return kampf.pause(1300);
+      });
+      kampf.text("Der Teufel hat gelogen!");
+    });
 
     kampf.zeigeStand(standFuerAnzeige());
     // Ganz neues Abenteuer: Einblendung der ersten Welt, der erste Boss spricht
@@ -890,6 +992,9 @@ function initSudoku(container) {
     }
     // Beim letzten Mal wurde nicht mehr gewählt? → Auswahl gleich zeigen
     if (abenteuer.zustand.auswahl) zeigeAuswahl(abenteuer.auswahlInfo());
+    // Glücksziffer, Hinweis des Teufels – und ein noch offener Pakt
+    const feldStand = feldStandUebernehmen();
+    if (feldStand.pakt === "offen") zeigePakt({ text: feldStand.paktText });
 
     if (beschaeftigt.abenteuer) return;      // es wird schon ausgelost
     if (abenteuer.brauchtRaetsel()) {
@@ -920,7 +1025,31 @@ function initSudoku(container) {
       verbesserungen: abenteuer.gesammelt(),
       faehigkeitStand: abenteuer.faehigkeitStand(),
       buchBonus: abenteuer.buchBonus(),
+      straehne: (abenteuer.feldStand().glueck || { faktor: 0 }).faktor,
     };
+  }
+
+  /**
+   * Teufelsfeld: Pakt-Abfrage zeigen (nach den laufenden Animationen); die
+   * Antwort geht an die Regeln. Danach geht es im Gitter weiter.
+   * @param {object} e – { text } (Ereignis "teufelPakt" oder Stand beim Laden)
+   */
+  function zeigePakt(e) {
+    const diesesAbenteuer = abenteuer;
+    kampf.pakt(rahmen, e, function (annehmen) {
+      if (abenteuer !== diesesAbenteuer) return;
+      abenteuer.teufelsPakt(annehmen);      // → Ereignisse "pakt" und (angenommen) "teufelHinweis"
+      setzeBeschaeftigtAnzeige();
+      if (spiel && !beschaeftigt.abenteuer && !waehltVerbesserung()) waehle(ausgewaehlt, true);
+    });
+  }
+
+  /** Glücks- und Teufelsfeld aus dem Spielstand übernehmen (Laden, neues Sudoku). */
+  function feldStandUebernehmen() {
+    const stand = abenteuer.feldStand();
+    angezeigterHinweis = stand.hinweis ? { index: stand.hinweis.index, zahl: stand.hinweis.zahl } : null;
+    angezeigteGlueckZiffer = stand.glueck ? stand.glueck.ziffer : null;
+    return stand;
   }
 
   /** Karten zur Verbesserungswahl zeigen; die Wahl geht an die Regeln. */
@@ -1005,6 +1134,8 @@ function initSudoku(container) {
       spiel = abenteuer.zustand.raetsel;
       kampf.zeigeFaehigkeit(abenteuer.faehigkeitStand());   // Wirkungen enden mit dem alten Sudoku
       kampf.zeigeBuchBonus(abenteuer.buchBonus());          // Buch-Bonus beginnt bei 0
+      kampf.zeigeStraehne(0);                               // Glücksziffer, Strähne und Pakt
+      feldStandUebernehmen();                               // gelten je Sudoku
       setzeBeschaeftigtAnzeige();
       zeigeStatus("");
       zeigeAbenteuerGrad();
@@ -1027,6 +1158,19 @@ function initSudoku(container) {
 
     const vorher = aktuellesGitter();
     const ergebnis = abenteuer.setzeZahl(index, ziffer);   // Regeln → Ereignisse → Kampffenster
+
+    // Ein gesetzter Zug (richtig oder falsch) lässt den Teufelshinweis verfallen –
+    // der neue erscheint nach den Animationen (Ereignis "teufelHinweis")
+    if (ergebnis.art === "richtig" || ergebnis.art === "fehler") {
+      angezeigterHinweis = null;
+      felder.forEach(function (feld) { zeichneHinweis(feld, null); });
+    }
+
+    if (ergebnis.art === "pakt-offen") {
+      // Teufelsfeld: Erst den Pakt annehmen oder ablehnen (zählt nicht als Zug)
+      zeigeKurzHinweis("Erst den Pakt annehmen oder ablehnen");
+      return;
+    }
 
     if (ergebnis.art === "versiegelt") {
       // Siegel des Bosses: Hier geht gerade nichts. Es wurde keine Zahl gesetzt –

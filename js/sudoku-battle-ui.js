@@ -100,6 +100,10 @@ const SudokuKampf = (function () {
     buchFlug: 320,       // Flugzeit einer Ziffer zum Schwert
     buchAufladen: 180,   // Schwert voll aufgeladen, kurz halten
     buchZahl: 500,       // Schadenszahl mit dem Namen des Buchs stehen lassen
+    // Glücksfeld und Teufelsfeld
+    glueckRad: 2200,     // Glücksrad dreht sich bis zum Stillstand
+    glueckRadPause: 900, // Glücksziffer stehen lassen, dann verschwindet das Rad
+    straehneBruch: 650,  // die Strähne-Anzeige zerbröselt
   };
 
   /** Farbe der Bücher (Karten, Reihe im Kampffenster, Zahlenfeld). */
@@ -153,6 +157,10 @@ const SudokuKampf = (function () {
     heilung: '<path d="M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z"/><path fill="#fff" d="M3 1h1v1h1v1H4v1H3V3H2V2h1z"/>',
     // Buch: Einband mit hellen Seiten am Rand
     buch: '<path d="M0 0h6v1h1v6H1V6H0z"/><path fill="rgba(255,255,255,.75)" d="M1 6h6v1H1zM6 1h1v5H6z"/><path fill="rgba(0,0,0,.3)" d="M1 0h1v6H1z"/>',
+    // Glücksfeld: vierblättriges Kleeblatt mit kleinem Stiel
+    klee: '<path d="M1 0h2v1H1zM4 0h2v1H4zM1 1h5v1H1zM2 2h3v1H2zM1 3h5v1H1zM1 4h2v1H1zM4 4h2v1H4zM3 5h1v1H3zM2 6h1v1H2z"/><path fill="rgba(255,255,255,.6)" d="M1 0h1v1H1zM4 0h1v1H4z"/>',
+    // Teufelsfeld: Kopf mit zwei kleinen Hörnern und glühenden Augen
+    hoerner: '<path d="M0 0h1v1H0zM6 0h1v1H6zM0 1h2v1H0zM5 1h2v1H5zM1 2h5v3H1zM2 5h3v1H2z"/><path fill="#ffd34d" d="M2 3h1v1H2zM4 3h1v1H4z"/>',
     // Reihenbrecher: eine Reihe Blöcke, in der Mitte zerbrochen
     reihe: '<path d="M0 2h2v3H0zM5 2h2v3H5z"/><path d="M3 1h1v2H3zM2 4h1v2H2zM4 3h1v1H4z"/><path fill="rgba(255,255,255,.55)" d="M0 2h1v1H0zM5 2h1v1H5z"/>',
   };
@@ -681,6 +689,8 @@ const SudokuKampf = (function () {
             '<span class="kampf-phase-symbol"></span>' + tippHtml() + "</button>" +
           // Überladenes Schwert (nach einem gelösten Sudoku): Etikett "×10" neben dem Helden
           '<span class="kampf-ueberladung" role="img" hidden></span>' +
+          // Glücksfeld: laufende Glückssträhne ("Strähne ×3") beim Helden
+          '<span class="kampf-straehne" role="img" hidden>' + symbolSvg("klee") + '<span class="kampf-straehne-text"></span></span>' +
           '<div class="kampf-info kampf-info--held">' +
             // HP des Helden – im selben Stil wie der Balken des Bosses
             '<div class="kampf-held-hp" role="img">' +
@@ -810,6 +820,8 @@ const SudokuKampf = (function () {
       absichtText: container.querySelector(".kampf-absicht-text"),
       absichtTipp: container.querySelector(".kampf-absicht .kampf-tipp"),
       ueberladung: container.querySelector(".kampf-ueberladung"),
+      straehne: container.querySelector(".kampf-straehne"),
+      straehneText: container.querySelector(".kampf-straehne-text"),
       phase: container.querySelector(".kampf-phase"),
       phaseSymbol: container.querySelector(".kampf-phase-symbol"),
       phaseTipp: container.querySelector(".kampf-phase .kampf-tipp"),
@@ -907,6 +919,7 @@ const SudokuKampf = (function () {
         verschiebe(el.leiste, ecke("plaetze"));
         verschiebe(el.phase, ecke("held"));
         verschiebe(el.ueberladung, ecke("held"));
+        verschiebe(el.straehne, ecke("held"));
         verschiebe(el.heldInfo, ecke("held"));
         verschiebe(el.kurz, ecke("zug"));
         verschiebe(el.platzInfo, el.kampf);      // ihr Glas-Panel erscheint unter dem Streifen
@@ -1717,6 +1730,10 @@ const SudokuKampf = (function () {
           zeilen.push({ key: "doppelt", label: "Doppelschaden", wert: wert, art: "doppelt", schritt: i });
         } else if (name === "Reihenbrecher") {
           zeilen.push({ key: "reihen", label: "Reihenbrecher", wert: wert, art: "reihe", schritt: i });
+        } else if (name === "Glückssträhne") {
+          zeilen.push({ key: "straehne", label: "Glückssträhne", wert: wert, art: "glueck", schritt: i });
+        } else if (name === "Teufelsflüstern") {
+          zeilen.push({ key: "teufel", label: "Teufelsflüstern", wert: wert, art: "teufel", schritt: i });
         } else if (name === "Überladung") {
           zeilen.push({ key: "ueberladung", label: "Überladung", wert: wert, art: "ueberladung", schritt: i });
         } else if (e.boss.selten && name === e.boss.selten.name) {
@@ -1802,9 +1819,13 @@ const SudokuKampf = (function () {
       if (e.einheiten.zeile) zeilen.push({ key: "zeile", label: "Zeile", wert: "+" + K.muenzen.proZeileOderSpalte });
       if (e.einheiten.spalte) zeilen.push({ key: "spalte", label: "Spalte", wert: "+" + K.muenzen.proZeileOderSpalte });
       if (e.einheiten.block) zeilen.push({ key: "block", label: "Block", wert: "+" + K.muenzen.proBlock });
-      if (e.powerup && e.powerupEffekt && e.powerupEffekt.muenzen > 0) {
-        zeilen.push({ key: "powerup", label: e.powerup.name + "feld", wert: "+" + e.powerupEffekt.muenzen, art: "gold" });
+      // (Die Münzen der Glücksziffer stecken mit im Effekt – sie bekommen eine eigene Zeile)
+      const glueckMuenzen = e.glueckMuenzen || 0;
+      const feldMuenzen = e.powerup && e.powerupEffekt ? e.powerupEffekt.muenzen - glueckMuenzen : 0;
+      if (feldMuenzen > 0) {
+        zeilen.push({ key: "powerup", label: e.powerup.name + "feld", wert: "+" + feldMuenzen, art: "gold" });
       }
+      if (glueckMuenzen > 0) zeilen.push({ key: "glueck", label: "Glücksziffer", wert: "+" + glueckMuenzen, art: "glueck" });
       if (e.muenzFaktor !== 1) {
         zeilen.push({ key: "faktor", label: "Schwierigkeit", wert: "×" + SudokuRPG.zahlText(e.muenzFaktor) });
       }
@@ -2158,6 +2179,7 @@ const SudokuKampf = (function () {
         zeigeHeldHp(stand.heldHp, stand.heldMaxHp);
         zeigePhase(stand.phase);
         zeigeUeberladung(stand.ueberladen);
+        zeigeStraehne(stand.straehne || 0);
         zeigeMuenzen(stand.muenzen, false);
         zeigeVerbesserungen(stand.verbesserungen);
         zeigeBuchBonus(stand.buchBonus);
@@ -2267,6 +2289,10 @@ const SudokuKampf = (function () {
           if (name === "grad") return mitte(optionen && optionen.gradAnzeige);
           if (name === "doppelt") return einheitMitte(e);
           if (name === "reihe") return einheitMitte(e, schritt && schritt.einheit);
+          // Glückssträhne: von der Strähne-Anzeige beim Helden
+          if (name === "straehne") return el.straehne.hidden ? null : mitte(el.straehne);
+          // Teufelsflüstern: vom Hinweisfeld, in das die Zahl gesetzt wurde
+          if (name === "teufel") return optionen && optionen.gitterFeld ? mitte(optionen.gitterFeld(e.index)) : null;
           return null;
         },
         warte: warte,
@@ -2353,6 +2379,7 @@ const SudokuKampf = (function () {
         return wuerfel.rolle(e, eilig()).then(function () {
           meldung(trefferText(e));
           leuchtePlaetze(e.wirksam);          // was bei diesem Treffer wirkt, leuchtet auf
+          straehneImZug(e);
           const u = fxUmgebung(e);
           // Smartphone: Die Zahl löst sich, der Würfel über dem Gitter verschwindet
           wuerfel.ausblenden();
@@ -2417,6 +2444,7 @@ const SudokuKampf = (function () {
       return wuerfel.rolle(e, eilig()).then(function () {
         meldung(trefferText(e));
         leuchtePlaetze(e.wirksam);
+        straehneImZug(e);
         // Die Regeln heilen vor dem Vergleich – also auch hier zuerst
         zeigeHeilung(e);
         const v = vergleichZeigen(e.block);
@@ -2997,7 +3025,181 @@ const SudokuKampf = (function () {
     }
 
 
+    /* ---------- Glücksfeld: Strähne beim Helden ---------- */
+
+    /**
+     * Zeigt die Glückssträhne beim Helden ("Strähne ×3") – bei 0 ausgeblendet.
+     * @param {number} faktor – Faktor der laufenden Strähne (0 = keine)
+     */
+    function zeigeStraehne(faktor) {
+      const an = faktor > 0;
+      el.straehne.classList.remove("zerbroeselt");
+      el.straehne.hidden = !an;
+      if (!an) return;
+      el.straehneText.textContent = "Strähne ×" + SudokuRPG.zahlText(faktor);
+      el.straehne.setAttribute("aria-label", "Glückssträhne: Die nächste Glücksziffer zählt ×" +
+        SudokuRPG.zahlText(Math.min(K.glueck.faktorMax, faktor + K.glueck.faktorSchritt)) + ".");
+    }
+
+    /** Im Zug mit der Glücksziffer: Die Anzeige steigt und pulsiert (vor dem Schadensaufbau). */
+    function straehneImZug(e) {
+      if (!(e.glueckFaktor > 0)) return;
+      zeigeStraehne(e.glueckFaktor);
+      animiere(el.straehne, "steigt", 450);
+    }
+
+    /**
+     * Die Strähne ist gebrochen (andere Ziffer oder Fehler): Die Anzeige
+     * zerbröselt kurz und verschwindet.
+     * @param {object} e – { faktor } der zerbrochenen Strähne
+     */
+    function straehneBricht(e) {
+      return einreihen(function () {
+        meldung("Glückssträhne ×" + SudokuRPG.zahlText(e.faktor) + " zerbrochen.");
+        verlaufEintrag({ text: "Glückssträhne zerbrochen", wert: "×" + SudokuRPG.zahlText(e.faktor), art: "glueck", symbol: "klee" });
+        if (el.straehne.hidden || ohneBewegung() || eilig()) {
+          zeigeStraehne(0);
+          return null;
+        }
+        el.straehne.classList.add("zerbroeselt");
+        return warte(DAUER.straehneBruch).then(function () { zeigeStraehne(0); });
+      });
+    }
+
+
     /* ---------- Overlays über dem Sudoku ---------- */
+
+    // Ist gerade das Glücksrad oder die Pakt-Abfrage zu sehen? Dann ist die
+    // Eingabe gesperrt (sudoku-ui.js fragt overlayOffen()).
+    let feldOverlay = null;
+
+    /**
+     * Glücksfeld: Ein Rad mit den Ziffern, die noch leere Felder haben, dreht
+     * sich und bleibt auf der Glücksziffer stehen. Bei "Bewegung reduzieren"
+     * dreht es nicht – es zeigt gleich das Ergebnis.
+     * @param {HTMLElement} rahmen – über dieses Element legt sich das Rad
+     * @param {object} e – { ziffer, kandidaten } aus den Regeln (Ereignis "glueckRad")
+     * @param {function} [zeichen] – Ziffer → angezeigtes Zeichen (Verwirrung)
+     * @returns {Promise} – erfüllt, wenn das Rad wieder weg ist
+     */
+    function glueckRad(rahmen, e, zeichen) {
+      zeichen = zeichen || String;
+      return einreihen(function () {
+        const ziffern = e.kandidaten;
+        const segment = 360 / ziffern.length;
+        const overlay = document.createElement("div");
+        overlay.className = "slot slot--glueck";
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-label", "Glücksrad");
+        overlay.innerHTML =
+          '<div class="slot-kasten glueck-kasten">' +
+            '<p class="slot-titel">Glücksrad …</p>' +
+            '<div class="glueck-rad-platz">' +
+              '<span class="glueck-zeiger" aria-hidden="true"></span>' +
+              '<div class="glueck-rad" aria-hidden="true"></div>' +
+              '<span class="glueck-mitte" aria-hidden="true">' + symbolSvg("klee") + "</span>" +
+            "</div>" +
+            '<p class="slot-belohnung"></p>' +
+          "</div>";
+        const rad = overlay.querySelector(".glueck-rad");
+        // Segmente abwechselnd gold und grün (conic-gradient), Ziffern in der Mitte jedes Segments
+        const farben = ziffern.map(function (z, k) {
+          const farbe = k % 2 === 0 ? "var(--glueck-gold)" : "var(--glueck-gruen)";
+          return farbe + " " + (k * segment) + "deg " + ((k + 1) * segment) + "deg";
+        });
+        rad.style.background = "conic-gradient(" + farben.join(", ") + ")";
+        ziffern.forEach(function (z, k) {
+          const zahl = document.createElement("span");
+          zahl.className = "glueck-rad-zahl";
+          zahl.style.setProperty("--winkel", (k * segment + segment / 2) + "deg");
+          zahl.textContent = zeichen(z);
+          rad.appendChild(zahl);
+        });
+        rahmen.appendChild(overlay);
+        feldOverlay = overlay;
+        meldung("Glücksrad dreht sich …");
+
+        // Ziel: Mitte des Segments der Glücksziffer genau unter dem Zeiger (oben)
+        const k = Math.max(0, ziffern.indexOf(e.ziffer));
+        const ziel = 360 * 5 - (k * segment + segment / 2);
+        const fertig = function () {
+          overlay.classList.add("ist-fertig");
+          overlay.querySelector(".slot-titel").textContent = "Glücksziffer: " + zeichen(e.ziffer);
+          overlay.querySelector(".slot-belohnung").textContent = "Strähne ×" + K.glueck.faktorStart + " bis ×" +
+            K.glueck.faktorMax + " · +" + K.glueck.muenzen + " Münzen je Glücksziffer";
+          meldung("Glücksziffer: " + zeichen(e.ziffer) + ". Jede gesetzte " + zeichen(e.ziffer) + " verlängert die Glückssträhne.");
+          verlaufEintrag({ text: "Glücksziffer", wert: zeichen(e.ziffer), art: "glueck", symbol: "klee" });
+        };
+        const weg = function () {
+          overlay.remove();
+          if (feldOverlay === overlay) feldOverlay = null;
+        };
+        if (ohneBewegung()) {
+          rad.style.transform = "rotate(" + ziel + "deg)";
+          fertig();
+          return pause(DAUER.glueckRadPause + 600).then(weg);
+        }
+        rad.style.transform = "rotate(0deg)";
+        void rad.offsetWidth;
+        rad.style.transitionDuration = DAUER.glueckRad + "ms";
+        rad.style.transform = "rotate(" + ziel + "deg)";
+        return warte(DAUER.glueckRad).then(function () {
+          rad.style.transitionDuration = "0ms";
+          rad.style.transform = "rotate(" + ziel + "deg)";
+          fertig();
+          return pause(DAUER.glueckRadPause);
+        }).then(weg, function (fehler) { weg(); throw fehler; });
+      });
+    }
+
+    /**
+     * Teufelsfeld: Der Teufel bietet seinen Pakt an – "Pakt annehmen" oder
+     * "Ablehnen". Die Abfrage kommt nach den Animationen des Zugs und bleibt,
+     * bis entschieden ist.
+     * @param {HTMLElement} rahmen
+     * @param {object} e – { text } aus den Regeln (Ereignis "teufelPakt")
+     * @param {function} beimEntscheiden – bekommt true (annehmen) oder false
+     * @returns {Promise} – erfüllt, wenn entschieden ist
+     */
+    function pakt(rahmen, e, beimEntscheiden) {
+      return einreihen(function () {
+        return new Promise(function (weiter) {
+          const overlay = document.createElement("div");
+          overlay.className = "auswahl auswahl--pakt";
+          overlay.setAttribute("role", "dialog");
+          overlay.setAttribute("aria-label", "Pakt mit dem Teufel");
+          overlay.innerHTML =
+            '<div class="auswahl-kasten pakt-kasten">' +
+              '<span class="pakt-symbol" aria-hidden="true">' + symbolSvg("hoerner") + "</span>" +
+              '<p class="auswahl-titel">Der Teufel flüstert …</p>' +
+              '<p class="pakt-text"></p>' +
+              '<p class="pakt-regel"></p>' +
+              '<div class="pakt-knoepfe">' +
+                '<button type="button" class="pakt-knopf pakt-knopf--ja">Pakt annehmen</button>' +
+                '<button type="button" class="pakt-knopf pakt-knopf--nein">Ablehnen</button>' +
+              "</div>" +
+            "</div>";
+          overlay.querySelector(".pakt-text").textContent = e.text;
+          overlay.querySelector(".pakt-regel").textContent = "Nach jedem Zug ein Hinweis bis zum Ende des Sudokus: " +
+            "Ist er wahr, macht er ×" + K.teufel.faktor + " Schaden – ist er gelogen, ist es ein Fehler.";
+          const entscheide = function (annehmen) {
+            overlay.remove();
+            if (feldOverlay === overlay) feldOverlay = null;
+            meldung(annehmen ? "Pakt angenommen." : "Pakt abgelehnt.");
+            verlaufEintrag({ text: annehmen ? "Pakt angenommen" : "Pakt abgelehnt", wert: "", art: "teufel", symbol: "hoerner" });
+            beimEntscheiden(annehmen);
+            weiter();
+          };
+          overlay.querySelector(".pakt-knopf--ja").addEventListener("click", function () { entscheide(true); });
+          overlay.querySelector(".pakt-knopf--nein").addEventListener("click", function () { entscheide(false); });
+          rahmen.appendChild(overlay);
+          feldOverlay = overlay;
+          meldung("Der Teufel bietet einen Pakt an.");
+          overlay.querySelector(".pakt-knopf--ja").focus({ preventScroll: true });
+        });
+      });
+    }
+
 
     /** "Münzen ×1,5 · Schaden +20 %" */
     function belohnungText(b) {
@@ -3505,6 +3707,14 @@ const SudokuKampf = (function () {
       behalten: behalten,
       schliesseAuswahl: schliesseAuswahl,
       text: text,
+      // Glücksfeld und Teufelsfeld
+      glueckRad: glueckRad,
+      pakt: pakt,
+      zeigeStraehne: zeigeStraehne,
+      straehneBricht: straehneBricht,
+      overlayOffen: function () { return Boolean(feldOverlay); },
+      // Pause in der Abfolge (wartet auch bei "Bewegung reduzieren", ein neuer Zug kürzt sie ab)
+      pause: pause,
       neuesAbenteuer: neuesAbenteuer,
       beschleunige: beschleunige,
       laeuft: laeuft,

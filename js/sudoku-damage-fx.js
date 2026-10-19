@@ -5,7 +5,9 @@
    abgespielt:
      1. Die gewürfelte Zahl löst sich vom Würfel und steht groß daneben.
      2. Jeder Bonus fliegt als Etikett von seiner Quelle auf die Zahl zu
-        (Buch-Bonus vom Buch, Doppelschaden von der fertigen Zeile …).
+        (Buch-Bonus vom Buch, Doppelschaden von der fertigen Zeile,
+        Glückssträhne von der Strähne beim Helden, Teufelsflüstern aus dem
+        Hinweisfeld …).
      3. Bei jedem Einschlag zählt die Zahl auf den Zwischenwert hoch.
      4. Die Summe fliegt mit Leuchtspur ins Schwert des Helden.
      5. Das Schwert leuchtet (je nach Schaden in fünf Stufen), der Held
@@ -205,6 +207,12 @@ const SudokuSchadenFx = (function () {
         eintrag.quelle = "buch";                             // Buch des Fünften
       } else if (name === "Doppelt") {
         eintrag.quelle = "doppelt";
+      } else if (name === "Glückssträhne") {
+        // Glücksfeld: "Glückssträhne ×3" fliegt von der Strähne-Anzeige beim Helden
+        eintrag.quelle = "straehne";
+      } else if (name === "Teufelsflüstern") {
+        // Teufelsfeld: "Teufelsflüstern ×3" steigt aus dem Hinweisfeld auf
+        eintrag.quelle = "teufel";
       } else if (grad) {
         eintrag.label = name + " +" + Math.round((zahl - 1) * 100) + " %";
         eintrag.quelle = "grad";

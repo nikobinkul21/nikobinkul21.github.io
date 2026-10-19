@@ -277,6 +277,20 @@
 /* Reihenbrecher: Etikett in der Farbe der Verbesserung (fliegt von der fertigen Reihe los) */
 .fx-etikett--reihe span { background: #1f9e89; }
 
+/* Glücksfeld: "Glückssträhne ×3" – gold-grün wie das Feld (fliegt von der Strähne beim Helden) */
+.fx-etikett--straehne span {
+  background: linear-gradient(135deg, #e6b422, #3fae3f);
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* Teufelsfeld: "Teufelsflüstern ×3" – tiefes Rotviolett mit Glut (steigt aus dem Hinweisfeld auf) */
+.fx-etikett--teufel span {
+  background: linear-gradient(135deg, #5a0f3c, #b0184f);
+  color: #ffe4ef;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3), 0 0 10px rgba(214, 40, 110, 0.75);
+}
+
 /* Regenbogenstrahl: bunter Lichtstreifen vom Feld zum Schwert.
    fx-mitte wird im JavaScript gedreht (Ursprung links = Startpunkt). */
 .fx-strahl .fx-mitte {
