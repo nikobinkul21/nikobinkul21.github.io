@@ -1,6 +1,6 @@
 /* ==========================================================================
    settings.js – Einstellungen
-   - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer)
+   - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer, Klettern-Rekord)
      als eine JSON-Datei – Export und Import
    - Sudoku-Abenteuer: Tempo der Kampfanimationen (Würfel und Schadensaufbau)
    - Zu erledigen: Verbindung zur Oracle-Datenbank (js/todo-db.js)
@@ -14,6 +14,7 @@
      termine:     { … }    ← Daten aus EventsStore (js/events-store.js)
      zuErledigen: { … }    ← Aufgaben aus TodoStore (js/todo-store.js)
      sudokuAbenteuer: { … } oder null ← Spielstand aus SudokuRPG (js/sudoku-rpg.js)
+     klettern:    { … } oder null ← Rekord des Kletterspiels (js/climb/speicher.js)
    }
    Neue Bereiche mit eigenen Daten? Hier in exportieren() und importieren()
    ergänzen – die Stores selbst bleiben für die Speicherung zuständig.
@@ -36,7 +37,7 @@ const EinstellungenAnsicht = (function () {
         '<h2 id="sicherung-titel">Daten sichern</h2>' +
         "<p>Deine Daten liegen nur in diesem Browser. Mit einer Sicherung kannst du sie " +
           "auf einem anderen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. " +
-          "Die Datei enthält <strong>Filme/Serien</strong>, <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong> und den Spielstand des <strong>Sudoku-Abenteuers</strong>.</p>" +
+          "Die Datei enthält <strong>Filme/Serien</strong>, <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong> den Spielstand des <strong>Sudoku-Abenteuers</strong> und den Rekord im <strong>Klettern</strong>.</p>" +
         '<div class="einstellungen-knoepfe">' +
           '<button type="button" class="knopf" data-aktion="exportieren">Daten exportieren</button>' +
           '<button type="button" class="knopf" data-aktion="importieren">Daten importieren</button>' +
@@ -229,6 +230,7 @@ const EinstellungenAnsicht = (function () {
       termine: EventsStore.alsObjekt(),
       zuErledigen: TodoStore.alsObjekt(),
       sudokuAbenteuer: SudokuRPG.alsObjekt(),
+      klettern: KletterSpeicher.alsObjekt(),
     };
     const datei = new Blob([JSON.stringify(sicherung, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
@@ -300,6 +302,21 @@ const EinstellungenAnsicht = (function () {
       }
     }
 
+    // Kletterspiel: in älteren Sicherungen fehlt es → bleibt dann unverändert
+    let klettern = { vorhanden: false };
+    let kletternText = "• Klettern: nicht enthalten (bleibt unverändert)\n";
+    if ("klettern" in roh) {
+      if (roh.klettern === null) {
+        klettern = { vorhanden: true, daten: null };
+        kletternText = "• Klettern: noch nicht gespielt\n";
+      } else {
+        const geprueft = KletterSpeicher.pruefeDaten(roh.klettern);
+        if (!geprueft.ok) return { ok: false, fehler: geprueft.fehler };
+        klettern = { vorhanden: true, daten: geprueft.daten };
+        kletternText = "• Klettern: Rekord " + geprueft.daten.rekord + " m\n";
+      }
+    }
+
     // Zu erledigen: in älteren Sicherungen fehlt es → bleibt dann unverändert
     let aufgaben = null;
     let aufgabenText = "• Zu erledigen: nicht enthalten (bleibt unverändert)\n";
@@ -314,12 +331,13 @@ const EinstellungenAnsicht = (function () {
     const erstellt = typeof roh.erstellt === "string" ? new Date(roh.erstellt) : null;
     const vom = erstellt && !isNaN(erstellt) ? " vom " + erstellt.toLocaleString("de-DE") : "";
     return {
-      ok: true, media: media, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben,
+      ok: true, media: media, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben, klettern: klettern,
       frage: "Sicherung" + vom + ":\n" +
         "• " + media.anzahl + " Filme/Serien-Einträge\n" +
         "• " + termine.daten.eintraege.length + " Termine/Vorlesungen\n" +
         aufgabenText +
-        abenteuerText + "\n" +
+        abenteuerText +
+        kletternText + "\n" +
         "ALLE aktuellen Daten werden dadurch ersetzt. Fortfahren?",
     };
   }
@@ -343,6 +361,9 @@ const EinstellungenAnsicht = (function () {
       MediaStore.ersetzen(pruefung.media.daten);
       if (pruefung.abenteuer && pruefung.abenteuer.vorhanden) {
         SudokuRPG.ersetzen(pruefung.abenteuer.daten);
+      }
+      if (pruefung.klettern && pruefung.klettern.vorhanden) {
+        KletterSpeicher.ersetzen(pruefung.klettern.daten);
       }
       if (pruefung.termine) {
         EventsStore.ersetzen(pruefung.termine.daten);

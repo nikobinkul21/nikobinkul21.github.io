@@ -1,0 +1,465 @@
+/* ==========================================================================
+   climb.css – Kletterspiel (#games/climb)
+   Aufbau von oben nach unten: Bühne (Pixel-Szene mit Höhe, Einblendungen
+   und Tafeln) · Tasten (wie auf der Tastatur angeordnet) bzw. Touch-Raster
+   · Fußzeile. Die Höhe setzt climb/darstellung.js (--kl-hoehe), damit alles
+   ohne Scrollen auf den Bildschirm passt. Farben der Oberfläche kommen aus
+   den Variablen des Hubs (hell und dunkel, style.css); die Szene hat ihre
+   eigenen Farben je Zone – bewusste Ausnahme wie beim Fußball.
+   ========================================================================== */
+
+.klettern {
+  --kl-einheit: 74px;              /* Breite einer Taste im Tastenbild */
+  --kl-einheit-y: 56px;            /* Höhe einer Tastenreihe */
+  --kl-los: #d8342c;               /* loslassen: rot */
+  --kl-neu: #23a047;               /* greifen: grün */
+  --kl-ziel: var(--farbe-akzent);  /* Start: diese vier halten */
+  width: 100%;
+  max-width: 960px;
+  height: var(--kl-hoehe, 640px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  outline: none;
+}
+
+/* Der Spielbereich nutzt die volle Breite (wie beim Fußball) */
+#spiel-climb {
+  width: auto;
+}
+
+#spiel-climb .unterseite-kopf {
+  padding-left: 0;
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+
+/* ---------- Bühne ---------- */
+
+.kl-buehne {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--radius-s);
+  border: var(--linie);
+  background: #120c09;
+  display: grid;
+  place-items: center;
+}
+
+.kl-szene {
+  display: block;
+  image-rendering: pixelated;      /* harte Pixelkanten beim Vergrößern */
+  image-rendering: crisp-edges;
+}
+
+/* Höhe groß am rechten Rand */
+.kl-hoehe {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  display: grid;
+  justify-items: end;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55), 0 0 6px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.kl-hoehe-zahl {
+  font-size: clamp(2.4rem, 7vw, 3.6rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.kl-hoehe-zahl.springt { animation: kl-springt 0.25s ease-out; }
+
+@keyframes kl-springt {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.kl-hoehe-m {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-top: -2px;
+}
+
+.kl-rekord-klein {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+/* Einblendung beim Erreichen einer Zone */
+.kl-zone {
+  --kl-zone-farbe: #ffffff;
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 140px);   /* rechts steht die Höhe */
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 22px 12px;
+  border-radius: var(--radius-s);
+  background: var(--kl-zone-grund, rgba(255, 255, 255, 0.82));
+  color: var(--kl-zone-farbe);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  text-align: center;
+}
+
+.kl-zone[hidden] { display: none; }
+
+.kl-zone.erscheint { animation: kl-zone 2.2s ease-out forwards; }
+
+@keyframes kl-zone {
+  0%   { opacity: 0; transform: translate(-50%, -8px); }
+  12%  { opacity: 1; transform: translate(-50%, 0); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.kl-zone-nr {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.kl-zone-name {
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.kl-zone-unter {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Tafeln über der Szene: Start, Pause, Ende, Tastaturtest */
+.kl-tafel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  padding: 18px 20px;
+  text-align: center;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  border: var(--linie);
+  border-radius: var(--radius-s);
+  box-shadow: var(--schatten-schwebend);
+}
+
+.kl-tafel[hidden] { display: none; }
+
+.kl-tafel p { margin: 0 0 10px; }
+
+.kl-tafel-titel {
+  font-family: var(--schrift-titel);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.kl-tafel-knoepfe {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.kl-start-hinweis,
+.kl-ende-grund {
+  font-size: 0.9rem;
+  color: var(--farbe-text-leise);
+}
+
+.kl-start-hinweis:empty { display: none; }
+
+.kl-ende-hoehe {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.kl-ende-zahl {
+  font-size: 3rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.kl-ende-rekord.ist-neu {
+  color: var(--farbe-erfolg);
+  font-weight: 800;
+}
+
+/* Start und Pause lassen die Szene durchscheinen */
+/* Tastaturtest: breitere Tafel, kleinere Tasten (fünf weit verteilte passen hinein) */
+.kl-test {
+  width: min(640px, calc(100% - 24px));
+}
+
+.kl-test .kl-tastenbild {
+  --kl-einheit: 52px;
+  --kl-einheit-y: 46px;
+  margin: 6px auto 18px;
+}
+
+.kl-test .kl-kappe-zeichen { font-size: 1.25rem; }
+.kl-test .kl-kappe-glied { font-size: 0.55rem; }
+
+.kl-start,
+.kl-pause {
+  background: color-mix(in srgb, var(--farbe-flaeche) 90%, transparent);
+}
+
+
+/* ---------- Tasten: so angeordnet wie auf der Tastatur ---------- */
+
+.kl-tasten {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--kl-einheit-y) * 4 + 16px);
+  padding: 4px 0;
+}
+
+.kl-tasten[hidden] { display: none; }
+
+.kl-tastenbild {
+  position: relative;
+  width: calc(var(--kl-spalten, 4) * var(--kl-einheit));
+  height: calc(var(--kl-reihen, 2) * var(--kl-einheit-y));
+}
+
+.kl-kappe {
+  position: absolute;
+  left: calc(var(--kl-x) * var(--kl-einheit));
+  top: calc(var(--kl-y) * var(--kl-einheit-y));
+  width: calc(var(--kl-einheit) - 8px);
+  height: calc(var(--kl-einheit-y) - 10px);
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  align-items: center;
+  border-radius: 10px;
+  background: var(--farbe-flaeche-hell);
+  color: var(--farbe-text);
+  border: 2px solid var(--farbe-rand-stark);
+  box-shadow: 0 5px 0 var(--farbe-rand-stark);
+  transition: transform 0.06s, box-shadow 0.06s;
+}
+
+.kl-kappe-zeichen {
+  font-size: 1.7rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.kl-kappe-glied {
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 4px;
+  color: var(--farbe-text-leise);
+  white-space: nowrap;
+}
+
+/* gedrückt: Kappe sitzt tiefer, kein Schatten */
+.kl-kappe.ist-unten {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--farbe-rand-stark);
+  background: var(--farbe-flaeche-leise);
+}
+
+/* Start: diese vier halten */
+.kl-kappe[data-art="ziel"] {
+  border-color: var(--kl-ziel);
+  box-shadow: 0 5px 0 var(--kl-ziel);
+}
+
+.kl-kappe[data-art="ziel"].ist-unten {
+  background: var(--farbe-akzent-leise);
+  box-shadow: 0 1px 0 var(--kl-ziel);
+}
+
+/* loslassen: rot */
+.kl-kappe[data-art="los"] {
+  border-color: var(--kl-los);
+  background: color-mix(in srgb, var(--kl-los) 14%, var(--farbe-flaeche-hell));
+  box-shadow: 0 5px 0 var(--kl-los);
+}
+
+.kl-kappe[data-art="los"].ist-unten {
+  box-shadow: 0 1px 0 var(--kl-los);
+}
+
+.kl-kappe[data-art="los"] .kl-kappe-glied { color: var(--kl-los); }
+
+/* greifen: grün und pulsierend */
+.kl-kappe[data-art="neu"] {
+  border-color: var(--kl-neu);
+  background: color-mix(in srgb, var(--kl-neu) 16%, var(--farbe-flaeche-hell));
+  box-shadow: 0 5px 0 var(--kl-neu), 0 0 0 0 color-mix(in srgb, var(--kl-neu) 60%, transparent);
+  animation: kl-puls 0.8s ease-in-out infinite;
+}
+
+.kl-kappe[data-art="neu"].ist-unten {
+  animation: none;
+  box-shadow: 0 1px 0 var(--kl-neu);
+}
+
+.kl-kappe[data-art="neu"] .kl-kappe-glied { color: var(--kl-neu); }
+
+@keyframes kl-puls {
+  0%, 100% { box-shadow: 0 5px 0 var(--kl-neu), 0 0 0 0 color-mix(in srgb, var(--kl-neu) 55%, transparent); }
+  50%      { box-shadow: 0 5px 0 var(--kl-neu), 0 0 0 7px color-mix(in srgb, var(--kl-neu) 0%, transparent); }
+}
+
+/* Zeitbalken unter der neuen Taste: schrumpft bis zum Ende der Zeit */
+.kl-kappe-balken {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: -14px;
+  height: 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--kl-neu) 20%, transparent);
+  overflow: hidden;
+}
+
+.kl-kappe-balken[hidden] { display: none; }
+
+.kl-kappe-balken span {
+  display: block;
+  height: 100%;
+  background: var(--kl-neu);
+  transform-origin: left center;
+}
+
+
+/* ---------- Touch-Raster ---------- */
+
+.kl-raster {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(var(--kl-raster-spalten, 3), 1fr);
+  gap: 8px;
+  height: 46%;
+  touch-action: none;              /* kein Scrollen und Zoomen beim Halten */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.kl-raster[hidden] { display: none; }
+
+.kl-feld {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--farbe-flaeche-leise);
+  border: 2px solid var(--farbe-rand-stark);
+  color: var(--farbe-text-leise);
+  font-size: 0.8rem;
+  font-weight: 700;
+  touch-action: none;
+}
+
+.kl-feld.ist-unten {
+  background: var(--farbe-rand);
+  transform: scale(0.97);
+}
+
+.kl-feld[data-art="ziel"] { border-color: var(--kl-ziel); color: var(--kl-ziel); }
+.kl-feld[data-art="halten"] { border-color: var(--farbe-text-leise); color: var(--farbe-text); }
+.kl-feld[data-art="los"] {
+  border-color: var(--kl-los);
+  color: var(--kl-los);
+  background: color-mix(in srgb, var(--kl-los) 14%, var(--farbe-flaeche-leise));
+}
+.kl-feld[data-art="neu"] {
+  border-color: var(--kl-neu);
+  color: var(--kl-neu);
+  background: color-mix(in srgb, var(--kl-neu) 16%, var(--farbe-flaeche-leise));
+  animation: kl-puls-feld 0.8s ease-in-out infinite;
+}
+.kl-feld[data-art="neu"].ist-unten { animation: none; }
+
+@keyframes kl-puls-feld {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--kl-neu) 55%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--kl-neu) 0%, transparent); }
+}
+
+.kl-feld .kl-kappe-balken {
+  bottom: 8px;
+  left: 14%;
+  right: 14%;
+}
+
+
+/* ---------- Fußzeile ---------- */
+
+.kl-fuss {
+  flex: none;
+  display: flex;
+  justify-content: center;
+}
+
+.kl-modus-knopf {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--farbe-text-leise);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.kl-modus-knopf:hover { color: var(--farbe-akzent); }
+
+
+/* ---------- Smartphone ---------- */
+
+@media (max-width: 600px) {
+  .klettern {
+    --kl-einheit: 50px;
+    --kl-einheit-y: 48px;
+    gap: 8px;
+  }
+
+  .kl-kappe-zeichen { font-size: 1.3rem; }
+  .kl-kappe-glied { font-size: 0.5rem; }
+  .kl-zone-name { font-size: 1.25rem; }
+  .kl-tafel { padding: 14px; }
+}
+
+
+/* ---------- Bewegung reduzieren: nichts pulsiert, springt oder wackelt ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .kl-kappe,
+  .kl-kappe[data-art="neu"],
+  .kl-feld[data-art="neu"],
+  .kl-hoehe-zahl.springt,
+  .kl-zone.erscheint {
+    animation: none !important;
+    transition: none !important;
+  }
+}

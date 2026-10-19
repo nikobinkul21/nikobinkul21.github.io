@@ -22,6 +22,12 @@ const SPIELE = [
     beschreibung: "Duell 2 gegen 2 in Seitenansicht: Passen, Dribbeln, Schießen – und den Gegner durchschauen.",
     init: initFootball,
   },
+  {
+    id: "climb",
+    name: "Klettern",
+    beschreibung: "Vier Finger halten, immer einen umsetzen: Kletter die Wand hinauf – von der Grube bis über die Wolken.",
+    init: initClimb,
+  },
 ];
 
 // Merkt sich, welche Spiele schon gestartet wurden (init nur 1x)
