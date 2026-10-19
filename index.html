@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/climb.css">
   <link rel="stylesheet" href="css/media.css">
   <link rel="stylesheet" href="css/todo.css">
+  <link rel="stylesheet" href="css/prompts.css">
 
   <!--
     Kleines Skript direkt im <head>:
@@ -75,7 +76,7 @@
           <li><a class="reiter" href="#todo" data-view="todo">Zu erledigen</a></li>
           <li><a class="reiter" href="#media" data-view="media">Filme/Serien</a></li>
           <li><a class="reiter" href="#games" data-view="games">Games</a></li>
-          <li><a class="reiter" href="#customising" data-view="customising">Customising</a></li>
+          <li><a class="reiter" href="#prompts" data-view="prompts">Prompts</a></li>
           <li><a class="reiter" href="#einstellungen" data-view="einstellungen">Einstellungen</a></li>
         </ul>
       </div>
@@ -137,10 +138,10 @@
       <div id="settings-root"></div>
     </section>
 
-    <section class="ansicht" id="view-customising" aria-labelledby="titel-customising" hidden>
-      <h1 id="titel-customising" tabindex="-1">Customising</h1>
-      <!-- customising.js füllt diesen Container später -->
-      <div class="karte" id="customising-root"></div>
+    <section class="ansicht" id="view-prompts" aria-labelledby="titel-prompts" hidden>
+      <h1 id="titel-prompts" tabindex="-1">Prompts</h1>
+      <!-- prompts.js füllt diesen Container mit den Kacheln (Daten: js/prompts-data.js) -->
+      <div id="prompts-root"></div>
     </section>
 
   </main>
@@ -202,7 +203,9 @@
   <script src="js/settings.js"></script>
   <!-- Startseite: liest aus allen Stores, deshalb zuletzt vor app.js -->
   <script src="js/home.js"></script>
-  <script src="js/customising.js"></script>
+  <!-- Prompts: erst der Baum mit allen Kacheln und Texten, dann die Ansicht -->
+  <script src="js/prompts-data.js"></script>
+  <script src="js/prompts.js"></script>
   <!-- Übergänge zwischen den Ansichten (Karte ↔ Abschnitt), vor app.js -->
   <script src="js/seitenwechsel.js"></script>
   <script src="js/app.js"></script>

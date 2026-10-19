@@ -1,5 +1,7 @@
 /* ==========================================================================
    settings.js – Einstellungen
+   - Darstellung: Anpassungen des Aussehens (früher eigener Abschnitt
+     "Customising" – #customising leitet hierher weiter, siehe js/app.js)
    - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer, Klettern-Rekord)
      als eine JSON-Datei – Export und Import
    - Sudoku-Abenteuer: Tempo der Kampfanimationen (Würfel und Schadensaufbau)
@@ -33,6 +35,11 @@ const EinstellungenAnsicht = (function () {
    */
   function init(container) {
     container.innerHTML =
+      // Darstellung (früher "Customising"): noch ohne eigene Optionen
+      '<section class="karte einstellungen-block" aria-labelledby="darstellung-titel">' +
+        '<h2 id="darstellung-titel">Darstellung</h2>' +
+        '<p class="platzhalter">Anpassungen der Darstellung kommen bald. Hell oder dunkel stellst du mit dem Schalter oben rechts ein.</p>' +
+      "</section>" +
       '<section class="karte einstellungen-block" aria-labelledby="sicherung-titel">' +
         '<h2 id="sicherung-titel">Daten sichern</h2>' +
         "<p>Deine Daten liegen nur in diesem Browser. Mit einer Sicherung kannst du sie " +

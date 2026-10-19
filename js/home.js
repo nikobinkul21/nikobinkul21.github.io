@@ -46,9 +46,9 @@ const StartseiteAnsicht = (function () {
       { id: "todo", href: "#todo", name: "Zu erledigen" },
     ],
     rechts: [  // Freizeit
-      { id: "media", href: "#media", name: "Filme/Serien" },
+      { id: "prompts", href: "#prompts", name: "Prompts" },
       { id: "games", href: "#games", name: "Games" },
-      { id: "customising", href: "#customising", name: "Customising" },
+      { id: "media", href: "#media", name: "Filme/Serien" },
     ],
   };
   const KARTEN = REIHEN.links.concat(REIHEN.rechts);

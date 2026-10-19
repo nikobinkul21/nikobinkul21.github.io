@@ -15,7 +15,9 @@
 //   init  – die Startfunktion aus der Tool-Datei (z. B. games.js)
 //   root  – die ID des Containers in index.html, in den das Tool zeichnet
 //   zeige – (optional) wird bei JEDEM Öffnen aufgerufen und bekommt die
-//           Unterseite aus der Adresse, z. B. "sudoku" bei #games/sudoku
+//           Unterseite aus der Adresse, z. B. "sudoku" bei #games/sudoku,
+//           und als zweiten Wert true, wenn die Ansicht schon offen war
+//           (nur die Unterseite wechselt – z. B. #prompts → #prompts/uni)
 // Neues Tool? Hier eine Zeile ergänzen (plus Reiter in der Leiste und
 // eine <section> in index.html).
 const ANSICHTEN = {
@@ -25,8 +27,14 @@ const ANSICHTEN = {
   media: { init: MediaAnsicht.init, zeige: MediaAnsicht.zeige, root: "media-root" },
   schedule: { init: StundenplanAnsicht.init, zeige: StundenplanAnsicht.zeige, root: "schedule-root" },
   todo: { init: TodoAnsicht.init, zeige: TodoAnsicht.zeige, root: "todo-root" },
+  prompts: { init: PromptsAnsicht.init, zeige: PromptsAnsicht.zeige, root: "prompts-root" },
   einstellungen: { init: EinstellungenAnsicht.init, root: "settings-root" },
-  customising: { init: initCustomising, root: "customising-root" },
+};
+
+// Alte Adressen, die es nicht mehr als eigenen Abschnitt gibt → neues Ziel.
+// "Customising" ist als Bereich "Darstellung" in die Einstellungen gewandert.
+const WEITERLEITUNGEN = {
+  customising: "einstellungen",
 };
 
 const START_ANSICHT = "home";
@@ -70,6 +78,12 @@ const mobilAbfrage = window.matchMedia("(max-width: 1099px)");
  */
 function ansichtAusHash() {
   const teile = window.location.hash.slice(1).split("/"); // "#" entfernen, bei "/" trennen
+  // Alte Adresse (z. B. #customising)? Adresse ersetzen, ohne einen neuen
+  // Eintrag im Verlauf – der Zurück-Button führt nicht wieder hierher.
+  if (teile[0] in WEITERLEITUNGEN) {
+    teile[0] = WEITERLEITUNGEN[teile[0]];
+    history.replaceState(null, "", "#" + teile[0]);
+  }
   const name = teile[0];
   if (name in ANSICHTEN) {
     return { name: name, unterseite: teile.slice(1).join("/") };
@@ -86,6 +100,7 @@ function ansichtAusHash() {
  *                                Screenreader-Nutzern)
  */
 function zeigeAnsicht(name, unterseite, fokusSetzen) {
+  const warSchonOffen = aktuelleAnsicht === name;
   aktuelleAnsicht = name;
   // Alle Ansichten durchgehen: die gewünschte zeigen, den Rest verstecken
   for (const ansichtName in ANSICHTEN) {
@@ -114,7 +129,7 @@ function zeigeAnsicht(name, unterseite, fokusSetzen) {
   // Gibt es ein Element zurück, bekommt dieses den Fokus.
   let fokusZiel = null;
   if (tool && tool.zeige) {
-    fokusZiel = tool.zeige(unterseite);
+    fokusZiel = tool.zeige(unterseite, warSchonOffen);
   }
 
   // Titel im Browser-Tab anpassen: "NTB" auf Home, sonst z. B. "Games – NTB"

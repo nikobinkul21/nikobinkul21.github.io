@@ -1,0 +1,399 @@
+/* ==========================================================================
+   prompts.css – Kachel-Navigation des Abschnitts "Prompts" (js/prompts.js)
+   Die Kacheln sehen aus wie die Karten der Startseite: große, abgerundete
+   Rechtecke mit Glow, Titel mittig, darüber ein Emoji. Glow-Werte
+   (--glow-…) stehen in css/home.css, Farben und Schriften in css/style.css.
+   Bewegt werden nur transform und opacity.
+   ========================================================================== */
+
+#view-prompts {
+  /* Größen der Kacheln */
+  --pr-kachel-breite: 200px;
+  --pr-kachel-hoehe: 240px;
+  --pr-abstand: 22px;                       /* Lücke zwischen zwei Kacheln */
+  --pr-rundung: 24px;
+  --pr-innen: 16px;
+  --pr-emoji-groesse: 2.6rem;
+  --pr-titel-groesse: 1.3rem;
+  --pr-titel-max: 11cqi;                    /* Obergrenze relativ zur Kachelbreite: lange Wörter passen */
+  /* Hover und Tastaturfokus: hebt sich etwas an und wird größer */
+  --pr-heben: -6px;
+  --pr-wachsen: 1.03;
+  /* Prompt-Ansicht */
+  --pr-gross-breite: 760px;
+}
+
+
+/* ==========================================================================
+   BÜHNE UND REIHE
+   Ein Raster mit gleich vielen Spalten links und rechts der Hauptkachel;
+   js/prompts.js setzt --spalten (Anzahl) und je Kachel --spalte (Platz).
+   ========================================================================== */
+
+.pr-buehne {
+  position: relative;                        /* Bezug für das Abbild beim Schrumpfen */
+  padding: var(--abstand-l) 0 var(--abstand-xl);
+}
+
+.pr-buehne:focus {
+  outline: none;                             /* hält nur kurz den Fokus während der Bewegung */
+}
+
+/* Während einer Bewegung: keine Klicks, kein Hover-Wackeln */
+.pr-buehne.ist-animiert {
+  pointer-events: none;
+}
+
+.pr-reihe {
+  display: grid;
+  grid-template-columns: repeat(var(--spalten, 5), minmax(0, var(--pr-kachel-breite)));
+  justify-content: center;
+  gap: var(--pr-abstand);
+}
+
+.pr-reihe > .pr-kachel {
+  grid-row: 1;
+  grid-column: var(--spalte);
+  height: var(--pr-kachel-hoehe);
+}
+
+
+/* ==========================================================================
+   KACHEL
+   ========================================================================== */
+
+.pr-kachel {
+  --heben: 0px;
+  --wachsen: 1;
+  position: relative;
+  isolation: isolate;                        /* Lichtschicht bleibt hinter dem Text */
+  container-type: inline-size;               /* Bezug für die Obergrenze des Titels (cqi) */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  padding: var(--pr-innen);
+  font: inherit;
+  color: var(--farbe-text);
+  text-align: center;
+  text-decoration: none;
+  background: var(--farbe-flaeche);
+  border: var(--linie-breite) solid var(--farbe-rand);
+  border-radius: var(--pr-rundung);
+  /* Glow wie auf der Startseite: Lichtkante, heller Schein, warmer Schatten */
+  box-shadow:
+    inset 0 var(--glow-kante-breite) 0 rgb(var(--glow-farbe) / var(--glow-kante)),
+    0 0 var(--glow-groesse) rgb(var(--glow-farbe) / var(--glow-staerke)),
+    0 var(--glow-schatten-versatz) var(--glow-schatten-groesse) rgb(var(--glow-schatten-farbe) / var(--glow-schatten-staerke));
+  cursor: pointer;
+  transform: translateY(var(--heben)) scale(var(--wachsen));
+  transition: transform 280ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Heller beim Hovern und Akzentrand mit stärkerem Glow – zwei Lichtschichten,
+   die nur ihre Deckkraft ändern (wie auf der Startseite) */
+.pr-kachel::before,
+.pr-kachel::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+
+.pr-kachel::before {
+  z-index: -1;
+  background: var(--farbe-flaeche-hell);
+}
+
+.pr-kachel::after {
+  border: 2px solid var(--farbe-akzent);
+  box-shadow:
+    0 0 var(--glow-hover-groesse) color-mix(in srgb, var(--farbe-akzent) var(--glow-hover-akzent), rgb(var(--glow-farbe) / var(--glow-hover-staerke))),
+    0 0 calc(var(--glow-hover-groesse) / 2.5) rgb(var(--glow-farbe) / var(--glow-hover-staerke));
+}
+
+a.pr-kachel:hover,
+a.pr-kachel:focus-visible,
+button.pr-kachel:hover,
+button.pr-kachel:focus-visible {
+  --heben: var(--pr-heben);
+  --wachsen: var(--pr-wachsen);
+  color: var(--farbe-text);                  /* nicht die Link-Farbe beim Hovern */
+}
+
+a.pr-kachel:hover::before,
+a.pr-kachel:focus-visible::before,
+a.pr-kachel:hover::after,
+a.pr-kachel:focus-visible::after,
+button.pr-kachel:hover::before,
+button.pr-kachel:focus-visible::before,
+button.pr-kachel:hover::after,
+button.pr-kachel:focus-visible::after {
+  opacity: 1;
+}
+
+.pr-kachel:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 4px;
+}
+
+.pr-emoji {
+  font-size: var(--pr-emoji-groesse);
+  line-height: 1;
+}
+
+.pr-titel {
+  max-width: 100%;
+  margin: 0;
+  font-family: var(--schrift-titel);
+  font-size: min(var(--pr-titel-groesse), var(--pr-titel-max));
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  overflow-wrap: break-word;
+  hyphens: auto;                             /* lange Wörter ("Zusammenfassung") sauber trennen */
+}
+
+
+/* ==========================================================================
+   HAUPTKACHEL
+   Liegt über den anderen (sie fliegen aus ihr heraus und in sie hinein).
+   Ausgeklappt ist sie keine Schaltfläche mehr – nur "Zurückkehren" darin.
+   ========================================================================== */
+
+.pr-haupt {
+  z-index: 2;
+  border-color: color-mix(in srgb, var(--farbe-akzent) 45%, var(--farbe-rand));
+}
+
+.pr-haupt.ist-offen {
+  cursor: default;
+}
+
+/* "Zurückkehren": dezent unter dem Titel */
+.pr-zurueck {
+  margin-top: 2px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  color: var(--farbe-text-leise);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 3px;
+  border-radius: var(--radius-s);
+  transition: color var(--dauer) ease;
+}
+
+.pr-zurueck:hover,
+.pr-zurueck:focus-visible {
+  color: var(--farbe-akzent);
+  text-decoration-color: currentColor;
+}
+
+.pr-zurueck:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 2px;
+}
+
+/* "Kommt bald": kleines Schild unten in der Hauptkachel */
+.pr-hinweis {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  margin: 0;
+  padding: 3px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--farbe-akzent);
+  background: var(--farbe-akzent-leise);
+  border-radius: var(--radius-pille);
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.pr-haupt.zeigt-hinweis .pr-hinweis {
+  opacity: 1;
+}
+
+
+/* ==========================================================================
+   PROMPT-ANSICHT: die Kachel groß in der Mitte
+   ========================================================================== */
+
+.pr-gross {
+  width: 100%;
+  max-width: var(--pr-gross-breite);
+  margin: 0 auto;
+  gap: var(--abstand-m);
+  padding: var(--abstand-l) var(--karte-innen) var(--abstand-l);
+  cursor: default;
+  --pr-titel-max: 100%;
+}
+
+/* Beim Schrumpfen zurück zur Ebene liegt sie kurz als Abbild über der Bühne */
+.pr-gross.ist-abbild {
+  position: absolute;
+  z-index: 4;
+  margin: 0;
+  max-width: none;
+}
+
+.pr-gross .pr-titel {
+  font-size: 1.6rem;
+}
+
+/* Das Textfeld: nur lesen, gut lesbar, Text bleibt markierbar */
+.pr-textfeld {
+  align-self: stretch;
+  min-height: 9em;
+  max-height: 55vh;
+  overflow: auto;
+  padding: 14px 16px;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: var(--farbe-text);
+  background: var(--farbe-hintergrund);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
+  cursor: text;
+  user-select: text;
+}
+
+.pr-textfeld:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 2px;
+}
+
+/* Platzhalter wie [Fach]: farbig, damit man sie nach dem Einfügen schnell findet */
+.pr-platzhalter {
+  padding: 0 3px;
+  font-weight: 600;
+  color: var(--farbe-akzent);
+  background: var(--farbe-akzent-leise);
+  border-radius: 4px;
+}
+
+.pr-legende {
+  margin: -6px 0 0;
+  font-size: 0.85rem;
+  color: var(--farbe-text-leise);
+}
+
+/* Großer Knopf "Kopieren" */
+.pr-kopieren {
+  height: 52px;
+  min-width: 220px;
+  padding: 0 28px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.pr-kopieren:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 3px;
+}
+
+.pr-kopieren.ist-kopiert,
+.pr-kopieren.ist-kopiert:hover {
+  background: var(--farbe-erfolg);
+  border-color: var(--farbe-erfolg);
+}
+
+
+/* ==========================================================================
+   MITTLERE BREITE: kleinere Kacheln
+   ========================================================================== */
+
+@media (max-width: 1099px) {
+  #view-prompts {
+    --pr-kachel-hoehe: 210px;
+    --pr-abstand: 16px;
+    --pr-emoji-groesse: 2.2rem;
+    --pr-innen: 12px;
+  }
+}
+
+
+/* ==========================================================================
+   SMARTPHONE UND SCHMALE TABLETS (unter 900 px – dieselbe Grenze steht
+   in js/prompts.js): Fünf Kacheln passen nicht nebeneinander.
+   Hauptkachel oben über die volle Breite, die anderen darunter in zwei
+   Spalten. Die Prompt-Ansicht nutzt die volle Breite.
+   ========================================================================== */
+
+@media (max-width: 899px) {
+  #view-prompts {
+    --pr-abstand: 12px;
+    --pr-rundung: 20px;
+    --pr-emoji-groesse: 2rem;
+    --pr-innen: 10px;
+    --pr-titel-groesse: 1.02rem;
+    --pr-titel-max: 11cqi;
+  }
+
+  .pr-buehne {
+    padding-top: var(--abstand-m);
+  }
+
+  .pr-reihe {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pr-reihe > .pr-kachel {
+    grid-row: auto;
+    grid-column: auto;
+    height: 148px;
+  }
+
+  .pr-reihe > .pr-haupt {
+    grid-column: 1 / -1;
+    height: 168px;
+    --pr-titel-max: 100%;
+    --pr-titel-groesse: 1.35rem;
+  }
+
+  .pr-gross {
+    max-width: none;
+    padding: var(--abstand-m);
+  }
+
+  .pr-gross .pr-titel {
+    font-size: 1.3rem;
+  }
+
+  .pr-kopieren {
+    width: 100%;
+  }
+}
+
+
+/* ==========================================================================
+   BEWEGUNG REDUZIEREN: kein Anheben beim Hovern (die Wechsel blenden nur
+   kurz über – js/prompts.js)
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-kachel,
+  .pr-kachel::before,
+  .pr-kachel::after,
+  .pr-hinweis {
+    transition: none;
+  }
+
+  a.pr-kachel:hover,
+  a.pr-kachel:focus-visible,
+  button.pr-kachel:hover,
+  button.pr-kachel:focus-visible {
+    --heben: 0px;
+    --wachsen: 1;
+  }
+}

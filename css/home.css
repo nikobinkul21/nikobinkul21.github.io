@@ -46,7 +46,7 @@
      damit er trotz der Perspektive lesbar bleibt */
   --titel-wachstum: 0.15;
   /* Obergrenze relativ zur Kartenbreite (cqi): so passt auch das längste
-     Wort ("Stundenplan/", "Customising") immer ganz in die Karte */
+     Wort ("Stundenplan/", "erledigen") immer ganz in die Karte */
   --titel-max: 15cqi;
 
   /* Glow (nur box-shadow und opacity). Farben: --glow-farbe und
