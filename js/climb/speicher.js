@@ -1,6 +1,14 @@
 /* ==========================================================================
-   climb/speicher.js – Rekord des Kletterspiels (localStorage)
-   Aufbau: { version: 1, rekord: Meter, tastaturTest: null | "ok" | "probleme" }
+   climb/speicher.js – Rekord und Einstellungen des Kletterspiels (localStorage)
+   Aufbau: {
+     version: 1,
+     rekord: Meter,
+     hand: "rechts" | "links",                 ← mit welcher Hand gespielt wird
+     tastaturTest: null | "ok" | "probleme",   ← Ergebnis des letzten Tests
+     testFortschritt: { alle: n, zahlen: n },  ← so viele Schritte des großen Tests geschafft
+     testFehler: [ [code, code, code, code] ]  ← Griffe, die die Tastatur nicht erkannt hat
+   }
+   Ältere Stände (nur rekord und tastaturTest) laden ohne Fehler.
    Teil der Datensicherung (js/settings.js: alsObjekt, pruefeDaten, ersetzen).
    ========================================================================== */
 
@@ -9,8 +17,11 @@ const KletterSpeicher = (function () {
   const VERSION = 1;
 
   function leer() {
-    return { version: VERSION, rekord: 0, tastaturTest: null };
+    return { version: VERSION, rekord: 0, hand: K.hand.standard, tastaturTest: null,
+      testFortschritt: { alle: 0, zahlen: 0 }, testFehler: [] };
   }
+
+  const istCode = function (c) { return typeof c === "string" && /^(Key[A-Z]|Digit[0-9])$/.test(c); };
 
   /**
    * Prüft gespeicherte oder importierte Daten.
@@ -24,7 +35,14 @@ const KletterSpeicher = (function () {
       return { ok: false, fehler: "Kletterspiel: ungültiger Rekord." };
     }
     const test = roh.tastaturTest === "ok" || roh.tastaturTest === "probleme" ? roh.tastaturTest : null;
-    return { ok: true, daten: { version: VERSION, rekord: roh.rekord, tastaturTest: test } };
+    const hand = roh.hand === "links" || roh.hand === "rechts" ? roh.hand : K.hand.standard;
+    const f = roh.testFortschritt && typeof roh.testFortschritt === "object" ? roh.testFortschritt : {};
+    const schritt = function (n) { return Number.isInteger(n) && n >= 0 && n < 1e6 ? n : 0; };
+    const fehler = Array.isArray(roh.testFehler) ? roh.testFehler.filter(function (g) {
+      return Array.isArray(g) && g.length === 4 && g.every(istCode);
+    }).slice(0, 5000) : [];
+    return { ok: true, daten: { version: VERSION, rekord: roh.rekord, hand: hand, tastaturTest: test,
+      testFortschritt: { alle: schritt(f.alle), zahlen: schritt(f.zahlen) }, testFehler: fehler } };
   }
 
   function laden() {
@@ -55,10 +73,23 @@ const KletterSpeicher = (function () {
     return { rekord: d.rekord, neu: neu };
   }
 
-  function setzeTastaturTest(ergebnis) {
-    const d = laden();
-    d.tastaturTest = ergebnis;
+  /** Ändert einzelne Werte (z. B. { hand: "links" }) und speichert. */
+  function setze(werte) {
+    const d = Object.assign(laden(), werte);
     speichern(d);
+    return d;
+  }
+
+  function setzeTastaturTest(ergebnis) {
+    setze({ tastaturTest: ergebnis });
+  }
+
+  /** Tastaturtest: ein nicht erkannter Griff (doppelte werden nur einmal gemerkt). */
+  function merkeTestFehler(griff) {
+    const d = laden();
+    if (!d.testFehler.some(function (g) { return g.join() === griff.join(); })) d.testFehler.push(griff.slice());
+    speichern(d);
+    return d.testFehler;
   }
 
   /** Für die Sicherung: der gespeicherte Stand oder null, wenn noch nie gespielt. */
@@ -81,7 +112,9 @@ const KletterSpeicher = (function () {
   return {
     laden: laden,
     eintragen: eintragen,
+    setze: setze,
     setzeTastaturTest: setzeTastaturTest,
+    merkeTestFehler: merkeTestFehler,
     pruefeDaten: pruefeDaten,
     alsObjekt: alsObjekt,
     ersetzen: ersetzen,

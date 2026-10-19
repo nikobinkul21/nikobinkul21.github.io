@@ -6,9 +6,12 @@
                 Parallaxe), die Kletterin, die Kamera folgt nach oben.
                 Darüber: Höhe groß am Rand, Einblendung der Zone, Start-,
                 Pausen- und Endbildschirm, Tastaturtest.
-     Tasten   – die vier gehaltenen Tasten und die neue, so angeordnet wie
-                auf der Tastatur (Tastatur-Steuerung)
-     Raster   – große Griff-Felder für mehrere Finger (Touch-Steuerung)
+     Tasten   – die vier Finger einer Hand als große Tasten (von links nach
+                rechts, mit Fingernamen; der umgreifende: rot → grün mit
+                Zeitbalken), darunter eine kleine Tastatur mit den Fingern
+                als Punkten (Tastatur-Steuerung)
+     Raster   – dasselbe Tastaturraster als große Griff-Felder (Touch)
+     Fußzeile – Hand (links/rechts: nur die Fingernamen) und Steuerung
    Die Regeln (climb/regeln.js) entscheiden, die Eingabe (climb/eingabe.js)
    liefert Tasten, die Zonen (climb/zonen.js) die Landschaften.
    Alle Werte: climb/konfig.js (KletterKonfig.bild).
@@ -19,9 +22,11 @@ function initClimb(container) {
   const B = K.bild;
   const S = KletterSprites;
 
-  const GLIED_NAMEN = {
-    handLinks: "Hand links", handRechts: "Hand rechts", fussLinks: "Fuß links", fussRechts: "Fuß rechts",
-  };
+  const T = KletterTastatur;
+  const HAND = K.hand;
+  // Welche Gliedmaße der Kletterin zu welcher Fingerposition gehört (von
+  // links nach rechts): die äußeren Finger sind die Hände, die inneren die Füße
+  const GLIED_DER_POSITION = ["handLinks", "fussLinks", "fussRechts", "handRechts"];
   const GRUND_TEXTE = {
     losgelassen: "Du hast eine Taste losgelassen, die du halten musstest.",
     falscheTaste: "Du hast eine Taste gedrückt, die nicht gefordert war.",
@@ -60,20 +65,42 @@ function initClimb(container) {
           '<p class="kl-ende-rekord"></p>' +
           '<div class="kl-tafel-knoepfe"><button type="button" class="knopf kl-nochmal">Nochmal</button></div>' +
         "</div>" +
-        // Tastaturtest: fünf Tasten gleichzeitig halten, dreimal
+        // Tastaturtest: ein Kletterweg über die möglichen Griffe – jeder
+        // Schritt bewegt einen Finger; erkannt ist ein Griff, sobald genau
+        // seine vier Tasten ankommen
         '<div class="kl-tafel kl-test" role="dialog" aria-label="Tastaturtest" hidden>' +
           '<p class="kl-tafel-titel">Tastaturtest <span class="kl-test-nr"></span></p>' +
           '<p class="kl-test-text"></p>' +
-          '<div class="kl-tastenbild kl-test-tasten"></div>' +
+          '<div class="kl-test-wahl">' +
+            '<button type="button" class="knopf" data-test="schnell"></button>' +
+            '<button type="button" class="knopf" data-test="alle"></button>' +
+            '<button type="button" class="knopf" data-test="zahlen"></button>' +
+          "</div>" +
+          '<div class="kl-test-griff">' +
+            '<div class="kl-finger-reihe kl-test-finger"></div>' +
+            '<div class="kl-mini kl-test-mini" aria-hidden="true"></div>' +
+          "</div>" +
+          '<p class="kl-test-fehler"></p>' +
           '<div class="kl-tafel-knoepfe">' +
-            '<button type="button" class="knopf kl-test-geht-nicht">Klappt nicht</button>' +
+            '<button type="button" class="knopf kl-test-geht-nicht">Klappt nicht (Enter)</button>' +
             '<button type="button" class="knopf kl-test-fertig">Schließen</button>' +
           "</div>" +
         "</div>" +
       "</div>" +
-      '<div class="kl-tasten"><div class="kl-tastenbild kl-spiel-tasten"></div></div>' +
+      // Die vier Finger als große Tasten (der umgreifende: rot → grün),
+      // darunter eine kleine Tastatur mit den Fingern als Punkten
+      '<div class="kl-tasten">' +
+        '<div class="kl-finger-reihe kl-spiel-finger"></div>' +
+        '<div class="kl-mini kl-spiel-mini" aria-hidden="true"></div>' +
+      "</div>" +
+      // Touch: dasselbe Tastaturraster als große Griff-Felder
       '<div class="kl-raster" hidden></div>' +
       '<div class="kl-fuss">' +
+        '<div class="kl-hand-wahl" role="group" aria-label="Gespielt mit">' +
+          '<span>Hand:</span>' +
+          '<button type="button" data-hand="links" aria-pressed="false">Links</button>' +
+          '<button type="button" data-hand="rechts" aria-pressed="false">Rechts</button>' +
+        "</div>" +
         '<button type="button" class="kl-modus-knopf"></button>' +
       "</div>" +
       '<p class="kl-status nur-vorlesen" role="status"></p>' +
@@ -87,9 +114,10 @@ function initClimb(container) {
     start: $(".kl-start"), startText: $(".kl-start-text"), startHinweis: $(".kl-start-hinweis"),
     pause: $(".kl-pause"), pauseText: $(".kl-pause-text"),
     ende: $(".kl-ende"), endeGrund: $(".kl-ende-grund"), endeZahl: $(".kl-ende-zahl"), endeRekord: $(".kl-ende-rekord"),
-    test: $(".kl-test"), testNr: $(".kl-test-nr"), testText: $(".kl-test-text"), testTasten: $(".kl-test-tasten"),
-    tasten: $(".kl-tasten"), spielTasten: $(".kl-spiel-tasten"), raster: $(".kl-raster"),
-    modusKnopf: $(".kl-modus-knopf"), status: $(".kl-status"),
+    test: $(".kl-test"), testNr: $(".kl-test-nr"), testText: $(".kl-test-text"), testWahl: $(".kl-test-wahl"),
+    testGriff: $(".kl-test-griff"), testFinger: $(".kl-test-finger"), testMini: $(".kl-test-mini"), testFehler: $(".kl-test-fehler"),
+    tasten: $(".kl-tasten"), spielFinger: $(".kl-spiel-finger"), spielMini: $(".kl-spiel-mini"), raster: $(".kl-raster"),
+    handWahl: $(".kl-hand-wahl"), modusKnopf: $(".kl-modus-knopf"), status: $(".kl-status"),
   };
   const ctx = el.szene.getContext("2d");
 
@@ -97,7 +125,7 @@ function initClimb(container) {
   // Zustand der Anzeige
   // ------------------------------------------------------------------
   let modus = KletterEingabe.vermutlichTouch() ? "touch" : "tastatur";
-  const spiel = KletterRegeln.erstelle({ art: modus });
+  const spiel = KletterRegeln.erstelle();
   let beschriftung = {};          // Code → Beschriftung der Taste
   let sichtbar = false;           // ist #games/climb gerade offen?
   let W = 160, H = 200;           // Größe der Szene in Spielpixeln
@@ -121,7 +149,7 @@ function initClimb(container) {
 
   // Haltung der Kletterin (Hände und Füße relativ zur Hüfte): climb/konfig.js
   const RUHE = {};
-  KletterRegeln.GLIEDER.forEach(function (g) { RUHE[g] = B.figur[g]; });
+  GLIED_DER_POSITION.forEach(function (g) { RUHE[g] = B.figur[g]; });
 
   function gliederZuruecksetzen() {
     anim.glieder = {};
@@ -618,123 +646,162 @@ function initClimb(container) {
 
 
   // ------------------------------------------------------------------
-  // Tasten: so angeordnet wie auf der Tastatur
+  // Finger und Tasten
   // ------------------------------------------------------------------
 
+  /** Mit welcher Hand gespielt wird ("rechts" oder "links"). */
+  function hand() { return KletterSpeicher.laden().hand; }
+
+  /** Finger auf Position 0–3 (von links nach rechts), z. B. "Ring". */
+  function fingerName(position) { return HAND.finger[hand()][position]; }
+  function fingerLang(position) { return HAND.fingerLang[fingerName(position)]; }
+
+  function zeichen(code) { return beschriftung[code] || T.taste(code).label; }
+
   /**
-   * Füllt ein Tastenbild mit Tasten (Kappen) an ihrer Lage auf der Tastatur.
+   * Die vier Finger als große Tasten, von links nach rechts. Der
+   * umgreifende Finger zeigt zwei Tasten: die alte rot (loslassen), die
+   * neue grün (greifen, mit Zeitbalken).
    * @param {HTMLElement} ziel
-   * @param {object[]} eintraege – { code, art: "halten"|"los"|"neu"|"ziel", unten, glied, balken }
+   * @param {object} g – { griff, wechsel|null, unten: Set, phase, balken }
    */
-  function zeigeKappen(ziel, eintraege) {
-    const feld = spiel.feld;
-    const xs = eintraege.map(function (e) { return feld.nachCode[e.code].x; });
-    const ys = eintraege.map(function (e) { return feld.nachCode[e.code].y; });
-    const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
-    // Senkrecht immer alle Reihen des Felds (sonst springt die Höhe der
-    // Leiste – und mit ihr die Bühne – bei jedem Wechsel), waagerecht nur
-    // der Bereich der gezeigten Tasten
-    const minY = 0, maxY = Math.max.apply(null, feld.tasten.map(function (t) { return t.y; }));
-    ziel.style.setProperty("--kl-spalten", (maxX - minX + 1).toFixed(2));
-    ziel.style.setProperty("--kl-reihen", String(maxY - minY + 1));
-    // Vorhandene Kappen wiederverwenden (sonst ruckelt das Pulsieren)
-    const alte = {};
-    Array.from(ziel.children).forEach(function (k) { alte[k.dataset.code] = k; });
-    const bleiben = {};
-    eintraege.forEach(function (e) {
-      let kappe = alte[e.code];
-      if (!kappe) {
-        kappe = document.createElement("div");
-        kappe.className = "kl-kappe";
-        kappe.dataset.code = e.code;
-        kappe.innerHTML = '<span class="kl-kappe-zeichen"></span><span class="kl-kappe-glied"></span><span class="kl-kappe-balken"><span></span></span>';
-        ziel.appendChild(kappe);
+  function zeigeFinger(ziel, g) {
+    if (ziel.children.length !== 4) {
+      ziel.innerHTML = "";
+      for (let i = 0; i < 4; i++) {
+        const platz = document.createElement("div");
+        platz.className = "kl-fingerplatz";
+        platz.innerHTML =
+          '<div class="kl-kappe" data-rolle="alt"><span class="kl-kappe-zeichen"></span><span class="kl-kappe-glied"></span></div>' +
+          '<span class="kl-pfeil" aria-hidden="true">→</span>' +
+          '<div class="kl-kappe" data-rolle="neu" data-art="neu"><span class="kl-kappe-zeichen"></span><span class="kl-kappe-glied"></span>' +
+            '<span class="kl-kappe-balken"><span></span></span></div>';
+        ziel.appendChild(platz);
       }
-      bleiben[e.code] = true;
-      const t = feld.nachCode[e.code];
-      kappe.style.setProperty("--kl-x", (t.x - minX).toFixed(2));
-      kappe.style.setProperty("--kl-y", String(t.y - minY));
-      kappe.dataset.art = e.art;
-      kappe.classList.toggle("ist-unten", Boolean(e.unten));
-      kappe.querySelector(".kl-kappe-zeichen").textContent = beschriftung[e.code] || t.label;
-      kappe.querySelector(".kl-kappe-glied").textContent = e.text !== undefined ? e.text
-        : e.art === "los" ? "loslassen" : e.art === "neu" ? "greifen" : e.glied ? GLIED_NAMEN[e.glied] : "";
-      kappe.querySelector(".kl-kappe-balken").hidden = e.balken === undefined;
-      if (e.balken !== undefined) kappe.querySelector(".kl-kappe-balken span").style.transform = "scaleX(" + e.balken.toFixed(3) + ")";
-    });
-    Object.keys(alte).forEach(function (c) { if (!bleiben[c]) alte[c].remove(); });
-  }
-
-  /** Was die Tasten bzw. Felder gerade zeigen sollen. */
-  function eintraegeFuerSpiel(st) {
-    const unten = new Set(st.gedrueckt);
-    const liste = st.gehalten.map(function (c) {
-      let art = "halten";
-      if (st.phase === "start") art = "ziel";
-      else if (st.wechsel && c === st.wechsel.los && (st.phase === "klettern" || st.phase === "pause")) art = "los";
-      return { code: c, art: art, unten: unten.has(c), glied: st.glieder[c] };
-    });
-    if (st.wechsel && (st.phase === "klettern" || st.phase === "pause")) {
-      liste.push({ code: st.wechsel.neu, art: "neu", unten: unten.has(st.wechsel.neu), glied: st.glieder[st.wechsel.los],
-        balken: st.wechsel.zeitMs ? st.wechsel.restMs / st.wechsel.zeitMs : 0 });
     }
-    return liste;
+    g.griff.forEach(function (code, i) {
+      const platz = ziel.children[i];
+      const bewegt = Boolean(g.wechsel) && g.wechsel.finger === i;
+      const alt = platz.querySelector('[data-rolle="alt"]');
+      const neu = platz.querySelector('[data-rolle="neu"]');
+      platz.classList.toggle("bewegt", bewegt);
+      alt.dataset.code = code;
+      alt.dataset.art = g.phase === "start" ? "ziel" : bewegt ? "los" : "halten";
+      alt.classList.toggle("ist-unten", g.unten.has(code));
+      alt.querySelector(".kl-kappe-zeichen").textContent = zeichen(code);
+      alt.querySelector(".kl-kappe-glied").textContent = fingerName(i);
+      platz.querySelector(".kl-pfeil").hidden = !bewegt;
+      neu.hidden = !bewegt;
+      if (bewegt) {
+        neu.dataset.code = g.wechsel.neu;
+        neu.classList.toggle("ist-unten", g.unten.has(g.wechsel.neu));
+        neu.querySelector(".kl-kappe-zeichen").textContent = zeichen(g.wechsel.neu);
+        neu.querySelector(".kl-kappe-glied").textContent = fingerName(i);
+        const balken = neu.querySelector(".kl-kappe-balken");
+        balken.hidden = g.balken === undefined;
+        if (g.balken !== undefined) balken.firstChild.style.transform = "scaleX(" + g.balken.toFixed(3) + ")";
+      }
+    });
   }
 
-  /** Touch-Raster: alle Felder, mit Markierung der geforderten. */
-  function baueRaster() {
-    el.raster.innerHTML = "";
-    el.raster.style.setProperty("--kl-raster-spalten", String(K.touch.spalten));
-    spiel.feld.tasten.forEach(function (t) {
+  /**
+   * Ein Tastaturraster (alle Tasten an ihrer echten Lage): klein als
+   * Schema unter den großen Tasten, groß als Touch-Raster.
+   */
+  function baueTastatur(ziel, felder) {
+    ziel.innerHTML = "";
+    T.TASTEN.forEach(function (t) {
       const f = document.createElement("div");
-      f.className = "kl-feld";
-      f.dataset.code = t.code;
-      f.innerHTML = '<span class="kl-feld-text"></span><span class="kl-kappe-balken"><span></span></span>';
-      el.raster.appendChild(f);
+      f.className = felder ? "kl-feld" : "kl-mini-taste";
+      if (felder) f.dataset.code = t.code;
+      else f.dataset.taste = t.code;
+      f.style.setProperty("--kl-x", String(t.x - 1));
+      f.style.setProperty("--kl-y", String(t.reihe));
+      f.innerHTML = '<span class="kl-feld-zeichen"></span><span class="kl-punkt" hidden></span>' +
+        (felder ? '<span class="kl-kappe-balken" hidden><span></span></span>' : "");
+      ziel.appendChild(f);
     });
   }
 
-  function zeigeRaster(st) {
-    const eintraege = {};
-    eintraegeFuerSpiel(st).forEach(function (e) { eintraege[e.code] = e; });
-    const unten = new Set(st.gedrueckt);
-    Array.from(el.raster.children).forEach(function (f) {
-      const e = eintraege[f.dataset.code];
-      f.dataset.art = e ? e.art : "";
-      f.classList.toggle("ist-unten", unten.has(f.dataset.code));
-      f.querySelector(".kl-feld-text").textContent = e ? (e.art === "los" ? "loslassen" : e.art === "neu" ? "greifen" : e.art === "ziel" ? "halten" : GLIED_NAMEN[e.glied] || "") : "";
+  /**
+   * Tastaturraster auf den Stand bringen: Finger als beschriftete Punkte,
+   * die loszulassende Taste rot, die neue grün; nicht erlaubte Reihen blass.
+   */
+  function zeigeTastatur(ziel, g) {
+    const finger = {};
+    g.griff.forEach(function (c, i) { finger[c] = i; });
+    const reihen = KletterRegeln.erlaubteReihen(g.hoehe || 0);
+    Array.from(ziel.children).forEach(function (f) {
+      const code = f.dataset.code || f.dataset.taste;
+      const t = T.taste(code);
+      let art = "";
+      if (g.phase === "start" && code in finger) art = "ziel";
+      else if (g.wechsel && code === g.wechsel.los) art = "los";
+      else if (g.wechsel && code === g.wechsel.neu) art = "neu";
+      else if (code in finger) art = "halten";
+      f.dataset.art = art;
+      f.classList.toggle("ist-aus", reihen.indexOf(t.reihe) === -1);
+      f.classList.toggle("ist-unten", g.unten.has(code));
+      f.querySelector(".kl-feld-zeichen").textContent = zeichen(code);
+      const punkt = f.querySelector(".kl-punkt");
+      const pos = code in finger ? finger[code] : g.wechsel && code === g.wechsel.neu ? g.wechsel.finger : -1;
+      punkt.hidden = pos === -1;
+      if (pos !== -1) punkt.textContent = HAND.fingerKurz[fingerName(pos)];
       const balken = f.querySelector(".kl-kappe-balken");
-      balken.hidden = !e || e.balken === undefined;
-      if (e && e.balken !== undefined) balken.firstChild.style.transform = "scaleX(" + e.balken.toFixed(3) + ")";
+      if (balken) {
+        balken.hidden = !(art === "neu" && g.balken !== undefined);
+        if (!balken.hidden) balken.firstChild.style.transform = "scaleX(" + g.balken.toFixed(3) + ")";
+      }
     });
+  }
+
+  /** Stand des Spiels für die Anzeige der Tasten. */
+  function anzeigeStand(st) {
+    const laeuft = st.phase === "klettern" || st.phase === "pause";
+    return {
+      griff: st.griff, phase: st.phase, hoehe: st.hoehe, unten: new Set(st.gedrueckt),
+      wechsel: laeuft ? st.wechsel : null,
+      balken: laeuft && st.wechsel && st.wechsel.zeitMs ? st.wechsel.restMs / st.wechsel.zeitMs : undefined,
+    };
   }
 
   function zeigeSteuerung(t) {
-    const st = spiel.stand(t);
-    if (modus === "touch") zeigeRaster(st);
-    else zeigeKappen(el.spielTasten, eintraegeFuerSpiel(st));
-    el.hoeheZahl.textContent = String(st.hoehe);
+    const g = anzeigeStand(spiel.stand(t));
+    if (modus === "touch") {
+      zeigeTastatur(el.raster, g);
+    } else {
+      zeigeFinger(el.spielFinger, g);
+      zeigeTastatur(el.spielMini, g);
+    }
+    el.hoeheZahl.textContent = String(g.hoehe);
   }
 
 
   // ------------------------------------------------------------------
   // Tafeln: Start, Pause, Ende
   // ------------------------------------------------------------------
+
+  /** "Zeigefinger auf D, Mittelfinger auf F …" für den aktuellen Griff. */
+  function griffText(griff) {
+    return griff.map(function (c, i) { return fingerLang(i) + " auf " + zeichen(c); }).join(", ");
+  }
+
   function zeigeStart() {
     const st = spiel.stand(jetzt());
-    const tasten = st.gehalten.map(function (c) { return beschriftung[c] || spiel.feld.nachCode[c].label; });
-    el.startText.textContent = modus === "touch"
-      ? "Lege vier Finger auf die markierten Felder und halte sie. Dann wechselst du immer einen Finger: das rote Feld loslassen, das grüne greifen."
-      : "Halte die vier Tasten " + tasten.join(", ") + " gleichzeitig gedrückt. Dann wechselst du immer eine Taste: die rote loslassen, die grüne drücken – die anderen drei bleiben unten.";
+    const handText = hand() === "links" ? "linken" : "rechten";
+    el.startText.textContent = (modus === "touch"
+      ? "Lege vier Finger deiner " + handText + " Hand auf die markierten Felder: "
+      : "Lege vier Finger deiner " + handText + " Hand auf die Tasten und halte sie: ") +
+      griffText(st.griff) + ". Dann setzt du immer einen Finger auf eine Nachbartaste um: rot loslassen, grün greifen.";
     const gespeichert = KletterSpeicher.laden();
     el.start.querySelector(".kl-test-knopf").hidden = modus === "touch";
     el.startHinweis.textContent = modus === "touch" ? "" : gespeichert.tastaturTest === null
       ? "Erstes Mal? Mach kurz den Tastaturtest – manche Tastaturen erkennen nicht alle Kombinationen."
-      : gespeichert.tastaturTest === "probleme" ? "Beim Tastaturtest kamen nicht alle Tasten an. Klappt es nicht, nimm eine andere Tastatur." : "";
+      : gespeichert.tastaturTest === "probleme" ? "Beim Tastaturtest kamen nicht alle Griffe an – sie stehen im Test." : "";
     el.start.hidden = false;
     el.pause.hidden = true;
     el.ende.hidden = true;
-    melde(modus === "touch" ? "Halte die vier markierten Felder." : "Halte die Tasten " + tasten.join(", ") + ".");
+    melde("Halte " + griffText(st.griff) + ".");
   }
 
   function zeigeRekord() {
@@ -757,6 +824,22 @@ function initClimb(container) {
     zeigeSteuerung(jetzt());
   }
 
+  /** Handwahl: nur Beschriftung und Zuordnung der Finger ändern sich. */
+  function zeigeHand() {
+    el.handWahl.querySelectorAll("[data-hand]").forEach(function (k) {
+      k.setAttribute("aria-pressed", String(k.dataset.hand === hand()));
+    });
+  }
+  el.handWahl.addEventListener("click", function (ev) {
+    const k = ev.target.closest("[data-hand]");
+    if (!k) return;
+    KletterSpeicher.setze({ hand: k.dataset.hand });
+    zeigeHand();
+    if (!el.start.hidden) zeigeStart();
+    zeigeSteuerung(jetzt());
+    melde("Gespielt mit der " + (k.dataset.hand === "links" ? "linken" : "rechten") + " Hand.");
+  });
+
   // ------------------------------------------------------------------
   // Ereignisse der Regeln
   // ------------------------------------------------------------------
@@ -765,23 +848,21 @@ function initClimb(container) {
     melde("Los geht's!");
   });
   spiel.an("wechsel", function (e) {
-    const neu = beschriftung[e.neu] || spiel.feld.nachCode[e.neu].label;
-    const los = beschriftung[e.los] || spiel.feld.nachCode[e.los].label;
-    melde(modus === "touch" ? GLIED_NAMEN[e.glied] + ": umgreifen." : los + " loslassen, " + neu + " greifen.");
+    melde(fingerLang(e.finger) + ": " + zeichen(e.los) + " loslassen, " + zeichen(e.neu) + " greifen.");
   });
   spiel.an("griff", function (e) {
     const t = jetzt();
     // Die umgreifende Gliedmaße geht nach oben, die anderen rutschen am Körper nach unten
-    const feld = spiel.feld;
     const st = spiel.stand(t);
-    const mittel = st.gehalten.reduce(function (s, c) { return s + feld.nachCode[c].x; }, 0) / 4;
+    const mittel = st.griff.reduce(function (s, c) { return s + T.taste(c).x; }, 0) / 4;
+    const bewegt = GLIED_DER_POSITION[e.finger];
     Object.keys(anim.glieder).forEach(function (g) {
       const a = anim.glieder[g];
       const pos = gliedPosition(g, t);
       a.vonX = pos.x; a.vonY = pos.y; a.start = t;
-      if (g === e.glied) {
+      if (g === bewegt) {
         const m = B.figur.seitlichMax;
-        const dx = Math.max(-m, Math.min(m, Math.round((feld.nachCode[e.neu].x - mittel) * 0.8)));
+        const dx = Math.max(-m, Math.min(m, Math.round((T.taste(e.neu).x - mittel) * 0.8)));
         a.zielX = RUHE[g].x + dx;
         a.zielY = RUHE[g].hoch;
         a.dauer = B.umgreifenMs;
@@ -819,14 +900,11 @@ function initClimb(container) {
     el.zone.classList.add("erscheint");
     clearTimeout(el.zone.zeit);
     el.zone.zeit = setTimeout(function () { el.zone.hidden = true; }, B.zoneEinblendungMs);
-    melde("Neue Zone: " + e.zone.name + ".");
+    melde("Neue Zone: " + e.zone.name + "." + (e.zone.ab === HAND.zahlenreiheAb ? " Ab jetzt auch die Zahlenreihe." : ""));
   });
   spiel.an("pause", function () {
     const st = spiel.stand(jetzt());
-    el.pauseText.textContent = modus === "touch"
-      ? "Lege die vier Finger wieder auf die gehaltenen Felder – dann geht es weiter."
-      : "Halte wieder die vier Tasten " + st.gehalten.map(function (c) { return beschriftung[c] || spiel.feld.nachCode[c].label; }).join(", ") +
-        " – dann geht es mit der restlichen Zeit weiter.";
+    el.pauseText.textContent = "Lege die Finger wieder auf: " + griffText(st.griff) + " – dann geht es mit der restlichen Zeit weiter.";
     el.pause.hidden = false;
     melde("Pause. " + el.pauseText.textContent);
   });
@@ -862,59 +940,131 @@ function initClimb(container) {
 
 
   // ------------------------------------------------------------------
-  // Tastaturtest: fünf Tasten gleichzeitig, so wie sie im Spiel vorkommen
+  // Tastaturtest: ein Kletterweg über die Griffe (KletterRegeln.testWeg).
+  // Jeder Schritt bewegt einen Finger auf eine Nachbartaste – wie im
+  // Spiel, nur ohne Zeit. Erkannt ist ein Griff, sobald GENAU seine vier
+  // Tasten gedrückt ankommen. Kommt er nicht an: "Klappt nicht" (oder
+  // Enter) – der Griff wird gemerkt, weiter geht es mit dem nächsten.
+  //   schnell – rund K.tastaturTest.schnell Griffe quer über die Tastatur
+  //   alle    – jeder Griff ohne Zahlenreihe (Fortschritt bleibt gespeichert)
+  //   zahlen  – jeder Griff mit Zahlenreihe, der noch nicht in "alle" war
   // ------------------------------------------------------------------
+  const testWege = {};          // einmal berechnet, dann gemerkt
+
+  function testWeg(art) {
+    if (testWege[art]) return testWege[art];
+    const ohne = HAND.reihen, mit = [0].concat(HAND.reihen);
+    if (art === "schnell") testWege[art] = KletterRegeln.schnellWeg(K.tastaturTest.schnell, Math.random);
+    else if (art === "alle") testWege[art] = KletterRegeln.testWeg(KletterRegeln.alleGriffe(ohne), ohne);
+    else {
+      const nurMitZahlen = KletterRegeln.alleGriffe(mit).filter(function (g) { return g.some(function (c) { return T.taste(c).reihe === 0; }); });
+      testWege[art] = KletterRegeln.testWeg(nurMitZahlen, mit);
+    }
+    return testWege[art];
+  }
+
+  function zahl(n) { return n.toLocaleString("de-DE"); }
+
+  /** Startseite des Tests: drei Varianten zur Wahl. */
   function starteTest() {
-    const feld = KletterRegeln.tastenFeld("tastatur");
-    test = {
-      kombis: KletterRegeln.testKombinationen(feld, K.tastaturTest.durchgaenge, K.tastaturTest.hoehe, Math.random),
-      nr: 0, unten: new Set(), probleme: 0, fertig: false,
-    };
+    test = { art: null, weg: null, nr: 0, unten: new Set(), fertig: false, probleme: 0 };
+    const f = KletterSpeicher.laden().testFortschritt;
     el.test.hidden = false;
+    el.testNr.textContent = "";
+    el.testText.textContent = "Wähle einen Test. Bei jedem Schritt setzt du – wie im Spiel – einen Finger auf eine Nachbartaste. " +
+      "Kommt ein Griff nicht an, drück „Klappt nicht“ (oder Enter).";
+    el.testWahl.hidden = false;
+    el.testGriff.hidden = true;
+    el.test.querySelector(".kl-test-geht-nicht").hidden = true;
+    const knopf = function (art) { return el.testWahl.querySelector('[data-test="' + art + '"]'); };
+    knopf("schnell").textContent = "Schnelltest (" + K.tastaturTest.schnell + " Griffe, etwa 2 Minuten)";
+    const alle = testWeg("alle");
+    knopf("alle").textContent = "Alle Griffe bis 120 m (" + zahl(KletterRegeln.alleGriffe(HAND.reihen).length) + " Griffe" +
+      (f.alle > 0 ? ", weiter bei Schritt " + zahl(f.alle + 1) + " von " + zahl(alle.length) : ", etwa 1 Stunde – in Etappen") + ")";
+    knopf("zahlen").textContent = "Griffe mit Zahlenreihe (ab 120 m" + (f.zahlen > 0 ? ", weiter bei Schritt " + zahl(f.zahlen + 1) : "") + ")";
+    zeigeTestFehler();
+    knopf("schnell").focus({ preventScroll: true });
+  }
+
+  function waehleTest(art) {
+    test.art = art;
+    test.weg = testWeg(art);
+    test.nr = art === "schnell" ? 0 : KletterSpeicher.laden().testFortschritt[art] || 0;
+    el.testWahl.hidden = true;
+    el.testGriff.hidden = false;
     el.test.querySelector(".kl-test-geht-nicht").hidden = false;
     zeigeTest();
-    el.test.querySelector(".kl-test-fertig").focus({ preventScroll: true });
+  }
+
+  /** Bisher nicht erkannte Griffe (gespeichert, über alle Tests). */
+  function zeigeTestFehler() {
+    const fehler = KletterSpeicher.laden().testFehler;
+    el.testFehler.textContent = fehler.length
+      ? "Nicht erkannt (" + fehler.length + "): " + fehler.slice(0, 40).map(function (g) { return g.map(zeichen).join(" "); }).join(" · ") +
+        (fehler.length > 40 ? " …" : "")
+      : "";
   }
 
   function zeigeTest() {
     if (test.fertig) {
       el.testNr.textContent = "";
-      el.testTasten.innerHTML = "";
+      el.testGriff.hidden = true;
       el.test.querySelector(".kl-test-geht-nicht").hidden = true;
       el.testText.textContent = test.probleme === 0
-        ? "Alles erkannt – deine Tastatur schafft die Kombinationen. Viel Spaß beim Klettern!"
-        : "Bei " + test.probleme + " von " + test.kombis.length + " Kombinationen kamen nicht alle Tasten an. " +
-          "Das liegt an der Tastatur (sie erkennt nicht alle gleichzeitig gedrückten Tasten). Eine andere Tastatur – oder die Touch-Steuerung – hilft.";
+        ? "Fertig – alle Griffe sind angekommen. Viel Spaß beim Klettern!"
+        : "Fertig. " + test.probleme + " Griffe kamen nicht an – das liegt an der Tastatur (sie erkennt nicht alle " +
+          "gleichzeitig gedrückten Tasten). Eine andere Tastatur oder die Touch-Steuerung hilft.";
+      zeigeTestFehler();
       melde(el.testText.textContent);
       return;
     }
-    const kombi = test.kombis[test.nr];
-    el.testNr.textContent = (test.nr + 1) + "/" + test.kombis.length;
-    el.testText.textContent = "Halte diese fünf Tasten gleichzeitig gedrückt. Jede, die ankommt, wird grün.";
-    zeigeKappen(el.testTasten, kombi.map(function (c) {
-      return { code: c, art: test.unten.has(c) ? "neu" : "halten", unten: test.unten.has(c), text: test.unten.has(c) ? "erkannt" : "" };
-    }));
-    melde("Test " + (test.nr + 1) + ": " + kombi.map(function (c) { return beschriftung[c] || spiel.feld.nachCode[c].label; }).join(", ") + " gleichzeitig halten.");
+    const griff = test.weg[test.nr];
+    const vorher = test.nr > 0 ? test.weg[test.nr - 1] : null;
+    // Welcher Finger bewegt sich gegenüber dem vorigen Schritt?
+    let wechsel = null;
+    if (vorher) {
+      const i = griff.findIndex(function (c, k) { return c !== vorher[k]; });
+      if (i !== -1) wechsel = { finger: i, los: vorher[i], neu: griff[i] };
+    }
+    el.testNr.textContent = zahl(test.nr + 1) + " / " + zahl(test.weg.length);
+    el.testText.textContent = wechsel
+      ? fingerLang(wechsel.finger) + ": " + zeichen(wechsel.los) + " loslassen, " + zeichen(wechsel.neu) + " greifen – dann alle vier halten."
+      : "Halte " + griffText(griff) + ".";
+    const g = { griff: vorher || griff, wechsel: wechsel, unten: test.unten, phase: wechsel ? "klettern" : "start", hoehe: 999 };
+    zeigeFinger(el.testFinger, g);
+    zeigeTastatur(el.testMini, g);
+    zeigeTestFehler();
+    melde("Test: " + el.testText.textContent);
   }
 
+  /** Nächster Schritt; geklappt = false → den Griff als nicht erkannt merken. */
   function naechsterTest(geklappt) {
-    if (!geklappt) test.probleme++;
+    if (!test || test.fertig || !test.weg) return;
+    if (!geklappt) {
+      test.probleme++;
+      KletterSpeicher.merkeTestFehler(test.weg[test.nr]);
+    }
     test.nr++;
-    test.unten.clear();
-    if (test.nr >= test.kombis.length) {
+    if (test.art !== "schnell") {
+      const f = KletterSpeicher.laden().testFortschritt;
+      f[test.art] = test.nr >= test.weg.length ? 0 : test.nr;
+      KletterSpeicher.setze({ testFortschritt: f });
+    }
+    if (test.nr >= test.weg.length) {
       test.fertig = true;
-      KletterSpeicher.setzeTastaturTest(test.probleme === 0 ? "ok" : "probleme");
-      zeigeStart();
+      const fehler = KletterSpeicher.laden().testFehler.length;
+      KletterSpeicher.setzeTastaturTest(fehler === 0 ? "ok" : "probleme");
     }
     zeigeTest();
   }
 
   function testTaste(code, gedrueckt) {
-    if (test.fertig) return;
+    if (!test.weg || test.fertig) return;
     if (gedrueckt) test.unten.add(code); else test.unten.delete(code);
-    const kombi = test.kombis[test.nr];
+    const griff = test.weg[test.nr];
     zeigeTest();
-    if (kombi.every(function (c) { return test.unten.has(c); })) {
+    // Erkannt: genau die vier Tasten des Griffs sind unten
+    if (test.unten.size === 4 && griff.every(function (c) { return test.unten.has(c); })) {
       const nr = test.nr;
       setTimeout(function () { if (test && test.nr === nr) naechsterTest(true); }, B.testWeiterMs);
     }
@@ -928,6 +1078,10 @@ function initClimb(container) {
   }
 
   el.start.querySelector(".kl-test-knopf").addEventListener("click", starteTest);
+  el.testWahl.addEventListener("click", function (ev) {
+    const k = ev.target.closest("[data-test]");
+    if (k) waehleTest(k.dataset.test);
+  });
   el.test.querySelector(".kl-test-geht-nicht").addEventListener("click", function () { naechsterTest(false); });
   el.test.querySelector(".kl-test-fertig").addEventListener("click", schliesseTest);
 
@@ -955,6 +1109,8 @@ function initClimb(container) {
       zeigeSteuerung(jetzt());
     },
     beimTastendruck: function (ev) {
+      // Tastaturtest: Enter = "Klappt nicht"
+      if (test && test.weg && ev.code === "Enter") { ev.preventDefault(); naechsterTest(false); return; }
       // Wer im Touch-Modus vor dem Start eine Spieltaste drückt, hat eine Tastatur
       if (modus === "touch" && /^(Key|Digit)/.test(ev.code) && spiel.stand(jetzt()).phase === "start") setzeModus("tastatur");
     },
@@ -964,19 +1120,29 @@ function initClimb(container) {
   function setzeModus(neu) {
     modus = neu;
     eingabe.zuruecksetzen();
-    spiel.setzeArt(neu);
+    spiel.vergiss();
     el.wurzel.dataset.modus = neu;
     el.tasten.hidden = neu === "touch";
     el.raster.hidden = neu !== "touch";
     el.modusKnopf.textContent = neu === "touch" ? "Mit Tastatur spielen" : "Touch-Steuerung (ohne Tastatur)";
-    if (neu === "touch") baueRaster();
-    KletterEingabe.beschriftungen(spiel.feld).then(function (b) { beschriftung = b; zeigeSteuerung(jetzt()); if (!el.start.hidden) zeigeStart(); });
     requestAnimationFrame(passeGroesseAn);
     neuerVersuch();
   }
   el.modusKnopf.addEventListener("click", function () {
     setzeModus(modus === "touch" ? "tastatur" : "touch");
   });
+
+  // Tastaturraster einmal aufbauen: Schema unter den Tasten, kleine Version
+  // im Test, große Griff-Felder für Touch
+  baueTastatur(el.spielMini, false);
+  baueTastatur(el.testMini, false);
+  baueTastatur(el.raster, true);
+  KletterEingabe.beschriftungen({ tasten: T.TASTEN }).then(function (b) {
+    beschriftung = b;
+    zeigeSteuerung(jetzt());
+    if (!el.start.hidden) zeigeStart();
+  });
+  zeigeHand();
 
 
   // ------------------------------------------------------------------

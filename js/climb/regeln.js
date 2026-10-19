@@ -5,265 +5,207 @@
    Ereignisse zurück. Die Zeit kommt immer von außen (Millisekunden) – so
    lässt sich alles ohne Browser testen.
 
+   EINE HAND, VIER FINGER
+     Ein "Griff" sind die vier Tasten unter den Fingern, von links nach
+     rechts (Position 0 bis 3). Jeder Versuch beginnt mit D, F, H, J.
+     Ein Griffwechsel bewegt genau EINEN Finger auf eine benachbarte Taste
+     (climb/keyboard.js) – die anderen drei bleiben liegen. Erlaubt ist er nur,
+     wenn danach gilt:
+       - die Tasten liegen weiter von links nach rechts (kein Finger
+         überholt seinen Nachbarn, nie zwei auf derselben Taste oder in
+         derselben Spalte),
+       - zwischen zwei benachbarten Fingern höchstens maxAbstandNachbarn
+         Spalten Abstand, außen insgesamt höchstens maxAbstandGesamt,
+       - nur erlaubte Reihen (die Zahlenreihe ab zahlenreiheAb Metern).
+     Bei der Auswahl außerdem: nie öfter als maxGleicherFinger hintereinander
+     derselbe Finger; ist die Hand mehr als maxWandern Spalten von der
+     Startmitte weg, bevorzugt Wechsel, die zurückführen.
+     Welcher Finger (Zeige, Mittel …) auf welcher Position liegt, hängt nur
+     von der gewählten Hand ab – das ist reine Beschriftung (darstellung.js).
+
    ABLAUF
-     "start"    – vier Tasten werden angezeigt. Sind GENAU diese vier
-                  gedrückt, beginnt der Aufstieg.
-     "klettern" – ein Griffwechsel nach dem anderen: Eine gehaltene Taste
-                  ist "los" (loslassen), eine neue "neu" (greifen). Die
-                  übrigen drei bleiben gedrückt. Die Reihenfolge ist egal
-                  (erst loslassen oder erst greifen) – fertig ist der
-                  Wechsel, wenn "los" oben und "neu" unten ist.
+     "start"    – Sind GENAU die vier Starttasten gedrückt, beginnt der Aufstieg.
+     "klettern" – ein Wechsel nach dem anderen: "los" loslassen, "neu"
+                  greifen (Reihenfolge egal). Fertig ist er, wenn "los"
+                  oben und "neu" unten ist.
      "pause"    – Fenster ohne Fokus oder anderer Tab: Der Browser meldet
-                  dann alle Tasten als losgelassen. Statt eines Absturzes
-                  ruht das Spiel; weiter geht es, sobald die vier
-                  gehaltenen Tasten wieder gedrückt sind (mit der Restzeit).
-     "absturz"  – vorbei. Gründe:
-                    "losgelassen" – eine der drei bleibenden Tasten ist oben
-                    "falscheTaste" – eine Taste gedrückt, die nicht gefordert ist
-                    "zeit"        – die Zeit für den Wechsel ist abgelaufen
+                  dann alle Tasten als losgelassen. Das Spiel ruht; weiter
+                  geht es, sobald die vier Tasten wieder gedrückt sind.
+     "absturz"  – vorbei. Gründe: "losgelassen" (eine der drei bleibenden
+                  Tasten ist oben), "falscheTaste" (eine nicht geforderte
+                  Taste gedrückt), "zeit" (Zeit für den Wechsel abgelaufen).
 
    EREIGNISSE (spiel.an(name, fn)):
-     "start"   { gehalten, glieder }
-     "wechsel" { los, neu, zeitMs, glied }       – ein neuer Wechsel ist gefordert
-     "griff"   { los, neu, glied, griffe, hoehe } – Wechsel gelungen
-     "zone"    { zone, vorher }                  – eine neue Zone ist erreicht
-     "pause"   { restMs } · "weiter" { restMs }
+     "start"   { griff }
+     "wechsel" { los, neu, finger, zeitMs }        – ein neuer Wechsel ist gefordert
+     "griff"   { los, neu, finger, griffe, hoehe } – Wechsel gelungen
+     "zone"    { zone, vorher } · "pause" { restMs } · "weiter" { restMs }
      "absturz" { grund, taste, hoehe, griffe }
    ========================================================================== */
 
 const KletterRegeln = (function () {
   const K = typeof KletterKonfig !== "undefined" ? KletterKonfig : require("./konfig.js");
+  const T = typeof KletterTastatur !== "undefined" ? KletterTastatur : require("./keyboard.js");
   const Z = typeof KletterZonen !== "undefined"
     ? { KletterZonen: KletterZonen, kletterZoneFuer: kletterZoneFuer }
     : require("./zonen.js");
-
-  // Die vier Gliedmaßen – jede gehaltene Taste gehört zu einer davon
-  const GLIEDER = ["handLinks", "handRechts", "fussLinks", "fussRechts"];
+  const H = K.hand;
 
 
   /* ------------------------------------------------------------------------
-     TASTENFELDER: Tastatur (QWERTZ, event.code) und Touch-Raster
+     GRIFFE UND WECHSEL
      ------------------------------------------------------------------------ */
 
-  /**
-   * Alle Tasten eines Felds mit Lage und Spalte.
-   * @param {string} art – "tastatur" oder "touch"
-   * @returns {{art, tasten: object[], nachCode: object, geisterschutz, maxProReihe, spreizung, reihenAb}}
-   */
-  function tastenFeld(art) {
-    const tasten = [];
-    if (art === "touch") {
-      const t = K.touch;
-      for (let r = 0; r < t.reihen; r++) {
-        for (let s = 0; s < t.spalten; s++) {
-          tasten.push({ code: "Feld" + (r * t.spalten + s), label: "", reihe: r, spalte: s, x: s, y: r });
-        }
-      }
-      return fertig({ art: art, tasten: tasten, geisterschutz: t.geisterschutz, maxProReihe: Infinity,
-        spreizung: t.spreizung, reihenAb: null });
-    }
-    K.tastatur.reihen.forEach(function (r) {
-      r.codes.forEach(function (code, i) {
-        tasten.push({ code: code, label: r.labels[i], reihe: r.reihe, spalte: i, x: r.x0 + i, y: r.reihe });
-      });
-    });
-    return fertig({ art: "tastatur", tasten: tasten, geisterschutz: K.tastatur.geisterschutz,
-      maxProReihe: K.tastatur.maxProReihe, spreizung: K.spreizung, reihenAb: K.tastatur.reihenAb });
+  /** Erlaubte Reihen in dieser Höhe (die Zahlenreihe erst ab zahlenreiheAb). */
+  function erlaubteReihen(meter) {
+    return meter >= H.zahlenreiheAb ? [0].concat(H.reihen) : H.reihen.slice();
   }
 
-  function fertig(feld) {
-    feld.nachCode = {};
-    feld.tasten.forEach(function (t) { feld.nachCode[t.code] = t; });
-    return feld;
-  }
-
-  /** Abstand zweier Tasten (Tastenbreiten; eine Reihe zählt 1). */
-  function abstand(feld, a, b) {
-    const ta = feld.nachCode[a], tb = feld.nachCode[b];
-    return Math.hypot(ta.x - tb.x, ta.y - tb.y);
-  }
-
-  /** Breite (x) einer Gruppe von Tasten. */
-  function spanne(feld, codes) {
-    const xs = codes.map(function (c) { return feld.nachCode[c].x; });
-    return Math.max.apply(null, xs) - Math.min.apply(null, xs);
-  }
-
-  /**
-   * Geisterschutz: Können diese Tasten GLEICHZEITIG gedrückt sicher erkannt
-   * werden? Jede in einer eigenen Fingerspalte, höchstens maxProReihe je
-   * Reihe (siehe climb/konfig.js). Touch-Felder sind immer sicher.
-   */
-  function geisterSicher(feld, codes) {
-    if (!feld.geisterschutz) return true;
-    const spalten = {}, reihen = {};
-    for (const c of codes) {
-      const t = feld.nachCode[c];
-      if (spalten[t.spalte]) return false;
-      spalten[t.spalte] = true;
-      reihen[t.reihe] = (reihen[t.reihe] || 0) + 1;
-      if (reihen[t.reihe] > feld.maxProReihe) return false;
-    }
-    return true;
-  }
-
-
-  /* ------------------------------------------------------------------------
-     SCHWIERIGKEIT
-     ------------------------------------------------------------------------ */
-
-  /** 0 am Boden … 1 ab endeHoehe */
-  function anteil(meter, ende) {
-    return Math.max(0, Math.min(1, meter / ende));
-  }
-
-  /** Zeit für einen Wechsel in dieser Höhe (ms). */
+  /** Zeit für einen Wechsel in dieser Höhe (ms) – die einzige andere Steigerung. */
   function zeitFuer(meter) {
     const z = K.zeit;
-    return Math.round(z.startMs - (z.startMs - z.minMs) * Math.pow(anteil(meter, z.endeHoehe), z.kurve));
-  }
-
-  /** Spreizung in dieser Höhe: { abstandMin, abstandMax, spanneMax } */
-  function spreizungFuer(feld, meter) {
-    const s = feld.spreizung;
-    const a = anteil(meter, s.endeHoehe);
-    const wert = function (w) { return w.start + (w.ende - w.start) * a; };
-    return { abstandMin: wert(s.abstandMin), abstandMax: wert(s.abstandMax), spanneMax: wert(s.spanneMax) };
-  }
-
-  /** Tasten, die in dieser Höhe vorkommen dürfen (Reihen kommen nach und nach dazu). */
-  function erlaubteTasten(feld, meter) {
-    if (!feld.reihenAb) return feld.tasten;
-    const offen = feld.reihenAb.filter(function (r) { return meter >= r.ab; }).map(function (r) { return r.reihe; });
-    return feld.tasten.filter(function (t) { return offen.indexOf(t.reihe) !== -1; });
-  }
-
-  function mische(liste, zufall) {
-    const neu = liste.slice();
-    for (let i = neu.length - 1; i > 0; i--) {
-      const j = Math.floor(zufall() * (i + 1));
-      const tmp = neu[i]; neu[i] = neu[j]; neu[j] = tmp;
-    }
-    return neu;
-  }
-
-
-  /* ------------------------------------------------------------------------
-     GRIFFE AUSWÄHLEN
-     ------------------------------------------------------------------------ */
-
-  /** Die vier Tasten zu Beginn – nah beieinander wie eine aufgelegte Hand. */
-  function startGriff(feld, zufall) {
-    if (feld.art === "touch") {
-      return K.touch.start.map(function (sr) { return "Feld" + (sr[1] * K.touch.spalten + sr[0]); });
-    }
-    const s = K.tastatur.startSpalten;
-    const erste = s.von + Math.floor(zufall() * (s.bis - s.von + 1));
-    const reihen = zufall() < 0.5 ? K.tastatur.startReihen : K.tastatur.startReihen.slice().reverse();
-    const codes = [];
-    for (let k = 0; k < 4; k++) {
-      const reihe = reihen[k % 2];
-      const t = feld.tasten.find(function (x) { return x.reihe === reihe && x.spalte === erste + k; });
-      codes.push(t.code);
-    }
-    return codes;
+    const anteil = Math.max(0, Math.min(1, meter / z.endeHoehe));
+    return Math.round(z.startMs - (z.startMs - z.minMs) * Math.pow(anteil, z.kurve));
   }
 
   /**
-   * Gliedmaßen zuordnen: die beiden linken Tasten gehören zur linken
-   * Körperseite, die beiden rechten zur rechten – jeweils die höhere
-   * (kleinere Reihe) zur Hand, die tiefere zum Fuß.
+   * Ist das ein gültiger Griff? (vier Tasten in Fingerreihenfolge)
+   * @param {string[]} griff – vier event.codes von links nach rechts
+   * @param {number[]} [reihen] – erlaubte Reihen (Standard: alle)
    */
-  function gliederZuordnen(feld, codes) {
-    const sortiert = codes.slice().sort(function (a, b) { return feld.nachCode[a].x - feld.nachCode[b].x; });
-    const glieder = {};
-    [[sortiert[0], sortiert[1], "Links"], [sortiert[2], sortiert[3], "Rechts"]].forEach(function (paar) {
-      const a = feld.nachCode[paar[0]], b = feld.nachCode[paar[1]];
-      const oben = a.y < b.y || (a.y === b.y && a.x <= b.x) ? paar[0] : paar[1];
-      glieder[paar[0]] = (paar[0] === oben ? "hand" : "fuss") + paar[2];
-      glieder[paar[1]] = (paar[1] === oben ? "hand" : "fuss") + paar[2];
-    });
-    return glieder;
+  function griffGueltig(griff, reihen) {
+    if (griff.length !== 4 || new Set(griff).size !== 4) return false;
+    if (!griff.every(function (c) { return T.taste(c) && (!reihen || reihen.indexOf(T.taste(c).reihe) !== -1); })) return false;
+    if (!T.vonLinksNachRechts(griff)) return false;
+    for (let i = 1; i < 4; i++) {
+      if (T.spaltenAbstand(griff[i - 1], griff[i]) > H.maxAbstandNachbarn) return false;
+    }
+    return T.spaltenAbstand(griff[0], griff[3]) <= H.maxAbstandGesamt;
   }
 
   /**
-   * Der nächste Griffwechsel: welche gehaltene Taste losgelassen und welche
-   * neue gegriffen wird. Bedingungen (gelockert, falls nichts passt):
-   *   - die neue Taste ist nicht gehalten und in dieser Höhe erlaubt,
-   *   - alle fünf (vier gehaltene + neue) sind zusammen geistersicher,
-   *   - Abstand zur losgelassenen Taste zwischen abstandMin und abstandMax,
-   *   - die vier danach gehaltenen Tasten liegen höchstens spanneMax auseinander,
-   *   - die Seiten bleiben erhalten: Greift eine linke Gliedmaße um, liegt
-   *     die neue Taste links von allen Tasten der rechten Seite (und
-   *     umgekehrt) – so passen "Hand links" & Co. zur Lage auf der Tastatur,
-   *   - nicht zweimal hintereinander dieselbe Gliedmaße,
-   *   - wie beim echten Klettern greift eher um, wer schon länger hält
-   *     (alter: so viele Griffe hält die Taste schon; leicht zufällig).
-   * @returns {{los, neu}}
+   * Alle erlaubten Wechsel aus einem Griff: je Finger jede Nachbartaste,
+   * nach der der Griff gültig bleibt.
+   * @returns {{finger, los, neu, griff}[]} – griff = der Griff danach
    */
-  function waehleWechsel(feld, gehalten, glieder, letztesGlied, meter, zufall, alter) {
-    const sp = spreizungFuer(feld, meter);
-    const erlaubt = erlaubteTasten(feld, meter).filter(function (t) { return gehalten.indexOf(t.code) === -1; });
-    const stufen = [
-      { min: sp.abstandMin, max: sp.abstandMax, spanne: sp.spanneMax, glied: true, seite: true },
-      { min: 0, max: sp.abstandMax, spanne: sp.spanneMax, glied: true, seite: true },
-      { min: 0, max: sp.abstandMax * 1.5, spanne: sp.spanneMax + 2, glied: false, seite: true },
-      { min: 0, max: Infinity, spanne: Infinity, glied: false, seite: true },
-      { min: 0, max: Infinity, spanne: Infinity, glied: false, seite: false },
-    ];
-    // Passt die neue Taste zur Seite der umgreifenden Gliedmaße?
-    const seitePasst = function (los, x) {
-      const links = /Links$/.test(glieder[los]);
-      const gegenseite = gehalten.filter(function (c) { return c !== los && /Links$/.test(glieder[c]) !== links; })
-        .map(function (c) { return feld.nachCode[c].x; });
-      if (!gegenseite.length) return true;
-      return links ? x < Math.min.apply(null, gegenseite) : x > Math.max.apply(null, gegenseite);
-    };
-    for (const st of stufen) {
-      const kandidaten = gehalten.filter(function (c) { return !st.glied || glieder[c] !== letztesGlied; });
-      // Ältere Griffe zuerst – mit etwas Zufall, damit es nicht starr reihum geht
-      const gewicht = {};
-      kandidaten.forEach(function (c) { gewicht[c] = ((alter && alter[c]) || 0) + zufall() * K.wechsel.alterZufall; });
-      const losListe = kandidaten.sort(function (a, b) { return gewicht[b] - gewicht[a]; });
-      for (const los of losListe) {
-        const rest = gehalten.filter(function (c) { return c !== los; });
-        const moeglich = erlaubt.filter(function (t) {
-          const d = abstand(feld, los, t.code);
-          return d >= st.min && d <= st.max &&
-            (!st.seite || seitePasst(los, t.x)) &&
-            geisterSicher(feld, gehalten.concat([t.code])) &&
-            spanne(feld, rest.concat([t.code])) <= st.spanne;
-        });
-        if (moeglich.length) return { los: los, neu: moeglich[Math.floor(zufall() * moeglich.length)].code };
-      }
-    }
-    // Kann eigentlich nicht passieren – zur Sicherheit wenigstens geistersicher
-    for (const los of gehalten) {
-      const t = erlaubt.find(function (x) { return geisterSicher(feld, gehalten.concat([x.code])); });
-      if (t) return { los: los, neu: t.code };
-    }
-    return { los: gehalten[0], neu: erlaubt[0].code };
-  }
-
-  /**
-   * Kombinationen für den Tastaturtest: je vier gehaltene Tasten plus die
-   * neue – genau so, wie sie im Spiel in dieser Höhe vorkommen.
-   * @returns {string[][]} – Listen aus fünf Codes
-   */
-  function testKombinationen(feld, anzahl, meter, zufall) {
+  function moeglicheWechsel(griff, reihen) {
     const liste = [];
-    let gehalten = startGriff(feld, zufall);
-    let glieder = gliederZuordnen(feld, gehalten);
-    let letztes = null;
-    // erst ein paar Wechsel "klettern", damit die Griffe verteilt sind
-    for (let k = 0; liste.length < anzahl && k < 200; k++) {
-      const w = waehleWechsel(feld, gehalten, glieder, letztes, meter, zufall, null);
-      if (k >= 4 && k % 3 === 1) liste.push(gehalten.concat([w.neu]));
-      glieder[w.neu] = glieder[w.los]; delete glieder[w.los];
-      letztes = glieder[w.neu];
-      gehalten = gehalten.filter(function (c) { return c !== w.los; }).concat([w.neu]);
+    griff.forEach(function (los, finger) {
+      T.nachbarn(los, reihen).forEach(function (neu) {
+        const danach = griff.slice();
+        danach[finger] = neu;
+        if (griffGueltig(danach, reihen)) liste.push({ finger: finger, los: los, neu: neu, griff: danach });
+      });
+    });
+    return liste;
+  }
+
+  /** Mitte der Hand in Spalten (Durchschnitt der vier Spalten). */
+  function handMitte(griff) {
+    return griff.reduce(function (s, c) { return s + T.taste(c).spalte; }, 0) / 4;
+  }
+
+  /** So weit liegt die Hand neben der Startposition (Spalten, immer ≥ 0). */
+  function abweichung(griff) {
+    return Math.abs(handMitte(griff) - handMitte(H.start));
+  }
+
+  /**
+   * Der nächste Wechsel.
+   * @param {string[]} griff – aktueller Griff
+   * @param {number} meter – Höhe (für die erlaubten Reihen)
+   * @param {number[]} verlauf – Positionen der zuletzt bewegten Finger (neueste zuletzt)
+   * @param {function} zufall
+   */
+  function waehleWechsel(griff, meter, verlauf, zufall) {
+    let liste = moeglicheWechsel(griff, erlaubteReihen(meter));
+    // Nie öfter als maxGleicherFinger hintereinander derselbe Finger
+    const n = H.maxGleicherFinger;
+    const letzte = verlauf.slice(-n);
+    if (letzte.length === n && letzte.every(function (f) { return f === letzte[0]; })) {
+      const andere = liste.filter(function (w) { return w.finger !== letzte[0]; });
+      if (andere.length) liste = andere;
+    }
+    // Zu weit gewandert? Dann bevorzugt Wechsel, die zurückführen
+    const jetzt = abweichung(griff);
+    if (jetzt > H.maxWandern) {
+      const zurueck = liste.filter(function (w) { return abweichung(w.griff) < jetzt; });
+      if (zurueck.length) liste = zurueck;
+    }
+    return liste[Math.floor(zufall() * liste.length)];
+  }
+
+  /**
+   * Alle Griffe, die von der Startposition aus erreichbar sind (Breitensuche).
+   * @returns {string[][]}
+   */
+  function alleGriffe(reihen) {
+    const gesehen = new Set([H.start.join()]);
+    const liste = [H.start.slice()];
+    for (let i = 0; i < liste.length; i++) {
+      moeglicheWechsel(liste[i], reihen).forEach(function (w) {
+        const k = w.griff.join();
+        if (!gesehen.has(k)) { gesehen.add(k); liste.push(w.griff); }
+      });
     }
     return liste;
+  }
+
+  /**
+   * Ein Kletterweg für den Tastaturtest, der jeden Griff aus "ziele"
+   * mindestens einmal besucht. Jeder Schritt ist ein erlaubter Wechsel
+   * (ein Finger auf eine Nachbartaste) – so testet man, wie man spielt.
+   * Ablauf: immer zum nächsten noch nicht besuchten Griff (kürzester Weg).
+   * @param {string[][]} ziele – zu besuchende Griffe
+   * @param {number[]} reihen – erlaubte Reihen für den Weg
+   * @param {number} [anzahl] – höchstens so viele Ziele (Schnelltest)
+   * @returns {string[][]} – der Weg (erster Eintrag = Startgriff)
+   */
+  function testWeg(ziele, reihen, anzahl) {
+    const offen = new Set(ziele.map(function (g) { return g.join(); }));
+    let jetzt = H.start.slice();
+    const weg = [jetzt];
+    offen.delete(jetzt.join());
+    let besucht = 1;
+    const genug = anzahl || Infinity;
+    while (offen.size && besucht < genug) {
+      // Breitensuche bis zum nächsten offenen Griff
+      const vorher = new Map([[jetzt.join(), null]]);
+      const schlange = [jetzt];
+      let ziel = null;
+      for (let i = 0; i < schlange.length && !ziel; i++) {
+        const wechsel = moeglicheWechsel(schlange[i], reihen);
+        for (const w of wechsel) {
+          const k = w.griff.join();
+          if (vorher.has(k)) continue;
+          vorher.set(k, schlange[i]);
+          if (offen.has(k)) { ziel = w.griff; break; }
+          schlange.push(w.griff);
+        }
+      }
+      if (!ziel) break;                     // nichts mehr erreichbar
+      const stueck = [];
+      for (let g = ziel; g && g.join() !== jetzt.join(); g = vorher.get(g.join())) stueck.unshift(g);
+      stueck.forEach(function (g) {
+        weg.push(g);
+        if (offen.delete(g.join())) besucht++;
+      });
+      jetzt = ziel;
+    }
+    return weg;
+  }
+
+  /**
+   * Schnelltest: ein Weg über "anzahl" verschiedene Griffe, quer über die
+   * Tastatur verteilt (jeder zweite zufällig gewählte Griff als Ziel, auch
+   * mit Zahlenreihe).
+   */
+  function schnellWeg(anzahl, zufall) {
+    const reihen = [0].concat(H.reihen);
+    const alle = alleGriffe(reihen);
+    const ziele = [];
+    for (let k = 0; k < anzahl; k++) ziele.push(alle[Math.floor(zufall() * alle.length)]);
+    return testWeg(ziele, reihen, anzahl);
   }
 
 
@@ -272,15 +214,12 @@ const KletterRegeln = (function () {
      ------------------------------------------------------------------------ */
 
   /**
-   * @param {object} optionen
-   *   art    – "tastatur" (Standard) oder "touch"
-   *   zufall – Zufallszahl 0 bis unter 1 (Standard: Math.random)
+   * @param {object} [optionen] – { zufall } (Standard: Math.random)
    */
   function erstelle(optionen) {
     optionen = optionen || {};
     const zufall = optionen.zufall || Math.random;
     const hoerer = {};
-    let feld = tastenFeld(optionen.art || "tastatur");
     let z;                       // Zustand des laufenden Versuchs
     const gedrueckt = new Set(); // gerade gedrückte Tasten (Codes)
 
@@ -288,15 +227,12 @@ const KletterRegeln = (function () {
       (hoerer[name] || []).forEach(function (fn) { fn(daten); });
     }
 
-    /** Neuer Versuch: vier Starttasten, warten, bis sie gehalten werden. */
+    /** Neuer Versuch: Startgriff D F H J, warten, bis er gehalten wird. */
     function neu() {
-      const gehalten = startGriff(feld, zufall);
       z = {
         phase: "start",
-        gehalten: gehalten,
-        glieder: gliederZuordnen(feld, gehalten),
-        letztesGlied: null,
-        seit: {},            // Code → bei welchem Griff die Taste gegriffen wurde
+        griff: H.start.slice(),
+        verlauf: [],            // Positionen der bewegten Finger
         wechsel: null,
         griffe: 0,
         zone: Z.KletterZonen[0],
@@ -308,14 +244,11 @@ const KletterRegeln = (function () {
 
     function hoehe() { return z.griffe * K.meterProGriff; }
 
-    /** Einen neuen Wechsel fordern (die Zeit läuft ab jetzt). */
     function neuerWechsel(jetzt) {
-      const alter = {};
-      z.gehalten.forEach(function (c) { alter[c] = z.griffe - (z.seit[c] || 0); });
-      const w = waehleWechsel(feld, z.gehalten, z.glieder, z.letztesGlied, hoehe(), zufall, alter);
+      const w = waehleWechsel(z.griff, hoehe(), z.verlauf, zufall);
       const zeitMs = zeitFuer(hoehe());
-      z.wechsel = { los: w.los, neu: w.neu, zeitMs: zeitMs, ende: jetzt + zeitMs };
-      melde("wechsel", { los: w.los, neu: w.neu, zeitMs: zeitMs, glied: z.glieder[w.los] });
+      z.wechsel = { finger: w.finger, los: w.los, neu: w.neu, zeitMs: zeitMs, ende: jetzt + zeitMs };
+      melde("wechsel", { finger: w.finger, los: w.los, neu: w.neu, zeitMs: zeitMs });
     }
 
     function abstuerzen(grund, taste) {
@@ -324,20 +257,23 @@ const KletterRegeln = (function () {
       melde("absturz", z.absturz);
     }
 
+    /** Sind genau die vier Tasten des Griffs gedrückt (und keine andere)? */
+    function genauGriff() {
+      return gedrueckt.size === 4 && z.griff.every(function (c) { return gedrueckt.has(c); });
+    }
+
     /** Nach jeder Änderung: Was bedeutet die Lage jetzt? */
     function pruefe(jetzt) {
       if (z.phase === "start") {
-        // Genau die vier Starttasten – dann geht es los
-        if (gedrueckt.size === 4 && z.gehalten.every(function (c) { return gedrueckt.has(c); })) {
+        if (genauGriff()) {
           z.phase = "klettern";
-          melde("start", { gehalten: z.gehalten.slice(), glieder: Object.assign({}, z.glieder) });
+          melde("start", { griff: z.griff.slice() });
           neuerWechsel(jetzt);
         }
         return;
       }
       if (z.phase === "pause") {
-        // Weiter, sobald die vier gehaltenen Tasten wieder unten sind (nur sie)
-        if (z.gehalten.every(function (c) { return gedrueckt.has(c); }) && gedrueckt.size === 4) {
+        if (genauGriff()) {
           z.phase = "klettern";
           z.wechsel.ende = jetzt + z.restMs;
           melde("weiter", { restMs: z.restMs });
@@ -347,23 +283,19 @@ const KletterRegeln = (function () {
       if (z.phase !== "klettern") return;
       const w = z.wechsel;
       // 1. Eine der drei bleibenden Tasten losgelassen?
-      const fehlt = z.gehalten.find(function (c) { return c !== w.los && !gedrueckt.has(c); });
+      const fehlt = z.griff.find(function (c) { return c !== w.los && !gedrueckt.has(c); });
       if (fehlt) { abstuerzen("losgelassen", fehlt); return; }
       // 2. Eine Taste gedrückt, die nicht gefordert ist?
       for (const c of gedrueckt) {
-        if (z.gehalten.indexOf(c) === -1 && c !== w.neu) { abstuerzen("falscheTaste", c); return; }
+        if (z.griff.indexOf(c) === -1 && c !== w.neu) { abstuerzen("falscheTaste", c); return; }
       }
       // 3. Wechsel fertig: alte Taste oben, neue unten
       if (gedrueckt.has(w.neu) && !gedrueckt.has(w.los)) {
-        const glied = z.glieder[w.los];
-        z.gehalten = z.gehalten.filter(function (c) { return c !== w.los; }).concat([w.neu]);
-        delete z.glieder[w.los];
-        z.glieder[w.neu] = glied;
-        z.letztesGlied = glied;
+        z.griff[w.finger] = w.neu;
+        z.verlauf.push(w.finger);
+        if (z.verlauf.length > 10) z.verlauf.shift();
         z.griffe++;
-        delete z.seit[w.los];
-        z.seit[w.neu] = z.griffe;
-        melde("griff", { los: w.los, neu: w.neu, glied: glied, griffe: z.griffe, hoehe: hoehe() });
+        melde("griff", { los: w.los, neu: w.neu, finger: w.finger, griffe: z.griffe, hoehe: hoehe() });
         const zone = Z.kletterZoneFuer(hoehe());
         if (zone !== z.zone) {
           const vorher = z.zone;
@@ -374,9 +306,9 @@ const KletterRegeln = (function () {
       }
     }
 
-    /** Eine Taste wurde gedrückt (Wiederholungen beim Gedrückthalten zählen nicht). */
+    /** Eine Taste wurde gedrückt (nur Buchstaben und Zahlen des Rasters zählen). */
     function druecke(code, jetzt) {
-      if (!feld.nachCode[code] || gedrueckt.has(code)) return;
+      if (!T.taste(code) || gedrueckt.has(code)) return;
       gedrueckt.add(code);
       if (z) pruefe(jetzt);
     }
@@ -412,9 +344,8 @@ const KletterRegeln = (function () {
       if (w) restMs = z.phase === "pause" ? z.restMs : z.phase === "klettern" ? Math.max(0, w.ende - jetzt) : 0;
       return {
         phase: z.phase,
-        gehalten: z.gehalten.slice(),
-        glieder: Object.assign({}, z.glieder),
-        wechsel: w ? { los: w.los, neu: w.neu, zeitMs: w.zeitMs, restMs: restMs } : null,
+        griff: z.griff.slice(),            // vier Tasten, von links nach rechts (Position = Finger)
+        wechsel: w ? { finger: w.finger, los: w.los, neu: w.neu, zeitMs: w.zeitMs, restMs: restMs } : null,
         gedrueckt: Array.from(gedrueckt),
         griffe: z.griffe,
         hoehe: hoehe(),
@@ -433,25 +364,22 @@ const KletterRegeln = (function () {
       tick: tick,
       pausiere: pausiere,
       stand: stand,
-      get feld() { return feld; },
-      /** Tastatur oder Touch – beginnt einen neuen Versuch. */
-      setzeArt: function (art) { feld = tastenFeld(art); gedrueckt.clear(); return neu(); },
+      /** Alle gedrückten Tasten vergessen (z. B. beim Wechsel Tastatur ↔ Touch). */
+      vergiss: function () { gedrueckt.clear(); },
     };
   }
 
   return {
-    GLIEDER: GLIEDER,
-    tastenFeld: tastenFeld,
-    abstand: abstand,
-    spanne: spanne,
-    geisterSicher: geisterSicher,
+    erlaubteReihen: erlaubteReihen,
     zeitFuer: zeitFuer,
-    spreizungFuer: spreizungFuer,
-    erlaubteTasten: erlaubteTasten,
-    startGriff: startGriff,
-    gliederZuordnen: gliederZuordnen,
+    griffGueltig: griffGueltig,
+    moeglicheWechsel: moeglicheWechsel,
+    handMitte: handMitte,
+    abweichung: abweichung,
     waehleWechsel: waehleWechsel,
-    testKombinationen: testKombinationen,
+    alleGriffe: alleGriffe,
+    testWeg: testWeg,
+    schnellWeg: schnellWeg,
     erstelle: erstelle,
   };
 })();

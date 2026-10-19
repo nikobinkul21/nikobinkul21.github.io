@@ -95,8 +95,8 @@ const KletterEingabe = (function () {
   /**
    * Beschriftung der Tasten: Kennt der Browser das eingestellte Layout
    * (navigator.keyboard.getLayoutMap, z. B. Chrome), steht dort die echte
-   * Beschriftung – sonst die von QWERTZ aus climb/konfig.js.
-   * @param {object} feld – Tastenfeld aus KletterRegeln.tastenFeld
+   * Beschriftung – sonst die von QWERTZ aus climb/keyboard.js.
+   * @param {object} feld – Tastatur mit Liste "tasten" (KletterTastatur aus climb/keyboard.js)
    * @returns {Promise<object>} – Code → Beschriftung
    */
   function beschriftungen(feld) {

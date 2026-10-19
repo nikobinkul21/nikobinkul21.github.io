@@ -1,8 +1,8 @@
 /* ==========================================================================
    climb/konfig.js – alle Werte des Kletterspiels an EINER Stelle
-   Zeiten, Schwierigkeit, Tastenfelder (Tastatur und Touch), Darstellung.
-   Die Zonen (Landschaften) stehen in climb/zonen.js, die Pixelbilder in
-   climb/sprites.js.
+   Zeiten, die Hand (Start, Spannweite, Reihen), Tastaturtest, Darstellung.
+   Das Tastaturraster steht in climb/keyboard.js, die Zonen (Landschaften)
+   in climb/zonen.js, die Pixelbilder in climb/sprites.js.
    ========================================================================== */
 
 const KletterKonfig = {
@@ -19,89 +19,51 @@ const KletterKonfig = {
     kurve: 1,               // 1 = gleichmäßig, < 1 = am Anfang schneller kürzer
   },
 
-  // SPREIZUNG: Wie weit liegt die neue Taste von der losgelassenen entfernt
-  // (in Tastenbreiten, Reihen zählen als 1)? Und wie weit dürfen die vier
-  // gehaltenen Tasten höchstens auseinanderliegen? Beides wächst mit der
-  // Höhe von "start" bis "ende" (erreicht bei endeHoehe).
-  spreizung: {
-    endeHoehe: 200,
-    abstandMin: { start: 0.9, ende: 2.5 },   // die Finger müssen sich später strecken …
-    abstandMax: { start: 2.2, ende: 6 },     // … und weiter greifen
-    spanneMax: { start: 4.5, ende: 9 },      // Breite aller vier gehaltenen Tasten
-  },
-
-  // Welche Gliedmaße greift um? Bevorzugt die, die am längsten hält –
-  // mit so viel Zufall (in Griffen), damit es nicht starr reihum geht
-  wechsel: {
-    alterZufall: 2.5,
-  },
-
-  // TASTATUR: Buchstaben und Zahlen der Haupttastatur, deutsches Layout
-  // (QWERTZ). Gezählt wird event.code – also die POSITION der Taste, egal
-  // welches Layout eingestellt ist. "label" ist die Beschriftung auf
-  // QWERTZ (auf anderen Layouts liest eingabe.js die echte Beschriftung,
-  // wenn der Browser sie verrät).
-  //   reihe  – 0 Zahlen, 1 Q-Reihe, 2 A-Reihe, 3 Y-Reihe
-  //   x      – Lage in Tastenbreiten (mit dem Versatz der Reihen)
-  //   spalte – Fingerspalte (1-Q-A-Y = 0, 2-W-S-X = 1 …)
-  //
-  // GEISTERTASTEN (Ghosting): Viele Tastaturen erkennen manche Kombinationen
-  // aus mehreren gleichzeitig gedrückten Tasten nicht – vor allem, wenn drei
-  // Tasten die Ecken eines "Rechtecks" im Tastenraster bilden. Deshalb gilt
-  // für die (bis zu fünf) gleichzeitig gedrückten Tasten:
-  //   - jede in einer anderen Fingerspalte (so entsteht nie ein Rechteck),
-  //   - höchstens maxProReihe in derselben Reihe (zusätzliche Vorsicht;
-  //     3, weil am Anfang nur zwei Reihen erlaubt sind und fünf Tasten
-  //     hineinpassen müssen).
-  tastatur: {
-    geisterschutz: true,
-    maxProReihe: 3,
-    // Reihen kommen nach und nach dazu: am Anfang nur die Buchstabenmitte
-    reihenAb: [
-      { reihe: 1, ab: 0 },
-      { reihe: 2, ab: 0 },
-      { reihe: 3, ab: 16 },
-      { reihe: 0, ab: 50 },
-    ],
-    // Startgriff: vier benachbarte Spalten im Zickzack über Q- und A-Reihe
-    // (wie eine aufgelegte Hand), erste Spalte zufällig aus diesem Bereich
-    startSpalten: { von: 1, bis: 5 },
-    startReihen: [1, 2],
-    reihen: [
-      { reihe: 0, x0: 1, codes: ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "Digit9", "Digit0"],
-        labels: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] },
-      { reihe: 1, x0: 1.5, codes: ["KeyQ", "KeyW", "KeyE", "KeyR", "KeyT", "KeyY", "KeyU", "KeyI", "KeyO", "KeyP"],
-        labels: ["Q", "W", "E", "R", "T", "Z", "U", "I", "O", "P"] },
-      { reihe: 2, x0: 1.75, codes: ["KeyA", "KeyS", "KeyD", "KeyF", "KeyG", "KeyH", "KeyJ", "KeyK", "KeyL"],
-        labels: ["A", "S", "D", "F", "G", "H", "J", "K", "L"] },
-      { reihe: 3, x0: 2.25, codes: ["KeyZ", "KeyX", "KeyC", "KeyV", "KeyB", "KeyN", "KeyM"],
-        labels: ["Y", "X", "C", "V", "B", "N", "M"] },
-    ],
-  },
-
-  // TOUCH (Smartphone ohne Tastatur): ein Raster großer Griff-Felder, die mit
-  // mehreren Fingern gleichzeitig gehalten werden. Dieselben Regeln – nur
-  // ohne Geisterschutz (Bildschirme erkennen jede Kombination) und mit
-  // Abständen in Feldern statt Tasten.
-  touch: {
-    spalten: 3,
-    reihen: 4,
-    geisterschutz: false,
-    // Startgriff: diese vier Felder (Spalte, Reihe)
-    start: [[0, 1], [2, 1], [0, 2], [2, 2]],
-    spreizung: {
-      endeHoehe: 200,
-      abstandMin: { start: 0.9, ende: 1.4 },
-      abstandMax: { start: 1.5, ende: 3.2 },
-      spanneMax: { start: 3, ende: 3 },
+  // EINE HAND: Vier Finger einer Hand liegen auf der Tastatur. Jeder
+  // Griffwechsel bewegt genau einen Finger auf eine benachbarte Taste
+  // (Raster und Nachbarn: climb/keyboard.js). Für Tastatur und Touch gleich.
+  hand: {
+    // Jeder Versuch beginnt hier (event.code, von links nach rechts)
+    start: ["KeyD", "KeyF", "KeyH", "KeyJ"],
+    // Erlaubte Reihen: QWERTZ-Reihe, Grundreihe, untere Reihe – die
+    // Zahlenreihe kommt ab dieser Höhe dazu (das ist neben der Zeit die
+    // einzige Steigerung der Schwierigkeit)
+    reihen: [1, 2, 3],
+    zahlenreiheAb: 120,
+    // Spannweite in Tastenspalten: Zwischen zwei benachbarten Fingern
+    // liegen höchstens 2 Spalten (Abstand 3), zwischen dem äußersten
+    // linken und rechten Finger insgesamt höchstens 5 (Abstand 6). Enger
+    // als eine Spalte geht nicht (zwei Finger nie in derselben Spalte).
+    maxAbstandNachbarn: 3,
+    maxAbstandGesamt: 6,
+    // Wandern: Die Hand darf über die Tastatur wandern. Liegt ihre Mitte
+    // mehr als so viele Spalten neben der Startmitte, führen die nächsten
+    // Wechsel bevorzugt zurück.
+    maxWandern: 2,
+    // Nie mehr als so oft hintereinander derselbe Finger
+    maxGleicherFinger: 3,
+    // Welcher Finger liegt auf welcher Position (von links nach rechts)?
+    // Nur die Beschriftung hängt davon ab – die Regeln sind gleich.
+    finger: {
+      rechts: ["Zeige", "Mittel", "Ring", "Klein"],
+      links: ["Klein", "Ring", "Mittel", "Zeige"],
     },
+    fingerLang: { Zeige: "Zeigefinger", Mittel: "Mittelfinger", Ring: "Ringfinger", Klein: "kleiner Finger" },
+    // Kürzel auf der kleinen Tastatur unter den großen Tasten
+    fingerKurz: { Zeige: "Z", Mittel: "M", Ring: "R", Klein: "K" },
+    standard: "rechts",       // Hand, solange nichts gewählt ist
   },
 
-  // Tastaturtest (vor dem ersten Spiel): so viele Kombinationen aus fünf
-  // Tasten, wie sie im Spiel vorkommen, gleichzeitig halten
+  // TASTATURTEST: Viele Tastaturen erkennen manche Kombinationen aus
+  // mehreren gleichzeitig gedrückten Tasten nicht (Ghosting). Der Test
+  // klettert einen Weg entlang, auf dem jeder Schritt ein erlaubter
+  // Griffwechsel ist:
+  //   schnell – so viele Griffe (quer über die Tastatur verteilt)
+  //   alle    – jeder mögliche Griff ohne Zahlenreihe (in Etappen, der
+  //             Fortschritt bleibt gespeichert)
+  //   zahlen  – zusätzlich alle Griffe mit der Zahlenreihe
   tastaturTest: {
-    durchgaenge: 3,
-    hoehe: 220,             // Spreizung wie in dieser Höhe (weit auseinander)
+    schnell: 30,
   },
 
   // DARSTELLUNG (Pixel). Gerechnet wird in "Spielpixeln", die ganzzahlig

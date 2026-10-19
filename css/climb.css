@@ -9,8 +9,6 @@
    ========================================================================== */
 
 .klettern {
-  --kl-einheit: 74px;              /* Breite einer Taste im Tastenbild */
-  --kl-einheit-y: 56px;            /* Höhe einer Tastenreihe */
   --kl-los: #d8342c;               /* loslassen: rot */
   --kl-neu: #23a047;               /* greifen: grün */
   --kl-ziel: var(--farbe-akzent);  /* Start: diese vier halten */
@@ -208,50 +206,81 @@
 }
 
 /* Start und Pause lassen die Szene durchscheinen */
-/* Tastaturtest: breitere Tafel, kleinere Tasten (fünf weit verteilte passen hinein) */
-.kl-test {
-  width: min(640px, calc(100% - 24px));
-}
-
-.kl-test .kl-tastenbild {
-  --kl-einheit: 52px;
-  --kl-einheit-y: 46px;
-  margin: 6px auto 18px;
-}
-
-.kl-test .kl-kappe-zeichen { font-size: 1.25rem; }
-.kl-test .kl-kappe-glied { font-size: 0.55rem; }
-
 .kl-start,
 .kl-pause {
   background: color-mix(in srgb, var(--farbe-flaeche) 90%, transparent);
 }
 
+/* Tastaturtest: breitere Tafel */
+.kl-test {
+  width: min(640px, calc(100% - 24px));
+}
 
-/* ---------- Tasten: so angeordnet wie auf der Tastatur ---------- */
+.kl-test-wahl {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.kl-test-wahl[hidden],
+.kl-test-griff[hidden] { display: none; }
+
+.kl-test-griff {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  margin: 4px 0 14px;
+}
+
+.kl-test .kl-finger-reihe { --kl-kappe-b: 54px; --kl-kappe-h: 56px; }
+
+.kl-test-fehler {
+  font-size: 0.8rem;
+  color: var(--farbe-gefahr);
+  text-align: left;
+}
+
+.kl-test-fehler:empty { display: none; }
+
+
+/* ---------- Die vier Finger als große Tasten ---------- */
 
 .kl-tasten {
   flex: none;
   display: grid;
-  place-items: center;
-  min-height: calc(var(--kl-einheit-y) * 4 + 16px);
-  padding: 4px 0;
+  justify-items: center;
+  gap: 20px;
+  padding: 6px 0 2px;
 }
 
 .kl-tasten[hidden] { display: none; }
 
-.kl-tastenbild {
-  position: relative;
-  width: calc(var(--kl-spalten, 4) * var(--kl-einheit));
-  height: calc(var(--kl-reihen, 2) * var(--kl-einheit-y));
+/* vier Plätze von links nach rechts – je Finger einer */
+.kl-finger-reihe {
+  --kl-kappe-b: 68px;
+  --kl-kappe-h: 70px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
 }
 
+.kl-fingerplatz {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kl-pfeil {
+  font-weight: 900;
+  color: var(--kl-neu);
+}
+
+.kl-pfeil[hidden] { display: none; }
+
 .kl-kappe {
-  position: absolute;
-  left: calc(var(--kl-x) * var(--kl-einheit));
-  top: calc(var(--kl-y) * var(--kl-einheit-y));
-  width: calc(var(--kl-einheit) - 8px);
-  height: calc(var(--kl-einheit-y) - 10px);
+  position: relative;
+  width: var(--kl-kappe-b);
+  height: var(--kl-kappe-h);
   display: grid;
   grid-template-rows: 1fr auto;
   justify-items: center;
@@ -264,17 +293,20 @@
   transition: transform 0.06s, box-shadow 0.06s;
 }
 
+.kl-kappe[hidden] { display: none; }
+
 .kl-kappe-zeichen {
-  font-size: 1.7rem;
+  font-size: 1.8rem;
   font-weight: 900;
   line-height: 1;
 }
 
+/* welcher Finger: "Zeige", "Mittel", "Ring", "Klein" */
 .kl-kappe-glied {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-weight: 700;
   line-height: 1.1;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   color: var(--farbe-text-leise);
   white-space: nowrap;
 }
@@ -304,10 +336,7 @@
   box-shadow: 0 5px 0 var(--kl-los);
 }
 
-.kl-kappe[data-art="los"].ist-unten {
-  box-shadow: 0 1px 0 var(--kl-los);
-}
-
+.kl-kappe[data-art="los"].ist-unten { box-shadow: 0 1px 0 var(--kl-los); }
 .kl-kappe[data-art="los"] .kl-kappe-glied { color: var(--kl-los); }
 
 /* greifen: grün und pulsierend */
@@ -352,14 +381,84 @@
 }
 
 
-/* ---------- Touch-Raster ---------- */
+/* ---------- Tastaturraster: kleines Schema und Touch-Felder ----------
+   Jede Taste liegt an ihrer echten Lage (--kl-x, --kl-y aus climb/keyboard.js). */
 
+.kl-mini,
+.kl-raster {
+  --kl-e: 27px;                    /* eine Tastenbreite */
+  --kl-r: 25px;                    /* eine Reihe */
+  position: relative;
+  width: calc(10.5 * var(--kl-e));
+  height: calc(4 * var(--kl-r));
+}
+
+.kl-mini-taste,
+.kl-feld {
+  position: absolute;
+  left: calc(var(--kl-x) * var(--kl-e));
+  top: calc(var(--kl-y) * var(--kl-r));
+  width: calc(var(--kl-e) - 3px);
+  height: calc(var(--kl-r) - 3px);
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--farbe-flaeche-leise);
+  border: 1px solid var(--farbe-rand-stark);
+  color: var(--farbe-text-leise);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Zahlenreihe vor 120 m: blass */
+.kl-mini-taste.ist-aus,
+.kl-feld.ist-aus { opacity: 0.35; }
+
+.kl-mini-taste[data-art="halten"],
+.kl-feld[data-art="halten"] { border-color: var(--farbe-text-leise); color: var(--farbe-text); }
+.kl-mini-taste[data-art="ziel"],
+.kl-feld[data-art="ziel"] { border-color: var(--kl-ziel); color: var(--kl-ziel); }
+.kl-mini-taste[data-art="los"],
+.kl-feld[data-art="los"] {
+  border-color: var(--kl-los);
+  background: color-mix(in srgb, var(--kl-los) 30%, var(--farbe-flaeche-leise));
+  color: var(--kl-los);
+}
+.kl-mini-taste[data-art="neu"],
+.kl-feld[data-art="neu"] {
+  border-color: var(--kl-neu);
+  background: color-mix(in srgb, var(--kl-neu) 30%, var(--farbe-flaeche-leise));
+  color: var(--kl-neu);
+}
+
+/* Finger als beschrifteter Punkt (Z, M, R, K) */
+.kl-punkt {
+  position: absolute;
+  right: -5px;
+  top: -6px;
+  width: 13px;
+  height: 13px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.5rem;
+  font-weight: 900;
+  color: #fff;
+  background: var(--farbe-text);
+  box-shadow: 0 0 0 1.5px var(--farbe-flaeche);
+}
+
+.kl-punkt[hidden] { display: none; }
+[data-art="los"] > .kl-punkt { background: var(--kl-los); }
+[data-art="neu"] > .kl-punkt { background: var(--kl-neu); }
+
+/* Touch: dasselbe Raster als große Griff-Felder über die ganze Breite */
 .kl-raster {
   flex: none;
-  display: grid;
-  grid-template-columns: repeat(var(--kl-raster-spalten, 3), 1fr);
-  gap: 8px;
-  height: 46%;
+  --kl-e: calc((100% - 4px) / 10.5);
+  --kl-r: 58px;
+  width: 100%;
   touch-action: none;              /* kein Scrollen und Zoomen beim Halten */
   user-select: none;
   -webkit-user-select: none;
@@ -369,36 +468,22 @@
 .kl-raster[hidden] { display: none; }
 
 .kl-feld {
-  position: relative;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: var(--farbe-flaeche-leise);
-  border: 2px solid var(--farbe-rand-stark);
-  color: var(--farbe-text-leise);
-  font-size: 0.8rem;
-  font-weight: 700;
+  border-radius: 8px;
+  border-width: 2px;
+  font-size: 0.95rem;
   touch-action: none;
 }
 
-.kl-feld.ist-unten {
-  background: var(--farbe-rand);
-  transform: scale(0.97);
+.kl-feld .kl-punkt {
+  right: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  font-size: 0.6rem;
 }
 
-.kl-feld[data-art="ziel"] { border-color: var(--kl-ziel); color: var(--kl-ziel); }
-.kl-feld[data-art="halten"] { border-color: var(--farbe-text-leise); color: var(--farbe-text); }
-.kl-feld[data-art="los"] {
-  border-color: var(--kl-los);
-  color: var(--kl-los);
-  background: color-mix(in srgb, var(--kl-los) 14%, var(--farbe-flaeche-leise));
-}
-.kl-feld[data-art="neu"] {
-  border-color: var(--kl-neu);
-  color: var(--kl-neu);
-  background: color-mix(in srgb, var(--kl-neu) 16%, var(--farbe-flaeche-leise));
-  animation: kl-puls-feld 0.8s ease-in-out infinite;
-}
+.kl-feld.ist-unten { background: var(--farbe-rand); }
+.kl-feld[data-art="neu"] { animation: kl-puls-feld 0.8s ease-in-out infinite; }
 .kl-feld[data-art="neu"].ist-unten { animation: none; }
 
 @keyframes kl-puls-feld {
@@ -407,23 +492,51 @@
 }
 
 .kl-feld .kl-kappe-balken {
-  bottom: 8px;
-  left: 14%;
-  right: 14%;
+  bottom: 4px;
+  left: 12%;
+  right: 12%;
+  height: 4px;
 }
 
 
-/* ---------- Fußzeile ---------- */
+/* ---------- Fußzeile: Hand und Steuerung ---------- */
 
 .kl-fuss {
   flex: none;
   display: flex;
   justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-size: 0.85rem;
+}
+
+.kl-hand-wahl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--farbe-text-leise);
+}
+
+.kl-hand-wahl button {
+  font: inherit;
+  padding: 3px 10px;
+  border-radius: var(--radius-s);
+  border: var(--linie);
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  cursor: pointer;
+}
+
+.kl-hand-wahl button[aria-pressed="true"] {
+  background: var(--farbe-akzent);
+  border-color: var(--farbe-akzent);
+  color: var(--farbe-auf-akzent);
+  font-weight: 700;
 }
 
 .kl-modus-knopf {
   font: inherit;
-  font-size: 0.85rem;
   color: var(--farbe-text-leise);
   background: none;
   border: none;
@@ -438,14 +551,10 @@
 /* ---------- Smartphone ---------- */
 
 @media (max-width: 600px) {
-  .klettern {
-    --kl-einheit: 50px;
-    --kl-einheit-y: 48px;
-    gap: 8px;
-  }
-
-  .kl-kappe-zeichen { font-size: 1.3rem; }
-  .kl-kappe-glied { font-size: 0.5rem; }
+  .klettern { gap: 8px; }
+  .kl-finger-reihe { --kl-kappe-b: 50px; --kl-kappe-h: 56px; gap: 6px; }
+  .kl-kappe-zeichen { font-size: 1.35rem; }
+  .kl-kappe-glied { font-size: 0.6rem; }
   .kl-zone-name { font-size: 1.25rem; }
   .kl-tafel { padding: 14px; }
 }
