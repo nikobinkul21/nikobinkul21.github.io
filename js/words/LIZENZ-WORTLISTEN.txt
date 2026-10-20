@@ -1,0 +1,67 @@
+Lizenzangaben zu den Wortlisten des Worträtsels
+===============================================
+
+Betroffene Dateien (in diesem Ordner):
+  de-solutions.js   Lösungswörter Deutsch
+  de-allowed.js     erlaubte Versuche Deutsch
+  en-solutions.js   Lösungswörter Englisch
+  en-allowed.js     erlaubte Versuche Englisch
+
+Diese vier Dateien stehen unter der Lizenz
+  Creative Commons Namensnennung – Weitergabe unter gleichen Bedingungen 4.0
+  International (CC BY-SA 4.0)
+  https://creativecommons.org/licenses/by-sa/4.0/deed.de
+Die übrigen Dateien des Spiels (Regeln, Darstellung, Konfiguration) sind
+davon nicht betroffen.
+
+
+QUELLE
+------
+wordfreq, Version 3.1.1, von Robyn Speer
+  https://github.com/rspeer/wordfreq
+  https://pypi.org/project/wordfreq/
+Verwendet: die Wortlisten "large" für Deutsch (de) und Englisch (en).
+
+Lizenz laut wordfreq: Der Programmcode steht unter der Apache-Lizenz 2.0,
+die Datendateien dürfen unter CC BY-SA 4.0 weitergegeben werden.
+
+wordfreq enthält Daten aus folgenden Quellen, die zu nennen sind:
+  - Google Books Ngrams (http://books.google.com/ngrams) und
+    Google Books Syntactic Ngrams
+  - Leeds Internet Corpus, University of Leeds, Centre for Translation
+    Studies (http://corpus.leeds.ac.uk/list.html)
+  - Wikipedia, die freie Enzyklopädie (https://www.wikipedia.org)
+  - ParaCrawl (https://paracrawl.eu)
+  - OPUS OpenSubtitles 2018 (http://opus.nlpl.eu/OpenSubtitles.php),
+    Daten des OpenSubtitles-Projekts (http://www.opensubtitles.org)
+  - SUBTLEX-Wortlisten (u. a. SUBTLEX-US, SUBTLEX-UK, SUBTLEX-DE) von
+    Marc Brysbaert et al., frei verfügbar unter
+    http://crr.ugent.be/programs-data/subtitle-frequencies
+    (SUBTLEX ist frei verfügbare Datenquelle; die Autoren werden hiermit
+    genannt.)
+
+
+BEARBEITUNG (was aus den Originaldaten gemacht wurde)
+-----------------------------------------------------
+Es wurden nur die Wörter übernommen, keine Häufigkeitswerte.
+
+Erlaubte Versuche (*-allowed.js):
+  - alle Wörter mit genau 5 Buchstaben
+    (Deutsch: a–z sowie ä, ö, ü – Wörter mit ß oder anderen Zeichen
+     entfallen; Englisch: a–z)
+  - mit einer Häufigkeit von mindestens 1,5 auf der Zipf-Skala von
+    wordfreq (darunter fast nur Namen, Tippfehler und Bruchstücke)
+  - alphabetisch sortiert, ergänzt um alle Lösungswörter
+
+Lösungswörter (*-solutions.js):
+  - aus den häufigsten 5-Buchstaben-Wörtern (Deutsch: Zipf ≥ 3,5,
+    Englisch: Zipf ≥ 3,4) von Hand ausgewählt
+  - entfernt: Eigennamen (Personen, Orte, Marken, Organisationen),
+    Abkürzungen, Fremdwörter ohne festen Platz in der Sprache,
+    Umgangssprache und Zusammenziehungen, Schreibweisen mit "ss" statt
+    "ß", seltene Fachbegriffe, anstößige und beleidigende Wörter,
+    Pronomen-/Artikelformen (Deutsch) und ein Teil der Plurale auf -s
+    (Englisch)
+  - nach Häufigkeit sortiert
+
+Die Auswahl wurde im Oktober 2026 für dieses Projekt erstellt.

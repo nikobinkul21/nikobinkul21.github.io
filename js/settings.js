@@ -2,7 +2,8 @@
    settings.js – Einstellungen
    - Darstellung: Anpassungen des Aussehens (früher eigener Abschnitt
      "Customising" – #customising leitet hierher weiter, siehe js/app.js)
-   - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer, Klettern-Rekord)
+   - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer, Klettern-Rekord,
+     Worträtsel)
      als eine JSON-Datei – Export und Import
    - Sudoku-Abenteuer: Tempo der Kampfanimationen (Würfel und Schadensaufbau)
    - Zu erledigen: Verbindung zur Oracle-Datenbank (js/todo-db.js)
@@ -17,6 +18,7 @@
      zuErledigen: { … }    ← Aufgaben aus TodoStore (js/todo-store.js)
      sudokuAbenteuer: { … } oder null ← Spielstand aus SudokuRPG (js/sudoku-rpg.js)
      klettern:    { … } oder null ← Rekord des Kletterspiels (js/climb/speicher.js)
+     woerter:     { … } oder null ← Worträtsel: laufendes Wort, Streaks, Statistik (js/words/speicher.js)
    }
    Neue Bereiche mit eigenen Daten? Hier in exportieren() und importieren()
    ergänzen – die Stores selbst bleiben für die Speicherung zuständig.
@@ -44,7 +46,7 @@ const EinstellungenAnsicht = (function () {
         '<h2 id="sicherung-titel">Daten sichern</h2>' +
         "<p>Deine Daten liegen nur in diesem Browser. Mit einer Sicherung kannst du sie " +
           "auf einem anderen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. " +
-          "Die Datei enthält <strong>Filme/Serien</strong>, <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong> den Spielstand des <strong>Sudoku-Abenteuers</strong> und den Rekord im <strong>Klettern</strong>.</p>" +
+          "Die Datei enthält <strong>Filme/Serien</strong>, <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong> den Spielstand des <strong>Sudoku-Abenteuers</strong>, den Rekord im <strong>Klettern</strong> und Streaks und Statistik des <strong>Worträtsels</strong>.</p>" +
         '<div class="einstellungen-knoepfe">' +
           '<button type="button" class="knopf" data-aktion="exportieren">Daten exportieren</button>' +
           '<button type="button" class="knopf" data-aktion="importieren">Daten importieren</button>' +
@@ -238,6 +240,7 @@ const EinstellungenAnsicht = (function () {
       zuErledigen: TodoStore.alsObjekt(),
       sudokuAbenteuer: SudokuRPG.alsObjekt(),
       klettern: KletterSpeicher.alsObjekt(),
+      woerter: WoerterSpeicher.alsObjekt(),
     };
     const datei = new Blob([JSON.stringify(sicherung, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
@@ -324,6 +327,22 @@ const EinstellungenAnsicht = (function () {
       }
     }
 
+    // Worträtsel: in älteren Sicherungen fehlt es → bleibt dann unverändert
+    let woerter = { vorhanden: false };
+    let woerterText = "• Worträtsel: nicht enthalten (bleibt unverändert)\n";
+    if ("woerter" in roh) {
+      if (roh.woerter === null) {
+        woerter = { vorhanden: true, daten: null };
+        woerterText = "• Worträtsel: noch nicht gespielt\n";
+      } else {
+        const geprueft = WoerterSpeicher.pruefeDaten(roh.woerter);
+        if (!geprueft.ok) return { ok: false, fehler: geprueft.fehler };
+        woerter = { vorhanden: true, daten: geprueft.daten };
+        const st = geprueft.daten.stats;
+        woerterText = "• Worträtsel: bester Streak Deutsch " + st.de.bester + ", Englisch " + st.en.bester + "\n";
+      }
+    }
+
     // Zu erledigen: in älteren Sicherungen fehlt es → bleibt dann unverändert
     let aufgaben = null;
     let aufgabenText = "• Zu erledigen: nicht enthalten (bleibt unverändert)\n";
@@ -338,13 +357,14 @@ const EinstellungenAnsicht = (function () {
     const erstellt = typeof roh.erstellt === "string" ? new Date(roh.erstellt) : null;
     const vom = erstellt && !isNaN(erstellt) ? " vom " + erstellt.toLocaleString("de-DE") : "";
     return {
-      ok: true, media: media, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben, klettern: klettern,
+      ok: true, media: media, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben, klettern: klettern, woerter: woerter,
       frage: "Sicherung" + vom + ":\n" +
         "• " + media.anzahl + " Filme/Serien-Einträge\n" +
         "• " + termine.daten.eintraege.length + " Termine/Vorlesungen\n" +
         aufgabenText +
         abenteuerText +
-        kletternText + "\n" +
+        kletternText +
+        woerterText + "\n" +
         "ALLE aktuellen Daten werden dadurch ersetzt. Fortfahren?",
     };
   }
@@ -371,6 +391,9 @@ const EinstellungenAnsicht = (function () {
       }
       if (pruefung.klettern && pruefung.klettern.vorhanden) {
         KletterSpeicher.ersetzen(pruefung.klettern.daten);
+      }
+      if (pruefung.woerter && pruefung.woerter.vorhanden) {
+        WoerterSpeicher.ersetzen(pruefung.woerter.daten);
       }
       if (pruefung.termine) {
         EventsStore.ersetzen(pruefung.termine.daten);

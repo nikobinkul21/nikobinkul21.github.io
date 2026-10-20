@@ -1,0 +1,669 @@
+/* ==========================================================================
+   words.css – Worträtsel (js/words/darstellung.js)
+   Schlicht wie der Rest der Seite: Farben, Schriften und Linien aus
+   css/style.css. Eigene Werte (Spielfarben, Größen) stehen oben in .wo.
+   Animationszeiten setzt js/words/darstellung.js aus js/words/konfig.js
+   (--wo-drehen usw.). Bewegt wird nur über transform; die Farbe springt
+   beim Umdrehen genau in der Mitte, wenn das Feld quer steht.
+   ========================================================================== */
+
+.wo {
+  /* Spielfarben: grün = richtig, gelb = an anderer Stelle, grau = nicht im Wort.
+     Kontrast der weißen Buchstaben je mindestens 3,4 : 1 (große, fette Schrift) */
+  --wo-richtig: #4f8a4b;
+  --wo-richtig-text: #ffffff;
+  --wo-vorhanden: #a9851a;
+  --wo-vorhanden-text: #ffffff;
+  --wo-fehlt: #8b8279;
+  --wo-fehlt-text: #ffffff;
+  --wo-feld-rand: var(--farbe-rand-stark);
+  --wo-feld-rand-voll: color-mix(in srgb, var(--farbe-text) 55%, var(--farbe-flaeche));
+  --wo-taste: var(--farbe-flaeche-leise);
+
+  /* Größen. Das Spielfeld passt sich der Höhe an, damit Feld und Tastatur
+     auf dem Smartphone ohne Scrollen auf den Bildschirm passen:
+     --wo-rest ist die Höhe aller übrigen Teile (Leiste, Kopf, Tastatur …). */
+  --wo-luecke: 6px;
+  --wo-hinweis-hoehe: 40px;               /* Zeile für Meldungen über dem Feld */
+  --wo-taste-hoehe: 56px;
+  --wo-taste-luecke: 6px;
+  --wo-rest: 410px;
+  --wo-feld: clamp(22px, min(calc((100vw - 32px - 4 * var(--wo-luecke)) / 5),
+                             calc((100svh - var(--wo-rest)) / 6 - var(--wo-luecke))), 60px);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--abstand-s);
+  max-width: 520px;
+  margin: 0 auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Farbenblind-Modus: Orange und Blau statt Grün und Gelb */
+.wo.wo--farbenblind {
+  --wo-richtig: #c8641f;
+  --wo-vorhanden: #2f7fc0;
+}
+
+/* Dunkles Design: etwas gedecktere Spielfarben, dunkles Grau */
+:root[data-theme="dark"] .wo {
+  --wo-richtig: #4a7f46;
+  --wo-vorhanden: #9a7b1c;
+  --wo-fehlt: #3d3935;
+  --wo-fehlt-text: #d8d0c4;
+  --wo-taste: #5b544d;                    /* noch nicht benutzte Tasten: heller als "fehlt" */
+}
+
+:root[data-theme="dark"] .wo.wo--farbenblind {
+  --wo-richtig: #b85a1c;
+  --wo-vorhanden: #3a83bf;
+}
+
+
+/* Spielbereich über die volle Breite (wie Klettern); "← Übersicht" und
+   Titel stehen bündig über dem Spiel */
+#spiel-words {
+  width: auto;
+}
+
+#spiel-words .unterseite-kopf {
+  padding-left: 0;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+
+/* ==========================================================================
+   KOPF: Sprache · Streak · Werkzeuge
+   ========================================================================== */
+
+.wo-kopf {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--abstand-s);
+  width: 100%;
+}
+
+.wo-sprachen {
+  display: inline-flex;
+  justify-self: start;
+  padding: 3px;
+  background: var(--farbe-flaeche-leise);
+  border-radius: var(--radius-pille);
+}
+
+.wo-sprache {
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pille);
+  cursor: pointer;
+}
+
+.wo-sprache[aria-pressed="true"] {
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.wo-sprache:focus-visible,
+.wo-symbol:focus-visible,
+.wo-taste:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 2px;
+}
+
+.wo-sprache-kurz {
+  display: none;
+}
+
+/* Streak gut sichtbar in der Mitte */
+.wo-streak {
+  display: flex;
+  align-items: baseline;
+  gap: var(--abstand-m);
+  padding: 4px 14px;
+  border: var(--linie);
+  border-radius: var(--radius-pille);
+  background: var(--farbe-flaeche);
+}
+
+.wo-streak-wert,
+.wo-rekord-wert {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.wo-streak strong {
+  font-family: var(--schrift-titel);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.wo-rekord-wert strong {
+  font-size: 1.15rem;
+  color: var(--farbe-text-leise);
+}
+
+.wo-streak-name {
+  font-size: 0.78rem;
+  color: var(--farbe-text-leise);
+}
+
+/* Neuer Rekord: der Streak leuchtet kurz auf und wächst */
+.wo-streak.feiert {
+  animation: wo-feiern var(--wo-rekord) ease-out;
+  border-color: var(--farbe-akzent);
+}
+
+@keyframes wo-feiern {
+  0%   { transform: scale(1); }
+  15%  { transform: scale(1.18); }
+  30%  { transform: scale(0.97); }
+  45%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.wo-werkzeuge {
+  display: flex;
+  justify-self: end;
+  gap: 4px;
+}
+
+.wo-symbol {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  color: var(--farbe-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.wo-symbol:hover {
+  background: var(--farbe-flaeche-leise);
+}
+
+.wo-symbol[aria-pressed="true"] {
+  border-color: var(--farbe-akzent);
+  color: var(--farbe-akzent);
+}
+
+.wo-symbol svg,
+.wo-taste svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wo-symbol .wo-gefuellt {
+  fill: currentColor;
+  stroke: none;
+}
+
+
+/* ==========================================================================
+   MELDUNG ("Kein bekanntes Wort", "Genial!" …)
+   ========================================================================== */
+
+/* Meldung und (nach einer Niederlage) Lösung teilen sich eine Zeile fester
+   Höhe – so verrutschen Spielfeld und Tastatur nie */
+.wo-hinweis {
+  display: grid;
+  place-items: center;
+  height: var(--wo-hinweis-hoehe);
+}
+
+.wo-hinweis > * {
+  grid-area: 1 / 1;
+}
+
+.wo-meldung {
+  margin: 0;
+  padding: 3px 14px;
+  font-weight: 600;
+  color: var(--farbe-hintergrund);
+  background: var(--farbe-text);
+  border-radius: var(--radius-s);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.wo-meldung.ist-sichtbar {
+  opacity: 1;
+}
+
+
+/* ==========================================================================
+   SPIELFELD
+   ========================================================================== */
+
+.wo-brett {
+  display: grid;
+  gap: var(--wo-luecke);
+}
+
+.wo-brett.ist-neu {
+  animation: wo-einblenden 260ms ease;
+}
+
+@keyframes wo-einblenden {
+  from { opacity: 0; }
+}
+
+.wo-zeile {
+  display: grid;
+  grid-template-columns: repeat(5, var(--wo-feld));
+  gap: var(--wo-luecke);
+}
+
+.wo-feld {
+  /* Farben je Zustand – die Drehung schaltet in der Mitte darauf um */
+  --k-bg: transparent;
+  --k-rand: var(--wo-feld-rand);
+  --k-text: var(--farbe-text);
+  display: grid;
+  place-items: center;
+  width: var(--wo-feld);
+  height: var(--wo-feld);
+  font-family: var(--schrift-text);
+  font-size: calc(var(--wo-feld) * 0.5);
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--k-text);
+  background: var(--k-bg);
+  border: 2px solid var(--k-rand);
+  border-radius: 4px;
+}
+
+.wo-feld.ist-voll {
+  --k-rand: var(--wo-feld-rand-voll);
+}
+
+.wo-feld[data-status="richtig"] {
+  --k-bg: var(--wo-richtig);
+  --k-rand: var(--wo-richtig);
+  --k-text: var(--wo-richtig-text);
+}
+
+.wo-feld[data-status="vorhanden"] {
+  --k-bg: var(--wo-vorhanden);
+  --k-rand: var(--wo-vorhanden);
+  --k-text: var(--wo-vorhanden-text);
+}
+
+.wo-feld[data-status="fehlt"] {
+  --k-bg: var(--wo-fehlt);
+  --k-rand: var(--wo-fehlt);
+  --k-text: var(--wo-fehlt-text);
+}
+
+/* Buchstabe ploppt beim Tippen */
+.wo-feld.ploppt {
+  animation: wo-ploppen var(--wo-ploppen) ease-out;
+}
+
+@keyframes wo-ploppen {
+  50% { transform: scale(1.12); }
+}
+
+/* Umdrehen: erste Hälfte noch die alte Farbe (leer mit Rand), ab der
+   Mitte – das Feld steht quer – die neue Farbe */
+.wo-feld.dreht {
+  animation: wo-drehen var(--wo-drehen) ease-in-out both;
+  animation-delay: calc(var(--i) * var(--wo-dreh-versatz));
+}
+
+@keyframes wo-drehen {
+  0% {
+    transform: rotateX(0deg);
+    color: var(--farbe-text);
+    background: transparent;
+    border-color: var(--wo-feld-rand-voll);
+  }
+  49.9% {
+    transform: rotateX(90deg);
+    color: var(--farbe-text);
+    background: transparent;
+    border-color: var(--wo-feld-rand-voll);
+  }
+  50% {
+    transform: rotateX(90deg);
+    color: var(--k-text);
+    background: var(--k-bg);
+    border-color: var(--k-rand);
+  }
+  100% {
+    transform: rotateX(0deg);
+    color: var(--k-text);
+    background: var(--k-bg);
+    border-color: var(--k-rand);
+  }
+}
+
+/* Sieg: die Zeile hüpft, Feld für Feld */
+.wo-feld.huepft {
+  animation: wo-huepfen var(--wo-huepfen) ease;
+  animation-delay: calc(var(--i) * var(--wo-huepf-versatz));
+}
+
+@keyframes wo-huepfen {
+  0%, 20% { transform: translateY(0); }
+  40% { transform: translateY(-30%); }
+  50% { transform: translateY(4%); }
+  60% { transform: translateY(-14%); }
+  80% { transform: translateY(2%); }
+  100% { transform: translateY(0); }
+}
+
+/* Ungültiges Wort: die Zeile schüttelt */
+.wo-zeile.schuettelt {
+  animation: wo-schuetteln var(--wo-schuetteln) ease;
+}
+
+@keyframes wo-schuetteln {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+
+
+/* ==========================================================================
+   NACH EINER NIEDERLAGE: Lösung und "Nächstes Wort"
+   ========================================================================== */
+
+.wo-ende {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--abstand-s) var(--abstand-m);
+}
+
+.wo-ende[hidden] {
+  display: none;
+}
+
+.wo-ende-text {
+  margin: 0;
+}
+
+.wo-ende .knopf {
+  height: 34px;
+}
+
+.wo-ende-text strong {
+  letter-spacing: 0.08em;
+}
+
+
+/* ==========================================================================
+   BILDSCHIRMTASTATUR
+   ========================================================================== */
+
+.wo-tastatur {
+  display: grid;
+  gap: var(--wo-taste-luecke);
+  width: 100%;
+}
+
+.wo-tasten-reihe {
+  display: flex;
+  justify-content: center;
+  gap: var(--wo-taste-luecke);
+}
+
+.wo-taste {
+  --k-bg: var(--wo-taste);
+  --k-text: var(--farbe-text);
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 44px;
+  height: var(--wo-taste-hoehe);
+  padding: 0;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--k-text);
+  background: var(--k-bg);
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;           /* kein Zoom bei schnellem Doppeltippen */
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.wo-taste:active {
+  filter: brightness(0.92);
+}
+
+.wo-taste--breit {
+  flex-grow: 1.6;
+  max-width: 70px;
+  font-size: 0.8rem;
+}
+
+.wo-taste[data-status="richtig"] {
+  --k-bg: var(--wo-richtig);
+  --k-text: var(--wo-richtig-text);
+}
+
+.wo-taste[data-status="vorhanden"] {
+  --k-bg: var(--wo-vorhanden);
+  --k-text: var(--wo-vorhanden-text);
+}
+
+.wo-taste[data-status="fehlt"] {
+  --k-bg: var(--wo-fehlt);
+  --k-text: var(--wo-fehlt-text);
+}
+
+
+/* ==========================================================================
+   DIALOGE: Statistik und Rückfrage
+   ========================================================================== */
+
+.wo-dialog {
+  width: min(380px, calc(100vw - 32px));
+  padding: var(--abstand-l);
+}
+
+.wo-dialog h3 {
+  margin: 0 0 var(--abstand-m);
+  text-align: center;
+}
+
+.wo-dialog p {
+  margin: 0 0 var(--abstand-m);
+}
+
+.wo-stat-sprachen {
+  display: flex;
+  width: max-content;
+  margin: 0 auto var(--abstand-m);
+}
+
+.wo-zahlen {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--abstand-s);
+  margin: 0 0 var(--abstand-l);
+  text-align: center;
+}
+
+.wo-zahlen div {
+  display: flex;
+  flex-direction: column;
+}
+
+.wo-zahlen dd {
+  margin: 0;
+  font-family: var(--schrift-titel);
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+
+.wo-zahlen dt {
+  font-size: 0.75rem;
+  color: var(--farbe-text-leise);
+}
+
+.wo-vert-titel {
+  margin: 0 0 var(--abstand-s);
+  font-size: 0.9rem;
+}
+
+.wo-verteilung {
+  display: grid;
+  gap: 4px;
+}
+
+.wo-vert-zeile {
+  display: grid;
+  grid-template-columns: 1.2em 1fr;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.wo-vert-balken {
+  --anteil: 0;
+  width: max(2em, calc(var(--anteil) * 100%));
+  padding: 1px 6px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--wo-fehlt-text);
+  background: var(--wo-fehlt);
+  border-radius: 3px;
+}
+
+.wo-vert-balken.ist-zuletzt {
+  color: var(--wo-richtig-text);
+  background: var(--wo-richtig);
+}
+
+.wo-dialog-knoepfe {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--abstand-s);
+  margin-top: var(--abstand-l);
+}
+
+
+/* ==========================================================================
+   SMARTPHONE: kompakter Kopf, Feld und Tastatur ohne Scrollen
+   ========================================================================== */
+
+@media (max-width: 599px) {
+  .wo {
+    --wo-luecke: 5px;
+    --wo-taste-luecke: 5px;
+    --wo-taste-hoehe: 52px;
+    --wo-rest: 414px;
+  }
+
+  .wo-sprache {
+    padding: 5px 9px;
+  }
+
+  .wo-sprache-lang {
+    display: none;
+  }
+
+  .wo-sprache-kurz {
+    display: inline;
+  }
+
+  .wo-streak {
+    gap: var(--abstand-s);
+    padding: 3px 10px;
+  }
+
+  .wo-streak-name {
+    display: none;
+  }
+
+  .wo-symbol {
+    width: 34px;
+    height: 34px;
+  }
+
+  .wo-taste {
+    font-size: 0.9rem;
+  }
+
+  .wo-taste--breit {
+    font-size: 0.7rem;
+  }
+}
+
+/* Niedrige Bildschirme (z. B. kleine Smartphones): flachere Tasten */
+@media (max-height: 700px) {
+  .wo {
+    --wo-taste-hoehe: 46px;
+    --wo-rest: 400px;
+  }
+}
+
+
+/* Sehr niedrige Bildschirme (z. B. 320 × 568): noch flachere Tasten */
+@media (max-height: 600px) {
+  .wo {
+    --wo-taste-hoehe: 40px;
+    --wo-taste-luecke: 4px;
+    --wo-hinweis-hoehe: 34px;
+    --wo-rest: 372px;
+  }
+}
+
+
+/* ==========================================================================
+   BEWEGUNG REDUZIEREN: nur Farbwechsel, keine Bewegung
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .wo-feld.dreht {
+    animation: wo-farbe var(--wo-ruhig) ease both;
+    animation-delay: 0ms;
+  }
+
+  .wo-feld.ploppt,
+  .wo-feld.huepft,
+  .wo-zeile.schuettelt,
+  .wo-streak.feiert,
+  .wo-brett.ist-neu {
+    animation: none;
+  }
+
+  .wo-meldung,
+  .wo-taste {
+    transition: none;
+  }
+}
+
+@keyframes wo-farbe {
+  from {
+    color: var(--farbe-text);
+    background: transparent;
+    border-color: var(--wo-feld-rand-voll);
+  }
+}

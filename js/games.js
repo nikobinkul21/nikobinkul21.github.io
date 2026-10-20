@@ -28,6 +28,12 @@ const SPIELE = [
     beschreibung: "Vier Finger halten, immer einen umsetzen: Kletter die Wand hinauf – von der Grube bis über die Wolken.",
     init: initClimb,
   },
+  {
+    id: "words",
+    name: "Worträtsel",
+    beschreibung: "Ein Wort aus fünf Buchstaben in sechs Versuchen – auf Deutsch oder Englisch, mit Streak.",
+    init: initWords,
+  },
 ];
 
 // Merkt sich, welche Spiele schon gestartet wurden (init nur 1x)
