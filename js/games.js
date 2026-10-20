@@ -18,13 +18,13 @@ const SPIELE = [
   },
   {
     id: "football",
-    name: "Fußball",
+    name: "Lock",
     beschreibung: "Duell 2 gegen 2 in Seitenansicht: Passen, Dribbeln, Schießen – und den Gegner durchschauen.",
     init: initFootball,
   },
   {
     id: "climb",
-    name: "Klettern",
+    name: "Climb",
     beschreibung: "Vier Finger halten, immer einen umsetzen: Kletter die Wand hinauf – von der Grube bis über die Wolken.",
     init: initClimb,
   },
