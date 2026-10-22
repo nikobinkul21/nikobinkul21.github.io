@@ -266,6 +266,34 @@ const EventsStore = (function () {
     return ergebnis;
   }
 
+  /**
+   * Wann endet ein Vorkommen? Mit Endzeit: Tag + Endzeit. Ganztägig: um
+   * Mitternacht am Ende seines Tages (gilt also den ganzen Tag als aktuell).
+   * @param {object} vorkommen – Eintrag mit Feld "tag" (aus eintraegeImZeitraum)
+   *                             oder ein einmaliger Eintrag (dann zählt "datum")
+   * @returns {Date}
+   */
+  function endeVon(vorkommen) {
+    const tag = alsDatum(vorkommen.tag || vorkommen.datum);
+    if (vorkommen.ganztaegig) {
+      return new Date(tag.getFullYear(), tag.getMonth(), tag.getDate() + 1);
+    }
+    const minuten = inMinuten(vorkommen.ende);
+    return new Date(tag.getFullYear(), tag.getMonth(), tag.getDate(), Math.floor(minuten / 60), minuten % 60);
+  }
+
+  /**
+   * DIE gemeinsame Regel: Ist ein Vorkommen vorbei?
+   * Vorbei ist es, sobald seine Endzeit erreicht ist (ganztägig: ab
+   * Mitternacht danach). Ein laufender Termin ist noch nicht vorbei.
+   * Wird vom Kalender benutzt; andere Bereiche sollen dieselbe Funktion nehmen.
+   * @param {object} vorkommen – siehe endeVon
+   * @param {Date} [jetzt] – Vergleichszeitpunkt (Standard: jetzt)
+   */
+  function istVergangen(vorkommen, jetzt) {
+    return (jetzt || new Date()) >= endeVon(vorkommen);
+  }
+
   /** Einträge eines einzelnen Tages (sortiert). */
   function eintraegeAm(tag) {
     return eintraegeImZeitraum(tag, tag)[tag] || [];
@@ -341,6 +369,8 @@ const EventsStore = (function () {
     // Abfragen
     eintraegeImZeitraum: eintraegeImZeitraum,
     eintraegeAm: eintraegeAm,
+    endeVon: endeVon,
+    istVergangen: istVergangen,
     hole: hole,
     // Ändern
     hinzufuegen: hinzufuegen,

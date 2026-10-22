@@ -282,7 +282,6 @@
   --kal-termin-rand: rgba(255, 255, 255, 0.75);
   --kal-termin-leuchten: rgba(90, 160, 240, 0.40);
   --kal-termin-ring: #5a9ce6;                  /* Ring um "heute", wenn heute ein Termin ist */
-  --kal-termin-glas-vergangen: rgba(90, 160, 240, 0.13);
   --kal-vorschau-hintergrund: rgba(253, 251, 247, 0.86);
 
   /* Sudoku-Gitter (freies Spiel und Abenteuer) */
@@ -340,7 +339,6 @@
   --kal-termin-rand: rgba(255, 255, 255, 0.26);
   --kal-termin-leuchten: rgba(120, 180, 250, 0.38);
   --kal-termin-ring: #82bbf5;
-  --kal-termin-glas-vergangen: rgba(120, 180, 250, 0.12);
   --kal-vorschau-hintergrund: rgba(37, 34, 31, 0.88);
 
   --sudoku-linie-duenn-farbe: #3a352f;

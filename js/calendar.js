@@ -7,11 +7,18 @@
      <div class="kalender-tag" data-datum="2026-10-10">…</div>
 
    Verbindung zum Stundenplan (Daten aus js/events-store.js):
-     - Tage mit einem Eintrag der Art "Termin" bekommen einen blauen
-       Glas-Kreis (Klasse "hat-termin"). Vorlesungen werden hier nicht
-       markiert – sonst wäre fast jeder Tag blau.
+     - Tage mit einem noch AKTUELLEN Eintrag der Art "Termin" bekommen einen
+       blauen Glas-Kreis (Klasse "hat-termin"), heute einen blauen Ring.
+       Vorlesungen werden hier nicht markiert – sonst wäre fast jeder Tag blau.
+     - Vergangene Einträge zeigt der Kalender nicht mehr: keine Markierung,
+       kein Panel – auch nicht in früheren Jahren. Ob ein Eintrag vorbei ist,
+       entscheidet EventsStore.istVergangen (Endzeit erreicht; ganztägig:
+       Ende des Tages). Gelöscht wird nichts – im Stundenplan bleiben sie.
+     - Heute verschwinden Einträge, sobald ihre Endzeit vorbei ist; ist kein
+       Termin mehr übrig, verschwindet der Ring. Ein Wecker zur nächsten
+       Endzeit aktualisiert das von selbst.
      - Hover, Tastaturfokus oder Antippen eines markierten Tages zeigt ein
-       kleines Glas-Panel mit den Einträgen des Tages.
+       kleines Glas-Panel mit den noch aktuellen Einträgen des Tages.
      - Ein Klick auf einen Tag öffnet den Stundenplan mit dieser Woche.
    ========================================================================== */
 
@@ -33,8 +40,10 @@ const KalenderAnsicht = (function () {
 
   let angezeigtesJahr = new Date().getFullYear();
   let mitternachtTimer = null;
+  let endeTimer = null;                 // Wecker zur nächsten Endzeit eines heutigen Eintrags
 
-  // Einträge des angezeigten Jahres: { "2026-10-12": [eintrag, …], … }
+  // Noch aktuelle (nicht vergangene) Einträge des angezeigten Jahres:
+  // { "2026-10-12": [eintrag, …], … } – Tage ohne aktuelle Einträge fehlen
   let eintraegeImJahr = {};
 
   // Vorschau-Panel: für welchen Tag es gerade offen ist, und ob per Antippen
@@ -223,8 +232,10 @@ const KalenderAnsicht = (function () {
    */
   function markiereTage() {
     if (!el.jahr) return;
+    const jetzt = new Date();
     const heute = heuteText();
-    eintraegeImJahr = EventsStore.eintraegeImZeitraum(angezeigtesJahr + "-01-01", angezeigtesJahr + "-12-31");
+    eintraegeImJahr = aktuelleEintraege(
+      EventsStore.eintraegeImZeitraum(angezeigtesJahr + "-01-01", angezeigtesJahr + "-12-31"), jetzt);
 
     el.jahr.querySelectorAll(".kalender-tag").forEach(function (feld) {
       const datum = feld.dataset.datum;
@@ -254,6 +265,49 @@ const KalenderAnsicht = (function () {
         feld.removeAttribute("aria-describedby");
       }
     });
+
+    // Ein offenes Panel passt sich an: weniger Einträge – oder es geht zu,
+    // wenn der Tag keine aktuellen Termine mehr hat
+    if (vorschauFuer) {
+      if (vorschauFuer.isConnected && vorschauFuer.classList.contains("hat-termin")) {
+        zeigeVorschau(vorschauFuer, el.vorschau.classList.contains("ist-angetippt"));
+      } else {
+        versteckeVorschau();
+      }
+    }
+
+    naechstesEndePlanen(jetzt);
+  }
+
+  /**
+   * Lässt nur Einträge übrig, die noch nicht vorbei sind (gemeinsame Regel:
+   * EventsStore.istVergangen). Tage ohne aktuelle Einträge fallen weg.
+   */
+  function aktuelleEintraege(proTag, jetzt) {
+    const ergebnis = {};
+    Object.keys(proTag).forEach(function (tag) {
+      const aktuell = proTag[tag].filter(function (e) { return !EventsStore.istVergangen(e, jetzt); });
+      if (aktuell.length) ergebnis[tag] = aktuell;
+    });
+    return ergebnis;
+  }
+
+  /**
+   * Stellt einen Wecker auf die nächste Endzeit eines heutigen Eintrags.
+   * Dann wird neu markiert: Der Eintrag verschwindet aus dem Panel, und
+   * war es der letzte Termin, verschwindet auch der Ring. (Ganztägige
+   * enden um Mitternacht – darum kümmert sich mitternachtPlanen.)
+   */
+  function naechstesEndePlanen(jetzt) {
+    clearTimeout(endeTimer);
+    const heute = EventsStore.eintraegeAm(heuteText());
+    let naechstes = null;
+    heute.forEach(function (e) {
+      const ende = EventsStore.endeVon(e);
+      if (ende > jetzt && (!naechstes || ende < naechstes)) naechstes = ende;
+    });
+    if (!naechstes) return;
+    endeTimer = setTimeout(markiereTage, naechstes - jetzt + 500);   // halbe Sekunde Puffer
   }
 
   /**

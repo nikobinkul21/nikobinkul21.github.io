@@ -193,8 +193,8 @@
   outline-offset: 1px;
 }
 
-/* Tag mit Termin: hellblauer Glas-Kreis hinter der Zahl.
-   Die Zahl behält ihre Farbe (bei vergangenen Tagen also rot). */
+/* Tag mit (noch aktuellem) Termin: hellblauer Glas-Kreis hinter der Zahl.
+   Vergangene Tage bekommen ihn nie (calendar.js setzt dort kein "hat-termin"). */
 .kalender-tag.hat-termin .kalender-zahl {
   position: relative;
   font-weight: 600;
@@ -207,14 +207,6 @@
   box-shadow:
     inset 0 1px 0 var(--kal-heute-reflex),
     0 0 10px var(--kal-termin-leuchten);
-}
-
-/* Vergangener Termin: Kreis abgeschwächt (nur der Kreis, die rote Zahl bleibt kräftig) */
-.kalender-tag.ist-vergangen.hat-termin .kalender-zahl {
-  background:
-    linear-gradient(to bottom, var(--kal-heute-glanz), transparent 55%),
-    var(--kal-termin-glas-vergangen);
-  box-shadow: inset 0 1px 0 var(--kal-heute-reflex);
 }
 
 /* Heute UND Termin: bleibt grün, bekommt zusätzlich einen hellblauen Ring */
