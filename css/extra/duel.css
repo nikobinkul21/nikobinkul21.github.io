@@ -100,6 +100,112 @@
 
 .dl-link:hover { color: var(--farbe-akzent); }
 
+/* Auswahl nach einer Runde: drei Walzen wie am Spielautomaten */
+.dl-auswahl {
+  --dl-karte-b: 200px;
+  --dl-karte-h: 214px;
+  gap: var(--abstand-s);
+  background: color-mix(in srgb, var(--farbe-flaeche) 92%, transparent);
+}
+
+.dl-auswahl-titel {
+  margin: 0;
+  font-size: clamp(1.1rem, 2.6vw, 1.6rem);
+}
+
+.dl-auswahl-titel[data-wer="gruen"] { color: var(--dl-gruen); }
+.dl-auswahl-titel[data-wer="blau"] { color: var(--dl-blau); }
+
+.dl-slots {
+  display: flex;
+  gap: var(--abstand-m);
+}
+
+.dl-slot {
+  position: relative;
+  width: var(--dl-karte-b);
+  height: calc(var(--dl-karte-h) + 4px);   /* Karte plus Rahmen */
+  overflow: hidden;
+  background: var(--farbe-flaeche);
+  border: 2px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-m);
+  transition: border-color 200ms ease;
+}
+
+.dl-auswahl-titel[data-wer="gruen"] ~ .dl-slots .dl-slot.steht { border-color: var(--dl-gruen); }
+.dl-auswahl-titel[data-wer="blau"] ~ .dl-slots .dl-slot.steht { border-color: var(--dl-blau); }
+
+.dl-walze {
+  display: flex;
+  flex-direction: column;
+}
+
+.dl-karte {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: var(--dl-karte-h);
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--farbe-text);
+  text-align: center;
+  background: transparent;
+  border: 0;
+}
+
+button.dl-karte:enabled {
+  cursor: pointer;
+}
+
+button.dl-karte:enabled:hover,
+button.dl-karte:focus-visible {
+  background: var(--farbe-flaeche-leise);
+  outline: none;
+}
+
+.dl-karte.ist-gewaehlt {
+  background: var(--farbe-akzent-leise);
+  box-shadow: inset 0 0 0 3px var(--farbe-akzent);
+}
+
+.dl-karte-symbol {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.dl-karte-name {
+  font-family: var(--schrift-titel);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.dl-karte-text {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--farbe-text-leise);
+}
+
+.dl-karte-stufe {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.dl-karte-taste {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--farbe-text-leise);
+}
+
 /* Bildschirmknöpfe (Smartphone, gegen den Computer) */
 .dl-touch {
   display: flex;
@@ -140,6 +246,18 @@
   border-color: var(--dl-gruen);
 }
 
+.dl-taste--schuss {
+  width: 72px;
+  font-size: 0.95rem;
+  color: #fff;
+  background: color-mix(in srgb, var(--dl-gruen) 70%, #000);
+  border-color: transparent;
+}
+
+.dl-taste[hidden] {
+  display: none;
+}
+
 .dl-taste.ist-gedrueckt {
   filter: brightness(0.85);
   transform: scale(0.95);
@@ -152,13 +270,44 @@
   }
 }
 
+/* Schmale Bildschirme: Die Auswahl füllt den ganzen Bildschirm, die
+   Karten werden kleiner */
+@media (max-width: 799px) {
+  .dl-auswahl {
+    position: fixed;
+    z-index: 50;
+    --dl-karte-b: min(150px, calc((100vw - 48px) / 3));
+    --dl-karte-h: 236px;
+  }
+
+  .dl-slots {
+    gap: 8px;
+  }
+
+  .dl-karte {
+    padding: 8px 6px;
+  }
+
+  .dl-karte-text {
+    font-size: 0.72rem;
+  }
+}
+
 @media (max-width: 599px) {
+  .dl-touch-gruppe {
+    gap: 6px;
+  }
+
   .dl-taste {
-    width: 56px;
+    width: 50px;
     height: 56px;
   }
 
+  .dl-taste--schuss {
+    width: 56px;
+  }
+
   .dl-taste--stoss {
-    width: 72px;
+    width: 64px;
   }
 }
