@@ -5,6 +5,8 @@
    Match bis K.siegeNoetig Rundensiege; nach jeder Runde wählt der
    Verlierer ein Power-up (K.powerups). Geschosse sind ein eigenes System
    (K.geschoss, K.geschossEffekte), das Power-ups verändern können.
+   Seltenes Zufallsereignis (K.ereignis): eine Blase fällt vom Himmel, wer
+   sie einsammelt, wird für kurze Zeit zum Mech (K.mech).
    Läuft auch in Node (für Tests).
    ========================================================================== */
 
@@ -53,6 +55,43 @@ const DuellRegeln = (function () {
       rueckstoss: { vx: 380, vy: 220, starre: 0.25, drehTempo: 8 },
     },
 
+    // Seltenes Zufallsereignis: höchstens einmal pro Match
+    ereignis: {
+      test: false,                   // Testschalter: in jeder Runde nach testZeit erzwingen (Regel "einmal pro Match" gilt weiter)
+      testZeit: 3,
+      chance: 0.3,                   // Wahrscheinlichkeit je Runde
+      zeitVon: 8, zeitBis: 25,       // Sekunden nach Rundenbeginn
+      vorwarnung: 1.2,               // so lange blinkt vorher das Ausrufezeichen
+      startHoehe: 400,               // hier beginnt die Blase zu fallen
+      fallTempo: 75,                 // Pixel pro Sekunde
+      schaukeln: { weite: 22, tempo: 1.7 },
+      schweben: { weite: 6, tempo: 2.6 },   // auf dem Boden: auf und ab
+      radius: 26,
+      randAbstand: 120,              // Abstand der Fallstelle zu den Wänden
+      platzenNach: 8,                // Sekunden nach der Landung
+      text: "Der Eiermann kommt!!!",
+      textDauer: 1.5,
+      // Darstellung: Blinken des "!" (pro Sekunde), Einflug des Texts,
+      // Lichtblitz und Bildschirmwackeln bei der Verwandlung, Platzen
+      anzeige: { warnTakt: 5, einflug: 0.45, ausblenden: 0.4, blitz: 0.35, beben: 0.45, bebenWeite: 9, platzen: 0.5 },
+    },
+    mech: {
+      dauer: 10,
+      blinken: 2,                    // in den letzten Sekunden blinkt er
+      groesse: 2,                    // Körpermaße gegenüber der normalen Figur
+      tempoFaktor: 0.6,
+      sprungFaktor: 0.72,
+      schadenFaktor: 0.5,            // nimmt nur die Hälfte des Schadens
+      stab: 120,                     // Länge des riesigen Strichs
+      feuer: {
+        rate: 8,                     // Kugeln pro Sekunde, solange gehalten
+        tempo: 950, radius: 4, schaden: 2, streuung: 4,   // Streuung ± Grad
+        abpraller: 0, lebensdauer: 3, spur: 4, effekte: [],
+      },
+      // Darstellung: Mündungsfeuer, ausgeworfene Hülsen, Explosion am Ende
+      anzeige: { muendung: 0.07, huelse: 0.9, explosion: 1.1, teile: 18 },
+    },
+
     // Auswahl nach einer Runde (Spielautomat)
     auswahl: { slots: 3, walzeStart: 0.9, walzeVersatz: 0.45, walzeKarten: 14, kiBedenkzeit: 0.8 },
 
@@ -84,8 +123,11 @@ const DuellRegeln = (function () {
     return K.powerups.find(function (p) { return p.id === id; });
   }
 
-  /** Die aktuellen Werte eines Kämpfers: Grundwerte plus alle Power-ups. */
+  /** Die aktuellen Werte eines Kämpfers: Grundwerte plus alle Power-ups (als Mech: ohne). */
   function werte(f) {
+    if (f.mech) {
+      return { stab: K.mech.stab, tempo: K.tempo * K.mech.tempoFaktor, sprung: K.sprung * K.mech.sprungFaktor, geschoss: null, mech: true };
+    }
     const w = { stab: K.stab, tempo: K.tempo, sprung: K.sprung, geschoss: null };
     K.powerups.forEach(function (p) {
       const stufe = f.powerups[p.id] || 0;
@@ -94,12 +136,22 @@ const DuellRegeln = (function () {
     return w;
   }
 
+  /** Körpermaße (Trefferfläche); der Mech ist größer und duckt sich nicht. */
+  function masse(f) {
+    const g = f.mech ? K.mech.groesse : 1;
+    return {
+      breite: K.breite * g,
+      hoehe: f.geduckt && !f.mech ? K.hoeheGeduckt : K.hoehe * g,
+      huefte: f.mech ? K.huefte * g : f.geduckt ? K.huefteGeduckt : K.huefte,
+    };
+  }
+
   function kaempfer(id) {
     return {
       id: id, x: K.startX[id], y: 0, vx: 0, vy: 0, blick: id === "gruen" ? 1 : -1,
       leben: K.leben, geduckt: false, stoss: null, pause: 0, starre: 0,
       drehung: 0, drehTempo: 0, ko: false, laufPhase: 0, siege: 0,
-      powerups: {}, schussPause: 0,
+      powerups: {}, schussPause: 0, mech: null,
       vorher: { angriff: false, springen: false, schuss: false }, ki: null,
     };
   }
@@ -114,7 +166,20 @@ const DuellRegeln = (function () {
       phase: "start", zeit: 0, runde: 1, rundenSieger: null, sieger: null,
       gruen: kaempfer("gruen"), blau: kaempfer("blau"), ereignisse: [], uhr: 0,
       geschosse: [], auswahl: null,
+      kampfZeit: 0,
+      ereignis: { verbraucht: false, geplant: null },
+      blase: null,
     };
+    planeEreignis();
+
+    /** Zu Beginn jeder Runde: Kommt die Blase in dieser Runde – und wann? */
+    function planeEreignis() {
+      const E = K.ereignis;
+      z.ereignis.geplant = null;
+      if (z.ereignis.verbraucht) return;
+      if (E.test) z.ereignis.geplant = E.testZeit;
+      else if (zufall() < E.chance) z.ereignis.geplant = E.zeitVon + zufall() * (E.zeitBis - E.zeitVon);
+    }
 
     /** Volle Lebenspunkte, Startpositionen – Siege und Power-ups bleiben. */
     function neueRunde() {
@@ -126,9 +191,12 @@ const DuellRegeln = (function () {
       });
       z.geschosse = [];
       z.auswahl = null;
+      z.blase = null;
+      z.kampfZeit = 0;
       z.phase = "start";
       z.zeit = 0;
       z.rundenSieger = null;
+      planeEreignis();
     }
 
     /**
@@ -172,6 +240,7 @@ const DuellRegeln = (function () {
 
       if (z.phase === "start" && z.zeit >= K.startZeit) { z.phase = "kampf"; z.zeit = 0; }
 
+      if (z.phase === "kampf") z.kampfZeit += dt;
       steuere(z.gruen, z.blau, eg, dt);
       steuere(z.blau, z.gruen, eb, dt);
       bewege(z.gruen, dt);
@@ -179,6 +248,9 @@ const DuellRegeln = (function () {
       schiebeAuseinander(z.gruen, z.blau);
       bewegeGeschosse(dt);
       if (z.phase === "kampf") {
+        ereignisSchritt(dt);
+        mechSchritt(z.gruen, dt);
+        mechSchritt(z.blau, dt);
         if (!pruefeZusammenprall()) {
           pruefeTreffer(z.gruen, z.blau);
           pruefeTreffer(z.blau, z.gruen);
@@ -219,6 +291,101 @@ const DuellRegeln = (function () {
         z[z.rundenSieger].siege++;
       }
       z.ereignisse.push({ art: "ko" });
+      // Rundenende: Verwandlung endet sofort, eine Blase verschwindet
+      beendeMech(z.gruen);
+      beendeMech(z.blau);
+      z.blase = null;
+    }
+
+    /* ---------- Zufallsereignis: die Blase ---------- */
+
+    function ereignisSchritt(dt) {
+      const E = K.ereignis;
+      const geplant = z.ereignis.geplant;
+      if (geplant !== null && !z.blase && z.kampfZeit >= geplant - E.vorwarnung) {
+        z.ereignis.geplant = null;
+        z.ereignis.verbraucht = true;
+        const links = K.raum.links + E.randAbstand, rechts = K.raum.rechts - E.randAbstand;
+        z.blase = { phase: "warnung", t: 0, x0: links + zufall() * (rechts - links), x: 0, y: E.startHoehe, liegt: 0 };
+        z.blase.x = z.blase.x0;
+        z.ereignisse.push({ art: "blaseWarnung", x: z.blase.x });
+      }
+      const b = z.blase;
+      if (!b) return;
+      b.t += dt;
+      if (b.phase === "warnung") {
+        if (b.t >= E.vorwarnung) { b.phase = "fallen"; b.t = 0; }
+        return;
+      }
+      if (b.phase === "fallen") {
+        b.y -= E.fallTempo * dt;
+        b.x = b.x0 + Math.sin(b.t * E.schaukeln.tempo) * E.schaukeln.weite;
+        if (b.y <= E.radius) { b.y = E.radius; b.phase = "liegt"; b.liegt = 0; }
+      } else {
+        b.liegt += dt;
+        b.y = E.radius + E.schweben.weite * (1 + Math.sin(b.liegt * E.schweben.tempo * Math.PI)) / 2;
+        if (b.liegt >= E.platzenNach) {
+          z.ereignisse.push({ art: "blasePlatzt", x: b.x, y: b.y });
+          z.blase = null;
+          return;
+        }
+      }
+      // Einsammeln: nur mit dem Körper (Kugeln und Stöße zählen nicht)
+      const nah = ["gruen", "blau"].map(function (id) { return z[id]; }).filter(function (f) {
+        return !f.ko && !f.mech && beruehrt(f, b);
+      }).sort(function (a, c) { return Math.abs(a.x - b.x) - Math.abs(c.x - b.x); });
+      if (nah.length) {
+        werdeMech(nah[0]);
+        z.ereignisse.push({ art: "blaseWeg", x: b.x, y: b.y });
+        z.blase = null;
+      }
+    }
+
+    function beruehrt(f, b) {
+      const m = masse(f);
+      const nx = Math.max(f.x - m.breite / 2, Math.min(b.x, f.x + m.breite / 2));
+      const ny = Math.max(f.y, Math.min(b.y, f.y + m.hoehe));
+      const r = K.ereignis.radius;
+      return (b.x - nx) * (b.x - nx) + (b.y - ny) * (b.y - ny) <= r * r;
+    }
+
+    /* ---------- Mech ---------- */
+
+    function werdeMech(f) {
+      f.mech = { rest: K.mech.dauer, takt: 0 };
+      f.stoss = null;
+      f.geduckt = false;
+      f.starre = 0;
+      z.ereignisse.push({ art: "eiermann", wer: f.id, x: f.x, y: f.y });
+    }
+
+    function beendeMech(f) {
+      if (!f.mech) return;
+      f.mech = null;
+      z.ereignisse.push({ art: "mechEnde", wer: f.id, x: f.x, y: f.y });
+    }
+
+    function mechSchritt(f, dt) {
+      if (!f.mech) return;
+      f.mech.rest -= dt;
+      if (f.mech.rest <= 0) beendeMech(f);
+    }
+
+    /** Schnellfeuer aus der Spitze des riesigen Strichs. */
+    function mechFeuer(f) {
+      const F = K.mech.feuer;
+      const m = masse(f);
+      const x = f.x + f.blick * (K.griff * K.mech.groesse + K.mech.stab);
+      const y = f.y + m.huefte;
+      const w = (zufall() * 2 - 1) * F.streuung * Math.PI / 180;
+      z.geschosse.push({
+        von: f.id, art: "mech", x: x, y: y,
+        vx: Math.cos(w) * F.tempo * f.blick, vy: Math.sin(w) * F.tempo,
+        radius: F.radius, schaden: F.schaden, abpraller: F.abpraller,
+        effekte: F.effekte.slice(), alter: 0, lebensdauer: F.lebensdauer,
+        spur: [], spurLaenge: F.spur, abgeprallt: 0,
+      });
+      z.ereignisse.push({ art: "mechSchuss", wer: f.id, x: x, y: y, blick: f.blick });
     }
 
     /** Eingaben in Bewegung umsetzen. */
@@ -239,7 +406,23 @@ const DuellRegeln = (function () {
       const steuerbar = !f.ko && f.starre <= 0;
       if (steuerbar && !f.stoss) f.blick = gegner.x >= f.x ? 1 : -1;
 
-      if (steuerbar) {
+      if (steuerbar && f.mech) {
+        // Als Mech: kein Stoß, kein Querschläger – die Angriffstaste ist Dauerfeuer
+        const w = werte(f);
+        f.geduckt = false;
+        const richtung = (e.rechts ? 1 : 0) - (e.links ? 1 : 0);
+        if (amBoden || richtung !== 0) f.vx = richtung * w.tempo;
+        if (e.springen && !f.vorher.springen && amBoden) f.vy = w.sprung;
+        if (e.angriff) {
+          f.mech.takt -= dt;
+          while (f.mech.takt <= 0) {
+            mechFeuer(f);
+            f.mech.takt += 1 / K.mech.feuer.rate;
+          }
+        } else {
+          f.mech.takt = 0;
+        }
+      } else if (steuerbar) {
         const w = werte(f);
         f.geduckt = Boolean(e.ducken) && amBoden;
         const richtung = (e.rechts ? 1 : 0) - (e.links ? 1 : 0);
@@ -290,9 +473,9 @@ const DuellRegeln = (function () {
     function schiebeAuseinander(a, b) {
       if (a.ko || b.ko) return;
       const dx = b.x - a.x;
-      const abstand = K.breite + 6;
+      const abstand = (masse(a).breite + masse(b).breite) / 2 + 6;
       if (Math.abs(dx) >= abstand) return;
-      const ueber = Math.max(a.y, b.y) > K.hoehe * 0.55;
+      const ueber = a.y > masse(b).hoehe * 0.55 || b.y > masse(a).hoehe * 0.55;
       if (ueber) return;
       const r = dx === 0 ? (a.blick || 1) : Math.sign(dx);
       const zuViel = (abstand - Math.abs(dx)) / 2;
@@ -343,20 +526,27 @@ const DuellRegeln = (function () {
       if (!a.stoss || a.stoss.getroffen || b.ko || b.starre > 0) return;
       const s = spitze(a);
       if (s.e < 0.6) return;
-      const h = b.geduckt ? K.hoeheGeduckt : K.hoehe;
+      const mb = masse(b);
+      const h = mb.hoehe;
       // Der ausgefahrene Stab (vom Griff bis zur Spitze) kreuzt den Körper –
       // so trifft er auch, wenn der Gegner sehr dicht steht
       const griff = a.x + a.blick * K.griff;
       const vorn = Math.min(griff, s.x), hinten = Math.max(griff, s.x);
-      const halb = K.breite / 2 + 4;
+      const halb = mb.breite / 2 + 4;
       const imKoerper = hinten >= b.x - halb && vorn <= b.x + halb && s.y >= b.y && s.y <= b.y + h;
       if (!imKoerper) return;
       a.stoss.getroffen = true;
-      const schaden = Math.round(K.schaden[0] + zufall() * (K.schaden[1] - K.schaden[0]));
+      const schaden = abgeschwaecht(b, Math.round(K.schaden[0] + zufall() * (K.schaden[1] - K.schaden[0])));
       b.leben = Math.max(0, b.leben - schaden);
       b.stoss = null;
       b.geduckt = false;
       const ko = b.leben <= 0;
+      if (b.mech && !ko) {
+        // Der Mech wird nicht zurückgestoßen
+        z.ereignisse.push({ art: "treffer", x: s.x, y: s.y, schaden: schaden, wer: b.id, ko: false, mech: true });
+        return;
+      }
+      beendeMech(b);
       const w = ko ? K.ko : K.rueckstoss;
       b.vx = a.blick * w.vx;
       b.vy = w.vy;
@@ -426,17 +616,29 @@ const DuellRegeln = (function () {
 
     function kugelTrifft(k, b) {
       if (b.ko || b.starre > 0) return false;
-      const h = b.geduckt ? K.hoeheGeduckt : K.hoehe;
-      const nx = Math.max(b.x - K.breite / 2, Math.min(k.x, b.x + K.breite / 2));
+      const m = masse(b);
+      const h = m.hoehe;
+      const nx = Math.max(b.x - m.breite / 2, Math.min(k.x, b.x + m.breite / 2));
       const ny = Math.max(b.y, Math.min(k.y, b.y + h));
       return (k.x - nx) * (k.x - nx) + (k.y - ny) * (k.y - ny) <= k.radius * k.radius;
     }
 
+    /** Als Mech nimmt man weniger Schaden. */
+    function abgeschwaecht(b, schaden) {
+      return b.mech ? Math.max(1, Math.round(schaden * K.mech.schadenFaktor)) : schaden;
+    }
+
     function trefferDurchKugel(k, b) {
-      b.leben = Math.max(0, b.leben - k.schaden);
+      const schaden = abgeschwaecht(b, k.schaden);
+      b.leben = Math.max(0, b.leben - schaden);
       b.stoss = null;
       const ko = b.leben <= 0;
       const richtung = k.vx >= 0 ? 1 : -1;
+      if (b.mech && !ko) {
+        z.ereignisse.push({ art: "treffer", x: k.x, y: k.y, schaden: schaden, wer: b.id, ko: false, kugel: true, mech: true, klein: k.art === "mech" });
+        return;
+      }
+      beendeMech(b);
       k.effekte.forEach(function (name) {
         const e = K.geschossEffekte[name];
         if (!e) return;
@@ -451,7 +653,7 @@ const DuellRegeln = (function () {
         b.vy = K.ko.vy;
         b.drehTempo = richtung * 11;
       }
-      z.ereignisse.push({ art: "treffer", x: k.x, y: k.y, schaden: k.schaden, wer: b.id, ko: ko, kugel: true });
+      z.ereignisse.push({ art: "treffer", x: k.x, y: k.y, schaden: schaden, wer: b.id, ko: ko, kugel: true, klein: k.art === "mech" });
     }
 
     return {
@@ -462,10 +664,12 @@ const DuellRegeln = (function () {
       werte: werte,
       angebote: angebote,
       waehle: waehle,
+      masse: masse,
       revanche: function () {
         ["gruen", "blau"].forEach(function (id) { z[id].siege = 0; z[id].powerups = {}; });
         z.runde = 1;
         z.sieger = null;
+        z.ereignis.verbraucht = false;
         neueRunde();
       },
     };
@@ -503,11 +707,32 @@ const DuellRegeln = (function () {
     m.warte -= dt;
     m.dauer -= dt;
 
+    // Als Mech: Abstand halten und Dauerfeuer
+    if (ich.mech) {
+      const abstand = Math.abs(er.x - ich.x);
+      const e = { angriff: true };
+      if (abstand > 420) e[er.x >= ich.x ? "rechts" : "links"] = true;
+      if (abstand < 140) e[er.x >= ich.x ? "links" : "rechts"] = true;
+      return e;
+    }
+    // Eine Blase liegt bereit oder fällt: hinlaufen
+    const blase = z.blase && z.blase.phase !== "warnung" ? z.blase : null;
+    if (blase && !(er.stoss && Math.abs(er.x - ich.x) < 120)) {
+      const dx = blase.x - ich.x;
+      const e = {};
+      if (Math.abs(dx) > 8) e[dx > 0 ? "rechts" : "links"] = true;
+      return e;
+    }
+
     if (m.warte <= 0) {
       m.warte = 0.16 + zufall() * 0.16;            // Reaktionszeit
       const abstand = Math.abs(er.x - ich.x);
       const erStoesst = er.stoss && er.stoss.t < K.stoss.vor + K.stoss.halten;
-      if (erStoesst && abstand < 150 && zufall() < 0.5) {
+      if (er.mech && zufall() < 0.6) {
+        // Ein feuernder Mech: ducken – seine Kugeln fliegen auf Kopfhöhe
+        m.plan = "ducken";
+        m.dauer = 0.4;
+      } else if (erStoesst && abstand < 150 && zufall() < 0.5) {
         m.plan = er.stoss.tief ? "springen" : "ducken";
         m.dauer = 0.35;
       } else if (kannSchiessen && abstand > 160 && zufall() < 0.45) {
@@ -550,7 +775,7 @@ const DuellRegeln = (function () {
     return e;
   }
 
-  return { K: K, erstelle: erstelle, ki: ki, kiWahl: kiWahl, werte: werte, powerup: powerup };
+  return { K: K, erstelle: erstelle, ki: ki, kiWahl: kiWahl, werte: werte, powerup: powerup, masse: masse };
 })();
 
 if (typeof module !== "undefined") module.exports = DuellRegeln;

@@ -11,6 +11,9 @@
   --dl-text: var(--farbe-text);
   --dl-leise: var(--farbe-text-leise);
   --dl-stern: #e8a317;
+  --dl-mech: #d62828;
+  --dl-mech-dunkel: #7a1111;
+  --dl-bart: #3b2416;
   max-width: 1100px;
   margin: 0 auto;
 }
@@ -19,6 +22,9 @@
   --dl-gruen: #51cf66;
   --dl-blau: #4dabf7;
   --dl-stern: #ffd43b;
+  --dl-mech: #ff4d4d;
+  --dl-mech-dunkel: #8c1a1a;
+  --dl-bart: #2e1b10;
 }
 
 .dl-buehne {
@@ -252,6 +258,11 @@ button.dl-karte:focus-visible {
   color: #fff;
   background: color-mix(in srgb, var(--dl-gruen) 70%, #000);
   border-color: transparent;
+}
+
+.dl-taste--feuer {
+  background: var(--dl-mech);
+  border-color: var(--dl-mech);
 }
 
 .dl-taste[hidden] {

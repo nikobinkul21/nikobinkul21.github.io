@@ -150,6 +150,7 @@
     el.auswahlHilfe = container.querySelector(".dl-auswahl-hilfe");
     el.slots = container.querySelector(".dl-slots");
     el.schussTaste = container.querySelector('[data-taste="schuss"]');
+    el.stossTaste = container.querySelector('[data-taste="angriff"]');
 
     el.slots.addEventListener("click", function (event) {
       const karte = event.target.closest("[data-wahl]");
@@ -312,17 +313,54 @@
     // Schuss-Knopf erst, wenn Grün den Querschläger hat
     const kannSchiessen = Boolean(R().werte(spiel.zustand.gruen).geschoss);
     if (el.schussTaste.hidden === kannSchiessen) el.schussTaste.hidden = !kannSchiessen;
+    // Als Mech wird der Stoß-Knopf zum Dauerfeuer-Knopf (gedrückt halten)
+    const feuer = Boolean(spiel.zustand.gruen.mech);
+    if (el.stossTaste.classList.contains("dl-taste--feuer") !== feuer) {
+      el.stossTaste.classList.toggle("dl-taste--feuer", feuer);
+      el.stossTaste.textContent = feuer ? "Feuer" : "Stoß";
+    }
     zeichne();
     requestAnimationFrame(bild);
   }
 
   function neuerEffekt(e) {
-    if (e.art === "treffer") {
+    const KE = R().K.ereignis, KM = R().K.mech;
+    if (e.art === "treffer" && e.klein) {
+      effekte.push({ art: "funke", x: e.x, y: e.y, t: 0, dauer: 0.2, text: "" });
+    } else if (e.art === "treffer") {
       effekte.push({ art: "treffer", x: e.x, y: e.y, t: 0, dauer: 0.55, text: AUSRUFE[Math.floor(Math.random() * AUSRUFE.length)] });
     } else if (e.art === "prall") {
       effekte.push({ art: "prall", x: e.x, y: e.y, t: 0, dauer: 0.45, text: "Klonk!" });
     } else if (e.art === "abpraller" || e.art === "kugelWeg") {
       effekte.push({ art: "funke", x: e.x, y: e.y, t: 0, dauer: 0.25, text: "" });
+    } else if (e.art === "blasePlatzt" || e.art === "blaseWeg") {
+      effekte.push({ art: "platzen", x: e.x, y: e.y, t: 0, dauer: KE.anzeige.platzen });
+    } else if (e.art === "eiermann") {
+      const A = KE.anzeige;
+      effekte.push({ art: "eiermann", t: 0, dauer: A.einflug + KE.textDauer + A.ausblenden });
+      effekte.push({ art: "blitz", t: 0, dauer: A.blitz });
+      if (!ruhig.matches) effekte.push({ art: "beben", t: 0, dauer: A.beben });
+    } else if (e.art === "mechSchuss") {
+      effekte.push({ art: "muendung", x: e.x, y: e.y, blick: e.blick, t: 0, dauer: KM.anzeige.muendung, w: Math.random() * 6 });
+      const f = spiel.zustand[e.wer];
+      effekte.push({
+        art: "huelse", x: f.x - e.blick * 8, y: e.y + 6, t: 0, dauer: KM.anzeige.huelse,
+        vx: -e.blick * (90 + Math.random() * 90), vy: 260 + Math.random() * 140, dreh: (Math.random() * 2 - 1) * 24,
+      });
+    } else if (e.art === "mechEnde") {
+      const m = R().K.hoehe * KM.groesse;
+      const teile = [];
+      for (let i = 0; i < KM.anzeige.teile; i++) {
+        const w = Math.PI * (0.1 + 0.8 * Math.random());
+        const v = 260 + Math.random() * 420;
+        teile.push({
+          dx: (Math.random() * 2 - 1) * 30, dy: m * (0.2 + 0.7 * Math.random()),
+          vx: Math.cos(w) * v * (Math.random() < 0.5 ? -1 : 1), vy: Math.sin(w) * v,
+          dreh: (Math.random() * 2 - 1) * 14, b: 8 + Math.random() * 16, h: 6 + Math.random() * 12,
+          art: i === 0 ? "bart" : i < 4 ? "dunkel" : "rot",
+        });
+      }
+      effekte.push({ art: "explosion", x: e.x, y: e.y + m / 2, boden: e.y, t: 0, dauer: KM.anzeige.explosion, teile: teile });
     }
   }
 
@@ -447,9 +485,10 @@
   function leseFarben() {
     if (!el.wurzel) return;
     const s = getComputedStyle(el.wurzel);
-    ["gruen", "blau", "grund", "linie", "text", "leise", "stern"].forEach(function (n) {
+    ["gruen", "blau", "grund", "linie", "text", "leise", "stern", "mech", "bart"].forEach(function (n) {
       farben[n] = s.getPropertyValue("--dl-" + n).trim();
     });
+    farben.mechDunkel = s.getPropertyValue("--dl-mech-dunkel").trim();
   }
 
   function groesseAnpassen() {
@@ -466,6 +505,11 @@
     c.setTransform(el.canvas.width / W, 0, 0, el.canvas.height / H, 0, 0);
     c.fillStyle = farben.grund;
     c.fillRect(0, 0, W, H);
+    const beben = effekte.find(function (e) { return e.art === "beben"; });
+    if (beben) {
+      const st = R().K.ereignis.anzeige.bebenWeite * (1 - beben.t / beben.dauer);
+      c.translate((Math.random() * 2 - 1) * st, (Math.random() * 2 - 1) * st);
+    }
 
     // Boden
     c.strokeStyle = farben.linie;
@@ -488,12 +532,31 @@
         });
         c.globalAlpha = 1;
       }
-      figur(c, f, farben[id], z.uhr);
+      if (f.mech) {
+        mech(c, f, z.uhr);
+        mechBalken(c, f);
+      } else {
+        figur(c, f, farben[id], z.uhr);
+      }
       schussBalken(c, f, w, farben[id]);
     });
-    z.geschosse.forEach(function (k) { kugel(c, k, farben[k.von]); });
-    effekte.forEach(function (e) { effekt(c, e); });
+    z.geschosse.forEach(function (k) { kugel(c, k, k.art === "mech" ? farben.mech : farben[k.von]); });
+    effekte.forEach(function (e) {
+      if (EFFEKTE[e.art]) EFFEKTE[e.art](c, e);
+      else if (e.art !== "eiermann" && e.art !== "blitz" && e.art !== "beben") effekt(c, e);
+    });
     anzeige(c, z);
+    if (z.blase) blase(c, z.blase, z.uhr);
+    effekte.forEach(function (e) {
+      if (e.art === "blitz") {
+        c.globalAlpha = 0.75 * Math.pow(1 - e.t / e.dauer, 2);
+        c.fillStyle = "#fff";
+        c.fillRect(-20, -20, W + 40, H + 40);
+        c.globalAlpha = 1;
+      } else if (e.art === "eiermann") {
+        eiermannText(c, e);
+      }
+    });
   }
 
   /** Abklingzeit des Schusses: kleiner Balken unter der Figur. */
@@ -526,7 +589,7 @@
     }
     c.globalAlpha = 1;
     c.shadowColor = farbe;
-    c.shadowBlur = 14;
+    c.shadowBlur = k.art === "mech" ? 6 : 14;
     c.fillStyle = farbe;
     c.beginPath();
     c.arc(k.x, BODEN - k.y, k.radius, 0, Math.PI * 2);
@@ -536,10 +599,11 @@
 
   function schatten(c, f) {
     const s = Math.max(0.35, 1 - f.y / 300);
+    const g = f.mech ? R().K.mech.groesse : 1;
     c.fillStyle = farben.leise;
     c.globalAlpha = 0.25 * s;
     c.beginPath();
-    c.ellipse(f.x, BODEN + 4, 26 * s, 5 * s, 0, 0, Math.PI * 2);
+    c.ellipse(f.x, BODEN + 4, 26 * s * g, 5 * s * g, 0, 0, Math.PI * 2);
     c.fill();
     c.globalAlpha = 1;
   }
@@ -620,6 +684,353 @@
         stern(c, kx + Math.cos(w) * 22, ky - 18 + Math.sin(w) * 7, 6, farben.stern);
       }
     }
+  }
+
+  /** Der Mega-Mech: klobiger roter Roboter, Ursprung Hüfte, doppelt so groß. */
+  function mech(c, f, uhr) {
+    const K = R().K, KM = K.mech;
+    const g = KM.groesse;
+    const huefte = K.huefte * g;
+    const amBoden = f.y <= 0.5;
+    const laeufst = amBoden && Math.abs(f.vx) > 10;
+    const schritt = laeufst ? Math.sin(f.laufPhase * 0.7) * 14 : 0;
+    const wippen = laeufst ? Math.abs(Math.sin(f.laufPhase * 0.7)) * 4 : Math.sin(uhr * 2) * 1.2;
+    const kontur = "#2a0808";
+
+    c.save();
+    if (f.mech.rest < KM.blinken && Math.floor(f.mech.rest * 8) % 2 === 0) c.globalAlpha = 0.4;
+    c.translate(f.x, BODEN - f.y - huefte);
+    c.scale(f.blick, 1);
+    c.lineJoin = "round";
+    c.strokeStyle = kontur;
+    c.lineWidth = 3;
+    const block = function (x, y, b, h, farbe) {
+      c.fillStyle = farbe;
+      c.fillRect(x, y, b, h);
+      c.strokeRect(x, y, b, h);
+    };
+
+    // Beine mit breiten Füßen
+    const bein = amBoden ? huefte : huefte * 0.75;
+    [[-24 - schritt, farben.mechDunkel], [4 + schritt, farben.mech]].forEach(function (b) {
+      block(b[0], 4, 20, bein - 16, b[1]);
+      block(b[0] - 4, bein - 14, 32, 14, farben.mechDunkel);
+    });
+    c.translate(0, -wippen);
+    block(-30, -12, 60, 26, farben.mechDunkel);
+
+    // Hinterer Arm
+    c.lineCap = "square";
+    c.strokeStyle = farben.mechDunkel;
+    c.lineWidth = 14;
+    c.beginPath();
+    c.moveTo(-34, -98);
+    c.lineTo(-30, -52);
+    c.lineTo(4, -6);
+    c.stroke();
+    c.strokeStyle = kontur;
+    c.lineWidth = 3;
+
+    // Rumpf mit Brustplatte und Nieten
+    block(-36, -112, 72, 104, farben.mech);
+    block(-22, -96, 44, 40, farben.mechDunkel);
+    c.fillStyle = "#ffd43b";
+    c.fillRect(-14, -84, 28, 6);
+    c.fillRect(-14, -72, 18, 6);
+    c.fillStyle = kontur;
+    [[-30, -106], [30, -106], [-30, -16], [30, -16]].forEach(function (n) {
+      c.beginPath();
+      c.arc(n[0], n[1], 2.5, 0, Math.PI * 2);
+      c.fill();
+    });
+    block(-46, -114, 18, 26, farben.mechDunkel);
+
+    // Kopf: Sehschlitz, Antenne, buschiger Schnurrbart
+    block(-26, -158, 52, 44, farben.mech);
+    block(-20, -150, 44, 14, kontur);
+    c.fillStyle = "#fff";
+    c.fillRect(2, -147, 8, 8);
+    c.fillRect(14, -147, 8, 8);
+    c.beginPath();
+    c.moveTo(0, -158);
+    c.lineTo(-4, -178);
+    c.stroke();
+    c.fillStyle = Math.floor(uhr * 3) % 2 ? farben.stern : farben.mechDunkel;
+    c.beginPath();
+    c.arc(-4, -182, 5, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    c.fillStyle = farben.bart;
+    [[-30, -127, 5], [-22, -128, 7], [-12, -129, 8], [0, -130, 8.5], [12, -129, 8], [24, -128, 7], [34, -127, 5]].forEach(function (k) {
+      c.beginPath();
+      c.arc(k[0] + 2, k[1], k[2], 0, Math.PI * 2);
+      c.fill();
+    });
+    [-1, 1].forEach(function (s) {
+      c.beginPath();
+      c.arc(2 + s * 40, -133, 5, 0, Math.PI * 2);
+      c.fill();
+    });
+
+    // Vorderer Arm und Schulter
+    c.strokeStyle = farben.mech;
+    c.lineWidth = 14;
+    c.beginPath();
+    c.moveTo(38, -98);
+    c.lineTo(46, -50);
+    c.lineTo(20, -6);
+    c.stroke();
+    c.strokeStyle = kontur;
+    c.lineWidth = 3;
+    block(28, -116, 22, 28, farben.mech);
+
+    // Der riesige rote Strich – vorn die Mündung
+    const vorn = K.griff * g + KM.stab;
+    c.translate(0, wippen);
+    block(K.griff * g, -8, vorn - K.griff * g - 10, 16, farben.mech);
+    block(vorn - 12, -6, 12, 12, kontur);
+    block(8, -12, 16, 24, farben.mechDunkel);
+    c.restore();
+  }
+
+  /** Restzeit über dem Mech, blinkt in den letzten Sekunden. */
+  function mechBalken(c, f) {
+    const K = R().K, KM = K.mech;
+    const anteil = Math.max(0, f.mech.rest / KM.dauer);
+    const breite = 80, x = f.x - breite / 2, y = BODEN - f.y - K.hoehe * KM.groesse - 34;
+    if (f.mech.rest < KM.blinken && Math.floor(f.mech.rest * 8) % 2 === 0) return;
+    c.globalAlpha = 0.25;
+    c.fillStyle = farben.leise;
+    c.fillRect(x, y, breite, 7);
+    c.globalAlpha = 1;
+    c.fillStyle = farben.mech;
+    c.fillRect(x, y, breite * anteil, 7);
+    c.strokeStyle = farben.linie;
+    c.lineWidth = 1.5;
+    c.strokeRect(x, y, breite, 7);
+  }
+
+  /** Geschwungener Schnurrbart (Breite b, Mitte x/y). */
+  function schnurrbart(c, x, y, b, farbe) {
+    c.save();
+    c.translate(x, y);
+    c.scale(b / 2, b / 2);
+    c.fillStyle = farbe;
+    [1, -1].forEach(function (s) {
+      c.save();
+      c.scale(s, 1);
+      c.beginPath();
+      c.moveTo(0, -0.1);
+      c.bezierCurveTo(0.2, -0.38, 0.55, -0.32, 0.72, -0.06);
+      c.bezierCurveTo(0.8, 0.08, 0.95, 0.06, 0.98, -0.18);
+      c.bezierCurveTo(1.06, 0.18, 0.78, 0.36, 0.5, 0.24);
+      c.bezierCurveTo(0.3, 0.16, 0.12, 0.1, 0, 0.16);
+      c.closePath();
+      c.fill();
+      c.restore();
+    });
+    c.restore();
+  }
+
+  /** Die Blase: vorher ein blinkendes "!", dann fällt sie, schaukelt und schwebt. */
+  function blase(c, b, uhr) {
+    const KE = R().K.ereignis;
+    const r = KE.radius;
+    if (b.phase === "warnung") {
+      if (Math.floor(b.t * KE.anzeige.warnTakt * 2) % 2) return;
+      const y = BODEN - KE.startHoehe;
+      c.fillStyle = farben.stern;
+      c.strokeStyle = "#2a0808";
+      c.lineWidth = 2.5;
+      c.beginPath();
+      c.arc(b.x, y, 17, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#2a0808";
+      c.font = "800 26px " + getComputedStyle(document.body).fontFamily;
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText("!", b.x, y + 1);
+      c.textBaseline = "alphabetic";
+      return;
+    }
+    const y = BODEN - b.y;
+    const bald = b.phase === "liegt" && b.liegt > KE.platzenNach - 1.5;
+    const wabern = Math.sin(uhr * (bald ? 14 : 5)) * (bald ? 0.09 : 0.05);
+    // Schatten am Boden
+    c.fillStyle = farben.leise;
+    c.globalAlpha = 0.2 * Math.max(0.3, 1 - b.y / 300);
+    c.beginPath();
+    c.ellipse(b.x, BODEN + 4, r * 0.8, 4, 0, 0, Math.PI * 2);
+    c.fill();
+    c.globalAlpha = 1;
+
+    c.save();
+    c.translate(b.x, y);
+    c.scale(1 + wabern, 1 - wabern);
+    const farbton = (uhr * 120) % 360;
+    const v = c.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    v.addColorStop(0, "rgba(255,255,255,0.4)");
+    v.addColorStop(0.7, "hsla(" + farbton + ",90%,70%,0.14)");
+    v.addColorStop(1, "hsla(" + (farbton + 60) + ",90%,60%,0.4)");
+    c.fillStyle = v;
+    c.beginPath();
+    c.arc(0, 0, r, 0, Math.PI * 2);
+    c.fill();
+    c.lineWidth = 2.5;
+    for (let i = 0; i < 12; i++) {
+      c.strokeStyle = "hsl(" + ((farbton + i * 30) % 360) + ",85%,55%)";
+      c.beginPath();
+      c.arc(0, 0, r, i * Math.PI / 6, (i + 1) * Math.PI / 6 + 0.02);
+      c.stroke();
+    }
+    schnurrbart(c, 0, r * 0.12, r * 1.35, farben.bart);
+    c.fillStyle = "rgba(255,255,255,0.85)";
+    c.beginPath();
+    c.ellipse(-r * 0.42, -r * 0.45, r * 0.22, r * 0.11, -0.6, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+
+  // Effekte des Ereignisses (Weltkoordinaten: y nach oben)
+  const EFFEKTE = {
+    platzen: function (c, e) {
+      const p = e.t / e.dauer, r = R().K.ereignis.radius;
+      const x = e.x, y = BODEN - e.y;
+      c.globalAlpha = 1 - p;
+      c.lineWidth = 3 * (1 - p) + 1;
+      for (let i = 0; i < 10; i++) {
+        const w = i * Math.PI / 5;
+        const d = r * (0.9 + p * 1.3);
+        c.strokeStyle = "hsl(" + (i * 36) + ",85%,58%)";
+        c.beginPath();
+        c.moveTo(x + Math.cos(w) * d * 0.75, y + Math.sin(w) * d * 0.75);
+        c.lineTo(x + Math.cos(w) * d, y + Math.sin(w) * d);
+        c.stroke();
+        c.fillStyle = c.strokeStyle;
+        c.beginPath();
+        c.arc(x + Math.cos(w + 0.3) * (r + p * 50), y + Math.sin(w + 0.3) * (r + p * 50) + p * p * 30, 3, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.globalAlpha = 1;
+    },
+    muendung: function (c, e) {
+      c.save();
+      c.translate(e.x, BODEN - e.y);
+      c.scale(e.blick, 1);
+      c.rotate((e.w - 3) * 0.04);
+      c.globalAlpha = 1 - e.t / e.dauer;
+      c.fillStyle = "#ffa94d";
+      c.beginPath();
+      c.moveTo(0, -9);
+      c.lineTo(10, -4);
+      c.lineTo(26, 0);
+      c.lineTo(10, 4);
+      c.lineTo(0, 9);
+      c.lineTo(4, 0);
+      c.closePath();
+      c.fill();
+      c.fillStyle = "#fff3bf";
+      c.beginPath();
+      c.arc(5, 0, 4, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+    },
+    huelse: function (c, e) {
+      const sch = 1800;
+      const landung = (e.vy + Math.sqrt(e.vy * e.vy + 2 * sch * e.y)) / sch;
+      const t = Math.min(e.t, landung);
+      const x = e.x + e.vx * t, y = Math.max(1.5, e.y + e.vy * t - sch * t * t / 2);
+      c.save();
+      c.translate(x, BODEN - y);
+      c.rotate(e.dreh * t);
+      c.globalAlpha = Math.min(1, (e.dauer - e.t) / (e.dauer * 0.3));
+      c.fillStyle = "#d4a017";
+      c.fillRect(-4, -1.5, 8, 3);
+      c.restore();
+      c.globalAlpha = 1;
+    },
+    explosion: function (c, e) {
+      const p = e.t / e.dauer;
+      const x = e.x, y = BODEN - e.y;
+      // Feuerball
+      if (p < 0.5) {
+        const q = p / 0.5;
+        c.globalAlpha = 1 - q;
+        [["#ffd43b", 1], ["#ff922b", 0.75], ["#fff", 0.4]].forEach(function (s) {
+          c.fillStyle = s[0];
+          c.beginPath();
+          c.arc(x, y, (30 + q * 70) * s[1], 0, Math.PI * 2);
+          c.fill();
+        });
+      }
+      // Teile fliegen umher und bleiben am Boden liegen
+      c.globalAlpha = Math.min(1, (1 - p) * 3);
+      c.strokeStyle = "#2a0808";
+      c.lineWidth = 2;
+      e.teile.forEach(function (t) {
+        const sch = 1600;
+        const y0 = e.boden + t.dy;
+        const landung = (t.vy + Math.sqrt(t.vy * t.vy + 2 * sch * y0)) / sch;
+        const tt = Math.min(e.t, landung);
+        const tx = e.x + t.dx + t.vx * tt;
+        const ty = Math.max(t.h / 2, y0 + t.vy * tt - sch * tt * tt / 2);
+        c.save();
+        c.translate(tx, BODEN - ty);
+        c.rotate(t.dreh * tt);
+        if (t.art === "bart") {
+          schnurrbart(c, 0, 0, 34, farben.bart);
+        } else {
+          c.fillStyle = t.art === "rot" ? farben.mech : farben.mechDunkel;
+          c.fillRect(-t.b / 2, -t.h / 2, t.b, t.h);
+          c.strokeRect(-t.b / 2, -t.h / 2, t.b, t.h);
+        }
+        c.restore();
+      });
+      c.globalAlpha = 1;
+    },
+  };
+
+  /** "Der Eiermann kommt!!!" – groß in der Mitte, fliegt wackelnd ein und blendet aus. */
+  function eiermannText(c, e) {
+    const KE = R().K.ereignis, A = KE.anzeige;
+    const g = Math.min(2.4, Math.max(1, 640 / (el.canvas.clientWidth || W)));
+    let groesse = 84 * Math.min(g, 1.6);
+    c.font = "800 " + groesse + "px " + getComputedStyle(document.body).fontFamily;
+    const zuBreit = c.measureText(KE.text).width / (W - 60);
+    if (zuBreit > 1) {
+      groesse /= zuBreit;
+      c.font = "800 " + groesse + "px " + getComputedStyle(document.body).fontFamily;
+    }
+    const ende = A.einflug + KE.textDauer;
+    let deckung = e.t > ende ? 1 - (e.t - ende) / A.ausblenden : 1;
+    let skala = 1, dreh = 0, versatz = 0;
+    if (ruhig.matches) {
+      deckung = Math.min(deckung, e.t / A.einflug);
+    } else {
+      const p = Math.min(1, e.t / A.einflug);
+      // Einflug von oben mit Überschwingen, danach kurzes Wackeln
+      const k = 1.7;
+      const zurueck = 1 + (k + 1) * Math.pow(p - 1, 3) + k * Math.pow(p - 1, 2);
+      skala = 0.3 + 0.7 * zurueck;
+      versatz = (1 - zurueck) * -220;
+      dreh = Math.sin(e.t * 24) * 0.12 * Math.exp(-e.t * 3.5);
+    }
+    c.save();
+    c.globalAlpha = Math.max(0, Math.min(1, deckung));
+    c.translate(W / 2, H / 2 - 10 + versatz);
+    c.rotate(dreh);
+    c.scale(skala, skala);
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.lineJoin = "round";
+    c.lineWidth = groesse * 0.16;
+    c.strokeStyle = "#1b0606";
+    c.strokeText(KE.text, 0, 0);
+    c.fillStyle = farben.mech;
+    c.fillText(KE.text, 0, 0);
+    c.restore();
+    c.textBaseline = "alphabetic";
   }
 
   function stern(c, x, y, r, farbe) {
