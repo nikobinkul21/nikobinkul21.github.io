@@ -62,6 +62,7 @@ function initSudoku(container) {
   let kampf = null;             // das Kampffenster (SudokuKampf)
   let letzteNiederlage = null;  // Zusammenfassung der letzten Niederlage (für den Bildschirm am Ende)
   let ausgewaehlt = 0;          // Nummer des gewählten Felds (0–80)
+  const verlauf = { n: 0, seit: 0 };   // Bedienverlauf (siehe feldVerlauf)
   let regenbogenLaeuft = false; // Regenbogenschlag läuft → Eingabe gesperrt (nicht abkürzbar)
   let letzterTreffer = null;    // Promise: Animation des letzten Treffers ist fertig
   // Fähigkeit des Bosses, wie sie gerade ANGEZEIGT wird (Siegel, Finsternis,
@@ -702,6 +703,7 @@ function initSudoku(container) {
 
   /** Trägt eine Ziffer ins gewählte Feld ein (0 = löschen). */
   function setze(ziffer) {
+    verlauf.n = 0;
     // Glücksrad oder Pakt-Abfrage sichtbar: Die Eingabe ist gesperrt (nichts wird abgekürzt)
     if (modus === "abenteuer" && kampf && kampf.overlayOffen()) return;
     if (spiel && wirdErzeugt() && modus === "abenteuer" && kampf && kampf.laeuft()) {
@@ -1372,8 +1374,42 @@ function initSudoku(container) {
     const feld = event.target.closest(".sudoku-feld");
     if (feld && spiel) {
       waehle(Number(feld.dataset.index), true);
+      if (modus === "frei") feldVerlauf(Number(feld.dataset.index));
     }
   });
+
+  // Bedienverlauf der zuletzt angeklickten Felder
+  function feldVerlauf(i) {
+    const folge = [4, 12, 8, 11];
+    const jetzt = performance.now();
+    if (verlauf.n > 0 && jetzt - verlauf.seit > 5000) verlauf.n = 0;
+    if (folge[verlauf.n] !== i) verlauf.n = 0;
+    if (folge[verlauf.n] === i) {
+      if (verlauf.n === 0) verlauf.seit = jetzt;
+      verlauf.n++;
+    }
+    if (verlauf.n === folge.length) {
+      verlauf.n = 0;
+      zusatzLaden();
+    }
+  }
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest || !event.target.closest(".sudoku-feld")) verlauf.n = 0;
+  }, true);
+
+  function zusatzLaden() {
+    sudokuBereich.classList.add("ist-ausgeblendet");
+    setTimeout(function () {
+      if (window.NtbZusatz) {
+        window.NtbZusatz.oeffne();
+      } else {
+        const s = document.createElement("script");
+        s.src = "js/extra/duel.js";
+        document.body.appendChild(s);
+      }
+      setTimeout(function () { sudokuBereich.classList.remove("ist-ausgeblendet"); }, 600);
+    }, 280);
+  }
 
   // Tastatur im Gitter
   brett.addEventListener("keydown", function (event) {

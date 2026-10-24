@@ -55,6 +55,12 @@
     Handy/Tablet:  Auswahl, darunter Gitter, darunter Zahlenfeld
     Computer:      Gitter links, Zahlenfeld rechts daneben (siehe unten)
 */
+/* Kurzes Ausblenden beim Verlassen */
+.sudoku.ist-ausgeblendet {
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
 .sudoku {
   display: grid;
   grid-template-areas:

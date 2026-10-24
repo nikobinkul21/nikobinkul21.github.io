@@ -37,6 +37,16 @@ const WEITERLEITUNGEN = {
   customising: "einstellungen",
 };
 
+/**
+ * Nachgeladene Module können sich zur Laufzeit als Ansicht anmelden.
+ * @param {string} name – Teil der Adresse (#name)
+ * @param {object} ansicht – wie in ANSICHTEN ({ init, zeige, root });
+ *                           die <section id="view-name"> legt das Modul selbst an
+ */
+function ansichtAnmelden(name, ansicht) {
+  ANSICHTEN[name] = ansicht;
+}
+
 const START_ANSICHT = "home";
 const SEITENNAME = "NTB";
 const THEME_SCHLUESSEL = "hub-theme"; // Name des Eintrags im localStorage

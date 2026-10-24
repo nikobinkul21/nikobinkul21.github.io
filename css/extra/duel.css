@@ -1,0 +1,164 @@
+/* ==========================================================================
+   extra/duel.css – Aussehen des Duells (js/extra/duel.js)
+   Farben der Bühne kommen aus css/style.css; die Figurenfarben stehen hier.
+   ========================================================================== */
+
+.dl {
+  --dl-gruen: #2f9e44;
+  --dl-blau: #1c7ed6;
+  --dl-grund: var(--farbe-flaeche);
+  --dl-linie: var(--farbe-text);
+  --dl-text: var(--farbe-text);
+  --dl-leise: var(--farbe-text-leise);
+  --dl-stern: #e8a317;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+:root[data-theme="dark"] .dl {
+  --dl-gruen: #51cf66;
+  --dl-blau: #4dabf7;
+  --dl-stern: #ffd43b;
+}
+
+.dl-buehne {
+  position: relative;
+  border: var(--linie);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+
+.dl-canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  touch-action: none;
+  outline: none;
+}
+
+/* Menü und Ergebnis liegen über der Bühne */
+.dl-schirm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--abstand-m);
+  padding: var(--abstand-m);
+  text-align: center;
+  background: color-mix(in srgb, var(--farbe-flaeche) 82%, transparent);
+}
+
+.dl-schirm[hidden] {
+  display: none;
+}
+
+.dl-titel {
+  margin: 0;
+  font-size: clamp(1.4rem, 4vw, 2.4rem);
+}
+
+.dl-ergebnis[data-sieger="gruen"] { color: var(--dl-gruen); }
+.dl-ergebnis[data-sieger="blau"] { color: var(--dl-blau); }
+
+.dl-stand {
+  margin: 0;
+  font-family: var(--schrift-titel);
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.dl-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--abstand-s);
+}
+
+.dl-hilfe {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--farbe-text-leise);
+}
+
+.dl-gruen { color: var(--dl-gruen); font-weight: 700; }
+.dl-blau { color: var(--dl-blau); font-weight: 700; }
+
+.dl-link {
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--farbe-text-leise);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.dl-link:hover { color: var(--farbe-akzent); }
+
+/* Bildschirmknöpfe (Smartphone, gegen den Computer) */
+.dl-touch {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--abstand-s);
+  margin-top: var(--abstand-s);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dl-touch[hidden] {
+  display: none;
+}
+
+.dl-touch-gruppe {
+  display: flex;
+  gap: var(--abstand-s);
+}
+
+.dl-taste {
+  width: 64px;
+  height: 64px;
+  font: inherit;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche-leise);
+  border: var(--linie);
+  border-radius: var(--radius-m);
+  touch-action: none;
+}
+
+.dl-taste--stoss {
+  width: 84px;
+  font-size: 1rem;
+  color: #fff;
+  background: var(--dl-gruen);
+  border-color: var(--dl-gruen);
+}
+
+.dl-taste.ist-gedrueckt {
+  filter: brightness(0.85);
+  transform: scale(0.95);
+}
+
+/* Auf Touch-Geräten gibt es nur das Spiel gegen den Computer */
+@media (pointer: coarse) {
+  .dl-nur-tastatur {
+    display: none;
+  }
+}
+
+@media (max-width: 599px) {
+  .dl-taste {
+    width: 56px;
+    height: 56px;
+  }
+
+  .dl-taste--stoss {
+    width: 72px;
+  }
+}
