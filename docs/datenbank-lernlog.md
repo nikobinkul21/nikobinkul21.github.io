@@ -411,5 +411,10 @@ Teil A (was auslagern?), Stand 2026-10-26:
   Übung, …) sollen per INSERT ergänzt werden können, ohne die
   Tabellendefinition zu ändern.
 
+- **Schlüssel von ART:** kurzer Code (`vorlesung`, `arzt`, …) statt Name
+  oder Zahl – stabil und trotzdem lesbar. Konzept natürlicher vs.
+  künstlicher Schlüssel erklärt; Vorteil (Umbenennen ändert nur den
+  Anzeigenamen, nicht die Verweise) noch einmal Schritt für Schritt erklärt.
+
 Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
 Aufgabe nach der anderen.
