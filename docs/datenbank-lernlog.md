@@ -396,3 +396,16 @@ Unterschiede zu "Zu erledigen":
 
 **Status:** offen – Konzept (Anomalien, Fremdschlüssel, Kardinalität)
 erklärt, Aufgabe gestellt (2026-10-26).
+
+Teil A (was auslagern?), Stand 2026-10-26:
+- **Fach:** ja. Begründung zuerst nur "keine Doppelungen" (richtig); die
+  Löschanomalie war falsch verstanden (es ging nicht um andere Termine,
+  sondern um das Wissen über das Fach). Mit konkretem Beispiel
+  (Dozentin/Farbe in jeder Zeile) erklärt.
+- **Ort:** nein – nur ein Raumname ohne weitere Eigenschaften.
+- **Wiederholung:** keine eigene Tabelle – "wöchentlich" + Enddatum bleiben
+  im Termin; leere Felder bei Einzelterminen werden in Kauf genommen.
+  (Eigene Serien-Tabelle erst nötig, wenn z. B. Ausnahmen wie "fällt an
+  Feiertag aus" gespeichert werden sollen.)
+- **Art:** offen – Nutzer möchte mehr Arten (Arzttermin, Arbeit, Vorlesung,
+  Übung). Kriterien Werteliste (CHECK) vs. eigene Tabelle erklärt.
