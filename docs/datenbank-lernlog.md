@@ -419,6 +419,10 @@ Teil A (was auslagern?), Stand 2026-10-26:
 Teil B – Tabellen:
 - **ART:** `id` VARCHAR2 NOT NULL PK (kurzer Code), `name` VARCHAR2 NOT NULL
   (Anzeigename). Ohne Farbe. ✅ (Längen und UNIQUE auf `name` → Schritt 2)
+  Begründung in eigenen Worten: Umbenennen ändert nur eine Zeile in ART,
+  der Code bleibt stabil, weil es keinen Grund gibt, ihn zu ändern. ✅
+- **FACH:** `id` NUMBER NOT NULL PK (fortlaufend, soll von Oracle vergeben
+  werden → Identity-Spalte in Schritt 2), `titel` VARCHAR2 NOT NULL. ✅
 
 Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
 Aufgabe nach der anderen.
