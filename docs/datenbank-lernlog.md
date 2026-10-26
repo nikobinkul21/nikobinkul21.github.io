@@ -429,9 +429,8 @@ Teil B – Tabellen:
   `art_id` VARCHAR2 NOT NULL FK → ART, `fach_id` NUMBER FK → FACH (optional),
   `datum` DATE NOT NULL, `ganztaegig` BOOLEAN NOT NULL, `start`, `ende`,
   `ort`, `notiz`, `wiederholung` BOOLEAN, `wiederholung_bis`.
-  Datentypen der FKs passen zu den Zieltabellen ✅. Korrekturen: `fach_id`
-  nicht NOT NULL, snake_case für `wiederholung_bis`, `wiederholung` als
-  Pflichtfeld überlegen. Typen für start/ende/wiederholung_bis →
+  Datentypen der FKs passen zu den Zieltabellen ✅. Korrigiert: `fach_id`
+  optional, `wiederholung_bis` in snake_case, `wiederholung` BOOLEAN NOT NULL ✅. Typen für start/ende/wiederholung_bis →
   Schritt 2 (`DATE WITH TIMESTAMP` gibt es nicht).
 
 Teil C – Beziehungen:
