@@ -441,5 +441,14 @@ Teil C – Beziehungen:
 
 **Status Schritt 1:** abgeschlossen (2026-10-26), Interview-Fragen gestellt.
 
+Interview-Fragen Schritt 1:
+1. *Warum Fach ausgelagert, Ort nicht?* – Bewertung 4/5: beide Hälften
+   begründet, Fremdschlüssel genannt. Verbesserung: "eleganter" durch den
+   konkreten Nutzen ersetzen (keine Anomalien: einmal umbenennen, Fach bleibt
+   beim Löschen der Termine erhalten, Zählen pro Fach zuverlässig); beim Ort
+   ist das stärkere Argument "keine eigenen Eigenschaften", nicht "jeder
+   Raum ist anders" (eine Serie nutzt denselben Raum jede Woche).
+2. *Fremdschlüssel / art_id = 'sport'?* – offen
+
 Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
 Aufgabe nach der anderen.
