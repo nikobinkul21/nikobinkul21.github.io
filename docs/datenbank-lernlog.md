@@ -460,3 +460,14 @@ Interview-Fragen Schritt 1:
 
 Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
 Aufgabe nach der anderen.
+
+## Schritt 2: Datentypen und Constraints für Zeiträume
+
+**Status:** als Nächstes. Offene Punkte aus Schritt 1:
+- passende Typen für `start`, `ende`, `wiederholung_bis`
+  (`DATE WITH TIMESTAMP` gibt es nicht)
+- Identity-Spalte für `FACH.id`
+- Längen der VARCHAR2-Spalten, UNIQUE für `ART.name`
+- Regeln: Ende nach Start, start/ende genau dann gesetzt, wenn nicht
+  ganztägig, `wiederholung_bis` nur bei Serien und nicht vor `datum`
+- Fremdschlüssel mit `ON DELETE CASCADE` (FACH) im DDL
