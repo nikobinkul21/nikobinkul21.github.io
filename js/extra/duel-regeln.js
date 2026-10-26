@@ -84,9 +84,24 @@ const DuellRegeln = (function () {
       schadenFaktor: 0.5,            // nimmt nur die Hälfte des Schadens
       stab: 120,                     // Länge des riesigen Strichs
       feuer: {
-        rate: 8,                     // Kugeln pro Sekunde, solange gehalten
-        tempo: 950, radius: 4, schaden: 2, streuung: 4,   // Streuung ± Grad
+        rate: 15,                    // Kugeln pro Sekunde, solange gehalten
+        tempo: 950, radius: 4, schaden: 1, streuung: 2,   // Streuung ± Grad
         abpraller: 0, lebensdauer: 3, spur: 4, effekte: [],
+        // Sperrfeuer: der Strich schwenkt gleichmäßig auf und ab
+        // (± weite Grad, tempo = ganze Schwenks oben–unten–oben pro Sekunde)
+        schwenk: { weite: 40, tempo: 2 },
+      },
+      // Druckwelle beim Landen nach einem Sprung
+      druckwelle: {
+        minHoehe: 40,                // so hoch muss der Sprung gewesen sein
+        reichweite: 320,             // nach jeder Seite (etwa ein Drittel der Bühne)
+        tempo: 900,                  // Ausbreitung in Pixeln pro Sekunde
+        schaden: 10,
+        wurf: { vx: 480, vy: 640, starre: 0.5, drehTempo: 9 },
+        ausklingen: 0.3,             // Sekunden, die der Ring am Ende noch sichtbar ist
+        kiAbstand: 0.8,              // Computer springt, wenn der Gegner so nah ist (Anteil der Reichweite)
+        kiPause: [1.4, 2.4],         // Sekunden zwischen zwei Druckwellen des Computers
+        beben: 0.3, bebenWeite: 5,   // Bildschirmwackeln
       },
       // Darstellung: Mündungsfeuer, ausgeworfene Hülsen, Explosion am Ende
       anzeige: { muendung: 0.07, huelse: 0.9, explosion: 1.1, teile: 18 },
@@ -165,7 +180,7 @@ const DuellRegeln = (function () {
     const z = {
       phase: "start", zeit: 0, runde: 1, rundenSieger: null, sieger: null,
       gruen: kaempfer("gruen"), blau: kaempfer("blau"), ereignisse: [], uhr: 0,
-      geschosse: [], auswahl: null,
+      geschosse: [], auswahl: null, wellen: [],
       kampfZeit: 0,
       ereignis: { verbraucht: false, geplant: null },
       blase: null,
@@ -190,6 +205,7 @@ const DuellRegeln = (function () {
         z[id].powerups = alt.powerups;
       });
       z.geschosse = [];
+      z.wellen = [];
       z.auswahl = null;
       z.blase = null;
       z.kampfZeit = 0;
@@ -251,6 +267,7 @@ const DuellRegeln = (function () {
         ereignisSchritt(dt);
         mechSchritt(z.gruen, dt);
         mechSchritt(z.blau, dt);
+        wellenSchritt(dt);
         if (!pruefeZusammenprall()) {
           pruefeTreffer(z.gruen, z.blau);
           pruefeTreffer(z.blau, z.gruen);
@@ -295,6 +312,7 @@ const DuellRegeln = (function () {
       beendeMech(z.gruen);
       beendeMech(z.blau);
       z.blase = null;
+      z.wellen = [];
     }
 
     /* ---------- Zufallsereignis: die Blase ---------- */
@@ -352,7 +370,7 @@ const DuellRegeln = (function () {
     /* ---------- Mech ---------- */
 
     function werdeMech(f) {
-      f.mech = { rest: K.mech.dauer, takt: 0 };
+      f.mech = { rest: K.mech.dauer, takt: 0, schwenk: 0, winkel: 0, flug: null };
       f.stoss = null;
       f.geduckt = false;
       f.starre = 0;
@@ -367,25 +385,93 @@ const DuellRegeln = (function () {
 
     function mechSchritt(f, dt) {
       if (!f.mech) return;
+      // Landung nach einem echten Sprung: Druckwelle (höchstens eine pro Sprung)
+      if (f.y > 0) {
+        if (!f.mech.flug) f.mech.flug = { start: f.y, hoch: f.y };
+        f.mech.flug.hoch = Math.max(f.mech.flug.hoch, f.y);
+      } else if (f.mech.flug) {
+        if (f.mech.flug.hoch - f.mech.flug.start >= K.mech.druckwelle.minHoehe) {
+          z.wellen.push({ von: f.id, x: f.x, r: 0, t: 0, erledigt: false });
+          z.ereignisse.push({ art: "druckwelle", wer: f.id, x: f.x });
+        }
+        f.mech.flug = null;
+      }
       f.mech.rest -= dt;
       if (f.mech.rest <= 0) beendeMech(f);
     }
 
-    /** Schnellfeuer aus der Spitze des riesigen Strichs. */
+    /** Winkel des Strichs (Grad, positiv = nach oben) – Dreieckswelle über die Schwenkphase. */
+    function schwenkWinkel(phase) {
+      const s = phase - Math.floor(phase);
+      const k = s < 0.25 ? 4 * s : s < 0.75 ? 2 - 4 * s : 4 * s - 4;
+      return k * K.mech.feuer.schwenk.weite;
+    }
+
+    /** Drehpunkt (Griff) und Mündung des Strichs in Weltkoordinaten. */
+    function mechLauf(f) {
+      const g = K.mech.groesse;
+      const w = f.mech.winkel * Math.PI / 180;
+      const gx = f.x + f.blick * K.griff * g, gy = f.y + masse(f).huefte;
+      return { gx: gx, gy: gy, x: gx + f.blick * Math.cos(w) * K.mech.stab, y: gy + Math.sin(w) * K.mech.stab };
+    }
+
+    /** Schnellfeuer aus der Spitze des riesigen Strichs, in die aktuelle Richtung. */
     function mechFeuer(f) {
       const F = K.mech.feuer;
-      const m = masse(f);
-      const x = f.x + f.blick * (K.griff * K.mech.groesse + K.mech.stab);
-      const y = f.y + m.huefte;
-      const w = (zufall() * 2 - 1) * F.streuung * Math.PI / 180;
-      z.geschosse.push({
-        von: f.id, art: "mech", x: x, y: y,
+      const lauf = mechLauf(f);
+      const w = (f.mech.winkel + (zufall() * 2 - 1) * F.streuung) * Math.PI / 180;
+      const k = {
+        von: f.id, art: "mech", x: lauf.x, y: lauf.y,
         vx: Math.cos(w) * F.tempo * f.blick, vy: Math.sin(w) * F.tempo,
         radius: F.radius, schaden: F.schaden, abpraller: F.abpraller,
         effekte: F.effekte.slice(), alter: 0, lebensdauer: F.lebensdauer,
         spur: [], spurLaenge: F.spur, abgeprallt: 0,
+      };
+      z.ereignisse.push({ art: "mechSchuss", wer: f.id, x: lauf.x, y: lauf.y, blick: f.blick, winkel: f.mech.winkel });
+      // Steht der Gegner schon zwischen Griff und Mündung, trifft die Kugel sofort
+      const b = z[f.id === "gruen" ? "blau" : "gruen"];
+      for (let i = 0; i <= 6; i++) {
+        const probe = Object.assign({}, k, { x: lauf.gx + (lauf.x - lauf.gx) * i / 6, y: lauf.gy + (lauf.y - lauf.gy) * i / 6 });
+        if (kugelTrifft(probe, b)) {
+          trefferDurchKugel(probe, b);
+          return;
+        }
+      }
+      z.geschosse.push(k);
+    }
+
+    /** Druckwellen laufen am Boden nach beiden Seiten. */
+    function wellenSchritt(dt) {
+      const D = K.mech.druckwelle;
+      z.wellen = z.wellen.filter(function (w) {
+        w.t += dt;
+        w.r = Math.min(D.reichweite, w.r + D.tempo * dt);
+        const b = z[w.von === "gruen" ? "blau" : "gruen"];
+        const abstand = Math.max(0, Math.abs(b.x - w.x) - masse(b).breite / 2);
+        if (!w.erledigt && abstand <= w.r) {
+          w.erledigt = true;
+          // Wer gerade in der Luft ist, weicht aus
+          if (b.y <= 0.5 && !b.ko) welleTrifft(w, b);
+        }
+        if (w.r >= D.reichweite) w.erledigt = true;
+        return w.t < D.reichweite / D.tempo + D.ausklingen;
       });
-      z.ereignisse.push({ art: "mechSchuss", wer: f.id, x: x, y: y, blick: f.blick });
+    }
+
+    function welleTrifft(w, b) {
+      const D = K.mech.druckwelle;
+      const schaden = abgeschwaecht(b, D.schaden);
+      const richtung = b.x >= w.x ? 1 : -1;
+      b.leben = Math.max(0, b.leben - schaden);
+      b.stoss = null;
+      b.geduckt = false;
+      const ko = b.leben <= 0;
+      b.vx = richtung * (ko ? K.ko.vx : D.wurf.vx);
+      b.vy = ko ? K.ko.vy : D.wurf.vy;
+      b.starre = D.wurf.starre;
+      b.drehTempo = richtung * D.wurf.drehTempo;
+      b.ko = ko;
+      z.ereignisse.push({ art: "treffer", x: b.x, y: 20, schaden: schaden, wer: b.id, ko: ko, welle: true });
     }
 
     /** Eingaben in Bewegung umsetzen. */
@@ -414,6 +500,8 @@ const DuellRegeln = (function () {
         if (amBoden || richtung !== 0) f.vx = richtung * w.tempo;
         if (e.springen && !f.vorher.springen && amBoden) f.vy = w.sprung;
         if (e.angriff) {
+          f.mech.schwenk += dt * K.mech.feuer.schwenk.tempo;
+          f.mech.winkel = schwenkWinkel(f.mech.schwenk);
           f.mech.takt -= dt;
           while (f.mech.takt <= 0) {
             mechFeuer(f);
@@ -421,6 +509,8 @@ const DuellRegeln = (function () {
           }
         } else {
           f.mech.takt = 0;
+          f.mech.schwenk = 0;
+          f.mech.winkel = 0;
         }
       } else if (steuerbar) {
         const w = werte(f);
@@ -707,12 +797,18 @@ const DuellRegeln = (function () {
     m.warte -= dt;
     m.dauer -= dt;
 
-    // Als Mech: Abstand halten und Dauerfeuer
+    // Als Mech: Abstand halten, Dauerfeuer, Druckwelle gegen einen Gegner am Boden
     if (ich.mech) {
+      const D = K.mech.druckwelle;
       const abstand = Math.abs(er.x - ich.x);
       const e = { angriff: true };
       if (abstand > 420) e[er.x >= ich.x ? "rechts" : "links"] = true;
       if (abstand < 140) e[er.x >= ich.x ? "links" : "rechts"] = true;
+      m.welle = (m.welle || 0) - dt;
+      if (m.welle <= 0 && ich.y <= 0 && er.y <= 0 && !er.ko && abstand < D.reichweite * D.kiAbstand) {
+        e.springen = true;
+        m.welle = D.kiPause[0] + zufall() * (D.kiPause[1] - D.kiPause[0]);
+      }
       return e;
     }
     // Eine Blase liegt bereit oder fällt: hinlaufen
@@ -728,10 +824,10 @@ const DuellRegeln = (function () {
       m.warte = 0.16 + zufall() * 0.16;            // Reaktionszeit
       const abstand = Math.abs(er.x - ich.x);
       const erStoesst = er.stoss && er.stoss.t < K.stoss.vor + K.stoss.halten;
-      if (er.mech && zufall() < 0.6) {
-        // Ein feuernder Mech: ducken – seine Kugeln fliegen auf Kopfhöhe
-        m.plan = "ducken";
-        m.dauer = 0.4;
+      if (er.mech && er.y > 30 && er.vy < 0 && zufall() < 0.5) {
+        // Ein landender Mech: hochspringen, um der Druckwelle auszuweichen
+        m.plan = "springen";
+        m.dauer = 0.2;
       } else if (erStoesst && abstand < 150 && zufall() < 0.5) {
         m.plan = er.stoss.tief ? "springen" : "ducken";
         m.dauer = 0.35;

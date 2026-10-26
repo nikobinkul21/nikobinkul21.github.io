@@ -341,12 +341,15 @@
       effekte.push({ art: "blitz", t: 0, dauer: A.blitz });
       if (!ruhig.matches) effekte.push({ art: "beben", t: 0, dauer: A.beben });
     } else if (e.art === "mechSchuss") {
-      effekte.push({ art: "muendung", x: e.x, y: e.y, blick: e.blick, t: 0, dauer: KM.anzeige.muendung, w: Math.random() * 6 });
+      effekte.push({ art: "muendung", x: e.x, y: e.y, blick: e.blick, winkel: e.winkel, t: 0, dauer: KM.anzeige.muendung, w: Math.random() * 6 });
       const f = spiel.zustand[e.wer];
       effekte.push({
         art: "huelse", x: f.x - e.blick * 8, y: e.y + 6, t: 0, dauer: KM.anzeige.huelse,
         vx: -e.blick * (90 + Math.random() * 90), vy: 260 + Math.random() * 140, dreh: (Math.random() * 2 - 1) * 24,
       });
+    } else if (e.art === "druckwelle") {
+      const D = KM.druckwelle;
+      if (!ruhig.matches) effekte.push({ art: "beben", t: 0, dauer: D.beben, weite: D.bebenWeite });
     } else if (e.art === "mechEnde") {
       const m = R().K.hoehe * KM.groesse;
       const teile = [];
@@ -507,7 +510,7 @@
     c.fillRect(0, 0, W, H);
     const beben = effekte.find(function (e) { return e.art === "beben"; });
     if (beben) {
-      const st = R().K.ereignis.anzeige.bebenWeite * (1 - beben.t / beben.dauer);
+      const st = (beben.weite || R().K.ereignis.anzeige.bebenWeite) * (1 - beben.t / beben.dauer);
       c.translate((Math.random() * 2 - 1) * st, (Math.random() * 2 - 1) * st);
     }
 
@@ -540,6 +543,7 @@
       }
       schussBalken(c, f, w, farben[id]);
     });
+    z.wellen.forEach(function (w) { welle(c, w); });
     z.geschosse.forEach(function (k) { kugel(c, k, k.art === "mech" ? farben.mech : farben[k.von]); });
     effekte.forEach(function (e) {
       if (EFFEKTE[e.art]) EFFEKTE[e.art](c, e);
@@ -785,11 +789,55 @@
     block(28, -116, 22, 28, farben.mech);
 
     // Der riesige rote Strich – vorn die Mündung
-    const vorn = K.griff * g + KM.stab;
-    c.translate(0, wippen);
-    block(K.griff * g, -8, vorn - K.griff * g - 10, 16, farben.mech);
-    block(vorn - 12, -6, 12, 12, kontur);
-    block(8, -12, 16, 24, farben.mechDunkel);
+    // Der riesige rote Strich schwenkt beim Sperrfeuer mit
+    c.translate(K.griff * g, wippen);
+    c.save();
+    c.rotate(-f.mech.winkel * Math.PI / 180);
+    block(0, -8, KM.stab - 10, 16, farben.mech);
+    block(KM.stab - 12, -6, 12, 12, kontur);
+    c.restore();
+    block(-4, -12, 16, 24, farben.mechDunkel);
+    c.restore();
+  }
+
+  /** Druckwelle: heller Ring flach über dem Boden, Staubwolken an der Front. */
+  function welle(c, w) {
+    const D = R().K.mech.druckwelle;
+    const voll = D.reichweite / D.tempo;
+    const deckung = w.t <= voll ? 1 : Math.max(0, 1 - (w.t - voll) / D.ausklingen);
+    c.save();
+    // Staub an der Aufprallstelle
+    if (w.t < 0.5) {
+      c.globalAlpha = 0.35 * (1 - w.t / 0.5);
+      c.fillStyle = farben.leise;
+      for (let i = -2; i <= 2; i++) {
+        c.beginPath();
+        c.arc(w.x + i * 22 * (1 + w.t * 2), BODEN - 10 + Math.abs(i) * 2 - w.t * 30, 16 + w.t * 30 - Math.abs(i) * 3, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+    // Staubwolken laufen mit der Front nach links und rechts
+    c.globalAlpha = 0.4 * deckung;
+    c.fillStyle = farben.leise;
+    [-1, 1].forEach(function (s) {
+      for (let i = 0; i < 4; i++) {
+        const x = w.x + s * (w.r - i * 16);
+        if (s * (x - w.x) < 0) continue;
+        c.beginPath();
+        c.arc(x, BODEN - 8 - i * 3, 12 - i * 2 + Math.sin(w.t * 20 + i) * 2, 0, Math.PI * 2);
+        c.fill();
+      }
+    });
+    // Heller, flacher Ring
+    c.globalAlpha = deckung;
+    c.strokeStyle = farben.stern;
+    c.lineWidth = 5;
+    c.beginPath();
+    c.ellipse(w.x, BODEN, Math.max(1, w.r), Math.max(3, w.r * 0.07), 0, 0, Math.PI * 2);
+    c.stroke();
+    c.strokeStyle = "#fff";
+    c.lineWidth = 2;
+    c.stroke();
     c.restore();
   }
 
@@ -918,7 +966,7 @@
       c.save();
       c.translate(e.x, BODEN - e.y);
       c.scale(e.blick, 1);
-      c.rotate((e.w - 3) * 0.04);
+      c.rotate((e.w - 3) * 0.04 - (e.winkel || 0) * Math.PI / 180);
       c.globalAlpha = 1 - e.t / e.dauer;
       c.fillStyle = "#ffa94d";
       c.beginPath();
