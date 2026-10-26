@@ -407,5 +407,9 @@ Teil A (was auslagern?), Stand 2026-10-26:
   im Termin; leere Felder bei Einzelterminen werden in Kauf genommen.
   (Eigene Serien-Tabelle erst nötig, wenn z. B. Ausnahmen wie "fällt an
   Feiertag aus" gespeichert werden sollen.)
-- **Art:** offen – Nutzer möchte mehr Arten (Arzttermin, Arbeit, Vorlesung,
-  Übung). Kriterien Werteliste (CHECK) vs. eigene Tabelle erklärt.
+- **Art:** eigene Tabelle – neue Arten (Arzttermin, Arbeit, Vorlesung,
+  Übung, …) sollen per INSERT ergänzt werden können, ohne die
+  Tabellendefinition zu ändern.
+
+Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
+Aufgabe nach der anderen.
