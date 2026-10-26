@@ -394,8 +394,7 @@ Unterschiede zu "Zu erledigen":
 
 ## Schritt 1: Datenmodell mit mehreren Tabellen
 
-**Status:** offen – Konzept (Anomalien, Fremdschlüssel, Kardinalität)
-erklärt, Aufgabe gestellt (2026-10-26).
+**Status:** siehe unten.
 
 Teil A (was auslagern?), Stand 2026-10-26:
 - **Fach:** ja. Begründung zuerst nur "keine Doppelungen" (richtig); die
@@ -426,6 +425,22 @@ Teil B – Tabellen:
 - **TERMIN (Vorüberlegung):** `titel` bleibt in TERMIN und ist immer
   Pflicht (Variante A) – Termine ohne Fach (z. B. Zahnarzt) brauchen einen
   Titel; `fach_id` darf leer sein.
+- **TERMIN (Entwurf):** `id` VARCHAR2 PK, `titel` VARCHAR2 NOT NULL,
+  `art_id` VARCHAR2 NOT NULL FK → ART, `fach_id` NUMBER FK → FACH (optional),
+  `datum` DATE NOT NULL, `ganztaegig` BOOLEAN NOT NULL, `start`, `ende`,
+  `ort`, `notiz`, `wiederholung` BOOLEAN, `wiederholung_bis`.
+  Datentypen der FKs passen zu den Zieltabellen ✅. Korrekturen: `fach_id`
+  nicht NOT NULL, snake_case für `wiederholung_bis`, `wiederholung` als
+  Pflichtfeld überlegen. Typen für start/ende/wiederholung_bis →
+  Schritt 2 (`DATE WITH TIMESTAMP` gibt es nicht).
+
+Teil C – Beziehungen:
+- ART 1 ──< n TERMIN (Pflicht), FACH 1 ──< n TERMIN (optional).
+- Löschen eines Fachs: **mitlöschen** (ON DELETE CASCADE) – nach dem
+  Semester mit einem Schritt aufräumen. Risiko besprochen: versehentliches
+  Löschen nimmt alle Termine (auch z. B. eine Klausur) unwiderruflich mit.
+
+**Status Schritt 1:** abgeschlossen (2026-10-26), Interview-Fragen gestellt.
 
 Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
 Aufgabe nach der anderen.
