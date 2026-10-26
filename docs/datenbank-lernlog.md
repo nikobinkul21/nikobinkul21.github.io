@@ -416,5 +416,9 @@ Teil A (was auslagern?), Stand 2026-10-26:
   künstlicher Schlüssel erklärt; Vorteil (Umbenennen ändert nur den
   Anzeigenamen, nicht die Verweise) noch einmal Schritt für Schritt erklärt.
 
+Teil B – Tabellen:
+- **ART:** `id` VARCHAR2 NOT NULL PK (kurzer Code), `name` VARCHAR2 NOT NULL
+  (Anzeigename). Ohne Farbe. ✅ (Längen und UNIQUE auf `name` → Schritt 2)
+
 Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
 Aufgabe nach der anderen.
