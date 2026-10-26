@@ -448,7 +448,11 @@ Interview-Fragen Schritt 1:
    beim Löschen der Termine erhalten, Zählen pro Fach zuverlässig); beim Ort
    ist das stärkere Argument "keine eigenen Eigenschaften", nicht "jeder
    Raum ist anders" (eine Serie nutzt denselben Raum jede Woche).
-2. *Fremdschlüssel / art_id = 'sport'?* – offen
+2. *Fremdschlüssel / art_id = 'sport'?* – Versuch 1: Definition im Kern
+   richtig (verweist auf andere Tabelle; genauer: auf deren Primärschlüssel).
+   Zweiter Teil falsch: mit NOT NULL begründet, obwohl 'sport' ein Wert
+   ist. Gesucht: referentielle Integrität (Fremdschlüssel-Constraint).
+   Bewertung vorläufig 2/5, zweiter Versuch steht aus.
 
 Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
 Aufgabe nach der anderen.
