@@ -423,6 +423,9 @@ Teil B – Tabellen:
   der Code bleibt stabil, weil es keinen Grund gibt, ihn zu ändern. ✅
 - **FACH:** `id` NUMBER NOT NULL PK (fortlaufend, soll von Oracle vergeben
   werden → Identity-Spalte in Schritt 2), `titel` VARCHAR2 NOT NULL. ✅
+- **TERMIN (Vorüberlegung):** `titel` bleibt in TERMIN und ist immer
+  Pflicht (Variante A) – Termine ohne Fach (z. B. Zahnarzt) brauchen einen
+  Titel; `fach_id` darf leer sein.
 
 Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
 Aufgabe nach der anderen.
