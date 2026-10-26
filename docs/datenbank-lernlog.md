@@ -452,7 +452,11 @@ Interview-Fragen Schritt 1:
    richtig (verweist auf andere Tabelle; genauer: auf deren Primärschlüssel).
    Zweiter Teil falsch: mit NOT NULL begründet, obwohl 'sport' ein Wert
    ist. Gesucht: referentielle Integrität (Fremdschlüssel-Constraint).
-   Bewertung vorläufig 2/5, zweiter Versuch steht aus.
+   Zweiter Versuch: "weiß ich nicht" → Auflösung erklärt: der
+   Fremdschlüssel-Constraint (referentielle Integrität) prüft, ob 'sport'
+   in ART.id existiert → ORA-02291 (übergeordneter Schlüssel nicht
+   gefunden). NOT NULL prüft nur "irgendein Wert", der FK "gültiger Wert".
+   Bewertung 2/5. Thema bei Schritt 3 (Testdaten) praktisch wiederholen.
 
 Hinweis an Claude: Nutzer wünscht kleinere Häppchen – eine Frage bzw.
 Aufgabe nach der anderen.
