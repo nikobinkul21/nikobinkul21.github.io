@@ -356,3 +356,43 @@ Offene Ideen für die nächsten Sitzungen:
   3. Autorisierung in der Datenbank: eigene ORDS-REST-Handler mit
      `WHERE benutzer = angemeldeter Nutzer` statt AutoREST,
   dazu Datenschutz (DSGVO). Guter Einstieg: Baustein 2 (Fremdschlüssel).
+
+---
+
+# Bereich 2: Stundenplan/Termine (ab 2026-10-26)
+
+Ziel: Modell mit mehreren Tabellen, Zeiträume, Abfragen, Serien auflösen,
+View und Index. Lehrer-Regeln gelten wieder vollständig, inklusive
+Interview-Fragen nach jedem Schritt (auf Wunsch des Nutzers).
+
+Fahrplan:
+1. Datenmodell mit mehreren Tabellen und Fremdschlüsseln (Normalisierung)
+2. Datentypen und Constraints für Zeiträume und Serien
+3. Testdaten (Serien mit Enddatum, einmalige und überlappende Termine)
+4. Abfragen: Woche, Überschneidungen, Anzahl pro Fach
+5. Serien per Abfrage in einzelne Vorkommen auflösen
+6. View für die aktuelle Woche, Index, Ausführungsplan
+
+## Analyse von `js/events-store.js`
+
+Ein Eintrag: `id`, `titel` (Pflicht), `art` ("termin" | "vorlesung"),
+`datum` (erster bzw. einziger Tag), `ganztaegig`, `start`/`ende` (HH:MM, nur
+wenn nicht ganztägig, Ende > Start), `ort`, `notiz` (optional),
+`wiederholung` ("keine" | "woechentlich"), `wiederholungBis` (optional,
+nicht vor `datum`). Kalender und Stundenplan lesen beide daraus.
+
+Unterschiede zu "Zu erledigen":
+- Zeitraum (Start und Ende) statt eines Fälligkeitszeitpunkts; ganztägig
+  als Sonderfall.
+- Serien mit optionalem Enddatum; der Wochentag wird aus `datum`
+  abgeleitet und nicht gespeichert.
+- Kein Zustand (kein "erledigt") – Einträge ändern sich selten.
+- Hauptzugriff ist "alles in einem Zeitraum" → Serien müssen aufgelöst
+  werden (Schritt 5), Zeitraum-Abfragen brauchen einen Index (Schritt 6).
+- Wiederkehrende Texte (Fachname, Ort) in vielen Einträgen →
+  Kandidaten für eigene Tabellen (Schritt 1).
+
+## Schritt 1: Datenmodell mit mehreren Tabellen
+
+**Status:** offen – Konzept (Anomalien, Fremdschlüssel, Kardinalität)
+erklärt, Aufgabe gestellt (2026-10-26).
