@@ -69,7 +69,7 @@ const STARTSEITE_KONFIG = {
     { name: "Claude", url: "https://claude.ai" },
     { name: "Gemini", url: "https://gemini.google.com" },
     { name: "Moodle", url: "https://moodle.hm.edu/my/index.php" },
-    { name: "ZPA", url: "https://zpa.example.org" },
+    { name: "ZPA", url: "https://zpa.cs.hm.edu/student/dashboard/" },
   ],
 
   speicherSchluessel: "ntb-startseite",
