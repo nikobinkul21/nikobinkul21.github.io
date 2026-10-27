@@ -32,9 +32,13 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Schritt 1d erledigt: `pipeline/hallo.py` mit drei `print`-Zeilen läuft
   (`python3 pipeline/hallo.py` im VS-Code-Terminal). Übung (eigener Name)
   gelöst. **Schritt 1 abgeschlossen.**
-- Interview-Frage gestellt: Unterschied `print("Hallo")` vs. `print(Hallo)`.
-- Schritt 2a gestellt: Variablen in `pipeline/grundlagen.py`
-  (`titel`, `anzahl`, `print("Meldungen:", anzahl)`). Wartet auf Ausgabe.
+- Interview-Frage `print("Hallo")` vs. `print(Hallo)`: richtig beantwortet
+  (String vs. Verweis auf nicht vorhandene Variable). Ergänzt: Fehlername
+  `NameError`.
+- Schritt 2a erledigt: Variablen in `pipeline/grundlagen.py`, Übung
+  (3 → 5) gelöst.
+- Schritt 2b gestellt: Listen (`schlagzeilen`, Index ab 0, `len`), Übung
+  mit `[3]` → `IndexError`. Wartet auf Ausgabe.
 
 ## Gelernte Konzepte
 
@@ -44,6 +48,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Python ausführen: `python3 pfad/datei.py`; Pfeil ↑ holt letzten Befehl
 - `print(...)` als Funktion, Strings in Anführungszeichen, Ablauf von oben
   nach unten
+- Variablen als beschriftete Kisten, `=` als Zuweisung, String vs. `int`,
+  `print` mit mehreren Werten per Komma
 
 ## Offene Punkte / Notizen
 
