@@ -39,9 +39,19 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   (3 → 5) gelöst.
 - Schritt 2b erledigt: Listen. Übung richtig: letzter Eintrag ist `[2]`,
   `[3]` gibt `IndexError`, weil es keinen vierten Eintrag gibt.
-- Schritt 2c gestellt: Kommentare mit `#`, `for`-Schleife mit
-  Doppelpunkt und Einrückung. Übung: Einrückung einer Zeile entfernen und
-  Unterschied erklären. Wartet auf Ausgabe.
+- Schritt 2c erledigt: Kommentare mit `#`, `for`-Schleife. Übung richtig:
+  eingerücktes `print("Fertig!")` erscheint nach jeder Schlagzeile, weil
+  es dann zur Schleife gehört.
+- **Pause.** Die Dateien `pipeline/hallo.py` und `pipeline/grundlagen.py`
+  liegen nur lokal auf dem Mac (nicht gepusht).
+
+## Hier geht es weiter
+
+- Kurz wiederholen: Variablen, Listen, Schleifen (Einrückung!).
+- Offene Interview-Frage (Angebot): „Was ist eine Schleife, und wozu
+  braucht man die Einrückung in Python?“
+- Dann **Schritt 2d: Funktionen** (`def`, Parameter, `return`), danach
+  Abschluss von Schritt 2 mit Zusammenfassung.
 
 ## Gelernte Konzepte
 
@@ -55,6 +65,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `print` mit mehreren Werten per Komma
 - Listen `[...]`, Index ab 0 (auch `[-1]` für den letzten), `len()`,
   `IndexError`; Python bricht beim ersten Fehler ab
+- Kommentare mit `#`; `for x in liste:` mit Doppelpunkt, Einrückung
+  (4 Leerzeichen) bestimmt, was zur Schleife gehört
 
 ## Offene Punkte / Notizen
 
