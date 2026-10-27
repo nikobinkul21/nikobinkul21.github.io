@@ -68,7 +68,7 @@ const STARTSEITE_KONFIG = {
   schnellzugriffe: [
     { name: "Claude", url: "https://claude.ai" },
     { name: "Gemini", url: "https://gemini.google.com" },
-    { name: "Moodle", url: "https://moodle.example.org" },
+    { name: "Moodle", url: "https://moodle.hm.edu/my/index.php" },
     { name: "ZPA", url: "https://zpa.example.org" },
   ],
 
