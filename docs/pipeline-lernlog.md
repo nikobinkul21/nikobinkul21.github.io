@@ -37,8 +37,11 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `NameError`.
 - Schritt 2a erledigt: Variablen in `pipeline/grundlagen.py`, Übung
   (3 → 5) gelöst.
-- Schritt 2b gestellt: Listen (`schlagzeilen`, Index ab 0, `len`), Übung
-  mit `[3]` → `IndexError`. Wartet auf Ausgabe.
+- Schritt 2b erledigt: Listen. Übung richtig: letzter Eintrag ist `[2]`,
+  `[3]` gibt `IndexError`, weil es keinen vierten Eintrag gibt.
+- Schritt 2c gestellt: Kommentare mit `#`, `for`-Schleife mit
+  Doppelpunkt und Einrückung. Übung: Einrückung einer Zeile entfernen und
+  Unterschied erklären. Wartet auf Ausgabe.
 
 ## Gelernte Konzepte
 
@@ -50,6 +53,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   nach unten
 - Variablen als beschriftete Kisten, `=` als Zuweisung, String vs. `int`,
   `print` mit mehreren Werten per Komma
+- Listen `[...]`, Index ab 0 (auch `[-1]` für den letzten), `len()`,
+  `IndexError`; Python bricht beim ersten Fehler ab
 
 ## Offene Punkte / Notizen
 
