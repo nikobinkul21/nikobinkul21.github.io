@@ -1,9 +1,12 @@
 /* ==========================================================================
    home.css – die Startseite als Bento-Raster (js/home.js)
-   Oben groß das Datum (Serif), darunter Wochentag und Uhrzeit (Monospace)
-   und die eingetippte Begrüßung; darunter sechs Kacheln in einem
-   lückenlosen Raster, ganz unten die Schnellzugriffe. Hinter allem am
-   unteren Rand ein kaum sichtbares Meer ferner Lichter (Canvas).
+   Ruhig und kompakt: oben rechts ein kleiner Zeitstempel, darunter sechs
+   Kacheln in einem lückenlosen Raster, ganz unten die Schnellzugriffe.
+   Alles passt ohne Scrollen in die Bildschirmhöhe (dvh): das Raster nimmt
+   den übrigen Platz ein, die Zeilen strecken sich. Nur wenn selbst die
+   Mindesthöhe der Zeilen nicht passt (sehr kleine Bildschirme), wird
+   gescrollt. Hinter allem am unteren Rand ein kaum sichtbares Meer ferner
+   Lichter (Canvas).
    Größe und Platz jeder Kachel setzt home.js als Variablen:
      --c-x, --c-y, --c-b, --c-h  (Computer: Spalte, Zeile, Breite, Höhe)
      --h-x, --h-y, --h-b, --h-h  (Smartphone)
@@ -13,12 +16,11 @@
 
 #view-home {
   /* Kopf */
-  --datum-groesse: clamp(2.6rem, 6vw, 4.6rem);
-  --zeit-groesse: 0.86rem;
-  --gruss-groesse: 1rem;
-  /* Raster */
+  --zeit-groesse: 0.78rem;
+  /* Raster: Zeilen strecken sich auf die freie Höhe, mindestens --bento-min-zeile */
   --bento-spalten: 4;
-  --bento-zeile: clamp(124px, 17vh, 190px);   /* Höhe einer Zeile */
+  --bento-zeilen: 3;
+  --bento-min-zeile: 96px;
   --bento-abstand: 12px;
   --bento-innen: 22px;
   /* Schrift in den Kacheln (Monospace, Großbuchstaben) */
@@ -29,6 +31,15 @@
   /* Aufblenden beim Öffnen: Dauer und Versatz je Kachel */
   --bento-auf-dauer: 1100ms;
   --bento-auf-versatz: 110ms;
+}
+
+/* Auf der Startseite weniger Rand um den Inhalt – so bleibt mehr Höhe für
+   das Raster. --home-rand gilt oben und unten (unten fließt er in die
+   Höhenrechnung von .home ein). */
+.hauptbereich:has(> #view-home:not([hidden])) {
+  --home-rand: var(--abstand-l);
+  padding-top: var(--home-rand);
+  padding-bottom: var(--home-rand);
 }
 
 
@@ -48,98 +59,50 @@
   pointer-events: none;
 }
 
-/* Der Inhalt liegt über den Lichtern */
+/* Der Inhalt liegt über den Lichtern und füllt genau die sichtbare Höhe:
+   Bildschirm minus Navigationsleiste (mit Linie) minus Rand oben und unten */
 .home {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--abstand-l);
+  gap: var(--abstand-m);
+  min-height: calc(100vh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
+  min-height: calc(100dvh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
 }
 
 
 /* ==========================================================================
-   KOPF: Datum, Uhrzeit, Begrüßung – alle mit Lichthof
+   KOPF: kleiner Zeitstempel oben rechts, wie in einem Film
    ========================================================================== */
 
 .home-kopf {
-  position: relative;
-  isolation: isolate;                          /* Lichtschein bleibt hinter dem Text */
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--abstand-s);
-  padding: var(--abstand-s) 0 var(--abstand-xs);
-}
-
-/* Der Lichtschein hinter dem Kopf: links unter dem Datum */
-.home-kopf.lichtschein::before {
-  left: 0;
-  width: min(900px, 110%);
-  height: 220%;
-  transform: translate(-18%, -50%);
-}
-
-.home-datum {
-  margin: 0;
-  font-family: var(--schrift-serif);
-  font-size: var(--datum-groesse);
-  font-weight: 500;
-  line-height: 1;
-  font-variant-numeric: oldstyle-nums;
-  letter-spacing: 0.01em;
+  justify-content: flex-end;
 }
 
 .home-zeit {
   margin: 0;
   font-family: var(--schrift-mono);
   font-size: var(--zeit-groesse);
+  line-height: 1.2;
   text-transform: uppercase;
   letter-spacing: var(--mono-sperrung);
+  color: var(--farbe-text-leise);
   white-space: pre;                            /* die Leerzeichen um den Punkt bleiben */
   text-shadow: var(--leuchten-leise);
 }
 
-/* Die Begrüßung tippt sich in Monospace ein (h1 aus index.html) */
-.home-gruss {
-  margin: var(--abstand-s) 0 0;
-  font-family: var(--schrift-mono);
-  font-size: var(--gruss-groesse);
-  font-weight: 400;
-  line-height: 1.4;
-  letter-spacing: var(--mono-sperrung);
-  min-height: 1.4em;                           /* nichts springt beim Eintippen */
-}
-
-.home-gruss::before {
-  display: none;                               /* kein eigener Lichtschein: der Kopf hat einen */
-}
-
-/* Blinkender Cursor am Ende */
-.home-cursor {
-  display: inline-block;
-  width: 0.6em;
-  height: 1.05em;
-  margin-left: 0.15em;
-  vertical-align: -0.15em;
-  background: currentColor;
-  box-shadow: 0 0 8px rgb(var(--licht) / 0.5);
-  animation: cursor-blinken var(--cursor-takt) steps(1) infinite;
-}
-
-@keyframes cursor-blinken {
-  50% { opacity: 0; }
-}
-
 
 /* ==========================================================================
-   RASTER
+   RASTER: nimmt den ganzen verbleibenden Platz ein
    ========================================================================== */
 
 .bento {
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: repeat(var(--bento-spalten), minmax(0, 1fr));
-  grid-auto-rows: var(--bento-zeile);
+  grid-template-rows: repeat(var(--bento-zeilen), minmax(var(--bento-min-zeile), 1fr));
   gap: var(--bento-abstand);
 }
 
@@ -272,12 +235,8 @@
 
 /* ==========================================================================
    AUFBLENDEN: Die Kacheln erscheinen nacheinander langsam aus dem Dunkel
-   (home.js: "wartet" während die Begrüßung sich eintippt, dann "blendet-auf")
+   (home.js setzt die Klasse bei jedem Öffnen neu)
    ========================================================================== */
-
-.bento.wartet .bento-kachel {
-  opacity: 0;
-}
 
 .bento.blendet-auf .bento-kachel {
   animation: aus-dem-dunkel var(--bento-auf-dauer) var(--kurve-weich) both;
@@ -344,17 +303,20 @@
 
 @media (max-width: 699px) {
   #view-home {
-    --datum-groesse: 2.5rem;
-    --zeit-groesse: 0.76rem;
-    --gruss-groesse: 0.9rem;
+    --zeit-groesse: 0.7rem;
     --bento-spalten: 2;
-    --bento-zeile: 104px;
+    --bento-zeilen: 6;
+    --bento-min-zeile: 72px;
     --bento-abstand: 10px;
     --bento-innen: 16px;
     --bento-titel-groesse: 0.74rem;
     --bento-titel-gross: 1.05rem;
     --bento-symbol: 22px;
     --bento-symbol-gross: 28px;
+  }
+
+  .hauptbereich:has(> #view-home:not([hidden])) {
+    --home-rand: var(--abstand-m);
   }
 
   .bento-kachel {
@@ -406,19 +368,11 @@
 
 
 /* ==========================================================================
-   BEWEGUNG REDUZIEREN: kein Eintippen, kein Aufblenden, Cursor steht
+   BEWEGUNG REDUZIEREN: kein Aufblenden
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
   .bento.blendet-auf .bento-kachel {
-    animation: none;
-  }
-
-  .bento.wartet .bento-kachel {
-    opacity: 1;
-  }
-
-  .home-cursor {
     animation: none;
   }
 

@@ -105,8 +105,10 @@
   <main class="hauptbereich" id="main">
 
     <section class="ansicht" id="view-home" aria-labelledby="titel-home">
-      <!-- Die Begrüßung ("Guten Morgen" …) setzt home.js -->
-      <h1 id="titel-home" class="home-gruss" tabindex="-1">Willkommen bei NTB</h1>
+      <!-- Die Begrüßung ("Guten Morgen" …) setzt home.js – sichtbar ist auf
+           der Startseite nur der kleine Zeitstempel, die Überschrift gilt
+           für Screenreader -->
+      <h1 id="titel-home" class="nur-screenreader" tabindex="-1">Willkommen bei NTB</h1>
       <!-- home.js füllt diesen Container: Zeitstempel, Bento-Kacheln und Schnellzugriffe -->
       <div id="home-root"></div>
     </section>

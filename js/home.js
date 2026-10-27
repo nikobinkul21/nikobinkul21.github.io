@@ -9,11 +9,11 @@
    am wenigsten genutzten 1×1. Neu berechnet wird höchstens einmal am Tag;
    ändert sich die Anordnung, gleiten die Kacheln beim Öffnen an ihren
    neuen Platz.
-   Darüber: groß das Datum (Serif), darunter klein Wochentag und Uhrzeit
-   (Monospace), dann tippt sich eine kurze Begrüßung ein ("GUTEN ABEND.")
-   – erst danach erscheinen die Kacheln aus dem Dunkel. Am unteren Rand
-   liegt ein kaum sichtbares Meer ferner Lichter (Canvas, ohne Bilddatei).
-   Darunter: die Schnellzugriffe.
+   Darüber rechts ein kleiner Zeitstempel (Datum und Uhrzeit in Monospace),
+   darunter die Schnellzugriffe. Die ganze Startseite passt ohne Scrollen
+   in die Bildschirmhöhe – das Raster nimmt den übrigen Platz ein.
+   Am unteren Rand liegt ein kaum sichtbares Meer ferner Lichter (Canvas,
+   ohne Bilddatei).
 
    Aufbau der Datei:
      KONFIG            – alle Werte (Raster, Zählung, Schnellzugriffe)
@@ -261,9 +261,7 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
   const K = STARTSEITE_KONFIG;
   const L = StartseiteLayout;
 
-  const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-  const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
-    "August", "September", "Oktober", "November", "Dezember"];
+  const WOCHENTAGE = ["SO", "MO", "DI", "MI", "DO", "FR", "SA"];
 
   // Schlichte Liniensymbole (24 × 24, Strichfarbe = Textfarbe)
   const SYMBOLE = {
@@ -282,8 +280,6 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
   let daten = null;
   let gezeigt = null;          // die Anordnung, die gerade im DOM steht (Reihenfolge als Text)
   let vorherReihenfolge = null;    // Anordnung vor der heutigen Neuberechnung
-  let tippTimer = null;            // läuft gerade das Eintippen der Begrüßung?
-  let grussText = "";
 
 
   /* ---------- Speicher ---------- */
@@ -374,9 +370,8 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
     container.innerHTML =
       '<canvas class="home-stadt" aria-hidden="true"></canvas>' +
       '<div class="home">' +
-        '<div class="home-kopf lichtschein">' +
-          '<p class="home-datum leuchtet"><time></time></p>' +
-          '<p class="home-zeit leuchtet"></p>' +
+        '<div class="home-kopf">' +
+          '<p class="home-zeit"><time></time></p>' +
         "</div>" +
         '<nav class="bento" aria-label="Bereiche"></nav>' +
         '<nav class="home-links" aria-label="Schnellzugriffe"><ul class="home-links-liste"></ul></nav>' +
@@ -384,18 +379,13 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
 
     el.home = container.querySelector(".home");
     el.gruss = document.getElementById("titel-home");
-    el.datum = container.querySelector(".home-datum time");
-    el.zeit = container.querySelector(".home-zeit");
+    el.zeit = container.querySelector(".home-zeit time");
     el.bento = container.querySelector(".bento");
     el.stadt = container.querySelector(".home-stadt");
-    // Die Begrüßung (h1 aus index.html) steht unter Datum und Uhrzeit. Sie
-    // behält ihre ID (app.js setzt Fokus und Seitentitel darüber). Vorgelesen
-    // wird der ganze Text; sichtbar tippt er sich Buchstabe für Buchstabe ein.
-    container.querySelector(".home-kopf").appendChild(el.gruss);
-    el.gruss.innerHTML = '<span class="nur-screenreader"></span>' +
-      '<span class="home-gruss-tippen" aria-hidden="true"></span><span class="home-cursor" aria-hidden="true"></span>';
-    el.grussVorlesen = el.gruss.firstChild;
-    el.grussSichtbar = el.gruss.querySelector(".home-gruss-tippen");
+    // Die Überschrift (h1 aus index.html) bleibt für Screenreader im Kopf –
+    // sichtbar ist nur der Zeitstempel. Sie behält ihre ID: app.js setzt
+    // Fokus und Seitentitel darüber.
+    container.querySelector(".home-kopf").insertBefore(el.gruss, container.querySelector(".home-zeit"));
 
     zeichneStadt();
     window.addEventListener("resize", function () {
@@ -506,14 +496,8 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
       setzeAnordnung(vorherReihenfolge || reihenfolge);
     }
     const neu = reihenfolge.join(",") !== gezeigt;
-    if (neu) {
-      gleite(reihenfolge);
-      tippen(null);
-    } else {
-      // Erst tippt sich die Begrüßung ein, dann erscheinen die Kacheln
-      el.bento.classList.add("wartet");
-      tippen(aufblenden);
-    }
+    if (neu) gleite(reihenfolge);
+    else aufblenden();
 
     clearInterval(minutenTimer);
     minutenTimer = setInterval(function () {
@@ -528,7 +512,7 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
 
   /** Die Kacheln erscheinen nacheinander langsam aus dem Dunkel (CSS-Animation). */
   function aufblenden() {
-    el.bento.classList.remove("blendet-auf", "wartet");
+    el.bento.classList.remove("blendet-auf");
     if (ruhigAbfrage.matches) return;
     void el.bento.offsetWidth;            // Neustart der Animation erzwingen
     el.bento.classList.add("blendet-auf");
@@ -556,55 +540,15 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
     });
   }
 
-  /**
-   * Datum groß (Trennung durch einen schlichten Punkt), darunter Wochentag
-   * und Uhrzeit. Ändert sich die Begrüßung (z. B. um 18 Uhr), steht der
-   * neue Text sofort da – ohne erneutes Eintippen.
-   */
+  /** Zeitstempel wie im Film: "DI 27.10.2026  ·  20:42". Die Begrüßung nur für Screenreader. */
   function zeichneZeit() {
     const jetzt = new Date();
     const zwei = function (n) { return String(n).padStart(2, "0"); };
-    el.datum.textContent = jetzt.getDate() + " · " + MONATE[jetzt.getMonth()] + " · " + jetzt.getFullYear();
-    el.datum.dateTime = jetzt.getFullYear() + "-" + zwei(jetzt.getMonth() + 1) + "-" + zwei(jetzt.getDate());
-    el.zeit.textContent = WOCHENTAGE[jetzt.getDay()] + "  ·  " + zwei(jetzt.getHours()) + ":" + zwei(jetzt.getMinutes());
-    const gruss = begruessung(jetzt);
-    if (gruss !== grussText) {
-      grussText = gruss;
-      el.grussVorlesen.textContent = gruss;
-      if (!tippTimer) el.grussSichtbar.textContent = gruss.toUpperCase() + ".";
-    }
-  }
-
-  /**
-   * Die Begrüßung tippt sich Buchstabe für Buchstabe ein, der Cursor
-   * blinkt am Ende. Danach (oder sofort bei "Bewegung reduzieren") wird
-   * fertig() aufgerufen.
-   */
-  function tippen(fertig) {
-    clearTimeout(tippTimer);
-    tippTimer = null;
-    const text = grussText.toUpperCase() + ".";
-    if (ruhigAbfrage.matches) {
-      el.grussSichtbar.textContent = text;
-      if (fertig) fertig();
-      return;
-    }
-    const tempo = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tippen-tempo")) || 75;
-    let i = 0;
-    el.grussSichtbar.textContent = "";
-    (function naechster() {
-      i++;
-      el.grussSichtbar.textContent = text.slice(0, i);
-      if (i < text.length) {
-        // Leerzeichen und Satzzeichen etwas länger, wie beim echten Tippen
-        tippTimer = setTimeout(naechster, tempo * (text[i - 1] === " " ? 2.2 : 0.7 + Math.random() * 0.6));
-      } else {
-        tippTimer = setTimeout(function () {
-          tippTimer = null;
-          if (fertig) fertig();
-        }, tempo * 3);
-      }
-    })();
+    el.gruss.textContent = begruessung(jetzt);
+    el.zeit.textContent = WOCHENTAGE[jetzt.getDay()] + " " + zwei(jetzt.getDate()) + "." + zwei(jetzt.getMonth() + 1) + "." +
+      jetzt.getFullYear() + "  ·  " + zwei(jetzt.getHours()) + ":" + zwei(jetzt.getMinutes());
+    el.zeit.dateTime = jetzt.getFullYear() + "-" + zwei(jetzt.getMonth() + 1) + "-" + zwei(jetzt.getDate()) +
+      "T" + zwei(jetzt.getHours()) + ":" + zwei(jetzt.getMinutes());
   }
 
   /** "Guten Morgen" (5–10 Uhr), "Guten Tag" (11–17 Uhr), "Guten Abend" (sonst). */

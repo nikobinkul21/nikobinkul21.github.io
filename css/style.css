@@ -279,8 +279,6 @@
   /* ---- Bewegung: ruhig und weich ---- */
   --dauer: 220ms;
   --kurve-weich: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --tippen-tempo: 75ms;              /* Startseite: je Buchstabe der Begrüßung */
-  --cursor-takt: 1.05s;              /* blinkender Cursor */
 
   /* ---- Seitenwechsel (js/seitenwechsel.js): Schnitt ins Schwarze ---- */
   --uebergang-abblende-dauer: 220ms;
@@ -512,6 +510,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;               /* sichtbare Höhe (ohne ein- und ausfahrende Browserleisten) */
   font-family: var(--schrift-text);
   font-size: var(--schrift-groesse);
   font-weight: 400;
