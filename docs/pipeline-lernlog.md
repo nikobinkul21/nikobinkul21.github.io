@@ -24,14 +24,19 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   mitgelieferte Version). Reicht zum Lernen; ein Update auf eine neuere
   Version ist später möglich, aber nicht nötig.
 - Bisher hat der Nutzer Dateien nur auf github.com bearbeitet, das
-  Repository liegt noch nicht auf dem Mac. Nächster Schritt (1b/1c):
-  VS Code installieren und das Repository damit klonen
-  (`nikobinkul21/nikobinkul21.github.io`, früher NTBhub). Danach (1d)
-  „Hallo Welt“ in `pipeline/hallo.py`.
+  Repository lag noch nicht auf dem Mac.
+- VS Code installiert, Repository `nikobinkul21/nikobinkul21.github.io`
+  (früher NTBhub) nach `Dokumente` geklont. Stolpersteine: „Restricted
+  Mode“ (Ordner vertrauen) und „Initialize Repository“ (falscher Ordner
+  offen). Gelöst über Befehlspalette ⌘⇧P → `Git: Clone`.
+- Schritt 1d gestellt: `pipeline/hallo.py` mit `print(...)`, ausführen mit
+  `python3 pipeline/hallo.py` im VS-Code-Terminal. Wartet auf Ausgabe.
 
 ## Gelernte Konzepte
 
 - Terminal: Befehle tippen statt klicken; Option `--version`
+- Git-Begriffe: Repository, klonen (lokale Kopie), pushen (hochschicken)
+- VS Code: Befehlspalette ⌘⇧P, eingeschränkter Modus
 
 ## Offene Punkte / Notizen
 
