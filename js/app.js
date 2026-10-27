@@ -24,7 +24,7 @@ const ANSICHTEN = {
   home: { init: StartseiteAnsicht.init, zeige: StartseiteAnsicht.zeige, root: "home-root" },
   kalender: { init: KalenderAnsicht.init, zeige: KalenderAnsicht.zeige, root: "calendar-root" },
   games: { init: initGames, zeige: zeigeGames, root: "games-root" },
-  media: { init: MediaAnsicht.init, zeige: MediaAnsicht.zeige, root: "media-root" },
+  pinnwand: { init: PinnwandAnsicht.init, zeige: PinnwandAnsicht.zeige, root: "board-root" },
   schedule: { init: StundenplanAnsicht.init, zeige: StundenplanAnsicht.zeige, root: "schedule-root" },
   todo: { init: TodoAnsicht.init, zeige: TodoAnsicht.zeige, root: "todo-root" },
   prompts: { init: PromptsAnsicht.init, zeige: PromptsAnsicht.zeige, root: "prompts-root" },
@@ -299,6 +299,13 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", fun
    ========================================================================== */
 
 setzeTheme(aktuellesTheme());       // Schalter an das bereits gesetzte Theme anpassen
+
+// Gespeicherte Daten eines entfernten Bereichs aufräumen (einmalig, danach ohne Wirkung)
+try {
+  localStorage.removeItem("ntb-media");
+} catch (fehler) {
+  // localStorage gesperrt – dann gibt es auch nichts aufzuräumen
+}
 // Ansicht aus der URL zeigen (ohne Fokus-Sprung)
 const startZiel = ansichtAusHash();
 zeigeAnsicht(startZiel.name, startZiel.unterseite, false);

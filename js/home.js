@@ -40,7 +40,7 @@ const STARTSEITE_KONFIG = {
     { id: "stundenplan", ansicht: "schedule", href: "#schedule", name: "Stundenplan/Termine", symbol: "uhr" },
     { id: "prompts", ansicht: "prompts", href: "#prompts", name: "Prompts", symbol: "text" },
     { id: "games", ansicht: "games", href: "#games", name: "Games", symbol: "wuerfel" },
-    { id: "media", ansicht: "media", href: "#media", name: "Filme/Serien", symbol: "film" },
+    { id: "pinnwand", ansicht: "pinnwand", href: "#pinnwand", name: "Pinnwand", symbol: "pinnwand" },
   ],
 
   // Raster: Spalten × Zeilen. Die Summe der Kachelflächen muss die
@@ -270,7 +270,7 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
     uhr: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
     text: '<path d="M5 6.5h14M5 11h14M5 15.5h9"/><path d="M17 14v6"/>',
     wuerfel: '<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.1"/><circle cx="15" cy="15" r="1.1"/><circle cx="15" cy="9" r="1.1"/><circle cx="9" cy="15" r="1.1"/>',
-    film: '<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M7.5 5v14M16.5 5v14M3.5 9h4M3.5 15h4M16.5 9h4M16.5 15h4"/>',
+    pinnwand: '<rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="13" width="8" height="7" rx="1"/><path d="M11 7.5c4 0 6 1.5 6 5.5"/>',
   };
 
   const el = {};

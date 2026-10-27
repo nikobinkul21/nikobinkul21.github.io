@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="css/football.css">
   <link rel="stylesheet" href="css/climb.css">
   <link rel="stylesheet" href="css/words.css">
-  <link rel="stylesheet" href="css/media.css">
+  <link rel="stylesheet" href="css/board.css">
   <link rel="stylesheet" href="css/todo.css">
   <link rel="stylesheet" href="css/prompts.css">
 
@@ -75,7 +75,7 @@
           <li><a class="reiter" href="#kalender" data-view="kalender">Kalender</a></li>
           <li><a class="reiter" href="#schedule" data-view="schedule">Stundenplan/Termine</a></li>
           <li><a class="reiter" href="#todo" data-view="todo">Zu erledigen</a></li>
-          <li><a class="reiter" href="#media" data-view="media">Filme/Serien</a></li>
+          <li><a class="reiter" href="#pinnwand" data-view="pinnwand">Pinnwand</a></li>
           <li><a class="reiter" href="#games" data-view="games">Games</a></li>
           <li><a class="reiter" href="#prompts" data-view="prompts">Prompts</a></li>
           <li><a class="reiter" href="#einstellungen" data-view="einstellungen">Einstellungen</a></li>
@@ -117,10 +117,11 @@
       <div id="games-root"></div>
     </section>
 
-    <section class="ansicht" id="view-media" aria-labelledby="titel-media" hidden>
-      <h1 id="titel-media" tabindex="-1">Filme/Serien</h1>
-      <!-- media.js füllt diesen Container (Übersicht und Kategorien) -->
-      <div id="media-root"></div>
+    <section class="ansicht" id="view-pinnwand" aria-labelledby="titel-pinnwand" hidden>
+      <!-- Die Überschrift ist für Screenreader – die Fläche füllt den ganzen Bereich -->
+      <h1 id="titel-pinnwand" class="nur-screenreader" tabindex="-1">Pinnwand</h1>
+      <!-- board.js füllt diesen Container mit der unendlichen Fläche -->
+      <div id="board-root"></div>
     </section>
 
     <section class="ansicht" id="view-schedule" aria-labelledby="titel-schedule" hidden>
@@ -205,10 +206,10 @@
   <script src="js/words/speicher.js"></script>
   <script src="js/words/darstellung.js"></script>
   <script src="js/games.js"></script>
-  <!-- Filme/Serien: erst die Speicherung, dann die Darstellung -->
-  <script src="js/media-store.js"></script>
-  <script src="js/media.js"></script>
-  <!-- Einstellungen: braucht MediaStore und EventsStore (für die Sicherung) -->
+  <!-- Pinnwand: erst die Speicherung, dann die Fläche -->
+  <script src="js/board-store.js"></script>
+  <script src="js/board.js"></script>
+  <!-- Einstellungen: braucht die Stores aller Bereiche (für die Sicherung) -->
   <script src="js/settings.js"></script>
   <!-- Startseite: liest aus allen Stores, deshalb zuletzt vor app.js -->
   <script src="js/home.js"></script>

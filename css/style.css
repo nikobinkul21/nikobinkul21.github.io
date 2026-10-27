@@ -420,6 +420,20 @@
   --sudoku-effekt-farbe: var(--farbe-akzent);
   --sudoku-effekt-schein: rgb(var(--licht) / 0.14);
   --sudoku-effekt-schein-stark: rgb(var(--licht) / 0.26);
+
+  /* Pinnwand: Zettelfarben (Off-White, Hellgrau, drei gedämpfte Töne) und
+     Schrift darauf. Im dunklen Design etwas gedämpfter, damit sie nicht blenden. */
+  --zettel-creme: #ddd7c7;
+  --zettel-grau: #b9b5ab;
+  --zettel-sand: #cdb995;
+  --zettel-salbei: #a9b8a0;
+  --zettel-taube: #a6b2bf;
+  --zettel-text: #16140f;
+  --zettel-text-leise: #3f3a30;
+  --zettel-schatten: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --pw-raster: rgb(var(--licht) / 0.13);       /* Punktraster der Fläche */
+  --pw-linie: rgb(var(--licht) / 0.55);        /* Verbindungen */
+  --pw-linie-aktiv: #f3efe4;
 }
 
 :root[data-theme="light"] {
@@ -467,6 +481,16 @@
   --sudoku-eingabe-farbe: #4c4639;
   --sudoku-effekt-schein: rgba(40, 32, 18, 0.10);
   --sudoku-effekt-schein-stark: rgba(40, 32, 18, 0.2);
+
+  --zettel-creme: #f7f2e6;
+  --zettel-grau: #dcd8cf;
+  --zettel-sand: #e6d6b5;
+  --zettel-salbei: #cdd8c6;
+  --zettel-taube: #cbd4de;
+  --zettel-schatten: 0 6px 16px rgba(40, 30, 10, 0.16);
+  --pw-raster: rgba(40, 32, 18, 0.16);
+  --pw-linie: rgba(20, 18, 14, 0.55);
+  --pw-linie-aktiv: #14120e;
 }
 
 
@@ -849,7 +873,7 @@ textarea:focus {
   margin: 0;
 }
 
-/* Übersichtsseiten (Games, Filme/Serien): ein Raster aus anklickbaren Karten */
+/* Übersichtsseiten (Games): ein Raster aus anklickbaren Karten */
 .karten-raster {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
