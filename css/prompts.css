@@ -1,8 +1,9 @@
 /* ==========================================================================
    prompts.css – Kachel-Navigation des Abschnitts "Prompts" (js/prompts.js)
-   Die Kacheln sehen aus wie die Karten der Startseite: große, abgerundete
-   Rechtecke mit Glow, Titel mittig, darüber ein Emoji. Glow-Werte
-   (--glow-…) stehen in css/home.css, Farben und Schriften in css/style.css.
+   Die Kacheln sehen aus wie die Kacheln der Startseite: dunkle Flächen mit
+   feiner heller Kante, beim Hovern leuchtet ein Scheinwerfer sie an.
+   Titel mittig, darüber ein Emoji. Licht, Farben und Schriften:
+   css/style.css (--kachel-…).
    Bewegt werden nur transform und opacity.
    ========================================================================== */
 
@@ -11,14 +12,14 @@
   --pr-kachel-breite: 200px;
   --pr-kachel-hoehe: 240px;
   --pr-abstand: 22px;                       /* Lücke zwischen zwei Kacheln */
-  --pr-rundung: 24px;
+  --pr-rundung: var(--radius-m);
   --pr-innen: 16px;
   --pr-emoji-groesse: 2.6rem;
   --pr-titel-groesse: 1.3rem;
   --pr-titel-max: 11cqi;                    /* Obergrenze relativ zur Kachelbreite: lange Wörter passen */
-  /* Hover und Tastaturfokus: hebt sich etwas an und wird größer */
-  --pr-heben: -6px;
-  --pr-wachsen: 1.03;
+  /* Hover und Tastaturfokus: nur Licht, keine Bewegung */
+  --pr-heben: 0px;
+  --pr-wachsen: 1;
   /* Prompt-Ansicht */
   --pr-gross-breite: 760px;
 }
@@ -80,20 +81,15 @@
   text-align: center;
   text-decoration: none;
   background: var(--farbe-flaeche);
-  border: var(--linie-breite) solid var(--farbe-rand);
+  border: var(--linie-breite) solid rgb(var(--kachel-kante) / var(--kachel-kante-staerke));
   border-radius: var(--pr-rundung);
-  /* Glow wie auf der Startseite: Lichtkante, heller Schein, warmer Schatten */
-  box-shadow:
-    inset 0 var(--glow-kante-breite) 0 rgb(var(--glow-farbe) / var(--glow-kante)),
-    0 0 var(--glow-groesse) rgb(var(--glow-farbe) / var(--glow-staerke)),
-    0 var(--glow-schatten-versatz) var(--glow-schatten-groesse) rgb(var(--glow-schatten-farbe) / var(--glow-schatten-staerke));
   cursor: pointer;
   transform: translateY(var(--heben)) scale(var(--wachsen));
   transition: transform 280ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-/* Heller beim Hovern und Akzentrand mit stärkerem Glow – zwei Lichtschichten,
-   die nur ihre Deckkraft ändern (wie auf der Startseite) */
+/* Hover: Scheinwerferlicht von vorn und ein weicher weißer Schein an der
+   Kante – zwei Lichtschichten, die nur langsam ihre Deckkraft ändern */
 .pr-kachel::before,
 .pr-kachel::after {
   content: "";
@@ -101,20 +97,20 @@
   inset: -1px;
   border-radius: inherit;
   opacity: 0;
-  transition: opacity 220ms ease;
+  transition: opacity var(--kachel-hover-dauer) var(--kurve-weich);
   pointer-events: none;
 }
 
 .pr-kachel::before {
   z-index: -1;
-  background: var(--farbe-flaeche-hell);
+  background: radial-gradient(ellipse 85% 75% at 50% 45%,
+    rgb(255 255 255 / var(--kachel-licht-staerke)),
+    rgb(255 255 255 / calc(var(--kachel-licht-staerke) * 0.35)));
 }
 
 .pr-kachel::after {
-  border: 2px solid var(--farbe-akzent);
-  box-shadow:
-    0 0 var(--glow-hover-groesse) color-mix(in srgb, var(--farbe-akzent) var(--glow-hover-akzent), rgb(var(--glow-farbe) / var(--glow-hover-staerke))),
-    0 0 calc(var(--glow-hover-groesse) / 2.5) rgb(var(--glow-farbe) / var(--glow-hover-staerke));
+  border: 1px solid rgb(var(--kachel-kante) / calc(var(--kachel-kante-staerke) * 3));
+  box-shadow: 0 0 var(--kachel-schein-groesse) rgb(255 255 255 / var(--kachel-schein-staerke));
 }
 
 a.pr-kachel:hover,
@@ -145,6 +141,7 @@ button.pr-kachel:focus-visible::after {
 .pr-emoji {
   font-size: var(--pr-emoji-groesse);
   line-height: 1;
+  filter: grayscale(1);                      /* monochrom wie die ganze Seite */
 }
 
 .pr-titel {

@@ -1,7 +1,8 @@
 /* ==========================================================================
    settings.js – Einstellungen
-   - Darstellung: Anpassungen des Aussehens (früher eigener Abschnitt
-     "Customising" – #customising leitet hierher weiter, siehe js/app.js)
+   - Darstellung: Startseite – Kachelgrößen nach Nutzung an/aus,
+     Nutzungsdaten zurücksetzen (früher eigener Abschnitt "Customising" –
+     #customising leitet hierher weiter, siehe js/app.js)
    - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer, Klettern-Rekord,
      Worträtsel)
      als eine JSON-Datei – Export und Import
@@ -37,10 +38,22 @@ const EinstellungenAnsicht = (function () {
    */
   function init(container) {
     container.innerHTML =
-      // Darstellung (früher "Customising"): noch ohne eigene Optionen
+      // Darstellung (früher "Customising"): Startseite (Werte in js/home.js)
       '<section class="karte einstellungen-block" aria-labelledby="darstellung-titel">' +
         '<h2 id="darstellung-titel">Darstellung</h2>' +
-        '<p class="platzhalter">Anpassungen der Darstellung kommen bald. Hell oder dunkel stellst du mit dem Schalter oben rechts ein.</p>' +
+        "<p>Hell oder dunkel stellst du mit dem Schalter oben rechts ein.</p>" +
+        '<h3 class="einstellungen-unter">Startseite</h3>' +
+        '<label class="einstellungen-feld einstellungen-feld--haken">' +
+          '<input type="checkbox" class="einstellungen-nutzung">' +
+          "<span>Kachelgrößen nach Nutzung</span>" +
+        "</label>" +
+        "<p>Die Abschnitte, die du am häufigsten öffnest, bekommen die größeren Kacheln. " +
+          "Gezählt wird nur in diesem Browser; Aufrufe älter als 30 Tage zählen nicht mehr. " +
+          "Ausgeschaltet gilt die feste Startanordnung.</p>" +
+        '<div class="einstellungen-knoepfe">' +
+          '<button type="button" class="knopf knopf--gefahr" data-aktion="nutzung-zuruecksetzen">Nutzungsdaten zurücksetzen</button>' +
+        "</div>" +
+        '<p class="einstellungen-hinweis einstellungen-hinweis--nutzung" role="status"></p>' +
       "</section>" +
       '<section class="karte einstellungen-block" aria-labelledby="sicherung-titel">' +
         '<h2 id="sicherung-titel">Daten sichern</h2>' +
@@ -112,6 +125,17 @@ const EinstellungenAnsicht = (function () {
         "Gespeichert: " + SudokuKampf.wuerfelEinstellung().name;
     });
 
+    // Startseite: Kachelgrößen nach Nutzung
+    const nutzung = container.querySelector(".einstellungen-nutzung");
+    const nutzungHinweis = container.querySelector(".einstellungen-hinweis--nutzung");
+    nutzung.checked = StartseiteAnsicht.nachNutzung();
+    nutzung.addEventListener("change", function () {
+      StartseiteAnsicht.setzeNachNutzung(nutzung.checked);
+      nutzungHinweis.textContent = nutzung.checked
+        ? "Gespeichert: Kachelgrößen nach Nutzung."
+        : "Gespeichert: feste Startanordnung.";
+    });
+
     el.datei = container.querySelector(".einstellungen-datei");
     el.hinweis = container.querySelector(".einstellungen-hinweis");
     el.dbStatus = container.querySelector(".einstellungen-db-status");
@@ -129,6 +153,11 @@ const EinstellungenAnsicht = (function () {
       if (knopf.dataset.aktion === "abenteuer-loeschen") fortschritteLoeschen(container);
       if (knopf.dataset.aktion === "db-trennen") datenbankTrennen();
       if (knopf.dataset.aktion === "db-uebertragen") datenbankUebertragen(knopf);
+      if (knopf.dataset.aktion === "nutzung-zuruecksetzen") {
+        StartseiteAnsicht.nutzungZuruecksetzen();
+        container.querySelector(".einstellungen-hinweis--nutzung").textContent =
+          "Nutzungsdaten gelöscht – die Startseite zeigt wieder die Startanordnung.";
+      }
     });
     el.datei.addEventListener("change", importieren);
   }

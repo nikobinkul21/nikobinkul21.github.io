@@ -1,15 +1,19 @@
 /* ==========================================================================
    style.css – Grundlage für ganz NTB
 
+   Stil: ein Schwarz-Weiß-Film spät in der Nacht. Viel Schwarz, harte
+   Kontraste, weiches Licht aus der Dunkelheit, feines Filmkorn.
+   Rein monochrom – hervorgehoben wird nur durch Helligkeit und Leuchten.
+
    HIER ÄNDERST DU DAS AUSSEHEN DER GANZEN SEITE:
      0. Schriften (Dateien im Ordner fonts/)
-     1. Design-Variablen: Farben, Schriften, Abstände, Radien, Linien
-        – zuerst das helle Design, darunter das dunkle
+     1. Design-Variablen: Farben, Schriften, Abstände, Licht, Korn, Bewegung
+        – zuerst das dunkle Design (Standard), darunter das helle
      1b. Bereichsfarben: Termine, Prioritäten, Kalender, Sudoku-Gitter …
    Die Bereichs-Stylesheets (home.css, todo.css, …) benutzen nur diese
-   Variablen. Ausnahme mit eigenen Farben: der Pixel-Stil im
-   Sudoku-Abenteuer (sudoku-rpg.css, sudoku-damage-fx.css, sudoku-mobil.css)
-   und im Fußballspiel (football.css).
+   Variablen. Eigene Farben behalten nur die Spiele (Pixel-Stil im
+   Sudoku-Abenteuer, Fußball, Klettern, Worträtsel) – leicht entsättigt
+   über --spiel-saettigung (Abschnitt 6d).
    ========================================================================== */
 
 
@@ -17,6 +21,7 @@
    0. SCHRIFTEN
    Alle Dateien liegen lokal in fonts/ – es wird nichts aus dem Internet
    geladen. Die Pfade sind relativ zu DIESER Datei (deshalb "../fonts/").
+   Alle drei Schriften: SIL Open Font License (Lizenztexte in fonts/).
    font-display: swap – bis die Schrift geladen ist, steht der Text in der
    Ersatzschrift da und ist nie unsichtbar.
    ========================================================================== */
@@ -30,45 +35,53 @@
   font-display: swap;
 }
 
-/* Inter – Fließtext, Navigation, Bedienelemente (SIL Open Font License) */
+/* Manrope – schlanke Grotesk für Text, Titel und Bedienelemente */
 @font-face {
-  font-family: "Inter";
-  src: url("../fonts/inter-400.woff2") format("woff2");
-  font-weight: 400;
+  font-family: "Manrope";
+  src: url("../fonts/manrope-300.woff2") format("woff2");
+  font-weight: 200 300;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Inter";
-  src: url("../fonts/inter-500.woff2") format("woff2");
-  font-weight: 500;
+  font-family: "Manrope";
+  src: url("../fonts/manrope-400.woff2") format("woff2");
+  font-weight: 400 500;
   font-style: normal;
   font-display: swap;
 }
 
-/* 600 übernimmt auch "fett" (700): Es gibt bewusst keinen eigenen 700er-Schnitt */
 @font-face {
-  font-family: "Inter";
-  src: url("../fonts/inter-600.woff2") format("woff2");
+  font-family: "Manrope";
+  src: url("../fonts/manrope-600.woff2") format("woff2");
   font-weight: 600 900;
   font-style: normal;
   font-display: swap;
 }
 
-/* Source Serif 4 – Überschriften (SIL Open Font License) */
+/* Bebas Neue – schmale, hohe Schrift für große Überschriften */
 @font-face {
-  font-family: "Source Serif 4";
-  src: url("../fonts/source-serif-4-400.woff2") format("woff2");
+  font-family: "Bebas Neue";
+  src: url("../fonts/bebas-neue-400.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
+/* IBM Plex Mono – kleine Angaben (Datum, Uhrzeit, Nummern) */
 @font-face {
-  font-family: "Source Serif 4";
-  src: url("../fonts/source-serif-4-600.woff2") format("woff2");
-  font-weight: 500 900;
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-300.woff2") format("woff2");
+  font-weight: 200 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-400.woff2") format("woff2");
+  font-weight: 400 900;
   font-style: normal;
   font-display: swap;
 }
@@ -76,57 +89,87 @@
 
 /* ==========================================================================
    1. DESIGN-VARIABLEN
-   Ruhig, warm, minimalistisch: cremefarbener Grund, etwas hellere Karten,
-   feine warmgraue Linien statt Schatten und EINE Akzentfarbe (Terrakotta)
-   für Buttons, Links und aktive Zustände.
+   Dunkel (Standard): tiefes Schwarz, darüber ein kaum sichtbarer Lichtschein
+   von oben wie von einer Straßenlaterne; Flächen sehr dunkelgrau mit feiner
+   heller Kante, weißer Text.
+   Die Werte gelten, solange <html data-theme="light"> NICHT gesetzt ist.
    ========================================================================== */
 
 :root {
-  /* ---- Farben: helles Design ---- */
-  --farbe-hintergrund: #f8f4ed;      /* Seite: warmes, leicht cremiges Off-White */
-  --farbe-flaeche: #fdfbf7;          /* Karten und Dialoge – etwas heller */
-  --farbe-flaeche-leise: #f1ebe1;    /* zurückhaltende Flächen: Hover, Umschalter */
-  --farbe-flaeche-hell: #ffffff;     /* hellste Fläche: Karte leuchtet beim Hovern auf */
-  /* Glow der Startseiten-Karten (css/home.css) – als "R G B", die Stärke
-     regelt home.css über den Alpha-Wert */
-  --glow-farbe: 255 255 255;         /* heller Schein und Lichtkante */
-  --glow-schatten-farbe: 120 84 48;  /* warmer Schatten nach außen (nur hell sichtbar) */
-  --farbe-text: #2b2622;             /* fast schwarz, warm */
-  --farbe-text-leise: #6b6158;       /* Nebentext (Kontrast 5,5 : 1 zum Grund) */
-  --farbe-rand: #e6dfd4;             /* feine Linien */
-  --farbe-rand-stark: #d2c8ba;       /* Eingabefelder, Trennlinien mit mehr Gewicht */
+  /* ---- Farben: dunkles Design ---- */
+  --farbe-hintergrund: #050505;      /* tiefes Schwarz */
+  --farbe-flaeche: #101010;          /* Kacheln, Karten, Dialoge */
+  --farbe-flaeche-leise: #191919;    /* Hover, Umschalter */
+  --farbe-flaeche-hell: #232323;     /* hellste Fläche */
+  --farbe-text: #f2f2f2;             /* fast Weiß */
+  --farbe-text-leise: #a6a6a6;       /* Nebentext: 8,6 : 1 auf Schwarz, 7,9 : 1 auf Flächen */
+  --farbe-rand: #2b2b2b;             /* feine Linien */
+  --farbe-rand-stark: #6b6b6b;       /* Eingabefelder, Knöpfe: 3,6 : 1 auf Flächen */
 
-  --farbe-akzent: #a8502f;           /* gedämpftes Terrakotta */
-  --farbe-akzent-hover: #8f4227;     /* etwas dunkler beim Hovern */
-  --farbe-akzent-leise: #f4e4da;     /* zarte Tönung, z. B. hinter Bewertungen */
-  --farbe-auf-akzent: #ffffff;       /* Text auf Akzent-Flächen */
-  --farbe-fokus: var(--farbe-akzent);/* Tastaturfokus */
+  /* Keine Akzentfarbe: "Akzent" ist die hellste Stufe */
+  --farbe-akzent: #ffffff;
+  --farbe-akzent-hover: #d6d6d6;
+  --farbe-akzent-leise: #262626;     /* zarte Tönung, z. B. Markierungen */
+  --farbe-auf-akzent: #000000;       /* Text auf Akzent-Flächen */
+  --farbe-fokus: #ffffff;            /* Tastaturfokus */
 
-  /* Rückmeldungen (bewusst gedeckt, nicht grell) */
-  --farbe-erfolg: #2f6e3b;
-  --farbe-gefahr: #b02a1f;
-  --farbe-gefahr-leise: #fae6e1;
+  /* Rückmeldungen – ebenfalls nur Grautöne */
+  --farbe-erfolg: #d9d9d9;
+  --farbe-gefahr: #ffffff;
+  --farbe-gefahr-leise: #2a2a2a;
 
   /* Abdunklung hinter Dialogen */
-  --farbe-schleier: rgba(43, 32, 22, 0.32);
+  --farbe-schleier: rgba(0, 0, 0, 0.7);
+
+  /* ---- Licht ---- */
+  /* Schein der Straßenlaterne oben (Farbe, Stärke, Form) */
+  --laterne-farbe: 255 255 255;
+  --laterne-staerke: 0.075;
+  --laterne-form: 90% 60% at 50% -12%;
+  /* Vignette an den Rändern */
+  --vignette-farbe: 0 0 0;
+  --vignette-staerke: 0.65;
+  /* Lichtkante und Scheinwerfer der Kacheln (als "R G B" + Stärke) */
+  --kachel-kante: 255 255 255;
+  --kachel-kante-staerke: 0.12;      /* feine helle Kante */
+  --kachel-licht-staerke: 0.10;      /* Hover: Fläche wird so viel heller */
+  --kachel-schein-staerke: 0.22;     /* Hover: weicher weißer Schein an der Kante */
+  --kachel-schein-groesse: 28px;
+  --kachel-hover-dauer: 700ms;       /* langsam, wie ein Scheinwerfer */
+
+  /* Glow (Prompts-Kacheln) – zeigt auf dieselbe Lichtkante */
+  --glow-farbe: 255 255 255;
+  --glow-schatten-farbe: 0 0 0;
+
+  /* ---- Filmkorn ---- */
+  --korn-deckkraft: 0.07;            /* sehr dezent */
+  --korn-groesse: 180px;             /* Kachelgröße des Rauschmusters */
+  --korn-tempo: 0.9s;                /* so schnell flimmert es (8 Sprünge) */
 
   /* ---- Schatten: NUR für schwebende Elemente (Menüs, Dialoge) ---- */
-  --schatten: none;                  /* Karten haben eine Linie statt Schatten */
-  --schatten-schwebend: 0 12px 32px rgba(60, 40, 20, 0.10), 0 2px 6px rgba(60, 40, 20, 0.06);
+  --schatten: none;
+  --schatten-schwebend: 0 18px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
 
   /* ---- Linien ---- */
   --linie-breite: 1px;
   --linie: var(--linie-breite) solid var(--farbe-rand);
 
   /* ---- Schriften ---- */
-  --schrift-text: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --schrift-titel: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
+  --schrift-text: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --schrift-titel: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --schrift-display: "Bebas Neue", "Arial Narrow", Impact, sans-serif;  /* große Überschriften */
+  --schrift-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --schrift: var(--schrift-text);    /* alter Name, zeigt auf die Textschrift */
   --schrift-groesse: 1.0625rem;      /* Grundschrift: 17 px */
   --zeilenhoehe: 1.6;
-  --zeilen-max: 68ch;                /* höchstens so lange Zeilen bei Fließtext */
-  --titel-groesse-1: 2rem;           /* h1 */
-  --titel-groesse-2: 1.3rem;         /* h2 */
+  --zeilen-max: 68ch;
+  --titel-groesse-1: 3.2rem;         /* h1 in Bebas Neue */
+  --titel-groesse-2: 1rem;           /* h2: Großbuchstaben, weit gesperrt */
+  --titel-gewicht: 300;              /* leichte Strichstärke für Titel */
+  --titel-sperrung: 0.22em;          /* Buchstabenabstand der Titel */
+  --display-sperrung: 0.06em;        /* Buchstabenabstand der großen Überschriften */
+  --mono-sperrung: 0.28em;           /* Zeitstempel, kleine Angaben */
+  --reiter-sperrung: 0.16em;
 
   /* ---- Abstände ---- */
   --abstand-xs: 4px;
@@ -134,222 +177,223 @@
   --abstand-m: 16px;
   --abstand-l: 24px;
   --abstand-xl: 48px;
-  --karte-innen: 28px;               /* großzügiger Innenabstand der Karten */
+  --karte-innen: 28px;
 
-  /* ---- Rundungen ---- */
-  --radius-s: 8px;                   /* Buttons, Eingabefelder */
-  --radius-m: 12px;                  /* Karten, Dialoge */
-  --radius-pille: 999px;             /* ganz rund (Pillen, Punkte) */
+  /* ---- Rundungen: klar und kantig ---- */
+  --radius-s: 2px;
+  --radius-m: 4px;
+  --radius-pille: 999px;
 
   /* ---- Bedienelemente ---- */
   --knopf-hoehe: 40px;
 
-  /* ---- Glas-Effekt ----
-     Nur noch im Kalender und in den Spielen (bleibt dort vorerst). */
-  --glas-hintergrund: rgba(253, 251, 247, 0.55);
+  /* ---- Glas-Effekt (Kalender, Spiele) ---- */
+  --glas-hintergrund: rgba(255, 255, 255, 0.05);
   --glas-blur: 16px;
-  --glas-saettigung: 160%;
-  --glas-rand: rgba(255, 255, 255, 0.75);
-  --glas-reflex: rgba(255, 255, 255, 0.9);
-  --glas-glanz: rgba(255, 255, 255, 0.35);
-  --glas-schatten: 0 4px 16px rgba(60, 40, 20, 0.10);
-  --glas-fallback: rgba(253, 251, 247, 0.9);
+  --glas-saettigung: 100%;
+  --glas-rand: rgba(255, 255, 255, 0.14);
+  --glas-reflex: rgba(255, 255, 255, 0.22);
+  --glas-glanz: rgba(255, 255, 255, 0.04);
+  --glas-schatten: 0 4px 16px rgba(0, 0, 0, 0.6);
+  --glas-fallback: rgba(24, 24, 24, 0.95);
 
   /* ---- Logo "NTB" ---- */
   --logo-schrift: "NTB Logo", Impact, "Arial Black", sans-serif;
-  --logo-groesse: 1.75rem;           /* passend zur ruhigen Leiste */
+  --logo-groesse: 1.75rem;
   --logo-groesse-mobil: 1.6rem;
   --logo-farbe: #000000;             /* Buchstaben */
-  --logo-kontur-farbe: #ffffff;      /* Kontur außen um die Buchstaben */
-  --logo-kontur-staerke: 1px;        /* sichtbare Breite der Kontur */
-  /* Feiner Schatten, damit die weiße Kontur auf hellem Grund sichtbar bleibt */
-  --logo-schatten: 0 0 1px rgba(0, 0, 0, 0.6), 0 0 2px rgba(0, 0, 0, 0.25);
+  --logo-kontur-farbe: #ffffff;      /* Kontur außen */
+  --logo-kontur-staerke: 1px;
+  --logo-schatten: 0 0 10px rgba(255, 255, 255, 0.18);   /* leises Leuchten */
 
   /* ---- Größen ---- */
   --leiste-hoehe: 64px;
-  --leiste-max-breite: 1280px;       /* Inhalt der Leiste wird nie breiter */
+  --leiste-max-breite: 1280px;
   --inhalt-max-breite: 1100px;
 
-  /* ---- Bewegung: kurz und unaufdringlich ---- */
-  --dauer: 150ms;
+  /* ---- Bewegung: ruhig und weich ---- */
+  --dauer: 220ms;
+  --kurve-weich: cubic-bezier(0.25, 0.1, 0.25, 1);
 
-  /* ---- Seitenwechsel (js/seitenwechsel.js) ----
-     Karte → Abschnitt: die Kamera fliegt in die Karte hinein und durch sie
-     hindurch. Drei Phasen, nacheinander ohne Stopp (Rückweg: rückwärts). */
-  --uebergang-fahrt-dauer: 440ms;                 /* 1. Kamerafahrt, bis die Karte den Bildschirm füllt */
-  --uebergang-fahrt-kurve: cubic-bezier(0.4, 0, 0.75, 0.5); /* beschleunigt bis zum Durchgang */
-  --uebergang-durchgang-dauer: 170ms;             /* 2. Durchgang: Karte wird durchsichtig, Schimmer */
-  --uebergang-erscheinen-dauer: 460ms;            /* 3. Seite erscheint (beginnt mit dem Durchgang) */
-  --uebergang-erscheinen-kurve: cubic-bezier(0.25, 0.6, 0.3, 1); /* weich los, ruhig und langsam ankommen */
-  --uebergang-erscheinen-skala: 0.93;             /* so klein ist die Seite, wenn sie aus der Tiefe kommt */
-  --uebergang-ueberfuellen-max: 2.2;              /* höchstens so weit wächst die Karte im Durchgang über den Bildschirm hinaus */
-  --uebergang-schimmer: 0.4;                      /* Stärke des Schimmers im Durchgang (0 = aus; dunkel: unten) */
-  --uebergang-wechsel-dauer: 220ms;               /* Abschnitt ↔ Abschnitt: kurze Überblendung */
-  --uebergang-ruhig-dauer: 160ms;                 /* "Bewegung reduzieren": nur Überblendung */
-  --anheben: 0px;                    /* früher hoben sich Elemente beim Hover – jetzt nicht mehr */
+  /* ---- Seitenwechsel (js/seitenwechsel.js): Schnitt ins Schwarze ----
+     Die Seite blendet in Schwarz ab und der Abschnitt aus dem Schwarz auf. */
+  --uebergang-abblende-dauer: 220ms;  /* Abblenden in Schwarz */
+  --uebergang-schwarz-dauer: 60ms;    /* kurz ganz schwarz (der Schnitt) */
+  --uebergang-aufblende-dauer: 260ms; /* Aufblenden des neuen Abschnitts */
+  --uebergang-schwarz: #000000;       /* Farbe der Blende (auch im hellen Design) */
+  --uebergang-ruhig-dauer: 160ms;     /* "Bewegung reduzieren": kurze Überblendung */
 
-  /* Formularelemente und Scrollbalken im hellen Stil */
-  color-scheme: light;
-}
-
-/* Dunkles Design: warmes, sehr dunkles Grau statt Schwarz, cremefarbener
-   Text, dieselbe Akzentfarbe leicht aufgehellt.
-   Aktiv, wenn <html data-theme="dark"> gesetzt ist (macht app.js). */
-:root[data-theme="dark"] {
-  --farbe-hintergrund: #1d1b18;
-  --farbe-flaeche: #25221f;
-  --farbe-flaeche-leise: #2f2b27;
-  --farbe-flaeche-hell: #322d28;
-  --glow-farbe: 255 255 255;
-  --glow-schatten-farbe: 0 0 0;
-  --uebergang-schimmer: 0.16;        /* auf dunklem Grund wirkt der helle Schimmer viel stärker */
-  --farbe-text: #efe8dc;
-  --farbe-text-leise: #ada395;
-  --farbe-rand: #38332d;
-  --farbe-rand-stark: #4d463e;
-
-  --farbe-akzent: #e08a68;
-  --farbe-akzent-hover: #eaa184;
-  --farbe-akzent-leise: #3d2b22;
-  --farbe-auf-akzent: #1d1b18;       /* dunkler Text auf dem hellen Terrakotta */
-
-  --farbe-erfolg: #8cc79a;
-  --farbe-gefahr: #f08a7c;
-  --farbe-gefahr-leise: #3e2420;
-
-  --farbe-schleier: rgba(0, 0, 0, 0.55);
-
-  --schatten-schwebend: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
-
-  --glas-hintergrund: rgba(255, 245, 230, 0.07);
-  --glas-rand: rgba(255, 245, 230, 0.16);
-  --glas-reflex: rgba(255, 245, 230, 0.24);
-  --glas-glanz: rgba(255, 245, 230, 0.05);
-  --glas-schatten: 0 4px 16px rgba(0, 0, 0, 0.40);
-  --glas-fallback: rgba(47, 43, 39, 0.94);
-
-  /* Auf dunklem Grund ist die weiße Kontur gut sichtbar – kein Schatten nötig */
-  --logo-schatten: none;
+  /* ---- Spiele: eigene Farben, leicht entsättigt (Abschnitt 6d) ---- */
+  --spiel-saettigung: 0.72;
 
   color-scheme: dark;
+}
+
+/* Helles Design: wie ein überbelichtetes Schwarz-Weiß-Foto. Gebrochenes
+   Weiß, schwarzer Text, dieselbe Körnung; das Licht von oben strahlt hier
+   fast weiß aus. Aktiv bei <html data-theme="light"> (setzt app.js). */
+:root[data-theme="light"] {
+  --farbe-hintergrund: #eceae6;
+  --farbe-flaeche: #f6f5f3;
+  --farbe-flaeche-leise: #e3e1dd;
+  --farbe-flaeche-hell: #ffffff;
+  --farbe-text: #0b0b0b;
+  --farbe-text-leise: #4f4f4f;       /* 7,1 : 1 auf dem Grund */
+  --farbe-rand: #cfcdc9;
+  --farbe-rand-stark: #7b7975;
+
+  --farbe-akzent: #000000;
+  --farbe-akzent-hover: #333333;
+  --farbe-akzent-leise: #d9d7d3;
+  --farbe-auf-akzent: #ffffff;
+  --farbe-fokus: #000000;
+
+  --farbe-erfolg: #2e2e2e;
+  --farbe-gefahr: #000000;
+  --farbe-gefahr-leise: #dcdad6;
+
+  --farbe-schleier: rgba(20, 20, 20, 0.45);
+
+  --laterne-staerke: 0.9;            /* überbelichteter, fast weißer Schein */
+  --laterne-form: 95% 70% at 50% -15%;
+  --vignette-staerke: 0.16;
+  --kachel-kante: 0 0 0;
+  --kachel-kante-staerke: 0.14;
+  --kachel-licht-staerke: 0.55;      /* Hover: Fläche strahlt fast weiß */
+  --kachel-schein-staerke: 0.9;
+  --glow-schatten-farbe: 0 0 0;
+
+  --korn-deckkraft: 0.08;
+
+  --schatten-schwebend: 0 18px 48px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
+
+  --glas-hintergrund: rgba(255, 255, 255, 0.55);
+  --glas-rand: rgba(255, 255, 255, 0.8);
+  --glas-reflex: rgba(255, 255, 255, 0.9);
+  --glas-glanz: rgba(255, 255, 255, 0.35);
+  --glas-schatten: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --glas-fallback: rgba(246, 245, 243, 0.94);
+
+  --logo-schatten: 0 0 1px rgba(0, 0, 0, 0.6), 0 0 2px rgba(0, 0, 0, 0.25);
+
+  color-scheme: light;
 }
 
 
 /* ==========================================================================
    1b. BEREICHSFARBEN
-   Farben, die nur einzelne Bereiche brauchen – ebenfalls hier zentral.
-   Prioritäten und Kalender-Markierungen behalten bewusst ihre Farbigkeit.
+   Termine, Kalender und Sudoku-Gitter in Grautönen – unterschieden nur
+   über Helligkeit. Die Prioritäten unter "Zu erledigen" behalten ihre
+   Farbskala, leicht entsättigt.
    ========================================================================== */
 
 :root {
-  /* Arten von Einträgen (Stundenplan, Startseite, Kalender-Vorschau) */
-  --farbe-termin: #4f6d93;           /* Rand / Strich */
-  --farbe-termin-flaeche: #e7ecf1;
-  --farbe-termin-text: #2c3e55;
-  --farbe-vorlesung: #8a5a7f;
-  --farbe-vorlesung-flaeche: #f1e6ec;
-  --farbe-vorlesung-text: #4f2f47;
+  /* Arten von Einträgen (Stundenplan, Kalender-Vorschau) */
+  --farbe-termin: #8c8c8c;           /* Rand / Strich: mittleres Grau */
+  --farbe-termin-flaeche: #1a1a1a;
+  --farbe-termin-text: #e6e6e6;
+  --farbe-vorlesung: #f2f2f2;        /* Vorlesungen: hell leuchtend */
+  --farbe-vorlesung-flaeche: #262626;
+  --farbe-vorlesung-text: #ffffff;
 
   /* Stundenplan-Raster */
-  --sp-linie: rgba(80, 60, 40, 0.08);         /* Stundenlinien */
-  --sp-heute-hintergrund: rgba(168, 80, 47, 0.05); /* Spalte von heute */
-  --sp-heute-akzent: var(--farbe-akzent);     /* Datum von heute */
-  --sp-jetzt-farbe: #c4482f;                  /* Linie für die aktuelle Uhrzeit */
+  --sp-linie: rgba(255, 255, 255, 0.07);
+  --sp-heute-hintergrund: rgba(255, 255, 255, 0.04);
+  --sp-heute-akzent: var(--farbe-akzent);
+  --sp-jetzt-farbe: #ffffff;
 
-  /* Zu erledigen: Prioritäten (Skala von Rot nach Grün) */
-  --todo-ueberfaellig: #b3261e;
-  --todo-sehr-wichtig: #d9483b;
-  --todo-wichtig: #e48a2e;
-  --todo-bald: #d9ad1f;
-  --todo-entspannt: #8bb352;
-  --todo-locker: #3d8f55;
-  --todo-erledigt: #3d8048;                   /* grüner Knopf "Erledigt" */
-  --todo-offen: #c4413a;                      /* roter Knopf "Noch offen" */
-  --todo-ueberfaellig-hintergrund: #fbe8e2;
+  /* Zu erledigen: Prioritäten (Skala von Rot nach Grün, entsättigt) */
+  --todo-ueberfaellig: #e0857d;
+  --todo-sehr-wichtig: #e39087;
+  --todo-wichtig: #dfa778;
+  --todo-bald: #d2bc6a;
+  --todo-entspannt: #a7c18b;
+  --todo-locker: #7db38d;
+  --todo-erledigt: #7db38d;
+  --todo-offen: #e39087;
+  --todo-ueberfaellig-hintergrund: #2a1f1e;
 
   /* Kalender-Markierungen */
-  --kal-vergangen-text: #b8402f;              /* vergangene Tage: rote Zahl … */
-  --kal-vergangen-hintergrund: rgba(196, 64, 40, 0.07); /* … auf blassem Grund */
-  --kal-heute-glas: rgba(56, 160, 84, 0.30);  /* heute: grünes Glas */
-  --kal-heute-glanz: rgba(255, 255, 255, 0.45);
-  --kal-heute-rand: rgba(255, 255, 255, 0.75);
-  --kal-heute-reflex: rgba(255, 255, 255, 0.9);
-  --kal-heute-leuchten: rgba(56, 160, 84, 0.40);
-  --kal-heute-schatten: rgba(60, 40, 20, 0.08);
-  --kal-heute-text: #0f4a20;
-  --kal-heute-fallback: rgba(56, 160, 84, 0.35);
-  --kal-termin-glas: rgba(90, 160, 240, 0.28); /* Tage mit Termin: hellblaues Glas */
-  --kal-termin-rand: rgba(255, 255, 255, 0.75);
-  --kal-termin-leuchten: rgba(90, 160, 240, 0.40);
-  --kal-termin-ring: #5a9ce6;                  /* Ring um "heute", wenn heute ein Termin ist */
-  --kal-vorschau-hintergrund: rgba(253, 251, 247, 0.86);
+  --kal-vergangen-text: #6e6e6e;              /* vergangene Tage: gedimmt */
+  --kal-vergangen-hintergrund: rgba(255, 255, 255, 0.02);
+  --kal-heute-glas: rgba(255, 255, 255, 0.20); /* heute: hell leuchtendes Glas */
+  --kal-heute-glanz: rgba(255, 255, 255, 0.12);
+  --kal-heute-rand: rgba(255, 255, 255, 0.55);
+  --kal-heute-reflex: rgba(255, 255, 255, 0.4);
+  --kal-heute-leuchten: rgba(255, 255, 255, 0.35);
+  --kal-heute-schatten: rgba(0, 0, 0, 0.5);
+  --kal-heute-text: #ffffff;
+  --kal-heute-fallback: rgba(255, 255, 255, 0.24);
+  --kal-termin-glas: rgba(255, 255, 255, 0.08); /* Tage mit Termin: zartes Glas */
+  --kal-termin-rand: rgba(255, 255, 255, 0.3);
+  --kal-termin-leuchten: rgba(255, 255, 255, 0.14);
+  --kal-termin-ring: #bdbdbd;
+  --kal-vorschau-hintergrund: rgba(16, 16, 16, 0.94);
 
-  /* Sudoku-Gitter (freies Spiel und Abenteuer) */
-  --sudoku-linie-duenn-farbe: #e2d9cc;
-  --sudoku-linie-dick-farbe: #5a5047;
+  /* Sudoku-Gitter (freies Spiel) */
+  --sudoku-linie-duenn-farbe: #2e2e2e;
+  --sudoku-linie-dick-farbe: #9a9a9a;
   --sudoku-feld: var(--farbe-flaeche);
-  --sudoku-verwandt: #f3ede4;                 /* gleiche Zeile, Spalte, Block */
-  --sudoku-gleich: #f1ddd1;                   /* Felder mit derselben Zahl */
-  --sudoku-ausgewaehlt: #e7c4b3;              /* das gewählte Feld */
+  --sudoku-verwandt: #171717;                 /* gleiche Zeile, Spalte, Block */
+  --sudoku-gleich: #2b2b2b;                   /* Felder mit derselben Zahl */
+  --sudoku-ausgewaehlt: #3d3d3d;              /* das gewählte Feld */
   --sudoku-vorgabe-farbe: var(--farbe-text);
-  --sudoku-eingabe-farbe: var(--farbe-akzent);
+  --sudoku-eingabe-farbe: #b3b3b3;            /* eigene Zahlen: etwas gedämpfter */
   --sudoku-fehler-farbe: var(--farbe-gefahr);
   --sudoku-fehler-hintergrund: var(--farbe-gefahr-leise);
   --sudoku-erfolg-farbe: var(--farbe-erfolg);
   --sudoku-fertig-haken-farbe: var(--farbe-erfolg);
   --sudoku-effekt-farbe: var(--farbe-akzent);
-  --sudoku-effekt-schein: rgba(168, 80, 47, 0.18);
-  --sudoku-effekt-schein-stark: rgba(168, 80, 47, 0.30);
-
+  --sudoku-effekt-schein: rgba(255, 255, 255, 0.14);
+  --sudoku-effekt-schein-stark: rgba(255, 255, 255, 0.26);
 }
 
-:root[data-theme="dark"] {
-  --farbe-termin: #8fb0d6;
-  --farbe-termin-flaeche: #2a3440;
-  --farbe-termin-text: #dde7f2;
-  --farbe-vorlesung: #c79bbb;
-  --farbe-vorlesung-flaeche: #3a2c36;
-  --farbe-vorlesung-text: #f2e4ee;
+:root[data-theme="light"] {
+  --farbe-termin: #5c5c5c;
+  --farbe-termin-flaeche: #e0dedb;
+  --farbe-termin-text: #1a1a1a;
+  --farbe-vorlesung: #000000;
+  --farbe-vorlesung-flaeche: #cfcdca;
+  --farbe-vorlesung-text: #000000;
 
-  --sp-linie: rgba(255, 240, 220, 0.07);
-  --sp-heute-hintergrund: rgba(224, 138, 104, 0.06);
-  --sp-jetzt-farbe: #f0866c;
+  --sp-linie: rgba(0, 0, 0, 0.08);
+  --sp-heute-hintergrund: rgba(255, 255, 255, 0.55);
+  --sp-jetzt-farbe: #000000;
 
-  --todo-ueberfaellig: #ff6b5e;
-  --todo-sehr-wichtig: #ff7a6b;
-  --todo-wichtig: #ffa458;
-  --todo-bald: #f2cf4a;
-  --todo-entspannt: #a8d27a;
-  --todo-locker: #6cc487;
-  --todo-erledigt: #6cc487;
-  --todo-offen: #ff7a6b;
-  --todo-ueberfaellig-hintergrund: #3a221e;
+  --todo-ueberfaellig: #973f3a;
+  --todo-sehr-wichtig: #bb6159;
+  --todo-wichtig: #c18a51;
+  --todo-bald: #b69a42;
+  --todo-entspannt: #88a164;
+  --todo-locker: #4d7f5b;
+  --todo-erledigt: #4a7351;
+  --todo-offen: #aa5954;
+  --todo-ueberfaellig-hintergrund: #f6eae7;
 
-  --kal-vergangen-text: #f0907f;
-  --kal-vergangen-hintergrund: rgba(255, 120, 100, 0.07);
-  --kal-heute-glas: rgba(80, 190, 110, 0.28);
-  --kal-heute-glanz: rgba(255, 255, 255, 0.12);
-  --kal-heute-rand: rgba(255, 255, 255, 0.26);
-  --kal-heute-reflex: rgba(255, 255, 255, 0.32);
-  --kal-heute-leuchten: rgba(80, 190, 110, 0.42);
-  --kal-heute-schatten: rgba(0, 0, 0, 0.25);
-  --kal-heute-text: #ebfff0;
-  --kal-heute-fallback: rgba(80, 190, 110, 0.38);
-  --kal-termin-glas: rgba(120, 180, 250, 0.26);
-  --kal-termin-rand: rgba(255, 255, 255, 0.26);
-  --kal-termin-leuchten: rgba(120, 180, 250, 0.38);
-  --kal-termin-ring: #82bbf5;
-  --kal-vorschau-hintergrund: rgba(37, 34, 31, 0.88);
+  --kal-vergangen-text: #8a8a8a;
+  --kal-vergangen-hintergrund: rgba(0, 0, 0, 0.03);
+  --kal-heute-glas: rgba(0, 0, 0, 0.78);
+  --kal-heute-glanz: rgba(255, 255, 255, 0.18);
+  --kal-heute-rand: rgba(255, 255, 255, 0.6);
+  --kal-heute-reflex: rgba(255, 255, 255, 0.4);
+  --kal-heute-leuchten: rgba(0, 0, 0, 0.25);
+  --kal-heute-schatten: rgba(0, 0, 0, 0.12);
+  --kal-heute-text: #ffffff;
+  --kal-heute-fallback: rgba(0, 0, 0, 0.8);
+  --kal-termin-glas: rgba(0, 0, 0, 0.08);
+  --kal-termin-rand: rgba(255, 255, 255, 0.8);
+  --kal-termin-leuchten: rgba(0, 0, 0, 0.08);
+  --kal-termin-ring: #444444;
+  --kal-vorschau-hintergrund: rgba(246, 245, 243, 0.94);
 
-  --sudoku-linie-duenn-farbe: #3a352f;
-  --sudoku-linie-dick-farbe: #9a8f80;
-  --sudoku-verwandt: #2f2b27;
-  --sudoku-gleich: #4a3328;
-  --sudoku-ausgewaehlt: #6e4636;
-  --sudoku-eingabe-farbe: #eda688;
-  --sudoku-effekt-schein: rgba(224, 138, 104, 0.22);
-  --sudoku-effekt-schein-stark: rgba(224, 138, 104, 0.36);
-
+  --sudoku-linie-duenn-farbe: #d3d1cd;
+  --sudoku-linie-dick-farbe: #3a3a3a;
+  --sudoku-verwandt: #e9e7e3;
+  --sudoku-gleich: #d6d4d0;
+  --sudoku-ausgewaehlt: #bdbbb7;
+  --sudoku-eingabe-farbe: #4a4a4a;
+  --sudoku-effekt-schein: rgba(0, 0, 0, 0.10);
+  --sudoku-effekt-schein-stark: rgba(0, 0, 0, 0.2);
 }
 
 
@@ -365,36 +409,48 @@
   box-sizing: border-box;
 }
 
+html {
+  background: var(--farbe-hintergrund);
+}
+
+/* Der Grund: Schwarz (bzw. gebrochenes Weiß) mit dem Schein der
+   Straßenlaterne von oben. background-attachment: fixed – das Licht
+   bleibt beim Scrollen an seinem Platz. */
 body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--schrift-text);
   font-size: var(--schrift-groesse);
+  font-weight: 400;
   line-height: var(--zeilenhoehe);
   color: var(--farbe-text);
-  background: var(--farbe-hintergrund);
-  /* Etwas ruhigere, glattere Schriftdarstellung */
+  background:
+    radial-gradient(ellipse var(--laterne-form), rgb(var(--laterne-farbe) / var(--laterne-staerke)), transparent 70%)
+    fixed,
+    var(--farbe-hintergrund);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Überschriften in der Serifenschrift, ruhige Hierarchie */
-h1,
-h2 {
-  font-family: var(--schrift-titel);
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.005em;
-}
-
+/* Große Überschriften: schmale, hohe Schrift */
 h1 {
   margin: 0 0 var(--abstand-l);
+  font-family: var(--schrift-display);
   font-size: var(--titel-groesse-1);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: var(--display-sperrung);
 }
 
+/* Titel: Großbuchstaben, weit gesperrt, leichte Strichstärke */
 h2 {
   margin: 0 0 var(--abstand-s);
+  font-family: var(--schrift-titel);
   font-size: var(--titel-groesse-2);
+  font-weight: var(--titel-gewicht);
+  line-height: 1.35;
+  text-transform: uppercase;
+  letter-spacing: var(--titel-sperrung);
 }
 
 h3 {
@@ -409,14 +465,17 @@ textarea {
   font-family: inherit;
 }
 
-/* Links: Akzentfarbe, Unterstreichung erst beim Hovern kräftig */
+/* Links: hell, fein unterstrichen */
 a {
-  color: var(--farbe-akzent);
+  color: var(--farbe-text);
+  text-decoration-color: var(--farbe-rand-stark);
   text-underline-offset: 3px;
+  transition: text-decoration-color var(--dauer) ease;
 }
 
 a:hover {
-  color: var(--farbe-akzent-hover);
+  color: var(--farbe-text);
+  text-decoration-color: currentColor;
 }
 
 /* Fließtext nicht endlos breit */
@@ -479,7 +538,9 @@ textarea:focus {
   position: sticky;                 /* bleibt beim Scrollen oben stehen */
   top: 0;
   z-index: 10;                      /* liegt über dem Inhalt */
-  background: var(--farbe-hintergrund);
+  background: color-mix(in srgb, var(--farbe-hintergrund) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border-bottom: var(--linie);
 }
 
@@ -513,8 +574,8 @@ textarea:focus {
 
 /* ==========================================================================
    4. REITER
-   Ruhiger Text. Hover: dezente, leicht abgerundete Fläche.
-   Aktiv: dunklere Schrift und eine feine Linie darunter.
+   Kleine Großbuchstaben, weit gesperrt. Hover: der Text wird hell.
+   Aktiv: helle Schrift und eine feine Linie darunter.
    ========================================================================== */
 
 .reiter {
@@ -523,8 +584,10 @@ textarea:focus {
   padding: 8px 12px;
   border-radius: var(--radius-s);
   color: var(--farbe-text-leise);
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 0.74rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: var(--reiter-sperrung);
   text-decoration: none;
   white-space: nowrap;              /* Reiter nie umbrechen */
   transition:
@@ -534,7 +597,6 @@ textarea:focus {
 
 .reiter:hover {
   color: var(--farbe-text);
-  background: var(--farbe-flaeche-leise);
 }
 
 /* Aktiver Reiter (app.js setzt aria-current="page") */
@@ -549,9 +611,9 @@ textarea:focus {
   left: 12px;
   right: 12px;
   bottom: 2px;
-  height: 2px;
-  border-radius: 1px;
+  height: 1px;
   background: var(--farbe-akzent);
+  box-shadow: 0 0 8px rgb(var(--kachel-kante) / 0.6);
 }
 
 /*
@@ -737,18 +799,21 @@ textarea:focus {
   height: var(--knopf-hoehe);
   padding: 0 16px;
   font: inherit;
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 0.78rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
   border: 1px solid var(--farbe-rand-stark);
   border-radius: var(--radius-s);
   cursor: pointer;
-  transition: background-color var(--dauer) ease, border-color var(--dauer) ease;
+  transition: background-color var(--dauer) ease, border-color var(--dauer) ease, box-shadow var(--dauer) ease;
 }
 
 .knopf:hover {
   background: var(--farbe-flaeche-leise);
+  border-color: var(--farbe-text-leise);
 }
 
 /* Hauptaktion: in der Akzentfarbe */
@@ -761,6 +826,7 @@ textarea:focus {
 .knopf--haupt:hover {
   background: var(--farbe-akzent-hover);
   border-color: var(--farbe-akzent-hover);
+  box-shadow: 0 0 18px rgb(var(--kachel-kante) / 0.25);
 }
 
 /* Einstellungen */
@@ -807,6 +873,22 @@ textarea:focus {
   cursor: pointer;
 }
 
+/* Ein Häkchen mit Beschriftung daneben */
+.einstellungen-feld--haken {
+  margin-bottom: var(--abstand-s);
+  cursor: pointer;
+}
+
+.einstellungen-feld.einstellungen-feld--haken input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--farbe-akzent);
+  cursor: pointer;
+}
+
 /* Textfeld in einer Einstellung (z. B. Datenbank-Zugang) */
 .einstellungen-feld--text {
   margin-bottom: var(--abstand-s);
@@ -841,6 +923,7 @@ textarea:focus {
 /* Knopf, der etwas unwiderruflich löscht */
 .knopf--gefahr {
   color: var(--farbe-gefahr);
+  border-style: dashed;             /* ohne Farbe: gestrichelt = Vorsicht */
 }
 
 .knopf--gefahr:hover {
@@ -878,83 +961,73 @@ dialog::backdrop {
 
 /* ==========================================================================
    6c. SEITENWECHSEL (js/seitenwechsel.js)
-   Feste Ebene unter der Navigation. Darin steht während der Kamerafahrt
-   ein Abbild der Startseite – dessen ganzer 3D-Raum fliegt auf die Karte
-   zu. Dauer und Kurven: Abschnitt 1, --uebergang-…
+   Ein Schnitt wie im Film: Eine schwarze Blende über der ganzen Seite
+   blendet auf, der Abschnitt wechselt im Schwarz, die Blende verschwindet.
+   Dauer: Abschnitt 1, --uebergang-…
    ========================================================================== */
 
-.seitenwechsel-ebene {
+.seitenwechsel-blende {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;                        /* top setzt seitenwechsel.js (Unterkante der Leiste) */
-  z-index: 9;                       /* unter der Leiste (z-index 10) */
-  overflow: hidden;
-  pointer-events: none;
-}
-
-/* Abbild der Startseite, Seitengrund dahinter und Kartenfläche (Rückweg) */
-.seitenwechsel-abbild,
-.seitenwechsel-grund,
-.seitenwechsel-flaeche,
-.seitenwechsel-schimmer {
-  position: absolute;
-}
-
-.seitenwechsel-grund,
-.seitenwechsel-flaeche,
-.seitenwechsel-schimmer {
   inset: 0;
-}
-
-/* Deckt die Seite darunter ab, bis die Karte den Bildschirm füllt */
-.seitenwechsel-grund {
-  background: var(--farbe-hintergrund);
-}
-
-/* Im Abbild: Karten, die sich bei der Fahrt wegdrehen, zeigen keine Rückseite */
-.seitenwechsel-abbild .tunnel-karte {
-  backface-visibility: hidden;
-  transition: none;
-}
-
-/* Der Schimmer im Durchgang: ein heller Lichtschein in der Farbe des
-   Karten-Glows (wie beim Hovern: weiß mit einem Hauch der Akzentfarbe) */
-.seitenwechsel-schimmer {
-  /* flächig: ein Verlauf würde auf dem ruhigen Grund sichtbare Ringe zeigen */
-  background: color-mix(in srgb, var(--farbe-akzent) var(--glow-hover-akzent, 35%), rgb(var(--glow-farbe)));
+  z-index: 1000;                    /* über allem, auch über der Leiste */
+  background: var(--uebergang-schwarz);
   opacity: 0;
+  cursor: progress;                 /* fängt während des Schnitts alle Klicks ab */
   will-change: opacity;
 }
 
-/* Die angeklickte Karte im Abbild: unsichtbare Hülle an ihrem Platz … */
-.tunnel-karte.ist-huelle {
-  background: none;
-  border-color: transparent;
-  box-shadow: none;
-}
 
-.tunnel-karte.ist-huelle::before,
-.tunnel-karte.ist-huelle::after,
-.tunnel-karte.ist-huelle > .tunnel-karte-name {
-  display: none;
-}
+/* ==========================================================================
+   6d. FILMKORN, VIGNETTE, SPIELE
+   Korn: ein kleines Rauschmuster (SVG, direkt hier eingebettet), das in
+   acht Sprüngen hin und her springt – so flimmert es leicht. Vignette:
+   die Ränder dunkeln weich ab. Beide liegen über der ganzen Seite und
+   fangen keine Klicks ab.
+   ========================================================================== */
 
-/* … und darin dieselbe Karte in mehrfacher Auflösung (scharf auch ganz nah) */
-.tunnel-karte.seitenwechsel-riese {
-  position: absolute;
-  margin: 0;
-  flex: none;
-  transform-origin: 0 0;
-  will-change: transform;
-}
-
-/* Während des Übergangs: keine Klicks (auch nicht auf die Leiste) */
-.seitenwechsel-sperre {
+body::before,
+body::after {
+  content: "";
   position: fixed;
+  pointer-events: none;
+  z-index: 900;
+}
+
+/* Vignette */
+body::before {
   inset: 0;
-  z-index: 1000;
-  cursor: progress;
+  background: radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgb(var(--vignette-farbe) / var(--vignette-staerke)) 100%);
+}
+
+/* Korn: etwas größer als der Bildschirm, damit beim Springen keine Kante sichtbar wird */
+body::after {
+  inset: -50%;
+  opacity: var(--korn-deckkraft);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='k'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 2.2 -0.6'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23k)'/%3E%3C/svg%3E");
+  background-size: var(--korn-groesse) var(--korn-groesse);
+  animation: korn-flimmern var(--korn-tempo) steps(1) infinite;
+}
+
+@keyframes korn-flimmern {
+  0%    { transform: translate(0, 0); }
+  12.5% { transform: translate(-7%, 4%); }
+  25%   { transform: translate(5%, -9%); }
+  37.5% { transform: translate(-11%, -3%); }
+  50%   { transform: translate(8%, 10%); }
+  62.5% { transform: translate(-3%, 8%); }
+  75%   { transform: translate(11%, -6%); }
+  87.5% { transform: translate(-6%, -11%); }
+}
+
+/* Spiele behalten ihre Farben, leicht entsättigt. Der Filter sitzt nur
+   auf Elementen, deren Kinder nicht am Bildschirm festhängen (filter würde
+   position: fixed darin verschieben) – das Sudoku-Abenteuer ist auf dem
+   Handy selbst bildschirmfüllend fixiert, dort passt es. */
+.spiel-bereich,
+.fx-ebene,
+.dl-canvas,
+.dl-auswahl {
+  filter: saturate(var(--spiel-saettigung));
 }
 
 
@@ -1049,7 +1122,7 @@ dialog::backdrop {
 /* Smartphone: Überschriften etwas kleiner */
 @media (max-width: 599px) {
   :root {
-    --titel-groesse-1: 1.65rem;
+    --titel-groesse-1: 2.5rem;
     --karte-innen: 20px;
   }
 }
@@ -1059,9 +1132,22 @@ dialog::backdrop {
    8. BARRIEREFREIHEIT
    ========================================================================== */
 
-/* Wer im System "Bewegung reduzieren" eingestellt hat: keine Bewegung */
+/* Wer im System "Bewegung reduzieren" eingestellt hat: keine Bewegung,
+   stehendes Korn */
 @media (prefers-reduced-motion: reduce) {
   .nav-panel {
     transform: none !important;
+  }
+
+  body::after {
+    animation: none;
+  }
+}
+
+/* Kontrast erhöhen (Systemeinstellung): kein Korn, keine Vignette */
+@media (prefers-contrast: more) {
+  body::before,
+  body::after {
+    display: none;
   }
 }

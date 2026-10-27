@@ -1,585 +1,342 @@
 /* ==========================================================================
-   home.css – die Startseite als Karten-Tunnel
-   Die Abschnitte stehen als große, abgerundete Karten in zwei Reihen. Die
-   linke Reihe ist um die senkrechte Achse nach innen gedreht, die rechte
-   spiegelbildlich – so laufen beide auf einen gemeinsamen Fluchtpunkt in
-   der Mitte zu. Der Tunnel entsteht nur durch die Karten selbst.
-
-   Alles zum Feinjustieren steht in den Variablen direkt hier oben.
-   Farben, Schriften und Linien kommen aus css/style.css.
-   Animiert werden nur transform und opacity.
+   home.css – die Startseite als Bento-Raster (js/home.js)
+   Oben Begrüßung und Zeitstempel, darunter sechs Kacheln in einem
+   lückenlosen Raster, ganz unten die Schnellzugriffe.
+   Größe und Platz jeder Kachel setzt home.js als Variablen:
+     --c-x, --c-y, --c-b, --c-h  (Computer: Spalte, Zeile, Breite, Höhe)
+     --h-x, --h-y, --h-b, --h-h  (Smartphone)
+     --n                          (Platz in der Lesereihenfolge, ab 0)
+   Farben, Licht und Schriften: css/style.css.
    ========================================================================== */
 
-:root {
-  /* Kamera. Zahlen OHNE Einheit, weil daraus auch Maßstäbe berechnet werden. */
-  --tunnel-perspektive-zahl: 1000;          /* Abstand der Kamera (px) – kleiner = stärkere Tiefe */
-  --tunnel-perspektive: calc(var(--tunnel-perspektive-zahl) * 1px);
-  --fluchtpunkt-y: 50%;                     /* Höhe des Fluchtpunkts im Tunnel */
-  /* Höhe: der ganze Bildschirm unter der Leiste, abzüglich Platz für die Links unten */
-  --tunnel-hoehe: clamp(440px, calc(100svh - var(--leiste-hoehe) - var(--links-platz)), 780px);
-
-  /* Reihen und Karten */
-  --karten-pro-seite: 3;                    /* Karten je Reihe (passend zu REIHEN in home.js) */
-  --karten-neigung: 72deg;                  /* Drehung der Reihen in die Tiefe (0 = flach, 90 = quer) */
-  --reihen-laenge-zahl: 1300;               /* Länge einer Reihe (px) – bestimmt die Tiefe des Tunnels */
-  --reihen-laenge: calc(var(--reihen-laenge-zahl) * 1px);
-  --karten-abstand: 30px;                   /* Lücke zwischen zwei Karten einer Reihe */
-  --karte-hoehe: min(420px, calc(var(--tunnel-hoehe) * 0.66));
-  --karte-rundung: 28px;
-  --karte-innen: 28px;                      /* Abstand des Titels zum Rand – links und rechts gleich, verschiebt ihn nicht */
-  /* Breite ergibt sich aus Reihenlänge, Anzahl und Abstand */
-  --karte-breite: calc((var(--reihen-laenge) - (var(--karten-pro-seite) - 1) * var(--karten-abstand)) / var(--karten-pro-seite));
-  /* Je Karte weiter hinten verblassen Fläche, Rand und Symbol um diesen
-     Anteil Richtung Hintergrund. Der Text bleibt dabei gut lesbar. */
-  --blass-schritt: 30%;
-
-  /* Begrüßung im Fluchtpunkt: Anteil der Tunneltiefe, in der sie steht */
-  --ziel-tiefe-anteil: 0.85;
-
-  /* Hover und Tastaturfokus */
-  --karte-abheben: 46px;                    /* so weit löst sich die Karte aus ihrer Reihe */
-  --karte-zudrehen: 22deg;                  /* so weit dreht sie sich zum Betrachter */
-
-  /* Titel auf den Karten (Überschriften-Schrift der Seite) */
-  --karte-titel-groesse: 2.9rem;
-  /* Hintere Karten bekommen einen etwas größeren Titel (je Platz +15 %),
-     damit er trotz der Perspektive lesbar bleibt */
-  --titel-wachstum: 0.15;
-  /* Obergrenze relativ zur Kartenbreite (cqi): so passt auch das längste
-     Wort ("Stundenplan/", "erledigen") immer ganz in die Karte */
-  --titel-max: 15cqi;
-
-  /* Glow (nur box-shadow und opacity). Farben: --glow-farbe und
-     --glow-schatten-farbe in css/style.css. Hier Stärke (Alpha 0…1) und Größe.
-     Helles Design: Lichtkante oben innen + sehr weicher, warmer Schatten –
-     ein weißer Schein wäre auf dem hellen Grund kaum zu sehen. */
-  --glow-staerke: 0.55;                     /* weißer Schein um den Rand */
-  --glow-groesse: 18px;
-  --glow-kante: 0.95;                       /* feine Lichtkante oben innen */
-  --glow-kante-breite: 2px;
-  --glow-schatten-staerke: 0.13;            /* warmer Schatten nach außen */
-  --glow-schatten-groesse: 34px;
-  --glow-schatten-versatz: 12px;            /* Schatten fällt nach unten: Licht von oben */
-  --glow-abfall: 0.32;                      /* je Platz nach hinten so viel schwächer */
-  --glow-hover-staerke: 0.75;               /* Hover/Fokus: stärkerer Schein … */
-  --glow-hover-groesse: 36px;
-  --glow-hover-akzent: 35%;                 /* … mit einem Hauch der Akzentfarbe */
-
-  /* Schnellzugriffe unten (Claude, Gemini …) */
-  --links-groesse: clamp(1.05rem, 1.35vw, 1.4rem);
-  --links-abstand: 0.75em;                  /* Abstand zwischen Name und Mittelpunkt (Platz für den Pfeil) */
-  --links-innen: 6px;                       /* Innenabstand oben/unten (Tippfläche) */
-  --links-seite: 2px;                       /* Innenabstand links/rechts */
-  --links-oben: 20px;                       /* ruhiger Abstand zum Tunnel */
-  /* So viel Höhe bleibt unter dem Tunnel frei: Abstand + Links + Seitenrand unten */
-  --links-platz: 116px;
-
-  /* Bewegung (der Tunnel selbst steht still) */
-  --aufbau-schritt: 110ms;                  /* Verzögerung von Karte zu Karte beim Aufbau */
-}
-
-/* Dunkles Design: weißer Glow, gut sichtbar, aber zart; Schatten unsichtbar */
-:root[data-theme="dark"] {
-  --glow-staerke: 0.13;
-  --glow-groesse: 22px;
-  --glow-kante: 0.16;
-  --glow-kante-breite: 1px;
-  --glow-schatten-staerke: 0.35;
-  --glow-schatten-groesse: 30px;
-  --glow-hover-staerke: 0.24;
-  --glow-hover-groesse: 40px;
-  --glow-hover-akzent: 45%;
+#view-home {
+  /* Raster */
+  --bento-spalten: 4;
+  --bento-zeile: clamp(128px, 19vh, 200px);   /* Höhe einer Zeile */
+  --bento-abstand: 12px;
+  --bento-innen: 22px;
+  /* Schrift in den Kacheln */
+  --bento-titel-groesse: 0.82rem;
+  --bento-titel-gross: 2.9rem;                 /* 2×2-Kachel: Titel in Bebas Neue */
+  --bento-symbol: 26px;
+  --bento-symbol-gross: 34px;
+  /* Aufblenden beim Öffnen: Dauer und Versatz je Kachel */
+  --bento-auf-dauer: 1100ms;
+  --bento-auf-versatz: 110ms;
 }
 
 
 /* ==========================================================================
-   SEITE: Tunnel über die volle Breite, Schnellzugriffe darunter
+   KOPF: Begrüßung und Zeitstempel
    ========================================================================== */
-
-/* Solange die Startseite offen ist: kein Seitenrand, volle Breite */
-.hauptbereich:has(#view-home:not([hidden])) {
-  max-width: none;
-  padding: 0 0 var(--abstand-xl);
-}
 
 .home {
   display: flex;
   flex-direction: column;
+  gap: var(--abstand-l);
 }
 
-
-/* ==========================================================================
-   TUNNEL
-   ========================================================================== */
-
-.tunnel {
-  position: relative;
-  height: var(--tunnel-hoehe);
-  overflow: hidden;
-  perspective: var(--tunnel-perspektive);
-  perspective-origin: 50% var(--fluchtpunkt-y);
-}
-
-/* Die "Welt": gemeinsamer 3D-Raum für Karten und Begrüßung */
-.tunnel-welt {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-}
-
-.tunnel-karten {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-}
-
-/* Die unsichtbaren Ebenen liegen im 3D-Raum VOR den Karten und würden sonst
-   die Maus abfangen – nur die Karten selbst (und die Begrüßung) reagieren */
-.tunnel-welt,
-.tunnel-karten,
-.karten-reihe {
-  pointer-events: none;
-}
-
-.tunnel-karte,
-.tunnel-ziel {
-  pointer-events: auto;
-}
-
-/* Eine Reihe: Karten nebeneinander, dann als Ganzes in die Tiefe gedreht.
-   Drehachse ist die äußere Kante – die vorderste Karte reicht so bis an
-   den Bildrand. */
-.karten-reihe {
-  position: absolute;
-  top: calc(var(--fluchtpunkt-y) - var(--karte-hoehe) / 2);
-  width: var(--reihen-laenge);
-  height: var(--karte-hoehe);
+.home-kopf {
   display: flex;
-  gap: var(--karten-abstand);
-  transform-style: preserve-3d;
-}
-
-.karten-reihe--links {
-  left: 0;
-  transform-origin: 0 50%;
-  transform: rotateY(var(--karten-neigung));
-}
-
-/* Spiegelbildlich: vorderste Karte rechts außen */
-.karten-reihe--rechts {
-  right: 0;
-  flex-direction: row-reverse;
-  transform-origin: 100% 50%;
-  transform: rotateY(calc(-1 * var(--karten-neigung)));
-}
-
-
-/* ==========================================================================
-   KARTEN
-   Helle Fläche, feine Linie, leichter Glow und nur der Titel – exakt in
-   der Mitte der Karte. Weiter hinten (--i = Platz in der Reihe, 0 = vorne)
-   etwas blasser und mit schwächerem Glow.
-   ========================================================================== */
-
-.tunnel-karte {
-  --abheben: 0px;
-  --zudrehen: 0deg;
-  position: relative;
-  isolation: isolate;                       /* Lichtschicht (z-index -1) bleibt hinter dem Text */
-  flex: 0 0 var(--karte-breite);
-  min-width: 0;                             /* nie breiter als vorgesehen, auch bei langen Namen */
-  /* Nur der Titel: exakt in der Mitte der Karte (waagerecht und senkrecht).
-     Grid mit place-items: center bezieht sich auf die Karte selbst; der
-     Innenabstand ist links und rechts gleich und oben/unten null. */
-  container-type: inline-size;              /* Bezug für die Obergrenze des Titels (cqi) */
-  display: grid;
-  place-items: center;
-  padding: 0 var(--karte-innen);
-  text-align: center;
-  /* --tiefe: wie weit die Karte nach hinten verblasst (0 = vorne) */
-  --tiefe: var(--i);
-  color: color-mix(in srgb, var(--farbe-text) calc(100% - var(--tiefe) * var(--blass-schritt) / 3), var(--farbe-hintergrund));
-  text-decoration: none;
-  background: color-mix(in srgb, var(--farbe-flaeche) calc(100% - var(--tiefe) * var(--blass-schritt)), var(--farbe-hintergrund));
-  border: var(--linie-breite) solid color-mix(in srgb, var(--farbe-rand) calc(100% - var(--tiefe) * var(--blass-schritt)), var(--farbe-hintergrund));
-  border-radius: var(--karte-rundung);
-  /* Glow: Lichtkante oben innen, weicher heller Schein, warmer Schatten.
-     --glow-anteil sinkt nach hinten (hintere Karten leuchten schwächer). */
-  --glow-anteil: max(0, 1 - var(--tiefe) * var(--glow-abfall));
-  box-shadow:
-    inset 0 var(--glow-kante-breite) 0 rgb(var(--glow-farbe) / calc(var(--glow-kante) * var(--glow-anteil))),
-    0 0 var(--glow-groesse) rgb(var(--glow-farbe) / calc(var(--glow-staerke) * var(--glow-anteil))),
-    0 var(--glow-schatten-versatz) var(--glow-schatten-groesse) rgb(var(--glow-schatten-farbe) / calc(var(--glow-schatten-staerke) * var(--glow-anteil)));
-  transform: translateZ(var(--abheben)) rotateY(var(--zudrehen));
-  transition:
-    transform 280ms cubic-bezier(0.2, 0.7, 0.2, 1),
-    opacity 280ms ease;
-}
-
-/* Heller beim Hovern: eigene Lichtschicht, nur ihre Deckkraft ändert sich */
-.tunnel-karte::before,
-.tunnel-karte::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  opacity: 0;
-  transition: opacity 220ms ease;
-  pointer-events: none;
-}
-
-.tunnel-karte::before {
-  z-index: -1;
-  background: var(--farbe-flaeche-hell);
-}
-
-/* Die Akzentfarbe markiert den Rand; dazu der stärkere Glow mit einem
-   Hauch der Akzentfarbe. Beides liegt auf dieser Ebene, die beim Hovern
-   nur ihre Deckkraft ändert. */
-.tunnel-karte::after {
-  border: 2px solid var(--farbe-akzent);
-  box-shadow:
-    0 0 var(--glow-hover-groesse) color-mix(in srgb, var(--farbe-akzent) var(--glow-hover-akzent), rgb(var(--glow-farbe) / var(--glow-hover-staerke))),
-    0 0 calc(var(--glow-hover-groesse) / 2.5) rgb(var(--glow-farbe) / var(--glow-hover-staerke));
-}
-
-/* Hover und Tastaturfokus: löst sich aus der Reihe, dreht sich zum
-   Betrachter, wird heller und voll deckend. "ist-gewaehlt": dasselbe für
-   die angeklickte Karte während der Kamerafahrt (js/seitenwechsel.js). */
-.tunnel-karte:hover,
-.tunnel-karte:focus-visible,
-.tunnel-karte.ist-gewaehlt {
-  --abheben: var(--karte-abheben);
-  --tiefe: 0;
-  color: var(--farbe-text);
-}
-
-.tunnel-karte[data-seite="links"]:hover,
-.tunnel-karte[data-seite="links"]:focus-visible,
-.tunnel-karte[data-seite="links"].ist-gewaehlt {
-  --zudrehen: calc(-1 * var(--karte-zudrehen));
-}
-
-.tunnel-karte[data-seite="rechts"]:hover,
-.tunnel-karte[data-seite="rechts"]:focus-visible,
-.tunnel-karte[data-seite="rechts"].ist-gewaehlt {
-  --zudrehen: var(--karte-zudrehen);
-}
-
-.tunnel-karte:hover::before,
-.tunnel-karte:focus-visible::before,
-.tunnel-karte:hover::after,
-.tunnel-karte:focus-visible::after,
-.tunnel-karte.ist-gewaehlt::before,
-.tunnel-karte.ist-gewaehlt::after {
-  opacity: 1;
-}
-
-/* Der Akzentrand übernimmt die Rolle des Fokusrahmens */
-.tunnel-karte:focus-visible {
-  outline: 2px solid var(--farbe-fokus);
-  outline-offset: 4px;
-}
-
-.tunnel-karte-name {
-  max-width: 100%;
-  text-align: center;                       /* auch jede umbrochene Zeile für sich mittig */
-  overflow-wrap: break-word;                /* nur im Notfall mitten im Wort umbrechen (sonst nach "/") */
-  font-family: var(--schrift-titel);
-  font-size: min(calc(var(--karte-titel-groesse) * (1 + var(--i) * var(--titel-wachstum))), var(--titel-max));
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-}
-
-
-/* ==========================================================================
-   BEGRÜSSUNG IM FLUCHTPUNKT
-   Sie steht im 3D-Raum zwischen den hinteren Karten und wird genau um den
-   Faktor vergrößert, um den die Perspektive sie verkleinert – so erscheint
-   sie in normaler Größe und bewegt sich bei der Fahrt mit dem Tunnel mit.
-   ========================================================================== */
-
-.tunnel-ziel {
-  --ziel-tiefe-zahl: calc(var(--reihen-laenge-zahl) * sin(var(--karten-neigung)) * var(--ziel-tiefe-anteil));
-  position: absolute;
-  left: 50%;
-  top: var(--fluchtpunkt-y);
-  width: max-content;
-  max-width: 30vw;
-  transform-origin: 0 0;
-  transform:
-    translateZ(calc(-1px * var(--ziel-tiefe-zahl)))
-    scale(calc((var(--tunnel-perspektive-zahl) + var(--ziel-tiefe-zahl)) / var(--tunnel-perspektive-zahl)))
-    translate(-50%, -50%);
-  text-align: center;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--abstand-s) var(--abstand-l);
 }
 
 .home-gruss {
   margin: 0;
-  font-size: clamp(1.5rem, 2.3vw, 2.4rem);
+}
+
+/* Wie ein Zeitstempel in einem Film: klein, weit gesperrt, Monospace */
+.home-zeit {
+  margin: 0;
+  font-family: var(--schrift-mono);
+  font-size: 0.74rem;
+  font-weight: 300;
+  letter-spacing: var(--mono-sperrung);
+  color: var(--farbe-text-leise);
+  white-space: pre;                            /* die Leerzeichen um den Strich bleiben */
+}
+
+
+/* ==========================================================================
+   RASTER
+   ========================================================================== */
+
+.bento {
+  display: grid;
+  grid-template-columns: repeat(var(--bento-spalten), minmax(0, 1fr));
+  grid-auto-rows: var(--bento-zeile);
+  gap: var(--bento-abstand);
+}
+
+.bento-kachel {
+  grid-column: var(--c-x) / span var(--c-b);
+  grid-row: var(--c-y) / span var(--c-h);
+}
+
+
+/* ==========================================================================
+   KACHEL
+   Sehr dunkle Fläche mit feiner heller Kante. Hover und Tastaturfokus:
+   langsam heller, als würde ein Scheinwerfer sie von vorn anleuchten,
+   mit einem weichen weißen Schein an der Kante. Nichts bewegt sich.
+   ========================================================================== */
+
+.bento-kachel {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  padding: var(--bento-innen);
+  overflow: hidden;
+  color: var(--farbe-text);
+  text-decoration: none;
+  background: var(--farbe-flaeche);
+  border: var(--linie-breite) solid rgb(var(--kachel-kante) / var(--kachel-kante-staerke));
+  border-radius: var(--radius-m);
+  box-shadow: 0 0 0 0 rgb(255 255 255 / 0);
+  transition:
+    box-shadow var(--kachel-hover-dauer) var(--kurve-weich),
+    border-color var(--kachel-hover-dauer) var(--kurve-weich);
+}
+
+/* Das Scheinwerferlicht: von vorn, in der Mitte am hellsten */
+.bento-kachel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(ellipse 85% 75% at 50% 45%,
+    rgb(255 255 255 / var(--kachel-licht-staerke)),
+    rgb(255 255 255 / calc(var(--kachel-licht-staerke) * 0.35)));
+  opacity: 0;
+  transition: opacity var(--kachel-hover-dauer) var(--kurve-weich);
+}
+
+.bento-kachel:hover,
+.bento-kachel:focus-visible {
+  color: var(--farbe-text);
+  border-color: rgb(var(--kachel-kante) / calc(var(--kachel-kante-staerke) * 3));
+  box-shadow:
+    0 0 var(--kachel-schein-groesse) rgb(255 255 255 / var(--kachel-schein-staerke)),
+    inset 0 0 0 1px rgb(255 255 255 / calc(var(--kachel-schein-staerke) * 0.6));
+}
+
+.bento-kachel:hover::before,
+.bento-kachel:focus-visible::before {
+  opacity: 1;
+}
+
+/* Im hellen Design trägt ein weicher Schatten den weißen Schein */
+:root[data-theme="light"] .bento-kachel:hover,
+:root[data-theme="light"] .bento-kachel:focus-visible {
+  box-shadow:
+    0 0 var(--kachel-schein-groesse) rgb(255 255 255 / var(--kachel-schein-staerke)),
+    0 10px 30px rgb(0 0 0 / 0.10),
+    inset 0 0 0 1px rgb(255 255 255 / 0.9);
+}
+
+.bento-kachel:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 3px;
+}
+
+/* Kleine Nummer oben rechts in der Ecke */
+.bento-nummer {
+  position: absolute;
+  top: calc(var(--bento-innen) - 4px);
+  right: calc(var(--bento-innen) - 2px);
+  font-family: var(--schrift-mono);
+  font-size: 0.68rem;
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  color: var(--farbe-text-leise);
+}
+
+.bento-symbol {
+  width: var(--bento-symbol);
+  height: var(--bento-symbol);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
+.bento-titel {
+  font-family: var(--schrift-titel);
+  font-size: var(--bento-titel-groesse);
+  font-weight: var(--titel-gewicht);
+  line-height: 1.35;
+  text-transform: uppercase;
+  letter-spacing: var(--titel-sperrung);
   overflow-wrap: anywhere;
 }
 
-.home-datum {
-  margin: 4px auto 0;
-  color: var(--farbe-text-leise);
+/* Die große Kachel: Titel in der schmalen, hohen Schrift */
+.bento-kachel[data-groesse-c="2x2"] .bento-symbol {
+  width: var(--bento-symbol-gross);
+  height: var(--bento-symbol-gross);
+}
+
+.bento-kachel[data-groesse-c="2x2"] .bento-titel {
+  font-family: var(--schrift-display);
+  font-size: var(--bento-titel-gross);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: var(--display-sperrung);
 }
 
 
 /* ==========================================================================
-   AUFBAU beim Öffnen: von hinten nach vorn nacheinander
-   (home.js setzt die Klasse "baut-auf" bei jedem Öffnen der Startseite)
-   "backwards": vor dem Start unsichtbar, danach gelten wieder die normalen
-   Werte (sonst hielte die Animation Hover und Blässe fest).
+   AUFBLENDEN: Die Kacheln erscheinen nacheinander langsam aus dem Dunkel
+   (home.js setzt die Klasse bei jedem Öffnen neu)
    ========================================================================== */
 
-.tunnel.baut-auf .tunnel-ziel {
-  animation: tunnel-ziel-auf 500ms ease backwards;
+.bento.blendet-auf .bento-kachel {
+  animation: aus-dem-dunkel var(--bento-auf-dauer) var(--kurve-weich) both;
+  animation-delay: calc(var(--n, 0) * var(--bento-auf-versatz));
 }
 
-.tunnel.baut-auf .tunnel-karte {
-  animation: tunnel-karte-auf 560ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
-  animation-delay: calc(120ms + (var(--karten-pro-seite) - 1 - var(--i)) * var(--aufbau-schritt));
-}
-
-@keyframes tunnel-ziel-auf {
-  from { opacity: 0; }
-}
-
-@keyframes tunnel-karte-auf {
-  from {
-    opacity: 0;
-    transform: translateZ(-180px);
-  }
+@keyframes aus-dem-dunkel {
+  from { opacity: 0; filter: brightness(0.15); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; filter: brightness(1); }
 }
 
 
 /* ==========================================================================
-   SCHNELLZUGRIFFE UNTEN: schlichte Textlinks, mittig unter dem Tunnel
-   Überschriften-Schrift, normale Textfarbe, getrennt durch einen feinen
-   Mittelpunkt. Hover/Fokus: Akzentfarbe, feine Linie wächst von der Mitte,
-   kleiner Pfeil nach rechts oben (öffnet in neuem Tab).
+   SCHNELLZUGRIFFE: schlanke Leiste mit Textlinks
    ========================================================================== */
 
 .home-links {
-  display: flex;
-  justify-content: center;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0 var(--links-abstand);
-  margin-top: var(--links-oben);
-  font-family: var(--schrift-titel);
-  font-size: var(--links-groesse);
-  font-weight: 600;
+  border-top: var(--linie);
+  padding-top: var(--abstand-m);
 }
 
-.home-links-trenner {
-  color: var(--farbe-text-leise);
+.home-links-liste {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--abstand-xs) var(--abstand-xl);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .home-link {
-  position: relative;
-  display: inline-block;
-  padding: var(--links-innen) var(--links-seite);   /* größere Tippfläche */
-  color: var(--farbe-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 var(--abstand-s);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: var(--reiter-sperrung);
+  color: var(--farbe-text-leise);
   text-decoration: none;
-  transition: color 180ms ease;
-}
-
-/* Feine Linie unter dem Namen: wächst von der Mitte aus */
-.home-link::after {
-  content: "";
-  position: absolute;
-  left: var(--links-seite);
-  right: var(--links-seite);
-  bottom: calc(var(--links-innen) - 3px);
-  height: 1px;
-  background: currentColor;
-  transform: scaleX(0);
-  transform-origin: 50% 50%;
-  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-/* Kleiner Pfeil nach rechts oben – steht neben dem Namen, verschiebt nichts */
-.home-link-pfeil {
-  position: absolute;
-  left: calc(100% - var(--links-seite) + 1px);
-  top: calc(var(--links-innen) - 0.1em);
-  font-size: 0.6em;
-  line-height: 1;
-  opacity: 0;
-  transform: translate(-3px, 3px);
-  transition: opacity 180ms ease, transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: color var(--kachel-hover-dauer) var(--kurve-weich), text-shadow var(--kachel-hover-dauer) var(--kurve-weich);
 }
 
 .home-link:hover,
 .home-link:focus-visible {
-  color: var(--farbe-akzent);
+  color: var(--farbe-text);
+  text-shadow: 0 0 12px rgb(var(--kachel-kante) / 0.5);
 }
 
-.home-link:hover::after,
-.home-link:focus-visible::after {
-  transform: scaleX(1);
-}
-
-.home-link:hover .home-link-pfeil,
-.home-link:focus-visible .home-link-pfeil {
-  opacity: 1;
-  transform: none;
-}
-
-.home-link:focus-visible {
-  outline: 2px solid var(--farbe-fokus);
-  outline-offset: 2px;
-  border-radius: var(--radius-s, 4px);
+.home-link-pfeil {
+  font-size: 0.85em;
+  opacity: 0.6;
 }
 
 
 /* ==========================================================================
-   MITTLERE BREITE (z. B. 1024 px): kürzere Reihen, kleinere Karten
-   ========================================================================== */
-
-@media (max-width: 1199px) {
-  :root {
-    --reihen-laenge-zahl: 880;
-    --karte-hoehe: min(340px, calc(var(--tunnel-hoehe) * 0.62));
-    --karte-innen: 20px;
-    --karte-rundung: 24px;
-    --karte-titel-groesse: 2.05rem;
-  }
-}
-
-
-/* ==========================================================================
-   SMARTPHONE (unter 700 px)
-   Für zwei Reihen ist zu wenig Breite: Die Karten stehen untereinander und
-   neigen sich nach hinten, sodass sie nach oben in die Tiefe laufen –
-   mit der Begrüßung oben als Ziel. Diese Grenze steht auch in home.js.
+   SMARTPHONE: 2 Spalten (Grenze wie STARTSEITE_KONFIG.computerAb in home.js)
    ========================================================================== */
 
 @media (max-width: 699px) {
-  :root {
-    --tunnel-perspektive-zahl: 700;
-    --handy-neigung: 26deg;                 /* so weit kippen die Karten nach hinten */
-    --handy-karte-hoehe: 84px;
-    --handy-abstand: 12px;
-    --handy-blass-anteil: 0.2;              /* oben (hinten) etwas blasser: Anteil von --tiefe je Platz */
+  #view-home {
+    --bento-spalten: 2;
+    --bento-zeile: 104px;
+    --bento-abstand: 10px;
+    --bento-innen: 16px;
+    --bento-titel-groesse: 0.72rem;
+    --bento-titel-gross: 2.3rem;
+    --bento-symbol: 22px;
+    --bento-symbol-gross: 28px;
   }
 
-  /* Kleinerer Glow: die Karten stehen hier dicht untereinander
-     (beide Selektoren, damit es auch im dunklen Design gilt) */
-  :root,
-  :root[data-theme="dark"] {
-    --glow-groesse: 12px;
-    --glow-schatten-groesse: 20px;
-    --glow-schatten-versatz: 7px;
-    --glow-hover-groesse: 24px;
+  .bento-kachel {
+    grid-column: var(--h-x) / span var(--h-b);
+    grid-row: var(--h-y) / span var(--h-h);
   }
 
-  .tunnel {
-    height: auto;
-    overflow: visible;
-    perspective-origin: 50% 0;              /* Fluchtpunkt oben: dort steht die Begrüßung */
-    padding: var(--abstand-l) var(--abstand-m) 0;
+  /* Die große Kachel nach dem Smartphone-Raster */
+  .bento-kachel[data-groesse-c="2x2"]:not([data-groesse-h="2x2"]) .bento-titel {
+    font-family: var(--schrift-titel);
+    font-size: var(--bento-titel-groesse);
+    font-weight: var(--titel-gewicht);
+    line-height: 1.35;
+    letter-spacing: var(--titel-sperrung);
   }
 
-  .tunnel-welt {
-    position: relative;
-    inset: auto;
-    display: flex;
-    flex-direction: column;
+  .bento-kachel[data-groesse-h="2x2"] .bento-titel {
+    font-family: var(--schrift-display);
+    font-size: var(--bento-titel-gross);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: var(--display-sperrung);
   }
 
-  /* Begrüßung oben, ganz normal im Fluss */
-  .tunnel-ziel {
-    position: static;
-    order: -1;
-    width: auto;
-    max-width: none;
-    margin-bottom: var(--abstand-s);
-    transform: none;
+  /* Schnellzugriffe: gut antippbare Leiste in gleich breiten Feldern */
+  .home-links {
+    padding-top: 0;
+    border: var(--linie);
+    border-radius: var(--radius-m);
+    background: var(--farbe-flaeche);
   }
 
-  .home-gruss {
-    font-size: 1.6rem;
+  .home-links-liste {
+    flex-wrap: nowrap;
+    gap: 0;
   }
 
-  /* Schnellzugriffe gut antippbar (Tippfläche mindestens 44 px hoch),
-     mit ruhigem Abstand unter den Kacheln */
-  :root {
-    --links-groesse: 1.15rem;
-    --links-innen: 11px;
-    --links-seite: 10px;
-    --links-oben: var(--abstand-m);
+  .home-links-liste li {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
-  /* Alle Karten in einer Spalte, als Ganzes nach hinten gekippt
-     (Drehachse unten: die unterste Karte ist vorne) */
-  .tunnel-karten {
-    position: relative;
-    inset: auto;
-    display: flex;
-    flex-direction: column;
-    gap: var(--handy-abstand);
-    transform-origin: 50% 100%;
-    transform: rotateX(var(--handy-neigung));
+  .home-links-liste li + li {
+    border-left: var(--linie);
   }
 
-  .karten-reihe,
-  .karten-reihe--links,
-  .karten-reihe--rechts {
-    position: static;
-    width: auto;
-    height: auto;
-    flex-direction: column;
-    gap: var(--handy-abstand);
-    transform: none;
-  }
-
-  .tunnel-karte {
-    flex: none;
-    height: var(--handy-karte-hoehe);
-    padding: 0 var(--karte-innen);          /* Titel bleibt exakt mittig (Grid aus dem Grundaufbau) */
-    border-radius: 20px;
-    /* --n = Platz in der ganzen Liste (0 = oben, also am weitesten hinten) */
-    --tiefe: calc((5 - var(--n)) * var(--handy-blass-anteil));
-  }
-
-  .tunnel-karte[data-seite]:hover,
-  .tunnel-karte[data-seite]:focus-visible {
-    --abheben: 16px;
-    --zudrehen: 0deg;
-  }
-
-  .tunnel-karte-name {
-    font-size: 1.5rem;
-  }
-
-  /* Aufbau von oben (hinten) nach unten (vorne) */
-  .tunnel.baut-auf .tunnel-karte {
-    animation-delay: calc(100ms + var(--n) * 70ms);
+  .home-link {
+    justify-content: center;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 4px;
+    letter-spacing: 0.1em;
   }
 }
 
 
 /* ==========================================================================
-   BEWEGUNG REDUZIEREN: kein Aufbau (der Seitenwechsel blendet nur kurz über).
-   Die Karten stehen ruhig in ihrer Tiefe.
+   BEWEGUNG REDUZIEREN: kein Aufblenden, Licht nur kurz überblendet
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-  .tunnel.baut-auf .tunnel-karte,
-  .tunnel.baut-auf .tunnel-ziel {
+  .bento.blendet-auf .bento-kachel {
     animation: none;
   }
 
-  .tunnel-karte,
-  .tunnel-karte::before,
-  .tunnel-karte::after,
-  .home-link,
-  .home-link::after,
-  .home-link-pfeil {
-    transition: none;
+  .bento-kachel,
+  .bento-kachel::before,
+  .home-link {
+    transition-duration: 120ms;
   }
 }

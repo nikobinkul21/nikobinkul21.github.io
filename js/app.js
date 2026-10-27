@@ -128,6 +128,9 @@ function zeigeAnsicht(name, unterseite, fokusSetzen) {
     }
   });
 
+  // Öffnen eines Abschnitts zählen (Kachelgrößen der Startseite, js/home.js)
+  if (!warSchonOffen) StartseiteAnsicht.merkeAufruf(name);
+
   // Tool beim ersten Öffnen starten
   const tool = ANSICHTEN[name];
   if (tool && !gestarteteTools[name]) {
@@ -155,9 +158,9 @@ function zeigeAnsicht(name, unterseite, fokusSetzen) {
   }
 }
 
-// Wenn sich der Hash ändert (Klick auf einen Reiter oder eine Karte, Logo,
+// Wenn sich der Hash ändert (Klick auf einen Reiter oder eine Kachel, Logo,
 // Zurück-Button im Browser), die passende Ansicht zeigen – mit Übergang:
-// Karte ↔ Abschnitt als Verwandlung, sonst eine kurze Überblendung.
+// ein kurzer Schnitt ins Schwarze (js/seitenwechsel.js).
 // Neuladen und direkte Links laufen NICHT hierüber (siehe START unten):
 // sie landen ohne Animation auf der Seite.
 window.addEventListener("hashchange", function () {

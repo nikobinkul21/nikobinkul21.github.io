@@ -16,13 +16,15 @@ Eingebunden werden sie in `css/style.css` (Abschnitt „0. SCHRIFTEN“).
 
 | Datei | Schrift | Schnitt | Verwendung |
 |---|---|---|---|
-| `inter-400.woff2` | Inter | Normal (400) | Fließtext |
-| `inter-500.woff2` | Inter | Medium (500) | Navigation, Buttons |
-| `inter-600.woff2` | Inter | Semibold (600) | Hervorhebungen |
-| `source-serif-4-400.woff2` | Source Serif 4 | Normal (400) | Überschriften |
-| `source-serif-4-600.woff2` | Source Serif 4 | Semibold (600) | Überschriften |
+| `manrope-300.woff2` | Manrope | Light (300) | Titel in Großbuchstaben |
+| `manrope-400.woff2` | Manrope | Normal (400) | Fließtext, Navigation |
+| `manrope-600.woff2` | Manrope | Semibold (600) | Hervorhebungen |
+| `bebas-neue-400.woff2` | Bebas Neue | Normal (400) | große Überschriften |
+| `ibm-plex-mono-300.woff2` | IBM Plex Mono | Light (300) | Zeitstempel, Nummern |
+| `ibm-plex-mono-400.woff2` | IBM Plex Mono | Normal (400) | kleine Angaben |
 
-Herkunft: npm-Pakete `@fontsource/inter` (5.3.0) und
-`@fontsource/source-serif-4` (5.3.1), Teilmenge „latin“ (enthält ä, ö, ü, ß).
-Beide Schriften stehen unter der SIL Open Font License 1.1 –
-siehe `LICENSE-Inter.txt` und `LICENSE-SourceSerif4.txt`.
+Herkunft: npm-Pakete `@fontsource/manrope` (5.3.0), `@fontsource/bebas-neue`
+(5.3.0) und `@fontsource/ibm-plex-mono` (5.3.0), Teilmenge „latin“ (enthält
+ä, ö, ü, ß). Alle drei stehen unter der SIL Open Font License 1.1 –
+siehe `LICENSE-Manrope.txt`, `LICENSE-BebasNeue.txt` und
+`LICENSE-IBMPlexMono.txt`.
