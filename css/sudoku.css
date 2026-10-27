@@ -134,8 +134,6 @@
   padding: 10px 20px;
   border-radius: var(--radius-pille);
   background: var(--glas-fallback);
-  -webkit-backdrop-filter: blur(var(--glas-blur));
-  backdrop-filter: blur(var(--glas-blur));
   border: 1px solid var(--glas-rand);
   box-shadow: var(--glas-schatten);
   color: var(--farbe-text);

@@ -3,7 +3,7 @@
    Größen stehen in den Variablen direkt hier oben. Die Farben der
    Markierungen (vergangene Tage, heute, Termine) stehen zentral in
    style.css (Abschnitt 1b) – sie behalten bewusst ihre Farbigkeit.
-   Der Glas-Effekt der Markierungen bleibt vorerst erhalten.
+   Die Markierungen sind getönte Glasflächen (ohne Unschärfe).
    ========================================================================== */
 
 :root {
@@ -13,10 +13,6 @@
   --kal-tag-schrift: 0.875rem;              /* Größe der Tageszahlen */
   --kal-tag-radius: 7px;                    /* Rundung der roten Tagesfelder */
   --kal-heute-groesse: 2.1em;               /* Durchmesser des grünen Glas-Kreises (relativ zur Zahl) */
-
-  /* Glas der Markierungen */
-  --kal-heute-blur: 10px;
-  --kal-heute-saettigung: 180%;
 
   /* Vorschau-Panel beim Hovern / Antippen */
   --kal-vorschau-breite: 260px;
@@ -174,8 +170,6 @@
   background:
     linear-gradient(to bottom, var(--kal-heute-glanz), transparent 55%),
     var(--kal-heute-glas);
-  -webkit-backdrop-filter: blur(var(--kal-heute-blur)) saturate(var(--kal-heute-saettigung));
-  backdrop-filter: blur(var(--kal-heute-blur)) saturate(var(--kal-heute-saettigung));
   border: 1px solid var(--kal-heute-rand);
   box-shadow:
     inset 0 1px 0 var(--kal-heute-reflex),      /* Lichtreflex oben */
@@ -201,8 +195,6 @@
   background:
     linear-gradient(to bottom, var(--kal-heute-glanz), transparent 55%),
     var(--kal-termin-glas);
-  -webkit-backdrop-filter: blur(var(--kal-heute-blur)) saturate(var(--kal-heute-saettigung));
-  backdrop-filter: blur(var(--kal-heute-blur)) saturate(var(--kal-heute-saettigung));
   border: 1px solid var(--kal-termin-rand);
   box-shadow:
     inset 0 1px 0 var(--kal-heute-reflex),
@@ -221,18 +213,6 @@
     0 0 12px var(--kal-heute-leuchten);
 }
 
-/* Fallback für Browser ohne backdrop-filter */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .kalender-tag.ist-heute .kalender-zahl {
-    background: var(--kal-heute-fallback);
-  }
-
-  .kalender-tag.hat-termin:not(.ist-heute) .kalender-zahl {
-    background: var(--kal-termin-glas);
-  }
-}
-
-
 /* ==========================================================================
    VORSCHAU-PANEL (Einträge eines Tages)
    calendar.js setzt die Position (left/top) so, dass es im Bildschirm bleibt.
@@ -248,8 +228,6 @@
   line-height: 1.35;
   color: var(--farbe-text);
   background: var(--kal-vorschau-hintergrund);
-  -webkit-backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
-  backdrop-filter: blur(var(--glas-blur)) saturate(var(--glas-saettigung));
   border: 1px solid var(--glas-rand);
   border-radius: var(--radius-m);
   box-shadow: inset 0 1px 0 var(--glas-reflex), var(--schatten-schwebend);

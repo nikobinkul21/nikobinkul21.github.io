@@ -212,7 +212,6 @@
   letter-spacing: var(--mono-sperrung);
   overflow-wrap: anywhere;
   text-shadow: var(--leuchten-leise);
-  filter: blur(var(--leuchten-unschaerfe));
   transition: text-shadow var(--kachel-hover-dauer) var(--kurve-weich);
 }
 
@@ -239,7 +238,7 @@
    ========================================================================== */
 
 .bento.blendet-auf .bento-kachel {
-  animation: aus-dem-dunkel var(--bento-auf-dauer) var(--kurve-weich) both;
+  animation: aus-dem-dunkel var(--bento-auf-dauer) var(--kurve-weich) backwards;   /* danach bleibt nichts hängen */
   animation-delay: calc(var(--n, 0) * var(--bento-auf-versatz));
 }
 

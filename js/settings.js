@@ -1,7 +1,6 @@
 /* ==========================================================================
    settings.js – Einstellungen
-   - Darstellung: Film-Effekte an/aus (js/filmeffekte.js); Startseite –
-     Kachelgrößen nach Nutzung an/aus,
+   - Darstellung: Startseite – Kachelgrößen nach Nutzung an/aus,
      Nutzungsdaten zurücksetzen (früher eigener Abschnitt "Customising" –
      #customising leitet hierher weiter, siehe js/app.js)
    - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer, Klettern-Rekord,
@@ -43,11 +42,6 @@ const EinstellungenAnsicht = (function () {
       '<section class="karte einstellungen-block" aria-labelledby="darstellung-titel">' +
         '<h2 id="darstellung-titel">Darstellung</h2>' +
         "<p>Hell oder dunkel stellst du mit dem Schalter oben rechts ein.</p>" +
-        '<label class="einstellungen-feld einstellungen-feld--haken">' +
-          '<input type="checkbox" class="einstellungen-film">' +
-          "<span>Film-Effekte</span>" +
-        "</label>" +
-        "<p>Filmkorn, vereinzelte Staubpunkte und Kratzer, leichtes Flackern und dunklere Ränder.</p>" +
         '<h3 class="einstellungen-unter">Startseite</h3>' +
         '<label class="einstellungen-feld einstellungen-feld--haken">' +
           '<input type="checkbox" class="einstellungen-nutzung">' +
@@ -129,14 +123,6 @@ const EinstellungenAnsicht = (function () {
       SudokuKampf.setzeWuerfelEinstellung(wuerfelAuswahl.value);
       container.querySelector(".einstellungen-hinweis--wuerfel").textContent =
         "Gespeichert: " + SudokuKampf.wuerfelEinstellung().name;
-    });
-
-    // Film-Effekte an/aus (js/filmeffekte.js)
-    const film = container.querySelector(".einstellungen-film");
-    film.checked = FilmEffekte.istAn();
-    film.addEventListener("change", function () {
-      FilmEffekte.setzeAn(film.checked);
-      nutzungHinweis.textContent = film.checked ? "Gespeichert: Film-Effekte an." : "Gespeichert: Film-Effekte aus.";
     });
 
     // Startseite: Kachelgrößen nach Nutzung

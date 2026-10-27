@@ -3,13 +3,14 @@
 
    Stil: ein Schwarz-Weiß-Film spät in der Nacht, mit einem Hauch Sepia.
    Kein reines Weiß, kein reines Schwarz: warmes, cremiges Off-White auf
-   sehr tiefem, minimal warmem Schwarz. Überschriften und Titel leuchten
-   weich wie Text auf einer Röhre oder Leinwand; darüber Filmkorn, Staub
-   und ein kaum merkliches Flackern (js/filmeffekte.js, abschaltbar).
+   sehr tiefem, minimal warmem Schwarz. Überschriften und Titel haben einen
+   weichen Lichthof wie Text auf einer Röhre oder Leinwand – der Text selbst
+   bleibt gestochen scharf. Die Ränder dunkeln ruhig ab (Vignette).
+   Nichts bewegt sich von selbst.
 
    HIER ÄNDERST DU DAS AUSSEHEN DER GANZEN SEITE:
      0. Schriften (Dateien im Ordner fonts/)
-     1. Design-Variablen: Farben, Schriften, Leuchten, Abstände, Film,
+     1. Design-Variablen: Farben, Schriften, Leuchten, Abstände, Vignette,
         Bewegung – zuerst das dunkle Design (Standard), darunter das helle
      1b. Bereichsfarben: Termine, Prioritäten, Kalender, Sudoku-Gitter …
    Die Bereichs-Stylesheets (home.css, todo.css, …) benutzen nur diese
@@ -141,7 +142,7 @@
 
   /* ---- Licht (als "R G B", Stärke über den Alpha-Wert) ---- */
   --licht: 232 227 213;              /* Off-White für Leuchten und Scheinwerfer */
-  --dunkel: 10 10 9;                 /* Schwarz für Vignette und Flackern */
+  --dunkel: 10 10 9;                 /* Schwarz für die Vignette */
   /* Schein von oben, als stünde irgendwo eine Straßenlaterne */
   --laterne-staerke: 0.06;
   --laterne-form: 90% 60% at 50% -12%;
@@ -166,7 +167,6 @@
     0 0 1px rgb(var(--licht) / 0.4),
     0 0 6px rgb(var(--licht) / 0.16),
     0 0 16px rgb(var(--licht) / 0.06);
-  --leuchten-unschaerfe: 0.3px;      /* Hauch Unschärfe: Kanten nicht gestochen scharf */
   /* Länglicher Lichtschein hinter größeren Textblöcken */
   --lichtschein: radial-gradient(ellipse 50% 50% at 50% 55%, rgb(var(--licht) / 0.07), rgb(var(--licht) / 0.025) 45%, transparent 72%);
   --lichtschein-breite: 140%;        /* so viel breiter als der Text */
@@ -184,18 +184,9 @@
   --glow-farbe: var(--licht);
   --glow-schatten-farbe: var(--dunkel);
 
-  /* ---- Film-Effekte (js/filmeffekte.js; Schalter in den Einstellungen) ---- */
-  --korn-deckkraft: 0.06;            /* feine Körnung */
-  --korn-groesse: 180px;             /* Kachelgröße des Rauschmusters */
-  --korn-tempo: 0.9s;                /* Flimmern: 8 Sprünge in dieser Zeit */
-  --vignette-staerke: 0.6;           /* dunkle Ränder */
-  --flackern-staerke: 0.035;         /* größte Abdunklung beim Flackern */
-  --flackern-tempo: 7.3s;            /* ein unregelmäßiger Durchlauf */
-  --staub-farbe: 232 227 213;        /* Staubpunkte und Kratzer */
-  --staub-deckkraft: 0.55;
-  --staub-pro-sekunde: 1;            /* im Mittel so viele Staubpunkte */
-  --kratzer-abstand: 9;              /* im Mittel alle so vielen Sekunden ein Kratzer */
-  --film-ebene: 900;                 /* z-index der Ebene (unter Dialogen) */
+  /* ---- Vignette: die Ränder dunkeln ruhig ab ---- */
+  --vignette-staerke: 0.6;
+  --vignette-ebene: 900;             /* z-index (über der Seite, unter Dialogen) */
 
   /* ---- Stadt bei Nacht (Startseite, unterer Rand) ---- */
   --stadt-farbe: 236 214 170;        /* warme, ferne Lichter */
@@ -252,10 +243,8 @@
   /* ---- Bedienelemente ---- */
   --knopf-hoehe: 40px;
 
-  /* ---- Glas-Effekt (Kalender, Spiele) ---- */
+  /* ---- Glas-Flächen (Kalender, Spiele): Farbe, Rand, Glanz – ohne Unschärfe ---- */
   --glas-hintergrund: rgb(var(--licht) / 0.05);
-  --glas-blur: 16px;
-  --glas-saettigung: 100%;
   --glas-rand: rgb(var(--licht) / 0.14);
   --glas-reflex: rgb(var(--licht) / 0.22);
   --glas-glanz: rgb(var(--licht) / 0.04);
@@ -335,7 +324,6 @@
   --leuchten-leise:
     0 0 1px rgb(20 18 14 / 0.25),
     0 0 6px rgb(60 48 28 / 0.08);
-  --leuchten-unschaerfe: 0.2px;
   --lichtschein: radial-gradient(ellipse 50% 50% at 50% 55%, rgb(255 250 238 / 0.75), rgb(255 250 238 / 0.3) 45%, transparent 72%);
 
   --kachel-kante: 60 48 28;
@@ -343,11 +331,7 @@
   --kachel-licht-staerke: 0.6;
   --kachel-schein-staerke: 0.9;
 
-  --korn-deckkraft: 0.08;
   --vignette-staerke: 0.2;
-  --flackern-staerke: 0.025;
-  --staub-farbe: 40 32 18;           /* auf hellem Papier: dunkle Staubkörner */
-  --staub-deckkraft: 0.4;
 
   --stadt-farbe: 90 70 40;
   --stadt-deckkraft: 0.16;
@@ -414,7 +398,6 @@
   --kal-heute-leuchten: rgb(var(--licht) / 0.35);
   --kal-heute-schatten: rgba(0, 0, 0, 0.5);
   --kal-heute-text: #f3efe4;
-  --kal-heute-fallback: rgb(var(--licht) / 0.24);
   --kal-termin-glas: rgb(var(--licht) / 0.08); /* Tage mit Termin: zartes Glas */
   --kal-termin-rand: rgb(var(--licht) / 0.3);
   --kal-termin-leuchten: rgb(var(--licht) / 0.14);
@@ -470,7 +453,6 @@
   --kal-heute-leuchten: rgba(20, 18, 14, 0.25);
   --kal-heute-schatten: rgba(40, 30, 10, 0.12);
   --kal-heute-text: #f6f1e6;
-  --kal-heute-fallback: rgba(20, 18, 14, 0.82);
   --kal-termin-glas: rgba(40, 32, 18, 0.08);
   --kal-termin-rand: rgba(255, 250, 238, 0.8);
   --kal-termin-leuchten: rgba(40, 32, 18, 0.08);
@@ -546,13 +528,13 @@ h2 {
   line-height: 1.25;
 }
 
-/* Leuchten: Lichthof aus gestaffelten Schatten und ein Hauch Unschärfe.
-   Nur für Überschriften, Titel, Datum und Uhrzeit – nie für Fließtext. */
+/* Leuchten: Lichthof aus gestaffelten Schatten – nur das Licht drumherum
+   ist weich, der Text bleibt scharf. Nur für Überschriften, Titel,
+   Zeitstempel und aktive Navigation – nie für Fließtext. */
 h1,
 h2,
 .leuchtet {
   text-shadow: var(--leuchten);
-  filter: blur(var(--leuchten-unschaerfe));
 }
 
 /* Lichtschein hinter größeren Textblöcken: breit und länglich, als fiele
@@ -678,9 +660,7 @@ textarea:focus {
   position: sticky;                 /* bleibt beim Scrollen oben stehen */
   top: 0;
   z-index: 10;                      /* liegt über dem Inhalt */
-  background: color-mix(in srgb, var(--farbe-hintergrund) 88%, transparent);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  background: var(--farbe-hintergrund);
   border-bottom: var(--linie);
 }
 
@@ -1145,81 +1125,18 @@ dialog::backdrop {
 
 
 /* ==========================================================================
-   6d. FILM-EFFEKTE (js/filmeffekte.js), SPIELE
-   Eine eigene Ebene über der ganzen Seite, die keine Klicks abfängt:
-     .film-vignette – die Ränder dunkeln weich ab
-     .film-korn     – feines Rauschmuster (SVG, hier eingebettet), springt
-                      in acht Schritten hin und her: leichtes Flimmern
-     .film-flackern – kaum merkliches, unregelmäßiges Flackern der Helligkeit
-     .film-staub    – Canvas für vereinzelte Staubpunkte und feine Kratzer
-   Abschaltbar in den Einstellungen ("Film-Effekte"): dann trägt <html> die
-   Klasse "ohne-film" (setzt schon das Skript im <head> von index.html).
+   6d. VIGNETTE, SPIELE
+   Vignette: Die Ränder dunkeln weich ab. Eine feste, unbewegte Fläche über
+   der ganzen Seite, die keine Klicks abfängt.
    ========================================================================== */
 
-.film-ebene {
+body::before {
+  content: "";
   position: fixed;
   inset: 0;
-  z-index: var(--film-ebene);
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.film-ebene > * {
-  position: absolute;
-  inset: 0;
-}
-
-.film-vignette {
+  z-index: var(--vignette-ebene);
   background: radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgb(var(--dunkel) / var(--vignette-staerke)) 100%);
-}
-
-/* Etwas größer als der Bildschirm, damit beim Springen keine Kante sichtbar wird */
-.film-ebene > .film-korn {
-  inset: -50%;
-  opacity: var(--korn-deckkraft);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='k'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.52 0 0 0 0 0.46 0 0 0 2.2 -0.6'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23k)'/%3E%3C/svg%3E");
-  background-size: var(--korn-groesse) var(--korn-groesse);
-  animation: korn-flimmern var(--korn-tempo) steps(1) infinite;
-  will-change: transform;                    /* eigene Grafikebene: nur verschieben, nicht neu malen */
-}
-
-@keyframes korn-flimmern {
-  0%    { transform: translate(0, 0); }
-  12.5% { transform: translate(-7%, 4%); }
-  25%   { transform: translate(5%, -9%); }
-  37.5% { transform: translate(-11%, -3%); }
-  50%   { transform: translate(8%, 10%); }
-  62.5% { transform: translate(-3%, 8%); }
-  75%   { transform: translate(11%, -6%); }
-  87.5% { transform: translate(-6%, -11%); }
-}
-
-/* Flackern: unregelmäßige Stufen, die meiste Zeit ruhig */
-.film-flackern {
-  background: rgb(var(--dunkel));
-  opacity: 0;
-  animation: film-flackern var(--flackern-tempo) steps(1) infinite;   /* sprunghaft wie echter Film */
-  will-change: opacity;
-}
-
-@keyframes film-flackern {
-  0%, 9%, 100% { opacity: 0; }
-  11%  { opacity: calc(var(--flackern-staerke) * 0.6); }
-  13%  { opacity: 0; }
-  31%  { opacity: calc(var(--flackern-staerke) * 0.3); }
-  34%  { opacity: 0; }
-  52%  { opacity: var(--flackern-staerke); }
-  53%  { opacity: calc(var(--flackern-staerke) * 0.4); }
-  55%  { opacity: 0; }
-  78%  { opacity: calc(var(--flackern-staerke) * 0.5); }
-  80%  { opacity: 0; }
-  91%  { opacity: calc(var(--flackern-staerke) * 0.25); }
-  92%  { opacity: 0; }
-}
-
-/* Film-Effekte ausgeschaltet */
-.ohne-film .film-ebene {
-  display: none;
+  pointer-events: none;
 }
 
 
@@ -1336,26 +1253,16 @@ dialog::backdrop {
    8. BARRIEREFREIHEIT
    ========================================================================== */
 
-/* Wer im System "Bewegung reduzieren" eingestellt hat: keine Bewegung –
-   nur das stehende Korn bleibt (kein Flimmern, Flackern, Staub) */
+/* Wer im System "Bewegung reduzieren" eingestellt hat: keine Bewegung */
 @media (prefers-reduced-motion: reduce) {
   .nav-panel {
     transform: none !important;
   }
-
-  .film-ebene > .film-korn {
-    animation: none;
-  }
-
-  .film-flackern,
-  .film-staub {
-    display: none;
-  }
 }
 
-/* Kontrast erhöhen (Systemeinstellung): keine Film-Effekte, kein Leuchten */
+/* Kontrast erhöhen (Systemeinstellung): keine Vignette, kein Leuchten */
 @media (prefers-contrast: more) {
-  .film-ebene {
+  body::before {
     display: none;
   }
 
@@ -1363,6 +1270,5 @@ dialog::backdrop {
   h2,
   .leuchtet {
     text-shadow: none;
-    filter: none;
   }
 }
