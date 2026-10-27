@@ -38,6 +38,14 @@
       // Ohne eigene Wahl: dunkles Design (Standard)
       var theme = gespeichert === "light" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", theme);
+      // Film-Effekte ausgeschaltet? (js/filmeffekte.js)
+      try {
+        if (localStorage.getItem("ntb-filmeffekte") === "aus") {
+          document.documentElement.classList.add("ohne-film");
+        }
+      } catch (fehler) {
+        // ignorieren
+      }
     })();
   </script>
 </head>
@@ -213,6 +221,8 @@
   <!-- Prompts: erst der Baum mit allen Kacheln und Texten, dann die Ansicht -->
   <script src="js/prompts-data.js"></script>
   <script src="js/prompts.js"></script>
+  <!-- Filmkorn, Staub, Kratzer, Flackern und Vignette als eigene Ebene -->
+  <script src="js/filmeffekte.js"></script>
   <!-- Übergänge zwischen den Ansichten (Schnitt ins Schwarze), vor app.js -->
   <script src="js/seitenwechsel.js"></script>
   <script src="js/app.js"></script>

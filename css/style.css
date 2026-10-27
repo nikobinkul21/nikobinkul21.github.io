@@ -1,18 +1,19 @@
 /* ==========================================================================
    style.css – Grundlage für ganz NTB
 
-   Stil: ein Schwarz-Weiß-Film spät in der Nacht. Viel Schwarz, harte
-   Kontraste, weiches Licht aus der Dunkelheit, feines Filmkorn.
-   Rein monochrom – hervorgehoben wird nur durch Helligkeit und Leuchten.
+   Stil: ein Schwarz-Weiß-Film spät in der Nacht, mit einem Hauch Sepia.
+   Kein reines Weiß, kein reines Schwarz: warmes, cremiges Off-White auf
+   sehr tiefem, minimal warmem Schwarz. Überschriften und Titel leuchten
+   weich wie Text auf einer Röhre oder Leinwand; darüber Filmkorn, Staub
+   und ein kaum merkliches Flackern (js/filmeffekte.js, abschaltbar).
 
    HIER ÄNDERST DU DAS AUSSEHEN DER GANZEN SEITE:
      0. Schriften (Dateien im Ordner fonts/)
-     1. Design-Variablen: Farben, Schriften, Abstände, Licht, Korn, Bewegung
-        – zuerst das dunkle Design (Standard), darunter das helle
+     1. Design-Variablen: Farben, Schriften, Leuchten, Abstände, Film,
+        Bewegung – zuerst das dunkle Design (Standard), darunter das helle
      1b. Bereichsfarben: Termine, Prioritäten, Kalender, Sudoku-Gitter …
    Die Bereichs-Stylesheets (home.css, todo.css, …) benutzen nur diese
-   Variablen. Eigene Farben behalten nur die Spiele (Pixel-Stil im
-   Sudoku-Abenteuer, Fußball, Klettern, Worträtsel) – leicht entsättigt
+   Variablen. Eigene Farben behalten nur die Spiele – leicht entsättigt
    über --spiel-saettigung (Abschnitt 6d).
    ========================================================================== */
 
@@ -20,10 +21,12 @@
 /* ==========================================================================
    0. SCHRIFTEN
    Alle Dateien liegen lokal in fonts/ – es wird nichts aus dem Internet
-   geladen. Die Pfade sind relativ zu DIESER Datei (deshalb "../fonts/").
-   Alle drei Schriften: SIL Open Font License (Lizenztexte in fonts/).
-   font-display: swap – bis die Schrift geladen ist, steht der Text in der
-   Ersatzschrift da und ist nie unsichtbar.
+   geladen. Alle: SIL Open Font License (Lizenztexte in fonts/).
+   Vier Rollen (Variablen in Abschnitt 1):
+     Monospace (Share Tech Mono) – Kacheltitel, Navigation, Labels, Hinweise
+     Serif (Cormorant Garamond)  – große Zahlen und Überschriften
+     Schmal (Archivo Narrow Bold) – Kleingedrucktes, Fußzeile, Status
+     Text (Inter)                 – Fließtext und Formulare
    ========================================================================== */
 
 /* Schriftzug "NTB" (fehlt die Datei, greift --logo-schrift auf Impact zurück) */
@@ -35,53 +38,70 @@
   font-display: swap;
 }
 
-/* Manrope – schlanke Grotesk für Text, Titel und Bedienelemente */
+/* Share Tech Mono – wie eine alte Bildschirm- oder Videorekorder-Einblendung */
 @font-face {
-  font-family: "Manrope";
-  src: url("../fonts/manrope-300.woff2") format("woff2");
-  font-weight: 200 300;
+  font-family: "Share Tech Mono";
+  src: url("../fonts/share-tech-mono-400.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Cormorant Garamond – Old-Style-Serif mit kalligrafischem Zug */
+@font-face {
+  font-family: "Cormorant Garamond";
+  src: url("../fonts/cormorant-garamond-400.woff2") format("woff2");
+  font-weight: 300 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Manrope";
-  src: url("../fonts/manrope-400.woff2") format("woff2");
-  font-weight: 400 500;
+  font-family: "Cormorant Garamond";
+  src: url("../fonts/cormorant-garamond-500.woff2") format("woff2");
+  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Manrope";
-  src: url("../fonts/manrope-600.woff2") format("woff2");
+  font-family: "Cormorant Garamond";
+  src: url("../fonts/cormorant-garamond-600.woff2") format("woff2");
   font-weight: 600 900;
   font-style: normal;
   font-display: swap;
 }
 
-/* Bebas Neue – schmale, hohe Schrift für große Überschriften */
+/* Archivo Narrow Bold – schmal und kräftig für Kleingedrucktes */
 @font-face {
-  font-family: "Bebas Neue";
-  src: url("../fonts/bebas-neue-400.woff2") format("woff2");
+  font-family: "Archivo Narrow";
+  src: url("../fonts/archivo-narrow-700.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Inter – Fließtext und Formulare */
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-400.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
-/* IBM Plex Mono – kleine Angaben (Datum, Uhrzeit, Nummern) */
 @font-face {
-  font-family: "IBM Plex Mono";
-  src: url("../fonts/ibm-plex-mono-300.woff2") format("woff2");
-  font-weight: 200 300;
+  font-family: "Inter";
+  src: url("../fonts/inter-500.woff2") format("woff2");
+  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "IBM Plex Mono";
-  src: url("../fonts/ibm-plex-mono-400.woff2") format("woff2");
-  font-weight: 400 900;
+  font-family: "Inter";
+  src: url("../fonts/inter-600.woff2") format("woff2");
+  font-weight: 600 900;
   font-style: normal;
   font-display: swap;
 }
@@ -89,87 +109,132 @@
 
 /* ==========================================================================
    1. DESIGN-VARIABLEN
-   Dunkel (Standard): tiefes Schwarz, darüber ein kaum sichtbarer Lichtschein
-   von oben wie von einer Straßenlaterne; Flächen sehr dunkelgrau mit feiner
-   heller Kante, weißer Text.
+   Dunkel (Standard): sehr tiefes, minimal warmes Schwarz, Off-White mit
+   einem Hauch Sepia, Grautöne mit derselben Wärme.
    Die Werte gelten, solange <html data-theme="light"> NICHT gesetzt ist.
    ========================================================================== */
 
 :root {
   /* ---- Farben: dunkles Design ---- */
-  --farbe-hintergrund: #050505;      /* tiefes Schwarz */
-  --farbe-flaeche: #101010;          /* Kacheln, Karten, Dialoge */
-  --farbe-flaeche-leise: #191919;    /* Hover, Umschalter */
-  --farbe-flaeche-hell: #232323;     /* hellste Fläche */
-  --farbe-text: #f2f2f2;             /* fast Weiß */
-  --farbe-text-leise: #a6a6a6;       /* Nebentext: 8,6 : 1 auf Schwarz, 7,9 : 1 auf Flächen */
-  --farbe-rand: #2b2b2b;             /* feine Linien */
-  --farbe-rand-stark: #6b6b6b;       /* Eingabefelder, Knöpfe: 3,6 : 1 auf Flächen */
+  --farbe-hintergrund: #0a0a09;      /* tiefes, minimal warmes Schwarz */
+  --farbe-flaeche: #12110f;          /* Kacheln, Karten, Dialoge */
+  --farbe-flaeche-leise: #1b1a17;    /* Hover, Umschalter */
+  --farbe-flaeche-hell: #25231f;     /* hellste Fläche */
+  --farbe-text: #e8e3d5;             /* warmes, cremiges Off-White */
+  --farbe-text-leise: #a39d8f;       /* Nebentext: 7,3 : 1 auf dem Grund */
+  --farbe-rand: #2d2b26;             /* feine Linien */
+  --farbe-rand-stark: #6f6a5f;       /* Eingabefelder, Knöpfe: ≥ 3 : 1 auf Flächen */
 
-  /* Keine Akzentfarbe: "Akzent" ist die hellste Stufe */
-  --farbe-akzent: #ffffff;
-  --farbe-akzent-hover: #d6d6d6;
-  --farbe-akzent-leise: #262626;     /* zarte Tönung, z. B. Markierungen */
-  --farbe-auf-akzent: #000000;       /* Text auf Akzent-Flächen */
-  --farbe-fokus: #ffffff;            /* Tastaturfokus */
+  /* Keine Akzentfarbe: "Akzent" ist das hellste Off-White */
+  --farbe-akzent: #e8e3d5;
+  --farbe-akzent-hover: #f3efe4;
+  --farbe-akzent-leise: #27251f;     /* zarte Tönung, z. B. Markierungen */
+  --farbe-auf-akzent: #0a0a09;       /* Text auf Akzent-Flächen */
+  --farbe-fokus: #e8e3d5;            /* Tastaturfokus */
 
-  /* Rückmeldungen – ebenfalls nur Grautöne */
-  --farbe-erfolg: #d9d9d9;
-  --farbe-gefahr: #ffffff;
-  --farbe-gefahr-leise: #2a2a2a;
+  /* Rückmeldungen – ebenfalls nur warme Grautöne */
+  --farbe-erfolg: #d4cebf;
+  --farbe-gefahr: #f3efe4;
+  --farbe-gefahr-leise: #2b2924;
 
-  /* Abdunklung hinter Dialogen */
-  --farbe-schleier: rgba(0, 0, 0, 0.7);
+  --farbe-schleier: rgba(6, 6, 5, 0.72);   /* Abdunklung hinter Dialogen */
 
-  /* ---- Licht ---- */
-  /* Schein der Straßenlaterne oben (Farbe, Stärke, Form) */
-  --laterne-farbe: 255 255 255;
-  --laterne-staerke: 0.075;
+  /* ---- Licht (als "R G B", Stärke über den Alpha-Wert) ---- */
+  --licht: 232 227 213;              /* Off-White für Leuchten und Scheinwerfer */
+  --dunkel: 10 10 9;                 /* Schwarz für Vignette und Flackern */
+  /* Schein von oben, als stünde irgendwo eine Straßenlaterne */
+  --laterne-staerke: 0.06;
   --laterne-form: 90% 60% at 50% -12%;
-  /* Vignette an den Rändern */
-  --vignette-farbe: 0 0 0;
-  --vignette-staerke: 0.65;
-  /* Lichtkante und Scheinwerfer der Kacheln (als "R G B" + Stärke) */
-  --kachel-kante: 255 255 255;
-  --kachel-kante-staerke: 0.12;      /* feine helle Kante */
-  --kachel-licht-staerke: 0.10;      /* Hover: Fläche wird so viel heller */
-  --kachel-schein-staerke: 0.22;     /* Hover: weicher weißer Schein an der Kante */
-  --kachel-schein-groesse: 28px;
+
+  /* ---- Leuchten: Lichthof um Überschriften, Titel, Datum, Uhrzeit ----
+     Mehrere Schichten: innen eng und hell, außen breit und schwach. */
+  --leuchten:
+    0 0 1px rgb(var(--licht) / 0.55),
+    0 0 4px rgb(var(--licht) / 0.32),
+    0 0 11px rgb(var(--licht) / 0.18),
+    0 0 26px rgb(var(--licht) / 0.10),
+    0 0 52px rgb(var(--licht) / 0.05);
+  /* Stärker: Kacheltitel im Scheinwerfer (Hover) */
+  --leuchten-stark:
+    0 0 1px rgb(var(--licht) / 0.8),
+    0 0 5px rgb(var(--licht) / 0.5),
+    0 0 14px rgb(var(--licht) / 0.32),
+    0 0 32px rgb(var(--licht) / 0.18),
+    0 0 64px rgb(var(--licht) / 0.09);
+  /* Schwach: kleine Angaben (Navigation, Uhrzeit) */
+  --leuchten-leise:
+    0 0 1px rgb(var(--licht) / 0.4),
+    0 0 6px rgb(var(--licht) / 0.16),
+    0 0 16px rgb(var(--licht) / 0.06);
+  --leuchten-unschaerfe: 0.3px;      /* Hauch Unschärfe: Kanten nicht gestochen scharf */
+  /* Länglicher Lichtschein hinter größeren Textblöcken */
+  --lichtschein: radial-gradient(ellipse 50% 50% at 50% 55%, rgb(var(--licht) / 0.07), rgb(var(--licht) / 0.025) 45%, transparent 72%);
+  --lichtschein-breite: 140%;        /* so viel breiter als der Text */
+  --lichtschein-hoehe: 260%;
+
+  /* ---- Kacheln ---- */
+  --kachel-kante: 232 227 213;       /* feine, warme Kante */
+  --kachel-kante-staerke: 0.13;
+  --kachel-licht-staerke: 0.09;      /* Hover: Fläche wird so viel heller */
+  --kachel-schein-staerke: 0.18;     /* Hover: weicher Schein an der Kante */
+  --kachel-schein-groesse: 30px;
   --kachel-hover-dauer: 700ms;       /* langsam, wie ein Scheinwerfer */
 
-  /* Glow (Prompts-Kacheln) – zeigt auf dieselbe Lichtkante */
-  --glow-farbe: 255 255 255;
-  --glow-schatten-farbe: 0 0 0;
+  /* Glow (Prompts-Kacheln) – zeigt auf dasselbe Licht */
+  --glow-farbe: var(--licht);
+  --glow-schatten-farbe: var(--dunkel);
 
-  /* ---- Filmkorn ---- */
-  --korn-deckkraft: 0.07;            /* sehr dezent */
+  /* ---- Film-Effekte (js/filmeffekte.js; Schalter in den Einstellungen) ---- */
+  --korn-deckkraft: 0.06;            /* feine Körnung */
   --korn-groesse: 180px;             /* Kachelgröße des Rauschmusters */
-  --korn-tempo: 0.9s;                /* so schnell flimmert es (8 Sprünge) */
+  --korn-tempo: 0.9s;                /* Flimmern: 8 Sprünge in dieser Zeit */
+  --vignette-staerke: 0.6;           /* dunkle Ränder */
+  --flackern-staerke: 0.035;         /* größte Abdunklung beim Flackern */
+  --flackern-tempo: 7.3s;            /* ein unregelmäßiger Durchlauf */
+  --staub-farbe: 232 227 213;        /* Staubpunkte und Kratzer */
+  --staub-deckkraft: 0.55;
+  --staub-pro-sekunde: 1;            /* im Mittel so viele Staubpunkte */
+  --kratzer-abstand: 9;              /* im Mittel alle so vielen Sekunden ein Kratzer */
+  --film-ebene: 900;                 /* z-index der Ebene (unter Dialogen) */
+
+  /* ---- Stadt bei Nacht (Startseite, unterer Rand) ---- */
+  --stadt-farbe: 236 214 170;        /* warme, ferne Lichter */
+  --stadt-deckkraft: 0.42;           /* Gesamtstärke – kaum sichtbar */
+  --stadt-hoehe: 30vh;
+  --stadt-unschaerfe: 1.2;           /* Weichzeichnung der Lichter in Pixeln */
+  --stadt-punkte: 420;               /* Anzahl der Lichtpunkte */
 
   /* ---- Schatten: NUR für schwebende Elemente (Menüs, Dialoge) ---- */
   --schatten: none;
-  --schatten-schwebend: 0 18px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --schatten-schwebend: 0 18px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgb(var(--licht) / 0.06);
 
   /* ---- Linien ---- */
   --linie-breite: 1px;
   --linie: var(--linie-breite) solid var(--farbe-rand);
 
-  /* ---- Schriften ---- */
-  --schrift-text: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --schrift-titel: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --schrift-display: "Bebas Neue", "Arial Narrow", Impact, sans-serif;  /* große Überschriften */
-  --schrift-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --schrift: var(--schrift-text);    /* alter Name, zeigt auf die Textschrift */
-  --schrift-groesse: 1.0625rem;      /* Grundschrift: 17 px */
+  /* ---- Schriften: vier Rollen ---- */
+  --schrift-text: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --schrift-mono: "Share Tech Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --schrift-serif: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --schrift-klein: "Archivo Narrow", "Arial Narrow", "Roboto Condensed", sans-serif;
+  /* Ältere Namen, die einzelne Bereiche benutzen */
+  --schrift: var(--schrift-text);
+  --schrift-titel: var(--schrift-serif);
+  --schrift-display: var(--schrift-serif);
+
+  --schrift-groesse: 1rem;           /* Grundschrift: 16 px */
   --zeilenhoehe: 1.6;
   --zeilen-max: 68ch;
-  --titel-groesse-1: 3.2rem;         /* h1 in Bebas Neue */
-  --titel-groesse-2: 1rem;           /* h2: Großbuchstaben, weit gesperrt */
-  --titel-gewicht: 300;              /* leichte Strichstärke für Titel */
-  --titel-sperrung: 0.22em;          /* Buchstabenabstand der Titel */
-  --display-sperrung: 0.06em;        /* Buchstabenabstand der großen Überschriften */
-  --mono-sperrung: 0.28em;           /* Zeitstempel, kleine Angaben */
-  --reiter-sperrung: 0.16em;
+  --titel-groesse-1: 2.9rem;         /* h1: Serif */
+  --titel-groesse-2: 1.55rem;        /* h2: Serif */
+  --titel-gewicht: 500;
+  --mono-groesse: 0.82rem;           /* Monospace-Labels */
+  --mono-sperrung: 0.2em;            /* weiter Buchstabenabstand */
+  --klein-groesse: 0.72rem;          /* Archivo Narrow */
+  --klein-sperrung: 0.14em;
+  --reiter-sperrung: var(--mono-sperrung);
+  --titel-sperrung: var(--mono-sperrung);
+  --display-sperrung: 0.01em;
 
   /* ---- Abstände ---- */
   --abstand-xs: 4px;
@@ -188,23 +253,23 @@
   --knopf-hoehe: 40px;
 
   /* ---- Glas-Effekt (Kalender, Spiele) ---- */
-  --glas-hintergrund: rgba(255, 255, 255, 0.05);
+  --glas-hintergrund: rgb(var(--licht) / 0.05);
   --glas-blur: 16px;
   --glas-saettigung: 100%;
-  --glas-rand: rgba(255, 255, 255, 0.14);
-  --glas-reflex: rgba(255, 255, 255, 0.22);
-  --glas-glanz: rgba(255, 255, 255, 0.04);
+  --glas-rand: rgb(var(--licht) / 0.14);
+  --glas-reflex: rgb(var(--licht) / 0.22);
+  --glas-glanz: rgb(var(--licht) / 0.04);
   --glas-schatten: 0 4px 16px rgba(0, 0, 0, 0.6);
-  --glas-fallback: rgba(24, 24, 24, 0.95);
+  --glas-fallback: rgba(27, 26, 23, 0.95);
 
   /* ---- Logo "NTB" ---- */
   --logo-schrift: "NTB Logo", Impact, "Arial Black", sans-serif;
   --logo-groesse: 1.75rem;
   --logo-groesse-mobil: 1.6rem;
-  --logo-farbe: #000000;             /* Buchstaben */
-  --logo-kontur-farbe: #ffffff;      /* Kontur außen */
+  --logo-farbe: #0a0a09;             /* Buchstaben */
+  --logo-kontur-farbe: #e8e3d5;      /* Kontur außen */
   --logo-kontur-staerke: 1px;
-  --logo-schatten: 0 0 10px rgba(255, 255, 255, 0.18);   /* leises Leuchten */
+  --logo-schatten: 0 0 10px rgb(var(--licht) / 0.2);
 
   /* ---- Größen ---- */
   --leiste-hoehe: 64px;
@@ -214,14 +279,15 @@
   /* ---- Bewegung: ruhig und weich ---- */
   --dauer: 220ms;
   --kurve-weich: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --tippen-tempo: 75ms;              /* Startseite: je Buchstabe der Begrüßung */
+  --cursor-takt: 1.05s;              /* blinkender Cursor */
 
-  /* ---- Seitenwechsel (js/seitenwechsel.js): Schnitt ins Schwarze ----
-     Die Seite blendet in Schwarz ab und der Abschnitt aus dem Schwarz auf. */
-  --uebergang-abblende-dauer: 220ms;  /* Abblenden in Schwarz */
-  --uebergang-schwarz-dauer: 60ms;    /* kurz ganz schwarz (der Schnitt) */
-  --uebergang-aufblende-dauer: 260ms; /* Aufblenden des neuen Abschnitts */
-  --uebergang-schwarz: #000000;       /* Farbe der Blende (auch im hellen Design) */
-  --uebergang-ruhig-dauer: 160ms;     /* "Bewegung reduzieren": kurze Überblendung */
+  /* ---- Seitenwechsel (js/seitenwechsel.js): Schnitt ins Schwarze ---- */
+  --uebergang-abblende-dauer: 220ms;
+  --uebergang-schwarz-dauer: 60ms;
+  --uebergang-aufblende-dauer: 260ms;
+  --uebergang-schwarz: #0a0a09;      /* Farbe der Blende (auch im hellen Design) */
+  --uebergang-ruhig-dauer: 160ms;
 
   /* ---- Spiele: eigene Farben, leicht entsättigt (Abschnitt 6d) ---- */
   --spiel-saettigung: 0.72;
@@ -229,52 +295,79 @@
   color-scheme: dark;
 }
 
-/* Helles Design: wie ein überbelichtetes Schwarz-Weiß-Foto. Gebrochenes
-   Weiß, schwarzer Text, dieselbe Körnung; das Licht von oben strahlt hier
-   fast weiß aus. Aktiv bei <html data-theme="light"> (setzt app.js). */
+/* Helles Design: wie ein Abzug auf altem Fotopapier – cremefarbener Grund,
+   tiefschwarze Schrift, dieselbe Wärme. Das "Leuchten" wird hier zu einem
+   weichen Hof aus Tinte, wie leicht verlaufene Druckerschwärze.
+   Aktiv bei <html data-theme="light"> (setzt app.js). */
 :root[data-theme="light"] {
-  --farbe-hintergrund: #eceae6;
-  --farbe-flaeche: #f6f5f3;
-  --farbe-flaeche-leise: #e3e1dd;
-  --farbe-flaeche-hell: #ffffff;
-  --farbe-text: #0b0b0b;
-  --farbe-text-leise: #4f4f4f;       /* 7,1 : 1 auf dem Grund */
-  --farbe-rand: #cfcdc9;
-  --farbe-rand-stark: #7b7975;
+  --farbe-hintergrund: #e7e0cf;
+  --farbe-flaeche: #efe9db;
+  --farbe-flaeche-leise: #ddd5c3;
+  --farbe-flaeche-hell: #f6f1e6;
+  --farbe-text: #14120e;
+  --farbe-text-leise: #57503f;       /* 6,6 : 1 auf dem Grund */
+  --farbe-rand: #cbc2ad;
+  --farbe-rand-stark: #847a64;
 
-  --farbe-akzent: #000000;
-  --farbe-akzent-hover: #333333;
-  --farbe-akzent-leise: #d9d7d3;
-  --farbe-auf-akzent: #ffffff;
-  --farbe-fokus: #000000;
+  --farbe-akzent: #14120e;
+  --farbe-akzent-hover: #3a352b;
+  --farbe-akzent-leise: #d6cdb8;
+  --farbe-auf-akzent: #efe9db;
+  --farbe-fokus: #14120e;
 
-  --farbe-erfolg: #2e2e2e;
-  --farbe-gefahr: #000000;
-  --farbe-gefahr-leise: #dcdad6;
+  --farbe-erfolg: #2f2b22;
+  --farbe-gefahr: #14120e;
+  --farbe-gefahr-leise: #dbd2bf;
 
-  --farbe-schleier: rgba(20, 20, 20, 0.45);
+  --farbe-schleier: rgba(30, 26, 18, 0.45);
 
-  --laterne-staerke: 0.9;            /* überbelichteter, fast weißer Schein */
+  --licht: 255 250 238;              /* Papierweiß für Scheinwerfer und Laterne */
+  --dunkel: 40 32 18;
+  --laterne-staerke: 0.75;
   --laterne-form: 95% 70% at 50% -15%;
-  --vignette-staerke: 0.16;
-  --kachel-kante: 0 0 0;
-  --kachel-kante-staerke: 0.14;
-  --kachel-licht-staerke: 0.55;      /* Hover: Fläche strahlt fast weiß */
+
+  --leuchten:
+    0 0 1px rgb(20 18 14 / 0.35),
+    0 0 6px rgb(60 48 28 / 0.14),
+    0 0 18px rgb(60 48 28 / 0.06);
+  --leuchten-stark:
+    0 0 1px rgb(20 18 14 / 0.45),
+    0 0 8px rgb(60 48 28 / 0.2),
+    0 0 24px rgb(60 48 28 / 0.1);
+  --leuchten-leise:
+    0 0 1px rgb(20 18 14 / 0.25),
+    0 0 6px rgb(60 48 28 / 0.08);
+  --leuchten-unschaerfe: 0.2px;
+  --lichtschein: radial-gradient(ellipse 50% 50% at 50% 55%, rgb(255 250 238 / 0.75), rgb(255 250 238 / 0.3) 45%, transparent 72%);
+
+  --kachel-kante: 60 48 28;
+  --kachel-kante-staerke: 0.18;
+  --kachel-licht-staerke: 0.6;
   --kachel-schein-staerke: 0.9;
-  --glow-schatten-farbe: 0 0 0;
 
   --korn-deckkraft: 0.08;
+  --vignette-staerke: 0.2;
+  --flackern-staerke: 0.025;
+  --staub-farbe: 40 32 18;           /* auf hellem Papier: dunkle Staubkörner */
+  --staub-deckkraft: 0.4;
 
-  --schatten-schwebend: 0 18px 48px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --stadt-farbe: 90 70 40;
+  --stadt-deckkraft: 0.16;
 
-  --glas-hintergrund: rgba(255, 255, 255, 0.55);
-  --glas-rand: rgba(255, 255, 255, 0.8);
-  --glas-reflex: rgba(255, 255, 255, 0.9);
-  --glas-glanz: rgba(255, 255, 255, 0.35);
-  --glas-schatten: 0 4px 16px rgba(0, 0, 0, 0.10);
-  --glas-fallback: rgba(246, 245, 243, 0.94);
+  --schatten-schwebend: 0 18px 48px rgba(40, 30, 10, 0.16), 0 0 0 1px rgba(40, 30, 10, 0.06);
 
-  --logo-schatten: 0 0 1px rgba(0, 0, 0, 0.6), 0 0 2px rgba(0, 0, 0, 0.25);
+  --glas-hintergrund: rgba(255, 250, 238, 0.55);
+  --glas-rand: rgba(255, 250, 238, 0.8);
+  --glas-reflex: rgba(255, 250, 238, 0.9);
+  --glas-glanz: rgba(255, 250, 238, 0.35);
+  --glas-schatten: 0 4px 16px rgba(40, 30, 10, 0.10);
+  --glas-fallback: rgba(239, 233, 219, 0.94);
+
+  --logo-farbe: #14120e;
+  --logo-kontur-farbe: #efe9db;
+  --logo-schatten: 0 0 1px rgba(20, 18, 14, 0.6), 0 0 2px rgba(20, 18, 14, 0.25);
+
+  --uebergang-schwarz: #0a0a09;
 
   color-scheme: light;
 }
@@ -282,25 +375,25 @@
 
 /* ==========================================================================
    1b. BEREICHSFARBEN
-   Termine, Kalender und Sudoku-Gitter in Grautönen – unterschieden nur
-   über Helligkeit. Die Prioritäten unter "Zu erledigen" behalten ihre
+   Termine, Kalender und Sudoku-Gitter in warmen Grautönen – unterschieden
+   nur über Helligkeit. Die Prioritäten unter "Zu erledigen" behalten ihre
    Farbskala, leicht entsättigt.
    ========================================================================== */
 
 :root {
   /* Arten von Einträgen (Stundenplan, Kalender-Vorschau) */
-  --farbe-termin: #8c8c8c;           /* Rand / Strich: mittleres Grau */
-  --farbe-termin-flaeche: #1a1a1a;
-  --farbe-termin-text: #e6e6e6;
-  --farbe-vorlesung: #f2f2f2;        /* Vorlesungen: hell leuchtend */
-  --farbe-vorlesung-flaeche: #262626;
-  --farbe-vorlesung-text: #ffffff;
+  --farbe-termin: #8d877a;           /* Rand / Strich: mittleres warmes Grau */
+  --farbe-termin-flaeche: #1c1a17;
+  --farbe-termin-text: #e2ddcf;
+  --farbe-vorlesung: #e8e3d5;        /* Vorlesungen: hell leuchtend */
+  --farbe-vorlesung-flaeche: #28261f;
+  --farbe-vorlesung-text: #f3efe4;
 
   /* Stundenplan-Raster */
-  --sp-linie: rgba(255, 255, 255, 0.07);
-  --sp-heute-hintergrund: rgba(255, 255, 255, 0.04);
+  --sp-linie: rgb(var(--licht) / 0.07);
+  --sp-heute-hintergrund: rgb(var(--licht) / 0.04);
   --sp-heute-akzent: var(--farbe-akzent);
-  --sp-jetzt-farbe: #ffffff;
+  --sp-jetzt-farbe: #e8e3d5;
 
   /* Zu erledigen: Prioritäten (Skala von Rot nach Grün, entsättigt) */
   --todo-ueberfaellig: #e0857d;
@@ -311,54 +404,54 @@
   --todo-locker: #7db38d;
   --todo-erledigt: #7db38d;
   --todo-offen: #e39087;
-  --todo-ueberfaellig-hintergrund: #2a1f1e;
+  --todo-ueberfaellig-hintergrund: #2a1f1d;
 
   /* Kalender-Markierungen */
-  --kal-vergangen-text: #6e6e6e;              /* vergangene Tage: gedimmt */
-  --kal-vergangen-hintergrund: rgba(255, 255, 255, 0.02);
-  --kal-heute-glas: rgba(255, 255, 255, 0.20); /* heute: hell leuchtendes Glas */
-  --kal-heute-glanz: rgba(255, 255, 255, 0.12);
-  --kal-heute-rand: rgba(255, 255, 255, 0.55);
-  --kal-heute-reflex: rgba(255, 255, 255, 0.4);
-  --kal-heute-leuchten: rgba(255, 255, 255, 0.35);
+  --kal-vergangen-text: #6f6a5f;              /* vergangene Tage: gedimmt */
+  --kal-vergangen-hintergrund: rgb(var(--licht) / 0.02);
+  --kal-heute-glas: rgb(var(--licht) / 0.20); /* heute: hell leuchtendes Glas */
+  --kal-heute-glanz: rgb(var(--licht) / 0.12);
+  --kal-heute-rand: rgb(var(--licht) / 0.55);
+  --kal-heute-reflex: rgb(var(--licht) / 0.4);
+  --kal-heute-leuchten: rgb(var(--licht) / 0.35);
   --kal-heute-schatten: rgba(0, 0, 0, 0.5);
-  --kal-heute-text: #ffffff;
-  --kal-heute-fallback: rgba(255, 255, 255, 0.24);
-  --kal-termin-glas: rgba(255, 255, 255, 0.08); /* Tage mit Termin: zartes Glas */
-  --kal-termin-rand: rgba(255, 255, 255, 0.3);
-  --kal-termin-leuchten: rgba(255, 255, 255, 0.14);
-  --kal-termin-ring: #bdbdbd;
-  --kal-vorschau-hintergrund: rgba(16, 16, 16, 0.94);
+  --kal-heute-text: #f3efe4;
+  --kal-heute-fallback: rgb(var(--licht) / 0.24);
+  --kal-termin-glas: rgb(var(--licht) / 0.08); /* Tage mit Termin: zartes Glas */
+  --kal-termin-rand: rgb(var(--licht) / 0.3);
+  --kal-termin-leuchten: rgb(var(--licht) / 0.14);
+  --kal-termin-ring: #bdb7a8;
+  --kal-vorschau-hintergrund: rgba(18, 17, 15, 0.95);
 
   /* Sudoku-Gitter (freies Spiel) */
-  --sudoku-linie-duenn-farbe: #2e2e2e;
-  --sudoku-linie-dick-farbe: #9a9a9a;
+  --sudoku-linie-duenn-farbe: #2f2d28;
+  --sudoku-linie-dick-farbe: #9b9588;
   --sudoku-feld: var(--farbe-flaeche);
-  --sudoku-verwandt: #171717;                 /* gleiche Zeile, Spalte, Block */
-  --sudoku-gleich: #2b2b2b;                   /* Felder mit derselben Zahl */
-  --sudoku-ausgewaehlt: #3d3d3d;              /* das gewählte Feld */
+  --sudoku-verwandt: #181714;                 /* gleiche Zeile, Spalte, Block */
+  --sudoku-gleich: #2c2a25;                   /* Felder mit derselben Zahl */
+  --sudoku-ausgewaehlt: #3e3b34;              /* das gewählte Feld */
   --sudoku-vorgabe-farbe: var(--farbe-text);
-  --sudoku-eingabe-farbe: #b3b3b3;            /* eigene Zahlen: etwas gedämpfter */
+  --sudoku-eingabe-farbe: #b4ae9f;            /* eigene Zahlen: etwas gedämpfter */
   --sudoku-fehler-farbe: var(--farbe-gefahr);
   --sudoku-fehler-hintergrund: var(--farbe-gefahr-leise);
   --sudoku-erfolg-farbe: var(--farbe-erfolg);
   --sudoku-fertig-haken-farbe: var(--farbe-erfolg);
   --sudoku-effekt-farbe: var(--farbe-akzent);
-  --sudoku-effekt-schein: rgba(255, 255, 255, 0.14);
-  --sudoku-effekt-schein-stark: rgba(255, 255, 255, 0.26);
+  --sudoku-effekt-schein: rgb(var(--licht) / 0.14);
+  --sudoku-effekt-schein-stark: rgb(var(--licht) / 0.26);
 }
 
 :root[data-theme="light"] {
-  --farbe-termin: #5c5c5c;
-  --farbe-termin-flaeche: #e0dedb;
-  --farbe-termin-text: #1a1a1a;
-  --farbe-vorlesung: #000000;
-  --farbe-vorlesung-flaeche: #cfcdca;
-  --farbe-vorlesung-text: #000000;
+  --farbe-termin: #5e5748;
+  --farbe-termin-flaeche: #ddd5c3;
+  --farbe-termin-text: #1c1913;
+  --farbe-vorlesung: #14120e;
+  --farbe-vorlesung-flaeche: #cdc4af;
+  --farbe-vorlesung-text: #14120e;
 
-  --sp-linie: rgba(0, 0, 0, 0.08);
-  --sp-heute-hintergrund: rgba(255, 255, 255, 0.55);
-  --sp-jetzt-farbe: #000000;
+  --sp-linie: rgba(40, 32, 18, 0.08);
+  --sp-heute-hintergrund: rgba(255, 250, 238, 0.55);
+  --sp-jetzt-farbe: #14120e;
 
   --todo-ueberfaellig: #973f3a;
   --todo-sehr-wichtig: #bb6159;
@@ -368,32 +461,32 @@
   --todo-locker: #4d7f5b;
   --todo-erledigt: #4a7351;
   --todo-offen: #aa5954;
-  --todo-ueberfaellig-hintergrund: #f6eae7;
+  --todo-ueberfaellig-hintergrund: #f3e6dd;
 
-  --kal-vergangen-text: #8a8a8a;
-  --kal-vergangen-hintergrund: rgba(0, 0, 0, 0.03);
-  --kal-heute-glas: rgba(0, 0, 0, 0.78);
-  --kal-heute-glanz: rgba(255, 255, 255, 0.18);
-  --kal-heute-rand: rgba(255, 255, 255, 0.6);
-  --kal-heute-reflex: rgba(255, 255, 255, 0.4);
-  --kal-heute-leuchten: rgba(0, 0, 0, 0.25);
-  --kal-heute-schatten: rgba(0, 0, 0, 0.12);
-  --kal-heute-text: #ffffff;
-  --kal-heute-fallback: rgba(0, 0, 0, 0.8);
-  --kal-termin-glas: rgba(0, 0, 0, 0.08);
-  --kal-termin-rand: rgba(255, 255, 255, 0.8);
-  --kal-termin-leuchten: rgba(0, 0, 0, 0.08);
-  --kal-termin-ring: #444444;
-  --kal-vorschau-hintergrund: rgba(246, 245, 243, 0.94);
+  --kal-vergangen-text: #8b8370;
+  --kal-vergangen-hintergrund: rgba(40, 32, 18, 0.03);
+  --kal-heute-glas: rgba(20, 18, 14, 0.8);
+  --kal-heute-glanz: rgba(255, 250, 238, 0.18);
+  --kal-heute-rand: rgba(255, 250, 238, 0.6);
+  --kal-heute-reflex: rgba(255, 250, 238, 0.4);
+  --kal-heute-leuchten: rgba(20, 18, 14, 0.25);
+  --kal-heute-schatten: rgba(40, 30, 10, 0.12);
+  --kal-heute-text: #f6f1e6;
+  --kal-heute-fallback: rgba(20, 18, 14, 0.82);
+  --kal-termin-glas: rgba(40, 32, 18, 0.08);
+  --kal-termin-rand: rgba(255, 250, 238, 0.8);
+  --kal-termin-leuchten: rgba(40, 32, 18, 0.08);
+  --kal-termin-ring: #4a4437;
+  --kal-vorschau-hintergrund: rgba(239, 233, 219, 0.95);
 
-  --sudoku-linie-duenn-farbe: #d3d1cd;
-  --sudoku-linie-dick-farbe: #3a3a3a;
-  --sudoku-verwandt: #e9e7e3;
-  --sudoku-gleich: #d6d4d0;
-  --sudoku-ausgewaehlt: #bdbbb7;
-  --sudoku-eingabe-farbe: #4a4a4a;
-  --sudoku-effekt-schein: rgba(0, 0, 0, 0.10);
-  --sudoku-effekt-schein-stark: rgba(0, 0, 0, 0.2);
+  --sudoku-linie-duenn-farbe: #d2c9b5;
+  --sudoku-linie-dick-farbe: #3d382d;
+  --sudoku-verwandt: #e6dfce;
+  --sudoku-gleich: #d6cdb9;
+  --sudoku-ausgewaehlt: #bfb59f;
+  --sudoku-eingabe-farbe: #4c4639;
+  --sudoku-effekt-schein: rgba(40, 32, 18, 0.10);
+  --sudoku-effekt-schein-stark: rgba(40, 32, 18, 0.2);
 }
 
 
@@ -413,7 +506,7 @@ html {
   background: var(--farbe-hintergrund);
 }
 
-/* Der Grund: Schwarz (bzw. gebrochenes Weiß) mit dem Schein der
+/* Der Grund: tiefes Schwarz (bzw. altes Fotopapier) mit dem Schein der
    Straßenlaterne von oben. background-attachment: fixed – das Licht
    bleibt beim Scrollen an seinem Platz. */
 body {
@@ -425,32 +518,80 @@ body {
   line-height: var(--zeilenhoehe);
   color: var(--farbe-text);
   background:
-    radial-gradient(ellipse var(--laterne-form), rgb(var(--laterne-farbe) / var(--laterne-staerke)), transparent 70%)
+    radial-gradient(ellipse var(--laterne-form), rgb(var(--licht) / var(--laterne-staerke)), transparent 70%)
     fixed,
     var(--farbe-hintergrund);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Große Überschriften: schmale, hohe Schrift */
-h1 {
-  margin: 0 0 var(--abstand-l);
-  font-family: var(--schrift-display);
-  font-size: var(--titel-groesse-1);
-  font-weight: 400;
-  line-height: 1;
+/* Überschriften: Old-Style-Serif mit weichem Lichthof */
+h1,
+h2 {
+  font-family: var(--schrift-serif);
+  font-weight: var(--titel-gewicht);
+  font-variant-numeric: oldstyle-nums;
   letter-spacing: var(--display-sperrung);
 }
 
-/* Titel: Großbuchstaben, weit gesperrt, leichte Strichstärke */
+h1 {
+  position: relative;
+  margin: 0 0 var(--abstand-l);
+  font-size: var(--titel-groesse-1);
+  line-height: 1.05;
+}
+
 h2 {
   margin: 0 0 var(--abstand-s);
-  font-family: var(--schrift-titel);
   font-size: var(--titel-groesse-2);
-  font-weight: var(--titel-gewicht);
-  line-height: 1.35;
+  line-height: 1.25;
+}
+
+/* Leuchten: Lichthof aus gestaffelten Schatten und ein Hauch Unschärfe.
+   Nur für Überschriften, Titel, Datum und Uhrzeit – nie für Fließtext. */
+h1,
+h2,
+.leuchtet {
+  text-shadow: var(--leuchten);
+  filter: blur(var(--leuchten-unschaerfe));
+}
+
+/* Lichtschein hinter größeren Textblöcken: breit und länglich, als fiele
+   Licht durch den Text auf den Hintergrund */
+h1::before,
+.lichtschein::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  width: var(--lichtschein-breite);
+  height: var(--lichtschein-hoehe);
+  transform: translate(-50%, -50%);
+  background: var(--lichtschein);
+  pointer-events: none;
+}
+
+h1 {
+  isolation: isolate;
+}
+
+/* Monospace-Labels: wie eine Einblendung auf einem alten Bildschirm */
+.mono {
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: var(--titel-sperrung);
+  letter-spacing: var(--mono-sperrung);
+}
+
+/* Kleingedrucktes: schmal, kräftig, Großbuchstaben */
+.kleingedruckt {
+  font-family: var(--schrift-klein);
+  font-size: var(--klein-groesse);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--klein-sperrung);
 }
 
 h3 {
@@ -584,7 +725,8 @@ textarea:focus {
   padding: 8px 12px;
   border-radius: var(--radius-s);
   color: var(--farbe-text-leise);
-  font-size: 0.74rem;
+  font-family: var(--schrift-mono);
+  font-size: 0.78rem;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: var(--reiter-sperrung);
@@ -599,9 +741,10 @@ textarea:focus {
   color: var(--farbe-text);
 }
 
-/* Aktiver Reiter (app.js setzt aria-current="page") */
-.reiter[aria-current="page"] {
+/* Aktiver Reiter (app.js setzt aria-current="page"): leuchtet */
+.reiter[aria-current="page"]:not(.marke) {
   color: var(--farbe-text);
+  text-shadow: var(--leuchten);
 }
 
 /* Die feine Markierung unter dem aktiven Reiter */
@@ -613,7 +756,7 @@ textarea:focus {
   bottom: 2px;
   height: 1px;
   background: var(--farbe-akzent);
-  box-shadow: 0 0 8px rgb(var(--kachel-kante) / 0.6);
+  box-shadow: 0 0 8px rgb(var(--licht) / 0.6);
 }
 
 /*
@@ -799,7 +942,8 @@ textarea:focus {
   height: var(--knopf-hoehe);
   padding: 0 16px;
   font: inherit;
-  font-size: 0.78rem;
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -826,7 +970,7 @@ textarea:focus {
 .knopf--haupt:hover {
   background: var(--farbe-akzent-hover);
   border-color: var(--farbe-akzent-hover);
-  box-shadow: 0 0 18px rgb(var(--kachel-kante) / 0.25);
+  box-shadow: 0 0 18px rgb(var(--licht) / 0.25);
 }
 
 /* Einstellungen */
@@ -853,13 +997,38 @@ textarea:focus {
   margin-top: var(--abstand-l);
 }
 
-/* Eine Einstellung: Beschriftung links, Auswahl rechts daneben */
+/* Eine Einstellung: Beschriftung links, Auswahl rechts daneben.
+   Die Beschriftung ist ein Label in Monospace. */
 .einstellungen-feld {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--abstand-s) var(--abstand-m);
-  font-weight: 500;
+}
+
+.einstellungen-feld > span {
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+/* Zwischenüberschriften und Statusangaben */
+.einstellungen-unter {
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: var(--mono-sperrung);
+}
+
+.einstellungen-hinweis,
+.platzhalter {
+  font-family: var(--schrift-klein);
+  font-size: var(--klein-groesse);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--klein-sperrung);
 }
 
 .einstellungen-feld select {
@@ -917,7 +1086,6 @@ textarea:focus {
 /* Zwischenüberschrift innerhalb eines Einstellungs-Blocks */
 .einstellungen-unter {
   margin: var(--abstand-l) 0 var(--abstand-xs);
-  font-size: 1rem;
 }
 
 /* Knopf, der etwas unwiderruflich löscht */
@@ -978,34 +1146,42 @@ dialog::backdrop {
 
 
 /* ==========================================================================
-   6d. FILMKORN, VIGNETTE, SPIELE
-   Korn: ein kleines Rauschmuster (SVG, direkt hier eingebettet), das in
-   acht Sprüngen hin und her springt – so flimmert es leicht. Vignette:
-   die Ränder dunkeln weich ab. Beide liegen über der ganzen Seite und
-   fangen keine Klicks ab.
+   6d. FILM-EFFEKTE (js/filmeffekte.js), SPIELE
+   Eine eigene Ebene über der ganzen Seite, die keine Klicks abfängt:
+     .film-vignette – die Ränder dunkeln weich ab
+     .film-korn     – feines Rauschmuster (SVG, hier eingebettet), springt
+                      in acht Schritten hin und her: leichtes Flimmern
+     .film-flackern – kaum merkliches, unregelmäßiges Flackern der Helligkeit
+     .film-staub    – Canvas für vereinzelte Staubpunkte und feine Kratzer
+   Abschaltbar in den Einstellungen ("Film-Effekte"): dann trägt <html> die
+   Klasse "ohne-film" (setzt schon das Skript im <head> von index.html).
    ========================================================================== */
 
-body::before,
-body::after {
-  content: "";
+.film-ebene {
   position: fixed;
-  pointer-events: none;
-  z-index: 900;
-}
-
-/* Vignette */
-body::before {
   inset: 0;
-  background: radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgb(var(--vignette-farbe) / var(--vignette-staerke)) 100%);
+  z-index: var(--film-ebene);
+  overflow: hidden;
+  pointer-events: none;
 }
 
-/* Korn: etwas größer als der Bildschirm, damit beim Springen keine Kante sichtbar wird */
-body::after {
+.film-ebene > * {
+  position: absolute;
+  inset: 0;
+}
+
+.film-vignette {
+  background: radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgb(var(--dunkel) / var(--vignette-staerke)) 100%);
+}
+
+/* Etwas größer als der Bildschirm, damit beim Springen keine Kante sichtbar wird */
+.film-ebene > .film-korn {
   inset: -50%;
   opacity: var(--korn-deckkraft);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='k'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 2.2 -0.6'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23k)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='k'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.52 0 0 0 0 0.46 0 0 0 2.2 -0.6'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23k)'/%3E%3C/svg%3E");
   background-size: var(--korn-groesse) var(--korn-groesse);
   animation: korn-flimmern var(--korn-tempo) steps(1) infinite;
+  will-change: transform;                    /* eigene Grafikebene: nur verschieben, nicht neu malen */
 }
 
 @keyframes korn-flimmern {
@@ -1018,6 +1194,35 @@ body::after {
   75%   { transform: translate(11%, -6%); }
   87.5% { transform: translate(-6%, -11%); }
 }
+
+/* Flackern: unregelmäßige Stufen, die meiste Zeit ruhig */
+.film-flackern {
+  background: rgb(var(--dunkel));
+  opacity: 0;
+  animation: film-flackern var(--flackern-tempo) steps(1) infinite;   /* sprunghaft wie echter Film */
+  will-change: opacity;
+}
+
+@keyframes film-flackern {
+  0%, 9%, 100% { opacity: 0; }
+  11%  { opacity: calc(var(--flackern-staerke) * 0.6); }
+  13%  { opacity: 0; }
+  31%  { opacity: calc(var(--flackern-staerke) * 0.3); }
+  34%  { opacity: 0; }
+  52%  { opacity: var(--flackern-staerke); }
+  53%  { opacity: calc(var(--flackern-staerke) * 0.4); }
+  55%  { opacity: 0; }
+  78%  { opacity: calc(var(--flackern-staerke) * 0.5); }
+  80%  { opacity: 0; }
+  91%  { opacity: calc(var(--flackern-staerke) * 0.25); }
+  92%  { opacity: 0; }
+}
+
+/* Film-Effekte ausgeschaltet */
+.ohne-film .film-ebene {
+  display: none;
+}
+
 
 /* Spiele behalten ihre Farben, leicht entsättigt. Der Filter sitzt nur
    auf Elementen, deren Kinder nicht am Bildschirm festhängen (filter würde
@@ -1132,22 +1337,33 @@ body::after {
    8. BARRIEREFREIHEIT
    ========================================================================== */
 
-/* Wer im System "Bewegung reduzieren" eingestellt hat: keine Bewegung,
-   stehendes Korn */
+/* Wer im System "Bewegung reduzieren" eingestellt hat: keine Bewegung –
+   nur das stehende Korn bleibt (kein Flimmern, Flackern, Staub) */
 @media (prefers-reduced-motion: reduce) {
   .nav-panel {
     transform: none !important;
   }
 
-  body::after {
+  .film-ebene > .film-korn {
     animation: none;
+  }
+
+  .film-flackern,
+  .film-staub {
+    display: none;
   }
 }
 
-/* Kontrast erhöhen (Systemeinstellung): kein Korn, keine Vignette */
+/* Kontrast erhöhen (Systemeinstellung): keine Film-Effekte, kein Leuchten */
 @media (prefers-contrast: more) {
-  body::before,
-  body::after {
+  .film-ebene {
     display: none;
+  }
+
+  h1,
+  h2,
+  .leuchtet {
+    text-shadow: none;
+    filter: none;
   }
 }

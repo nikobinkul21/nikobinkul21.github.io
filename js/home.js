@@ -9,7 +9,11 @@
    am wenigsten genutzten 1×1. Neu berechnet wird höchstens einmal am Tag;
    ändert sich die Anordnung, gleiten die Kacheln beim Öffnen an ihren
    neuen Platz.
-   Darüber: Begrüßung und ein Zeitstempel. Darunter: die Schnellzugriffe.
+   Darüber: groß das Datum (Serif), darunter klein Wochentag und Uhrzeit
+   (Monospace), dann tippt sich eine kurze Begrüßung ein ("GUTEN ABEND.")
+   – erst danach erscheinen die Kacheln aus dem Dunkel. Am unteren Rand
+   liegt ein kaum sichtbares Meer ferner Lichter (Canvas, ohne Bilddatei).
+   Darunter: die Schnellzugriffe.
 
    Aufbau der Datei:
      KONFIG            – alle Werte (Raster, Zählung, Schnellzugriffe)
@@ -257,7 +261,9 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
   const K = STARTSEITE_KONFIG;
   const L = StartseiteLayout;
 
-  const WOCHENTAGE = ["SO", "MO", "DI", "MI", "DO", "FR", "SA"];
+  const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+  const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+    "August", "September", "Oktober", "November", "Dezember"];
 
   // Schlichte Liniensymbole (24 × 24, Strichfarbe = Textfarbe)
   const SYMBOLE = {
@@ -276,6 +282,8 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
   let daten = null;
   let gezeigt = null;          // die Anordnung, die gerade im DOM steht (Reihenfolge als Text)
   let vorherReihenfolge = null;    // Anordnung vor der heutigen Neuberechnung
+  let tippTimer = null;            // läuft gerade das Eintippen der Begrüßung?
+  let grussText = "";
 
 
   /* ---------- Speicher ---------- */
@@ -364,9 +372,11 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
   function init(container) {
     daten = daten || laden();
     container.innerHTML =
+      '<canvas class="home-stadt" aria-hidden="true"></canvas>' +
       '<div class="home">' +
-        '<div class="home-kopf">' +
-          '<p class="home-zeit"><time></time></p>' +
+        '<div class="home-kopf lichtschein">' +
+          '<p class="home-datum leuchtet"><time></time></p>' +
+          '<p class="home-zeit leuchtet"></p>' +
         "</div>" +
         '<nav class="bento" aria-label="Bereiche"></nav>' +
         '<nav class="home-links" aria-label="Schnellzugriffe"><ul class="home-links-liste"></ul></nav>' +
@@ -374,11 +384,25 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
 
     el.home = container.querySelector(".home");
     el.gruss = document.getElementById("titel-home");
-    el.zeit = container.querySelector(".home-zeit time");
+    el.datum = container.querySelector(".home-datum time");
+    el.zeit = container.querySelector(".home-zeit");
     el.bento = container.querySelector(".bento");
-    // Die Begrüßung (h1 aus index.html) steht im Kopf vor dem Zeitstempel.
-    // Sie behält ihre ID: app.js setzt den Fokus und den Seitentitel darüber.
-    container.querySelector(".home-kopf").insertBefore(el.gruss, container.querySelector(".home-zeit"));
+    el.stadt = container.querySelector(".home-stadt");
+    // Die Begrüßung (h1 aus index.html) steht unter Datum und Uhrzeit. Sie
+    // behält ihre ID (app.js setzt Fokus und Seitentitel darüber). Vorgelesen
+    // wird der ganze Text; sichtbar tippt er sich Buchstabe für Buchstabe ein.
+    container.querySelector(".home-kopf").appendChild(el.gruss);
+    el.gruss.innerHTML = '<span class="nur-screenreader"></span>' +
+      '<span class="home-gruss-tippen" aria-hidden="true"></span><span class="home-cursor" aria-hidden="true"></span>';
+    el.grussVorlesen = el.gruss.firstChild;
+    el.grussSichtbar = el.gruss.querySelector(".home-gruss-tippen");
+
+    zeichneStadt();
+    window.addEventListener("resize", function () {
+      clearTimeout(el.stadtTimer);
+      el.stadtTimer = setTimeout(zeichneStadt, 200);
+    });
+    new MutationObserver(zeichneStadt).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
     K.kacheln.forEach(function (k) {
       const link = document.createElement("a");
@@ -482,8 +506,14 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
       setzeAnordnung(vorherReihenfolge || reihenfolge);
     }
     const neu = reihenfolge.join(",") !== gezeigt;
-    if (neu) gleite(reihenfolge);
-    else aufblenden();
+    if (neu) {
+      gleite(reihenfolge);
+      tippen(null);
+    } else {
+      // Erst tippt sich die Begrüßung ein, dann erscheinen die Kacheln
+      el.bento.classList.add("wartet");
+      tippen(aufblenden);
+    }
 
     clearInterval(minutenTimer);
     minutenTimer = setInterval(function () {
@@ -498,7 +528,7 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
 
   /** Die Kacheln erscheinen nacheinander langsam aus dem Dunkel (CSS-Animation). */
   function aufblenden() {
-    el.bento.classList.remove("blendet-auf");
+    el.bento.classList.remove("blendet-auf", "wartet");
     if (ruhigAbfrage.matches) return;
     void el.bento.offsetWidth;            // Neustart der Animation erzwingen
     el.bento.classList.add("blendet-auf");
@@ -526,13 +556,55 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
     });
   }
 
+  /**
+   * Datum groß (Trennung durch einen schlichten Punkt), darunter Wochentag
+   * und Uhrzeit. Ändert sich die Begrüßung (z. B. um 18 Uhr), steht der
+   * neue Text sofort da – ohne erneutes Eintippen.
+   */
   function zeichneZeit() {
     const jetzt = new Date();
-    el.gruss.textContent = begruessung(jetzt);
     const zwei = function (n) { return String(n).padStart(2, "0"); };
-    el.zeit.textContent = WOCHENTAGE[jetzt.getDay()] + " " + zwei(jetzt.getDate()) + "." + zwei(jetzt.getMonth() + 1) + "." +
-      jetzt.getFullYear() + "  —  " + zwei(jetzt.getHours()) + ":" + zwei(jetzt.getMinutes());
-    el.zeit.dateTime = jetzt.toISOString().slice(0, 16);
+    el.datum.textContent = jetzt.getDate() + " · " + MONATE[jetzt.getMonth()] + " · " + jetzt.getFullYear();
+    el.datum.dateTime = jetzt.getFullYear() + "-" + zwei(jetzt.getMonth() + 1) + "-" + zwei(jetzt.getDate());
+    el.zeit.textContent = WOCHENTAGE[jetzt.getDay()] + "  ·  " + zwei(jetzt.getHours()) + ":" + zwei(jetzt.getMinutes());
+    const gruss = begruessung(jetzt);
+    if (gruss !== grussText) {
+      grussText = gruss;
+      el.grussVorlesen.textContent = gruss;
+      if (!tippTimer) el.grussSichtbar.textContent = gruss.toUpperCase() + ".";
+    }
+  }
+
+  /**
+   * Die Begrüßung tippt sich Buchstabe für Buchstabe ein, der Cursor
+   * blinkt am Ende. Danach (oder sofort bei "Bewegung reduzieren") wird
+   * fertig() aufgerufen.
+   */
+  function tippen(fertig) {
+    clearTimeout(tippTimer);
+    tippTimer = null;
+    const text = grussText.toUpperCase() + ".";
+    if (ruhigAbfrage.matches) {
+      el.grussSichtbar.textContent = text;
+      if (fertig) fertig();
+      return;
+    }
+    const tempo = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tippen-tempo")) || 75;
+    let i = 0;
+    el.grussSichtbar.textContent = "";
+    (function naechster() {
+      i++;
+      el.grussSichtbar.textContent = text.slice(0, i);
+      if (i < text.length) {
+        // Leerzeichen und Satzzeichen etwas länger, wie beim echten Tippen
+        tippTimer = setTimeout(naechster, tempo * (text[i - 1] === " " ? 2.2 : 0.7 + Math.random() * 0.6));
+      } else {
+        tippTimer = setTimeout(function () {
+          tippTimer = null;
+          if (fertig) fertig();
+        }, tempo * 3);
+      }
+    })();
   }
 
   /** "Guten Morgen" (5–10 Uhr), "Guten Tag" (11–17 Uhr), "Guten Abend" (sonst). */
@@ -542,6 +614,47 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
     if (stunde >= 5 && stunde < 11) gruss = "Guten Morgen";
     else if (stunde >= 11 && stunde < 18) gruss = "Guten Tag";
     return K.name ? gruss + ", " + K.name : gruss;
+  }
+
+  /**
+   * Ein Meer aus unscharfen, warmen Lichtpunkten am unteren Rand – wie eine
+   * Stadt bei Nacht aus der Ferne. Einmal gezeichnet (bei Größen- oder
+   * Designwechsel neu), mit festem Zufall: es sieht immer gleich aus.
+   * Farbe, Stärke, Höhe und Anzahl: CSS-Variablen --stadt-… in style.css.
+   */
+  function zeichneStadt() {
+    const c = el.stadt;
+    const s = getComputedStyle(document.documentElement);
+    const farbe = (s.getPropertyValue("--stadt-farbe").trim() || "236 214 170").split(/\s+/).join(",");
+    const anzahl = parseInt(s.getPropertyValue("--stadt-punkte"), 10) || 420;
+    const breite = window.innerWidth, hoehe = c.clientHeight || Math.round(window.innerHeight * 0.3);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.round(breite * dpr);
+    c.height = Math.round(hoehe * dpr);
+    const ctx = c.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, breite, hoehe);
+    // Einmal beim Zeichnen weichzeichnen: unscharf wie aus der Ferne
+    // (ein CSS-Filter würde in jedem Bild neu gerechnet)
+    ctx.filter = "blur(" + (parseFloat(s.getPropertyValue("--stadt-unschaerfe")) || 1.2) + "px)";
+    let saat = 7;
+    const zufall = function () { saat = (saat * 16807) % 2147483647; return saat / 2147483647; };
+    for (let i = 0; i < anzahl; i++) {
+      // Dichter nahe dem unteren Rand, in Gruppen wie Viertel einer Stadt
+      const y = hoehe * (1 - Math.pow(zufall(), 1.8) * 0.85);
+      const x = breite * (0.5 + (zufall() - 0.5) * 1.1 + Math.sin(i * 0.37) * 0.04);
+      const tiefe = (y / hoehe);                    // weiter unten = näher = größer
+      const r = 0.6 + zufall() * 1.6 * tiefe + (zufall() < 0.06 ? 4 + zufall() * 8 : 0);
+      const a = r > 3 ? 0.05 + zufall() * 0.06 : 0.18 + zufall() * 0.5 * tiefe;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2.5);
+      g.addColorStop(0, "rgba(" + farbe + "," + a + ")");
+      g.addColorStop(0.4, "rgba(" + farbe + "," + a * 0.45 + ")");
+      g.addColorStop(1, "rgba(" + farbe + ",0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
 
