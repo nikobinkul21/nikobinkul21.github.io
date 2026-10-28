@@ -57,6 +57,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Zweiter Versuch richtig: `def zeige_meldung(titel, quelle)`. Kleinigkeit:
   Leerzeichen vor `)` durch Komma in `print`; Lösung mit `quelle + ")"`
   (Strings mit `+` verbinden) gezeigt.
+- Interview-Frage „Warum Funktionen?“: gut beantwortet (Wiederverwendung,
+  weniger Code). Ergänzt: Änderungen nur an einer Stelle, weniger Fehler,
+  sprechende Namen machen Code lesbar. Nutzer kennt etwas Java.
 - **Pause** nach Schritt 2d.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
