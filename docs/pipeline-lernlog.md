@@ -53,8 +53,11 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Schritt 2d (Teil 1) gestellt: eigene Funktion `zeige_meldung(titel)` mit
   `def`, Parameter, Aufruf; Übung: zweiter Parameter `quelle`.
   Erster Versuch: Quelle fest in den Text geschrieben („NDR“ im `print`)
-  statt als Parameter. Hinweis gegeben (zwei Quellen, Komma in `def`),
-  zweiter Versuch offen.
+  statt als Parameter. Hinweis gegeben (zwei Quellen, Komma in `def`).
+  Zweiter Versuch richtig: `def zeige_meldung(titel, quelle)`. Kleinigkeit:
+  Leerzeichen vor `)` durch Komma in `print`; Lösung mit `quelle + ")"`
+  (Strings mit `+` verbinden) gezeigt.
+- **Pause** nach Schritt 2d.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
@@ -72,6 +75,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `IndexError`; Python bricht beim ersten Fehler ab
 - Kommentare mit `#`; `for x in liste:` mit Doppelpunkt, Einrückung
   (4 Leerzeichen) bestimmt, was zur Schleife gehört
+- Eigene Funktionen: `def name(param1, param2):`, Aufruf mit Werten,
+  Definition allein tut nichts; Strings mit `+` verbinden
 
 ## Offene Punkte / Notizen
 
