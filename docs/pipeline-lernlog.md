@@ -50,7 +50,10 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Kurz wiederholen: Variablen, Listen, Schleifen (Einrückung!).
 - Offene Interview-Frage (Angebot): „Was ist eine Schleife, und wozu
   braucht man die Einrückung in Python?“
-- Dann **Schritt 2d: Funktionen** (`def`, Parameter, `return`), danach
+- Schritt 2d (Teil 1) gestellt: eigene Funktion `zeige_meldung(titel)` mit
+  `def`, Parameter, Aufruf; Übung: zweiter Parameter `quelle`.
+  Ergebnis noch offen.
+- Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
 ## Gelernte Konzepte
