@@ -52,7 +52,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   braucht man die Einrückung in Python?“
 - Schritt 2d (Teil 1) gestellt: eigene Funktion `zeige_meldung(titel)` mit
   `def`, Parameter, Aufruf; Übung: zweiter Parameter `quelle`.
-  Ergebnis noch offen.
+  Erster Versuch: Quelle fest in den Text geschrieben („NDR“ im `print`)
+  statt als Parameter. Hinweis gegeben (zwei Quellen, Komma in `def`),
+  zweiter Versuch offen.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
