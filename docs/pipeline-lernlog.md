@@ -61,6 +61,10 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   weniger Code). Ergänzt: Änderungen nur an einer Stelle, weniger Fehler,
   sprechende Namen machen Code lesbar. Nutzer kennt etwas Java.
 - **Pause** nach Schritt 2d.
+- **2026-11-06:** Eine Woche Pause. Wiederholung gegeben: Spickzettel,
+  Quiz mit 4 Fragen (Ausgabe vorhersagen) und Aufwärm-Übung
+  `pipeline/wiederholung.py` (Liste + Schleife + Funktion, ohne Vorlage).
+  Antworten noch offen.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
