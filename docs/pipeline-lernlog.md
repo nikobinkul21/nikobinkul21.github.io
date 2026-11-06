@@ -64,7 +64,10 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **2026-11-06:** Eine Woche Pause. Wiederholung gegeben: Spickzettel,
   Quiz mit 4 Fragen (Ausgabe vorhersagen) und Aufwärm-Übung
   `pipeline/wiederholung.py` (Liste + Schleife + Funktion, ohne Vorlage).
-  Antworten noch offen.
+  Quiz: 1–3 richtig. Frage 4 (nur `def`, kein Aufruf) falsch: erwartete
+  Fehlermeldung, richtig ist „keine Ausgabe“. Erklärt: Funktionskörper
+  läuft erst beim Aufruf, Parameter wird erst dann gefüllt.
+  Aufwärm-Übung noch offen.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
