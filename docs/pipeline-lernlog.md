@@ -67,7 +67,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Quiz: 1–3 richtig. Frage 4 (nur `def`, kein Aufruf) falsch: erwartete
   Fehlermeldung, richtig ist „keine Ausgabe“. Erklärt: Funktionskörper
   läuft erst beim Aufruf, Parameter wird erst dann gefüllt.
-  Aufwärm-Übung noch offen.
+  Aufwärm-Übung ohne Vorlage richtig gelöst (Liste, `def zeige(titel)`,
+  Aufruf in der Schleife). Wiederholung abgeschlossen; morgen weiter mit 2e.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
