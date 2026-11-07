@@ -71,7 +71,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Aufruf in der Schleife). Erst keine Ausgabe: Datei nicht gespeichert
   (Tipp: Auto Save). Nutzer versteht die `for`-Schleife noch nicht ganz →
   Schritt-für-Schritt-Durchlauf mit Tabelle erklärt, Kontrollfrage gestellt.
-  **Vor 2e prüfen, ob die Schleife jetzt sitzt.**
+  Kontrollfrage (4. Schlagzeile → Schleife unverändert, 4 Ausgaben)
+  richtig beantwortet. Schleife sitzt. Nächstes Mal: 2e `return`.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
