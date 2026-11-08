@@ -90,8 +90,14 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Ergänzt: Wert geht an den Aufrufer zurück, `return` beendet die Funktion.
 - **2026-11-08, Schritt 3a gestellt:** Paket `feedparser` mit
   `pip3 install feedparser` installieren, Konzept Paket/`import` erklärt,
-  Prüfen mit `pip3 show feedparser`. Ergebnis offen.
-- Danach 3b: einen Feed abrufen (z. B. tagesschau), Schlagzeilen ausgeben.
+  Prüfen mit `pip3 show feedparser`: **feedparser 6.0.12** installiert.
+- Schritt 3b gestellt: `pipeline/news.py` (das eigentliche Pipeline-Skript)
+  mit `import feedparser`, `feedparser.parse(URL)`, Schleife über
+  `feed.entries`, `meldung.title`. Feed: tagesschau „Alle Meldungen“
+  (`https://www.tagesschau.de/infoservices/alle-meldungen-100~rss2.xml`).
+  Übung: zusätzlich `meldung.link` ausgeben. Ergebnis offen.
+  (Hinweis: Claudes Cloud-Umgebung erreicht tagesschau.de nicht; das
+  Skript läuft auf dem Mac des Nutzers.)
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
