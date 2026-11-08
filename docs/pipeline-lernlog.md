@@ -104,7 +104,12 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `zahl = 1` / `zahl += 1` eingebaut (aus Java bekannt). Feed hat 40
   Meldungen. **Schritt 3 abgeschlossen.**
 - Interview-Frage gestellt: „Was ist ein Paket, und warum benutzt man es,
-  statt alles selbst zu schreiben?“ Antwort offen.
+  statt alles selbst zu schreiben?“ Gut beantwortet (fertiges Werkzeug,
+  Hammer aus dem Baumarkt, Zeit sparen). Ergänzt: von vielen getestet;
+  Nachteil Abhängigkeit (vertrauen, aktuell halten).
+- Schritt 4a gestellt: `news.py` umgebaut auf Liste `feeds` (tagesschau +
+  Spiegel `https://www.spiegel.de/schlagzeilen/index.rss`), Schleife,
+  `daten.feed.title` und Anzahl je Feed. Ergebnis offen.
 - Als Nächstes **Schritt 4:** Liste mit mehreren Feed-Adressen, Schleife
   darüber, alle Meldungen in einer Liste sammeln (`.append`).
   (Hinweis: Claudes Cloud-Umgebung erreicht tagesschau.de nicht; das
