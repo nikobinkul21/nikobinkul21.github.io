@@ -113,8 +113,11 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   1. Versuch `daten.entries[0]` (ganze Meldung statt Titel), 2. Versuch
   richtig mit `daten.entries[0].title` usw., aber alles in einer Zeile →
   übersichtliche Variante mit eigenen `print`-Zeilen gezeigt.
-- Als Nächstes **4b:** leere Liste, verschachtelte Schleife, `.append`,
-  alle Meldungen sammeln.
+- Auf Nachfrage erklärt: erste 10 Schlagzeilen mit verschachtelter
+  Schleife und Slicing `daten.entries[:10]` (noch nicht selbst geübt).
+- **Pause.** Als Nächstes **4b:** leere Liste, `.append`, alle Meldungen
+  aus allen Feeds sammeln. Vorher kurz Slicing/verschachtelte Schleife
+  selbst ausprobieren lassen.
 - Als Nächstes **Schritt 4:** Liste mit mehreren Feed-Adressen, Schleife
   darüber, alle Meldungen in einer Liste sammeln (`.append`).
   (Hinweis: Claudes Cloud-Umgebung erreicht tagesschau.de nicht; das
@@ -144,6 +147,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Pakete: `pip3 install`, `import`; Punkt-Schreibweise `paket.funktion`,
   `objekt.feld`; `feedparser.parse(url)` → `feed.entries`, `.title`,
   `.link`; HTTP-Status 200/301/404; Zähler mit `+=`
+- Slicing `liste[:10]` (die ersten 10), Schleife in der Schleife
+  (doppelte Einrückung)
 
 ## Offene Punkte / Notizen
 
