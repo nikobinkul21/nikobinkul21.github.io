@@ -72,7 +72,11 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   (Tipp: Auto Save). Nutzer versteht die `for`-Schleife noch nicht ganz →
   Schritt-für-Schritt-Durchlauf mit Tabelle erklärt, Kontrollfrage gestellt.
   Kontrollfrage (4. Schlagzeile → Schleife unverändert, 4 Ausgaben)
-  richtig beantwortet. Schleife sitzt. Nächstes Mal: 2e `return`.
+  richtig beantwortet. Schleife sitzt.
+- **2026-11-08:** Mini-Wiederholung (3 Fragen) und Schritt 2e gestellt:
+  `return` in `pipeline/rueckgabe.py` (`mache_ueberschrift`), Unterschied
+  `print` vs. `return`. Übung: `zeige` in `wiederholung.py` auf `return`
+  umbauen. Antworten offen.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
