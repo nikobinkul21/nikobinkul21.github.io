@@ -11,7 +11,7 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 
 1. [x] Python auf dem Mac prüfen/einrichten, erstes „Hallo Welt“
 2. [x] Grundlagen: Variablen, Listen, Schleifen, Funktionen
-3. [ ] Einen RSS-Feed abrufen, Schlagzeilen ausgeben
+3. [x] Einen RSS-Feed abrufen, Schlagzeilen ausgeben
 4. [ ] Mehrere Feeds abrufen, Meldungen in einer Liste sammeln
 5. [ ] Einheitliches Format, als JSON speichern (Format der Website)
 6. [ ] Wichtigste Meldungen auswählen (erst die neuesten, später schlauer)
@@ -95,7 +95,18 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   mit `import feedparser`, `feedparser.parse(URL)`, Schleife über
   `feed.entries`, `meldung.title`. Feed: tagesschau „Alle Meldungen“
   (`https://www.tagesschau.de/infoservices/alle-meldungen-100~rss2.xml`).
-  Übung: zusätzlich `meldung.link` ausgeben. Ergebnis offen.
+  Übung: zusätzlich `meldung.link` ausgeben.
+- Adresse erst mit Tippfehler (`infoservice` statt `infoservices`), lief
+  trotzdem (vermutlich Weiterleitung). Gelernt: leere Liste → keine
+  Ausgabe ohne Fehler; Kontrolle mit `feed.status` (200/301/404) und
+  `len(feed.entries)`. Offizielle Adresse mit `s` verwenden.
+- Übung gelöst: Titel + Link ausgegeben; **selbstständig** einen Zähler
+  `zahl = 1` / `zahl += 1` eingebaut (aus Java bekannt). Feed hat 40
+  Meldungen. **Schritt 3 abgeschlossen.**
+- Interview-Frage gestellt: „Was ist ein Paket, und warum benutzt man es,
+  statt alles selbst zu schreiben?“ Antwort offen.
+- Als Nächstes **Schritt 4:** Liste mit mehreren Feed-Adressen, Schleife
+  darüber, alle Meldungen in einer Liste sammeln (`.append`).
   (Hinweis: Claudes Cloud-Umgebung erreicht tagesschau.de nicht; das
   Skript läuft auf dem Mac des Nutzers.)
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
@@ -120,6 +131,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - `return` gibt einen Wert zurück (Becher statt Display), `print` zeigt nur
   an; Aufrufe verschachteln: `print(zeige(x))` wird von innen nach außen
   ausgeführt
+- Pakete: `pip3 install`, `import`; Punkt-Schreibweise `paket.funktion`,
+  `objekt.feld`; `feedparser.parse(url)` → `feed.entries`, `.title`,
+  `.link`; HTTP-Status 200/301/404; Zähler mit `+=`
 
 ## Offene Punkte / Notizen
 
