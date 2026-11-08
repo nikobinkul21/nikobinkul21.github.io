@@ -76,7 +76,12 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **2026-11-08:** Mini-Wiederholung (3 Fragen) und Schritt 2e gestellt:
   `return` in `pipeline/rueckgabe.py` (`mache_ueberschrift`), Unterschied
   `print` vs. `return`. Übung: `zeige` in `wiederholung.py` auf `return`
-  umbauen. Antworten offen.
+  umbauen. Wiederholung: Index direkt an Liste (`[...][0]`) erst falsch,
+  nach Hinweis richtig („A“); Schleife „Hallo Hallo Ende“ nach Nachfrage
+  richtig. Frage: Wie hängt `x` mit „a“/„b“ zusammen, wenn `x` nicht
+  benutzt wird? → erklärt (Schleifenvariable wird gefüllt, aber nicht
+  verwendet; Liste bestimmt nur die Anzahl der Runden). `return`-Schritt
+  und Übung noch offen.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
