@@ -109,7 +109,12 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Nachteil Abhängigkeit (vertrauen, aktuell halten).
 - Schritt 4a gestellt: `news.py` umgebaut auf Liste `feeds` (tagesschau +
   Spiegel `https://www.spiegel.de/schlagzeilen/index.rss`), Schleife,
-  `daten.feed.title` und Anzahl je Feed. Ergebnis offen.
+  `daten.feed.title` und Anzahl je Feed. Übung „erste drei Schlagzeilen“:
+  1. Versuch `daten.entries[0]` (ganze Meldung statt Titel), 2. Versuch
+  richtig mit `daten.entries[0].title` usw., aber alles in einer Zeile →
+  übersichtliche Variante mit eigenen `print`-Zeilen gezeigt.
+- Als Nächstes **4b:** leere Liste, verschachtelte Schleife, `.append`,
+  alle Meldungen sammeln.
 - Als Nächstes **Schritt 4:** Liste mit mehreren Feed-Adressen, Schleife
   darüber, alle Meldungen in einer Liste sammeln (`.append`).
   (Hinweis: Claudes Cloud-Umgebung erreicht tagesschau.de nicht; das
