@@ -84,10 +84,14 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Übung `return` richtig gelöst: `return "* " + titel`,
   `print(zeige(schlagzeile))` in der Schleife (verschachtelter Aufruf,
   von innen nach außen erklärt). **Schritt 2 abgeschlossen.**
-- Offen: Experiment „`print(ergebnis)` weglassen“ in `rueckgabe.py`;
-  Interview-Frage „Unterschied `print` und `return`?“.
-- Als Nächstes **Schritt 3:** Paket `feedparser` installieren (`pip3`),
-  einen RSS-Feed abrufen, Schlagzeilen ausgeben.
+- Interview-Frage „Unterschied `print` und `return`?“: erster Versuch
+  verwechselte `return` mit der Funktion („Bauplan“); nach Hinweis
+  (Kaffeeautomat) richtig: liefert einen Wert, der nicht angezeigt wird.
+  Ergänzt: Wert geht an den Aufrufer zurück, `return` beendet die Funktion.
+- **2026-11-08, Schritt 3a gestellt:** Paket `feedparser` mit
+  `pip3 install feedparser` installieren, Konzept Paket/`import` erklärt,
+  Prüfen mit `pip3 show feedparser`. Ergebnis offen.
+- Danach 3b: einen Feed abrufen (z. B. tagesschau), Schlagzeilen ausgeben.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
