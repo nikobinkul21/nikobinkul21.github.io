@@ -10,7 +10,7 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 ## Fahrplan
 
 1. [x] Python auf dem Mac prüfen/einrichten, erstes „Hallo Welt“
-2. [ ] Grundlagen: Variablen, Listen, Schleifen, Funktionen
+2. [x] Grundlagen: Variablen, Listen, Schleifen, Funktionen
 3. [ ] Einen RSS-Feed abrufen, Schlagzeilen ausgeben
 4. [ ] Mehrere Feeds abrufen, Meldungen in einer Liste sammeln
 5. [ ] Einheitliches Format, als JSON speichern (Format der Website)
@@ -80,8 +80,14 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   nach Hinweis richtig („A“); Schleife „Hallo Hallo Ende“ nach Nachfrage
   richtig. Frage: Wie hängt `x` mit „a“/„b“ zusammen, wenn `x` nicht
   benutzt wird? → erklärt (Schleifenvariable wird gefüllt, aber nicht
-  verwendet; Liste bestimmt nur die Anzahl der Runden). `return`-Schritt
-  und Übung noch offen.
+  verwendet; Liste bestimmt nur die Anzahl der Runden).
+- Übung `return` richtig gelöst: `return "* " + titel`,
+  `print(zeige(schlagzeile))` in der Schleife (verschachtelter Aufruf,
+  von innen nach außen erklärt). **Schritt 2 abgeschlossen.**
+- Offen: Experiment „`print(ergebnis)` weglassen“ in `rueckgabe.py`;
+  Interview-Frage „Unterschied `print` und `return`?“.
+- Als Nächstes **Schritt 3:** Paket `feedparser` installieren (`pip3`),
+  einen RSS-Feed abrufen, Schlagzeilen ausgeben.
 - Danach **Schritt 2e: `return`** (Funktion gibt Wert zurück), dann
   Abschluss von Schritt 2 mit Zusammenfassung.
 
@@ -101,6 +107,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   (4 Leerzeichen) bestimmt, was zur Schleife gehört
 - Eigene Funktionen: `def name(param1, param2):`, Aufruf mit Werten,
   Definition allein tut nichts; Strings mit `+` verbinden
+- `return` gibt einen Wert zurück (Becher statt Display), `print` zeigt nur
+  an; Aufrufe verschachteln: `print(zeige(x))` wird von innen nach außen
+  ausgeführt
 
 ## Offene Punkte / Notizen
 
