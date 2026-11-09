@@ -73,15 +73,124 @@
 
 
 /* ==========================================================================
-   KOPF: kleiner Zeitstempel oben rechts, wie in einem Film
+   KOPF: links, was als Nächstes ansteht; rechts ein kleiner Zeitstempel,
+   wie in einem Film
    ========================================================================== */
 
 .home-kopf {
   display: flex;
-  justify-content: flex-end;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--abstand-l);
+}
+
+/* "Als Nächstes": Monospace, Großbuchstaben, weit gesperrt, dezenter Lichthof.
+   Der Titel ist heller als die übrigen Angaben. */
+.home-anstehend {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--schrift-mono);
+  font-size: var(--zeit-groesse);
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: var(--mono-sperrung);
+  color: var(--farbe-text-leise);
+  text-decoration: none;
+  text-shadow: var(--leuchten-leise);
+  transition: color var(--dauer) ease;
+}
+
+.home-anstehend:hover,
+.home-anstehend:focus-visible {
+  color: var(--farbe-text);
+}
+
+.home-anstehend:hover .home-an-titel,
+.home-anstehend:focus-visible .home-an-titel {
+  text-shadow: var(--leuchten);
+}
+
+/* Eine Zeile: nur der Titel wird gekürzt, Raum und Zeit bleiben sichtbar */
+.home-an-zeile {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.home-an-zeile > * {
+  flex: none;
+}
+
+.home-an-titel {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--farbe-text);
+}
+
+/* Trennpunkte zwischen den Angaben */
+.home-an-titel::before,
+.home-an-raum::before,
+.home-an-wann::before {
+  content: "·";
+  margin: 0 0.7em;
+  color: var(--farbe-text-leise);
+}
+
+.home-an-titel::before {
+  /* steht vor dem Text, wird aber nicht mit abgeschnitten */
+  display: inline-block;
+}
+
+/* Etikett: Vorlesung (gefüllt) oder Termin (nur Rahmen) */
+.home-an-art {
+  margin-right: 0.8em;
+  padding: 1px 5px;
+  font-family: var(--schrift-klein);
+  font-size: 0.85em;
+  font-weight: 700;
+  letter-spacing: var(--klein-sperrung);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
+  text-shadow: none;
+}
+
+.home-an-art.ist-vorlesung {
+  color: var(--farbe-auf-akzent);
+  background: var(--farbe-text-leise);
+  border-color: var(--farbe-text-leise);
+}
+
+.home-an-art-kurz {
+  display: none;
+}
+
+.home-an-status {
+  color: var(--farbe-text-leise);
+}
+
+/* Darunter klein: was nach dem laufenden Eintrag kommt */
+.home-an-danach {
+  font-size: 0.86em;
+  opacity: 0.85;
+}
+
+.home-an-danach .home-an-titel {
+  color: var(--farbe-text-leise);
+}
+
+/* Nichts in den nächsten Tagen: dezent */
+.home-anstehend.ist-leer {
+  opacity: 0.75;
 }
 
 .home-zeit {
+  flex: none;
   margin: 0;
   font-family: var(--schrift-mono);
   font-size: var(--zeit-groesse);
@@ -316,6 +425,30 @@
 
   .hauptbereich:has(> #view-home:not([hidden])) {
     --home-rand: var(--abstand-m);
+  }
+
+  /* Zeitstempel oben rechts, darunter "Als Nächstes" in voller Breite */
+  .home-kopf {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--abstand-s);
+  }
+
+  .home-zeit {
+    align-self: flex-end;
+    order: -1;
+  }
+
+  .home-anstehend {
+    letter-spacing: 0.1em;
+  }
+
+  .home-an-art-lang {
+    display: none;
+  }
+
+  .home-an-art-kurz {
+    display: inline;
   }
 
   .bento-kachel {

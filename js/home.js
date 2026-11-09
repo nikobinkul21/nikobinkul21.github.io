@@ -9,8 +9,10 @@
    am wenigsten genutzten 1×1. Neu berechnet wird höchstens einmal am Tag;
    ändert sich die Anordnung, gleiten die Kacheln beim Öffnen an ihren
    neuen Platz.
-   Darüber rechts ein kleiner Zeitstempel (Datum und Uhrzeit in Monospace),
-   darunter die Schnellzugriffe. Die ganze Startseite passt ohne Scrollen
+   Darüber links, was als Nächstes ansteht (laufende oder nächste Vorlesung
+   bzw. nächster Termin mit Uhrzeit und Raum – Daten aus
+   EventsStore.naechstesVorkommen), rechts ein kleiner Zeitstempel (Datum
+   und Uhrzeit in Monospace); darunter die Schnellzugriffe. Die ganze Startseite passt ohne Scrollen
    in die Bildschirmhöhe – das Raster nimmt den übrigen Platz ein.
    Am unteren Rand liegt ein kaum sichtbares Meer ferner Lichter (Canvas,
    ohne Bilddatei).
@@ -71,6 +73,9 @@ const STARTSEITE_KONFIG = {
     { name: "Moodle", url: "https://moodle.hm.edu/my/index.php" },
     { name: "ZPA", url: "https://zpa.cs.hm.edu/student/dashboard/" },
   ],
+
+  // "Als Nächstes": so viele Tage im Voraus wird gesucht
+  anstehend: { tage: 7 },
 
   speicherSchluessel: "ntb-startseite",
 };
@@ -276,7 +281,7 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
   const el = {};
   const ruhigAbfrage = window.matchMedia("(prefers-reduced-motion: reduce)");
   const computerAbfrage = window.matchMedia(K.computerAb);
-  let minutenTimer = null;
+  let taktTimer = null;            // weckt die Anzeige zur nächsten vollen Minute
   let daten = null;
   let gezeigt = null;          // die Anordnung, die gerade im DOM steht (Reihenfolge als Text)
   let vorherReihenfolge = null;    // Anordnung vor der heutigen Neuberechnung
@@ -371,6 +376,7 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
       '<canvas class="home-stadt" aria-hidden="true"></canvas>' +
       '<div class="home">' +
         '<div class="home-kopf">' +
+          '<a class="home-anstehend" href="#schedule"></a>' +
           '<p class="home-zeit"><time></time></p>' +
         "</div>" +
         '<nav class="bento" aria-label="Bereiche"></nav>' +
@@ -380,6 +386,11 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
     el.home = container.querySelector(".home");
     el.gruss = document.getElementById("titel-home");
     el.zeit = container.querySelector(".home-zeit time");
+    el.anstehend = container.querySelector(".home-anstehend");
+    // Zurück im Tab: sofort aktualisieren (Zeitgeber laufen im Hintergrund oft verzögert)
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && !document.getElementById("view-home").hidden) takt();
+    });
     el.bento = container.querySelector(".bento");
     el.stadt = container.querySelector(".home-stadt");
     // Die Überschrift (h1 aus index.html) bleibt für Screenreader im Kopf –
@@ -499,15 +510,24 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
     if (neu) gleite(reihenfolge);
     else aufblenden();
 
-    clearInterval(minutenTimer);
-    minutenTimer = setInterval(function () {
-      if (document.getElementById("view-home").hidden) {
-        clearInterval(minutenTimer);
-        return;
-      }
-      zeichneZeit();
-    }, 30 * 1000);
+    takt();
     return null;
+  }
+
+  /**
+   * Zeitstempel und "Als Nächstes" neu zeichnen und sich zur nächsten vollen
+   * Minute wieder wecken. Beginn und Ende von Einträgen liegen immer auf
+   * vollen Minuten – so springt die Anzeige genau dann auf den neuen Stand.
+   * Ist die Startseite nicht mehr zu sehen, schläft der Zeitgeber ein.
+   */
+  function takt() {
+    clearTimeout(taktTimer);
+    if (document.getElementById("view-home").hidden) return;
+    const jetzt = new Date();
+    zeichneZeit(jetzt);
+    zeichneAnstehend(jetzt);
+    const bisMinute = 60000 - (jetzt.getSeconds() * 1000 + jetzt.getMilliseconds());
+    taktTimer = setTimeout(takt, bisMinute + 20);
   }
 
   /** Die Kacheln erscheinen nacheinander langsam aus dem Dunkel (CSS-Animation). */
@@ -541,14 +561,111 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
   }
 
   /** Zeitstempel wie im Film: "DI 27.10.2026  ·  20:42". Die Begrüßung nur für Screenreader. */
-  function zeichneZeit() {
-    const jetzt = new Date();
+  function zeichneZeit(jetzt) {
+    jetzt = jetzt || new Date();
     const zwei = function (n) { return String(n).padStart(2, "0"); };
     el.gruss.textContent = begruessung(jetzt);
     el.zeit.textContent = WOCHENTAGE[jetzt.getDay()] + " " + zwei(jetzt.getDate()) + "." + zwei(jetzt.getMonth() + 1) + "." +
       jetzt.getFullYear() + "  ·  " + zwei(jetzt.getHours()) + ":" + zwei(jetzt.getMinutes());
     el.zeit.dateTime = jetzt.getFullYear() + "-" + zwei(jetzt.getMonth() + 1) + "-" + zwei(jetzt.getDate()) +
       "T" + zwei(jetzt.getHours()) + ":" + zwei(jetzt.getMinutes());
+  }
+
+  /* ---------- Als Nächstes ---------- */
+
+  const TAGE_KURZ = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  const zwei = function (n) { return String(n).padStart(2, "0"); };
+  const uhrzeit = function (d) { return zwei(d.getHours()) + ":" + zwei(d.getMinutes()); };
+
+  /** "in 45 Min", "in 2 Std 5 Min" bis zum Beginn. */
+  function countdown(beginn, jetzt) {
+    const min = Math.ceil((beginn - jetzt) / 60000);
+    if (min < 60) return "in " + min + " Min";
+    const std = Math.floor(min / 60), rest = min % 60;
+    return "in " + std + " Std" + (rest ? " " + rest + " Min" : "");
+  }
+
+  /**
+   * Wann? Heute: "14:00 · in 45 Min" (Countdown nur mit mitCountdown) bzw.
+   * "Heute ganztägig"; morgen: "Morgen 08:15"; sonst "Do 14:00" bzw.
+   * mit Datum "Do 12.11. ganztägig".
+   */
+  function wannText(v, jetzt, mitCountdown) {
+    const heute = EventsStore.datumText(jetzt);
+    const morgen = EventsStore.plusTage(heute, 1);
+    const d = EventsStore.alsDatum(v.tag);
+    if (v.ganztaegig) {
+      if (v.tag === heute) return "Heute ganztägig";
+      if (v.tag === morgen) return "Morgen ganztägig";
+      return TAGE_KURZ[d.getDay()] + " " + zwei(d.getDate()) + "." + zwei(d.getMonth() + 1) + ". ganztägig";
+    }
+    if (v.tag === heute) return uhrzeit(v.beginn) + (mitCountdown ? " · " + countdown(v.beginn, jetzt) : "");
+    if (v.tag === morgen) return "Morgen " + uhrzeit(v.beginn);
+    return TAGE_KURZ[d.getDay()] + " " + uhrzeit(v.beginn);
+  }
+
+  function span(klasse, text) {
+    const s = document.createElement("span");
+    s.className = klasse;
+    if (text !== undefined) s.textContent = text;
+    return s;
+  }
+
+  /** Etikett für die Art: Vorlesung oder Termin (auf dem Smartphone abgekürzt). */
+  function etikett(v) {
+    const vorlesung = v.art === "vorlesung";
+    const e = span("home-an-art" + (vorlesung ? " ist-vorlesung" : ""));
+    e.appendChild(span("home-an-art-lang", vorlesung ? "Vorlesung" : "Termin"));
+    e.appendChild(span("home-an-art-kurz", vorlesung ? "VL" : "Ter"));
+    return e;
+  }
+
+  /** Eine Zeile: Etikett, Status, Titel (wird gekürzt), Raum und Zeit (bleiben immer sichtbar). */
+  function zeile(klasse, v, status, wann) {
+    const z = span("home-an-zeile " + klasse);
+    if (v) z.appendChild(etikett(v));
+    if (status) z.appendChild(span("home-an-status", status));
+    if (v) z.appendChild(span("home-an-titel", v.titel));
+    if (v && v.ort) z.appendChild(span("home-an-raum", v.ort));
+    if (wann) z.appendChild(span("home-an-wann", wann));
+    return z;
+  }
+
+  /**
+   * "JETZT · Mathe I · HS 1 · bis 11:30", darunter klein der nächste Eintrag –
+   * oder "ALS NÄCHSTES · Programmierung · R 204 · 14:00 · in 45 Min".
+   * Klick öffnet den Stundenplan in der Woche des Eintrags.
+   */
+  function zeichneAnstehend(jetzt) {
+    const r = EventsStore.naechstesVorkommen(jetzt, K.anstehend.tage);
+    const a = el.anstehend;
+    a.textContent = "";
+    a.classList.toggle("ist-leer", !r.laeuft && !r.naechstes);
+    if (!r.laeuft && !r.naechstes) {
+      a.href = "#schedule";
+      a.appendChild(zeile("", null, "Keine Termine in den nächsten " + K.anstehend.tage + " Tagen", ""));
+      a.setAttribute("aria-label", "Keine Termine in den nächsten " + K.anstehend.tage + " Tagen. Stundenplan öffnen");
+      return;
+    }
+    const v = r.laeuft || r.naechstes;
+    const art = function (x) { return x.art === "vorlesung" ? "Vorlesung" : "Termin"; };
+    const raum = function (x) { return x.ort ? ", Raum " + x.ort : ""; };
+    a.href = "#schedule/" + v.tag;
+    let vorlesen;
+    if (r.laeuft) {
+      a.appendChild(zeile("", v, "Jetzt", "bis " + uhrzeit(v.schluss)));
+      vorlesen = "Jetzt: " + art(v) + " " + v.titel + raum(v) + ", bis " + uhrzeit(v.schluss) + ".";
+      if (r.danach) {
+        const w = wannText(r.danach, jetzt, false);
+        a.appendChild(zeile("home-an-danach", r.danach, "Danach", w));
+        vorlesen += " Danach: " + r.danach.titel + raum(r.danach) + ", " + w + ".";
+      }
+    } else {
+      const w = wannText(v, jetzt, true);
+      a.appendChild(zeile("", v, "Als Nächstes", w));
+      vorlesen = "Als Nächstes: " + art(v) + " " + v.titel + raum(v) + ", " + w + ".";
+    }
+    a.setAttribute("aria-label", vorlesen + " Stundenplan dieser Woche öffnen");
   }
 
   /** "Guten Morgen" (5–10 Uhr), "Guten Tag" (11–17 Uhr), "Guten Abend" (sonst). */

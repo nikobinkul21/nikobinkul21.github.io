@@ -294,6 +294,61 @@ const EventsStore = (function () {
     return (jetzt || new Date()) >= endeVon(vorkommen);
   }
 
+  /** Wann beginnt ein Vorkommen? Mit Startzeit: Tag + Startzeit. Ganztägig: um Mitternacht. */
+  function startVon(vorkommen) {
+    const tag = alsDatum(vorkommen.tag || vorkommen.datum);
+    if (vorkommen.ganztaegig) return tag;
+    const minuten = inMinuten(vorkommen.start);
+    return new Date(tag.getFullYear(), tag.getMonth(), tag.getDate(), Math.floor(minuten / 60), minuten % 60);
+  }
+
+  /**
+   * Was steht als Nächstes an? (Startseite)
+   * Grundlage sind alle Einträge samt wöchentlicher Wiederholungen und
+   * Enddaten; was vorbei ist, entscheidet istVergangen().
+   *   laeuft    – ein Eintrag mit Uhrzeit, der gerade läuft (bei mehreren
+   *               der, der zuerst endet), sonst null
+   *   danach    – nur wenn etwas läuft: der nächste Eintrag, der danach beginnt
+   *   naechstes – nur wenn nichts läuft: der nächste Eintrag mit Uhrzeit von
+   *               heute; gibt es keinen mehr, ein ganztägiger von heute;
+   *               sonst der früheste der folgenden Tage
+   * Betrachtet wird der Zeitraum bis "tage" Tage ab jetzt.
+   * Jedes Vorkommen ist eine Kopie mit "tag", "beginn" und "schluss" (Date).
+   * @param {Date} [jetzt]
+   * @param {number} [tage] – Standard 7
+   * @returns {{laeuft: object|null, danach: object|null, naechstes: object|null}}
+   */
+  function naechstesVorkommen(jetzt, tage) {
+    jetzt = jetzt || new Date();
+    tage = tage === undefined ? 7 : tage;
+    const heute = datumText(jetzt);
+    const grenze = new Date(jetzt.getTime() + tage * 24 * 60 * 60 * 1000);
+    const zeitraum = eintraegeImZeitraum(heute, plusTage(heute, tage));
+    const liste = [];
+    Object.keys(zeitraum).sort().forEach(function (tag) {
+      zeitraum[tag].forEach(function (v) {
+        if (istVergangen(v, jetzt)) return;
+        v.beginn = startVon(v);
+        v.schluss = endeVon(v);
+        if (v.beginn <= grenze) liste.push(v);
+      });
+    });
+    // Nach Beginn sortiert; bei gleichem Beginn zuerst die mit Uhrzeit
+    liste.sort(function (a, b) { return a.beginn - b.beginn || (a.ganztaegig ? 1 : 0) - (b.ganztaegig ? 1 : 0); });
+
+    const mitUhrzeit = function (v) { return !v.ganztaegig; };
+    const laufende = liste.filter(function (v) { return mitUhrzeit(v) && v.beginn <= jetzt; })
+      .sort(function (a, b) { return a.schluss - b.schluss; });
+    const laeuft = laufende[0] || null;
+    const spaeter = liste.filter(function (v) { return v.beginn > jetzt; });
+    if (laeuft) {
+      return { laeuft: laeuft, danach: spaeter[0] || null, naechstes: null };
+    }
+    const heuteMitUhrzeit = spaeter.find(function (v) { return v.tag === heute && mitUhrzeit(v); });
+    const heuteGanztags = liste.find(function (v) { return v.tag === heute && v.ganztaegig; });
+    return { laeuft: null, danach: null, naechstes: heuteMitUhrzeit || heuteGanztags || spaeter[0] || null };
+  }
+
   /** Einträge eines einzelnen Tages (sortiert). */
   function eintraegeAm(tag) {
     return eintraegeImZeitraum(tag, tag)[tag] || [];
@@ -369,8 +424,10 @@ const EventsStore = (function () {
     // Abfragen
     eintraegeImZeitraum: eintraegeImZeitraum,
     eintraegeAm: eintraegeAm,
+    startVon: startVon,
     endeVon: endeVon,
     istVergangen: istVergangen,
+    naechstesVorkommen: naechstesVorkommen,
     hole: hole,
     // Ändern
     hinzufuegen: hinzufuegen,
