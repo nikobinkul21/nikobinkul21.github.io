@@ -127,9 +127,10 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `TypeError: 'list' object is not callable` (runde vs. eckige Klammern
   erklärt), 2. Versuch `[0:4]` (nur 4), 3. Versuch richtig `[:5]`.
   **Schritt 4 abgeschlossen.**
-- Offen: Frage „Von welchem Feed kommen die ersten 5?“ (tagesschau, weil
-  erster Feed in der Liste und `append` hinten anhängt) und
-  Interview-Frage „Warum steht `alle_meldungen = []` vor der Schleife?“.
+- Frage „Von welchem Feed kommen die ersten 5?“ richtig: tagesschau, weil
+  erster Feed in der Liste (`append` hängt hinten an). Folge für Schritt 6
+  notiert: Reihenfolge = Feed-Reihenfolge, nicht Aktualität → sortieren.
+- Offen: Interview-Frage „Warum steht `alle_meldungen = []` vor der Schleife?“.
 - Als Nächstes **Schritt 5:** einheitliches Format (Dictionary mit titel,
   text, link, quelle), JSON-Datei `data/news.json` speichern.
 - Als Nächstes **Schritt 4:** Liste mit mehreren Feed-Adressen, Schleife
