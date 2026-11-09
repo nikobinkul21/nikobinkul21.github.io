@@ -141,7 +141,10 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **Schritt 5b gestellt:** in `news.py` je Meldung ein Dictionary
   `eintrag` (titel, text via `meldung.get("summary", "")`, link, quelle =
   `daten.feed.title`) bauen und anhängen; Kontrolle der ersten 3.
-  Ergebnis offen. Später: kurze Quellennamen statt langer Feed-Titel.
+  Läuft: Ausgabe mit Quelle, Titel und Anreißer korrekt.
+- **Schritt 5c gestellt:** `feeds` als Liste von Dictionaries
+  (`{"name": "tagesschau", "url": ...}`); Nutzer passt die Schleife selbst
+  an (`feed["url"]`, `feed["name"]`). Ergebnis offen.
 - Plan Schritt 5: Dictionary → je Meldung ein Dictionary mit titel, text,
   link, quelle, datum → `json` → `data/news.json`. Die News-Ansicht der
   Website gibt es noch nicht; das Format legen wir in Schritt 5 fest.
