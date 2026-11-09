@@ -13,7 +13,7 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 2. [x] Grundlagen: Variablen, Listen, Schleifen, Funktionen
 3. [x] Einen RSS-Feed abrufen, Schlagzeilen ausgeben
 4. [x] Mehrere Feeds abrufen, Meldungen in einer Liste sammeln
-5. [ ] Einheitliches Format, als JSON speichern (Format der Website)
+5. [x] Einheitliches Format, als JSON speichern (Format der Website)
 6. [ ] Wichtigste Meldungen auswählen (erst die neuesten, später schlauer)
 7. [ ] Täglich über GitHub Actions ausführen
 
@@ -152,7 +152,16 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `with open("data/news.json", "w", encoding="utf-8") as datei:` +
   `json.dump(alle_meldungen, datei, ensure_ascii=False, indent=2)`.
   Format vorerst: Liste von Dictionaries (titel, text, link, quelle).
-  Ergebnis offen.
+  **Funktioniert:** `data/news.json` mit 70 Meldungen (tagesschau +
+  Spiegel), Umlaute korrekt. **Schritt 5 abgeschlossen.**
+- Beobachtung: Fehlende Leerzeichen („erden“) nur in der kopierten
+  Terminal-Ausgabe, in der JSON-Datei korrekt („er den“). Spiegel-Links
+  enden auf `#ref=rss` (könnte man später entfernen).
+- Interview-Frage gestellt: „Was ist JSON, und warum speichert man die
+  Daten nicht einfach als Python-Code oder Textdatei?“ Antwort offen.
+- Als Nächstes **Schritt 6:** Datum mitspeichern, nach Datum sortieren,
+  die neuesten N auswählen. Offen: News-Ansicht der Website (Claude darf
+  das Frontend bauen, wenn der Nutzer das möchte).
 - Plan Schritt 5: Dictionary → je Meldung ein Dictionary mit titel, text,
   link, quelle, datum → `json` → `data/news.json`. Die News-Ansicht der
   Website gibt es noch nicht; das Format legen wir in Schritt 5 fest.
@@ -194,6 +203,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   sicherer Zugriff `d.get("schluessel", ersatz)`
 - Liste von Dictionaries (`feeds`), `AttributeError`, Traceback lesen:
   eigene Datei suchen, Ursache meist im Übergebenen
+- JSON als gemeinsames Datenformat; `import json`, `with open(pfad, "w",
+  encoding="utf-8") as datei:`, `json.dump(..., ensure_ascii=False,
+  indent=2)`; relativer Pfad hängt vom Ordner des Terminals ab
 
 ## Offene Punkte / Notizen
 
