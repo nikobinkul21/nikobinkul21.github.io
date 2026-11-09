@@ -135,8 +135,13 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   bliebe der **letzte** Feed, nicht der erste.
 - **Schritt 5a gestellt:** Dictionary in `pipeline/dictionary.py`
   (`{"titel": ..., "link": ..., "quelle": ...}`, Zugriff mit
-  `meldung["titel"]`). Übung: Schlüssel `"text"` ergänzen und ausgeben.
-  Ergebnis offen.
+  `meldung["titel"]`). Übung gelöst: `"text"` ergänzt; `meldung["datum"]`
+  richtig erklärt (Schlüssel fehlt) → Fehlername `KeyError`; `.get()` mit
+  Ersatzwert eingeführt.
+- **Schritt 5b gestellt:** in `news.py` je Meldung ein Dictionary
+  `eintrag` (titel, text via `meldung.get("summary", "")`, link, quelle =
+  `daten.feed.title`) bauen und anhängen; Kontrolle der ersten 3.
+  Ergebnis offen. Später: kurze Quellennamen statt langer Feed-Titel.
 - Plan Schritt 5: Dictionary → je Meldung ein Dictionary mit titel, text,
   link, quelle, datum → `json` → `data/news.json`. Die News-Ansicht der
   Website gibt es noch nicht; das Format legen wir in Schritt 5 fest.
@@ -174,6 +179,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Leere Liste `[]` + `.append(x)` zum Sammeln; runde Klammern = aufrufen,
   eckige = aus Liste holen; `TypeError: ... not callable`; Slicing-Anzahl
   = hinten − vorne
+- Dictionary `{"schluessel": wert}`, Zugriff `d["schluessel"]`, `KeyError`,
+  sicherer Zugriff `d.get("schluessel", ersatz)`
 
 ## Offene Punkte / Notizen
 
