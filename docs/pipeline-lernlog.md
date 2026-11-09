@@ -163,6 +163,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Python-Datei, sondern die Daten werden umgewandelt; JSON ist ein
   Format, kein Übersetzer. Ergänzt: Struktur (Schlüssel) statt Fließtext,
   Programme können Felder zuverlässig auslesen.
+- **Pause.** Nächstes Mal: kurze Wiederholung (Dictionary, JSON), dann
+  Schritt 6.
 - Als Nächstes **Schritt 6:** Datum mitspeichern, nach Datum sortieren,
   die neuesten N auswählen. Offen: News-Ansicht der Website (Claude darf
   das Frontend bauen, wenn der Nutzer das möchte).
