@@ -144,7 +144,15 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Läuft: Ausgabe mit Quelle, Titel und Anreißer korrekt.
 - **Schritt 5c gestellt:** `feeds` als Liste von Dictionaries
   (`{"name": "tagesschau", "url": ...}`); Nutzer passt die Schleife selbst
-  an (`feed["url"]`, `feed["name"]`). Ergebnis offen.
+  an (`feed["url"]`, `feed["name"]`). Erst `AttributeError: 'dict' object
+  has no attribute 'encode'` (Dictionary statt Text an `parse`) → Traceback
+  lesen gelernt (eigene Datei im Traceback suchen). Dann selbst richtig
+  gelöst.
+- **Schritt 5d gestellt:** `import json`, Ordner `data` anlegen,
+  `with open("data/news.json", "w", encoding="utf-8") as datei:` +
+  `json.dump(alle_meldungen, datei, ensure_ascii=False, indent=2)`.
+  Format vorerst: Liste von Dictionaries (titel, text, link, quelle).
+  Ergebnis offen.
 - Plan Schritt 5: Dictionary → je Meldung ein Dictionary mit titel, text,
   link, quelle, datum → `json` → `data/news.json`. Die News-Ansicht der
   Website gibt es noch nicht; das Format legen wir in Schritt 5 fest.
@@ -184,6 +192,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   = hinten − vorne
 - Dictionary `{"schluessel": wert}`, Zugriff `d["schluessel"]`, `KeyError`,
   sicherer Zugriff `d.get("schluessel", ersatz)`
+- Liste von Dictionaries (`feeds`), `AttributeError`, Traceback lesen:
+  eigene Datei suchen, Ursache meist im Übergebenen
 
 ## Offene Punkte / Notizen
 
