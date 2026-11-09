@@ -158,7 +158,11 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Terminal-Ausgabe, in der JSON-Datei korrekt („er den“). Spiegel-Links
   enden auf `#ref=rss` (könnte man später entfernen).
 - Interview-Frage gestellt: „Was ist JSON, und warum speichert man die
-  Daten nicht einfach als Python-Code oder Textdatei?“ Antwort offen.
+  Daten nicht einfach als Python-Code oder Textdatei?“ Gut beantwortet
+  (gemeinsame Sprache Python ↔ JavaScript). Präzisiert: nicht die
+  Python-Datei, sondern die Daten werden umgewandelt; JSON ist ein
+  Format, kein Übersetzer. Ergänzt: Struktur (Schlüssel) statt Fließtext,
+  Programme können Felder zuverlässig auslesen.
 - Als Nächstes **Schritt 6:** Datum mitspeichern, nach Datum sortieren,
   die neuesten N auswählen. Offen: News-Ansicht der Website (Claude darf
   das Frontend bauen, wenn der Nutzer das möchte).
