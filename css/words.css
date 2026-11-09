@@ -10,15 +10,15 @@
 .wo {
   /* Spielfarben: grün = richtig, gelb = an anderer Stelle, grau = nicht im Wort.
      Kontrast der weißen Buchstaben je mindestens 3,4 : 1 (große, fette Schrift) */
-  --wo-richtig: #4f8a4b;
+  --wo-richtig: #4a7f46;
   --wo-richtig-text: #ffffff;
-  --wo-vorhanden: #a9851a;
+  --wo-vorhanden: #9a7b1c;
   --wo-vorhanden-text: #ffffff;
-  --wo-fehlt: #8b8279;
-  --wo-fehlt-text: #ffffff;
+  --wo-fehlt: #3d3935;
+  --wo-fehlt-text: #d8d0c4;
   --wo-feld-rand: var(--farbe-rand-stark);
   --wo-feld-rand-voll: color-mix(in srgb, var(--farbe-text) 55%, var(--farbe-flaeche));
-  --wo-taste: var(--farbe-flaeche-leise);
+  --wo-taste: #5b544d;                    /* noch nicht benutzte Tasten: heller als "fehlt" */
 
   /* Größen. Das Spielfeld passt sich der Höhe an, damit Feld und Tastatur
      auf dem Smartphone ohne Scrollen auf den Bildschirm passen:
@@ -43,20 +43,6 @@
 
 /* Farbenblind-Modus: Orange und Blau statt Grün und Gelb */
 .wo.wo--farbenblind {
-  --wo-richtig: #c8641f;
-  --wo-vorhanden: #2f7fc0;
-}
-
-/* Dunkles Design: etwas gedecktere Spielfarben, dunkles Grau */
-:root[data-theme="dark"] .wo {
-  --wo-richtig: #4a7f46;
-  --wo-vorhanden: #9a7b1c;
-  --wo-fehlt: #3d3935;
-  --wo-fehlt-text: #d8d0c4;
-  --wo-taste: #5b544d;                    /* noch nicht benutzte Tasten: heller als "fehlt" */
-}
-
-:root[data-theme="dark"] .wo.wo--farbenblind {
   --wo-richtig: #b85a1c;
   --wo-vorhanden: #3a83bf;
 }

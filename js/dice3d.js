@@ -341,7 +341,6 @@ const Dice3D = (function () {
      EIN WÜRFEL
      ------------------------------------------------------------------------ */
 
-  const alle = new Set();       // lebende Würfel (für Farbwechsel hell/dunkel)
 
   function ohneBewegung() {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -556,27 +555,12 @@ const Dice3D = (function () {
       canvas: canvas,
     };
     canvas.__wuerfel3d = instanz;     // für Prüfungen im Browser
-    alle.add(instanz);
     // Größe ändert sich (Drehen, Fenster): neu zeichnen
     if (window.ResizeObserver) new ResizeObserver(function () { if (!w.lauf) bild(); }).observe(canvas);
     zeige(null);
     return instanz;
   }
 
-  // Hell/Dunkel gewechselt: alle Würfel mit den neuen Farben zeichnen
-  function alleNeu() {
-    alle.forEach(function (x) {
-      if (!x.canvas.isConnected) { alle.delete(x); return; }
-      x.zeichneNeu();
-    });
-  }
-  if (typeof window !== "undefined" && window.MutationObserver) {
-    new MutationObserver(alleNeu).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    if (window.matchMedia) {
-      const dunkel = window.matchMedia("(prefers-color-scheme: dark)");
-      if (dunkel.addEventListener) dunkel.addEventListener("change", alleNeu);
-    }
-  }
 
   return {
     KONFIG: K,

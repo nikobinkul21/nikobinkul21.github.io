@@ -191,7 +191,6 @@
     window.addEventListener("blur", allesLoslassen);
 
     new ResizeObserver(groesseAnpassen).observe(el.canvas);
-    new MutationObserver(leseFarben).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   }
 
   function zeige() {

@@ -4,8 +4,8 @@
      Nutzungsdaten zurücksetzen (früher eigener Abschnitt "Customising" –
      #customising leitet hierher weiter, siehe js/app.js)
    - Sicherung ALLER Daten der Seite (Termine, Zu erledigen, Pinnwand,
-     Abenteuer, Klettern-Rekord, Worträtsel) als eine JSON-Datei – Export
-     und Import
+     Projekte/Ideen, Abenteuer, Klettern-Rekord, Worträtsel) als eine
+     JSON-Datei – Export und Import
    - Sudoku-Abenteuer: Tempo der Kampfanimationen (Würfel und Schadensaufbau)
    - Zu erledigen: Verbindung zur Oracle-Datenbank (js/todo-db.js)
 
@@ -17,6 +17,7 @@
      termine:     { … }    ← Daten aus EventsStore (js/events-store.js)
      zuErledigen: { … }    ← Aufgaben aus TodoStore (js/todo-store.js)
      pinnwand:    { … } oder null ← Zettel, Verbindungen, Ansicht (js/board-store.js)
+     projekte:    { … } oder null ← Projekte/Ideen (js/projects-store.js)
      sudokuAbenteuer: { … } oder null ← Spielstand aus SudokuRPG (js/sudoku-rpg.js)
      klettern:    { … } oder null ← Rekord des Kletterspiels (js/climb/speicher.js)
      woerter:     { … } oder null ← Worträtsel: laufendes Wort, Streaks, Statistik (js/words/speicher.js)
@@ -44,7 +45,6 @@ const EinstellungenAnsicht = (function () {
       // Darstellung (früher "Customising"): Startseite (Werte in js/home.js)
       '<section class="karte einstellungen-block" aria-labelledby="darstellung-titel">' +
         '<h2 id="darstellung-titel">Darstellung</h2>' +
-        "<p>Hell oder dunkel stellst du mit dem Schalter oben rechts ein.</p>" +
         '<h3 class="einstellungen-unter">Startseite</h3>' +
         '<label class="einstellungen-feld einstellungen-feld--haken">' +
           '<input type="checkbox" class="einstellungen-nutzung">' +
@@ -62,7 +62,7 @@ const EinstellungenAnsicht = (function () {
         '<h2 id="sicherung-titel">Daten sichern</h2>' +
         "<p>Deine Daten liegen nur in diesem Browser. Mit einer Sicherung kannst du sie " +
           "auf einem anderen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. " +
-          "Die Datei enthält <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong>, die <strong>Pinnwand</strong>, den Spielstand des <strong>Sudoku-Abenteuers</strong>, den Rekord im <strong>Klettern</strong> und Streaks und Statistik des <strong>Worträtsels</strong>.</p>" +
+          "Die Datei enthält <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong>, die <strong>Pinnwand</strong>, <strong>Projekte/Ideen</strong>, den Spielstand des <strong>Sudoku-Abenteuers</strong>, den Rekord im <strong>Klettern</strong> und Streaks und Statistik des <strong>Worträtsels</strong>.</p>" +
         '<div class="einstellungen-knoepfe">' +
           '<button type="button" class="knopf" data-aktion="exportieren">Daten exportieren</button>' +
           '<button type="button" class="knopf" data-aktion="importieren">Daten importieren</button>' +
@@ -270,6 +270,7 @@ const EinstellungenAnsicht = (function () {
       termine: EventsStore.alsObjekt(),
       zuErledigen: TodoStore.alsObjekt(),
       pinnwand: BoardStore.alsObjekt(),
+      projekte: ProjekteStore.alsObjekt(),
       sudokuAbenteuer: SudokuRPG.alsObjekt(),
       klettern: KletterSpeicher.alsObjekt(),
       woerter: WoerterSpeicher.alsObjekt(),
@@ -368,6 +369,21 @@ const EinstellungenAnsicht = (function () {
       }
     }
 
+    // Projekte/Ideen: in älteren Sicherungen fehlen sie → bleiben dann unverändert
+    let projekte = { vorhanden: false };
+    let projekteText = "• Projekte/Ideen: nicht enthalten (bleiben unverändert)\n";
+    if ("projekte" in roh) {
+      if (roh.projekte === null) {
+        projekte = { vorhanden: true, daten: null };
+        projekteText = "• Projekte/Ideen: keine\n";
+      } else {
+        const geprueft = ProjekteStore.pruefeDaten(roh.projekte);
+        if (!geprueft.ok) return { ok: false, fehler: "Projekte/Ideen: " + geprueft.fehler };
+        projekte = { vorhanden: true, daten: geprueft.daten };
+        projekteText = "• " + geprueft.daten.projekte.length + " Projekte/Ideen\n";
+      }
+    }
+
     // Pinnwand: in älteren Sicherungen fehlt sie → bleibt dann unverändert
     let pinnwand = { vorhanden: false };
     let pinnwandText = "• Pinnwand: nicht enthalten (bleibt unverändert)\n";
@@ -398,11 +414,12 @@ const EinstellungenAnsicht = (function () {
     const erstellt = typeof roh.erstellt === "string" ? new Date(roh.erstellt) : null;
     const vom = erstellt && !isNaN(erstellt) ? " vom " + erstellt.toLocaleString("de-DE") : "";
     return {
-      ok: true, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben, klettern: klettern, woerter: woerter, pinnwand: pinnwand,
+      ok: true, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben, klettern: klettern, woerter: woerter, pinnwand: pinnwand, projekte: projekte,
       frage: "Sicherung" + vom + ":\n" +
         "• " + termine.daten.eintraege.length + " Termine/Vorlesungen\n" +
         aufgabenText +
         pinnwandText +
+        projekteText +
         abenteuerText +
         kletternText +
         woerterText + "\n" +
@@ -425,6 +442,10 @@ const EinstellungenAnsicht = (function () {
       if (!window.confirm(pruefung.frage)) {
         zeigeHinweis("Import abgebrochen.");
         return;
+      }
+      if (pruefung.projekte && pruefung.projekte.vorhanden) {
+        ProjekteStore.ersetzen(pruefung.projekte.daten);
+        ProjekteAnsicht.neuLaden();
       }
       if (pruefung.pinnwand && pruefung.pinnwand.vorhanden) {
         BoardStore.ersetzen(pruefung.pinnwand.daten);

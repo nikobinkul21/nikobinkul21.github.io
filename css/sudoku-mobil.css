@@ -289,10 +289,6 @@
   }
 
   .kopf-eintrag--warnung {
-    color: #d1242f;
-  }
-
-  :root[data-theme="dark"] .kopf-eintrag--warnung {
     color: #ff7b72;
   }
 

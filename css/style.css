@@ -11,7 +11,7 @@
    HIER ÄNDERST DU DAS AUSSEHEN DER GANZEN SEITE:
      0. Schriften (Dateien im Ordner fonts/)
      1. Design-Variablen: Farben, Schriften, Leuchten, Abstände, Vignette,
-        Bewegung – zuerst das dunkle Design (Standard), darunter das helle
+        Bewegung – die Seite hat nur dieses eine, dunkle Design
      1b. Bereichsfarben: Termine, Prioritäten, Kalender, Sudoku-Gitter …
    Die Bereichs-Stylesheets (home.css, todo.css, …) benutzen nur diese
    Variablen. Eigene Farben behalten nur die Spiele – leicht entsättigt
@@ -110,13 +110,13 @@
 
 /* ==========================================================================
    1. DESIGN-VARIABLEN
-   Dunkel (Standard): sehr tiefes, minimal warmes Schwarz, Off-White mit
-   einem Hauch Sepia, Grautöne mit derselben Wärme.
-   Die Werte gelten, solange <html data-theme="light"> NICHT gesetzt ist.
+   Sehr tiefes, minimal warmes Schwarz, Off-White mit einem Hauch Sepia,
+   Grautöne mit derselben Wärme. color-scheme: dark sorgt dafür, dass auch
+   Formularelemente und Scrollleisten dunkel sind.
    ========================================================================== */
 
 :root {
-  /* ---- Farben: dunkles Design ---- */
+  /* ---- Farben ---- */
   --farbe-hintergrund: #0a0a09;      /* tiefes, minimal warmes Schwarz */
   --farbe-flaeche: #12110f;          /* Kacheln, Karten, Dialoge */
   --farbe-flaeche-leise: #1b1a17;    /* Hover, Umschalter */
@@ -273,7 +273,7 @@
   --uebergang-abblende-dauer: 220ms;
   --uebergang-schwarz-dauer: 60ms;
   --uebergang-aufblende-dauer: 260ms;
-  --uebergang-schwarz: #0a0a09;      /* Farbe der Blende (auch im hellen Design) */
+  --uebergang-schwarz: #0a0a09;      /* Farbe der Blende */
   --uebergang-ruhig-dauer: 160ms;
 
   /* ---- Spiele: eigene Farben, leicht entsättigt (Abschnitt 6d) ---- */
@@ -281,79 +281,6 @@
 
   color-scheme: dark;
 }
-
-/* Helles Design: wie ein Abzug auf altem Fotopapier – cremefarbener Grund,
-   tiefschwarze Schrift, dieselbe Wärme. Das "Leuchten" wird hier zu einem
-   weichen Hof aus Tinte, wie leicht verlaufene Druckerschwärze.
-   Aktiv bei <html data-theme="light"> (setzt app.js). */
-:root[data-theme="light"] {
-  --farbe-hintergrund: #e7e0cf;
-  --farbe-flaeche: #efe9db;
-  --farbe-flaeche-leise: #ddd5c3;
-  --farbe-flaeche-hell: #f6f1e6;
-  --farbe-text: #14120e;
-  --farbe-text-leise: #57503f;       /* 6,6 : 1 auf dem Grund */
-  --farbe-rand: #cbc2ad;
-  --farbe-rand-stark: #847a64;
-
-  --farbe-akzent: #14120e;
-  --farbe-akzent-hover: #3a352b;
-  --farbe-akzent-leise: #d6cdb8;
-  --farbe-auf-akzent: #efe9db;
-  --farbe-fokus: #14120e;
-
-  --farbe-erfolg: #2f2b22;
-  --farbe-gefahr: #14120e;
-  --farbe-gefahr-leise: #dbd2bf;
-
-  --farbe-schleier: rgba(30, 26, 18, 0.45);
-
-  --licht: 255 250 238;              /* Papierweiß für Scheinwerfer und Laterne */
-  --dunkel: 40 32 18;
-  --laterne-staerke: 0.75;
-  --laterne-form: 95% 70% at 50% -15%;
-
-  --leuchten:
-    0 0 1px rgb(20 18 14 / 0.35),
-    0 0 6px rgb(60 48 28 / 0.14),
-    0 0 18px rgb(60 48 28 / 0.06);
-  --leuchten-stark:
-    0 0 1px rgb(20 18 14 / 0.45),
-    0 0 8px rgb(60 48 28 / 0.2),
-    0 0 24px rgb(60 48 28 / 0.1);
-  --leuchten-leise:
-    0 0 1px rgb(20 18 14 / 0.25),
-    0 0 6px rgb(60 48 28 / 0.08);
-  --lichtschein: radial-gradient(ellipse 50% 50% at 50% 55%, rgb(255 250 238 / 0.75), rgb(255 250 238 / 0.3) 45%, transparent 72%);
-
-  --kachel-kante: 60 48 28;
-  --kachel-kante-staerke: 0.18;
-  --kachel-licht-staerke: 0.6;
-  --kachel-schein-staerke: 0.9;
-
-  --vignette-staerke: 0.2;
-
-  --stadt-farbe: 90 70 40;
-  --stadt-deckkraft: 0.16;
-
-  --schatten-schwebend: 0 18px 48px rgba(40, 30, 10, 0.16), 0 0 0 1px rgba(40, 30, 10, 0.06);
-
-  --glas-hintergrund: rgba(255, 250, 238, 0.55);
-  --glas-rand: rgba(255, 250, 238, 0.8);
-  --glas-reflex: rgba(255, 250, 238, 0.9);
-  --glas-glanz: rgba(255, 250, 238, 0.35);
-  --glas-schatten: 0 4px 16px rgba(40, 30, 10, 0.10);
-  --glas-fallback: rgba(239, 233, 219, 0.94);
-
-  --logo-farbe: #14120e;
-  --logo-kontur-farbe: #efe9db;
-  --logo-schatten: 0 0 1px rgba(20, 18, 14, 0.6), 0 0 2px rgba(20, 18, 14, 0.25);
-
-  --uebergang-schwarz: #0a0a09;
-
-  color-scheme: light;
-}
-
 
 /* ==========================================================================
    1b. BEREICHSFARBEN
@@ -422,7 +349,7 @@
   --sudoku-effekt-schein-stark: rgb(var(--licht) / 0.26);
 
   /* Pinnwand: Zettelfarben (Off-White, Hellgrau, drei gedämpfte Töne) und
-     Schrift darauf. Im dunklen Design etwas gedämpfter, damit sie nicht blenden. */
+     Schrift darauf – etwas gedämpft, damit sie auf dem Schwarz nicht blenden. */
   --zettel-creme: #ddd7c7;
   --zettel-grau: #b9b5ab;
   --zettel-sand: #cdb995;
@@ -434,63 +361,6 @@
   --pw-raster: rgb(var(--licht) / 0.13);       /* Punktraster der Fläche */
   --pw-linie: rgb(var(--licht) / 0.55);        /* Verbindungen */
   --pw-linie-aktiv: #f3efe4;
-}
-
-:root[data-theme="light"] {
-  --farbe-termin: #5e5748;
-  --farbe-termin-flaeche: #ddd5c3;
-  --farbe-termin-text: #1c1913;
-  --farbe-vorlesung: #14120e;
-  --farbe-vorlesung-flaeche: #cdc4af;
-  --farbe-vorlesung-text: #14120e;
-
-  --sp-linie: rgba(40, 32, 18, 0.08);
-  --sp-heute-hintergrund: rgba(255, 250, 238, 0.55);
-  --sp-jetzt-farbe: #14120e;
-
-  --todo-ueberfaellig: #973f3a;
-  --todo-sehr-wichtig: #bb6159;
-  --todo-wichtig: #c18a51;
-  --todo-bald: #b69a42;
-  --todo-entspannt: #88a164;
-  --todo-locker: #4d7f5b;
-  --todo-erledigt: #4a7351;
-  --todo-offen: #aa5954;
-  --todo-ueberfaellig-hintergrund: #f3e6dd;
-
-  --kal-vergangen-text: #8b8370;
-  --kal-vergangen-hintergrund: rgba(40, 32, 18, 0.03);
-  --kal-heute-glas: rgba(20, 18, 14, 0.8);
-  --kal-heute-glanz: rgba(255, 250, 238, 0.18);
-  --kal-heute-rand: rgba(255, 250, 238, 0.6);
-  --kal-heute-reflex: rgba(255, 250, 238, 0.4);
-  --kal-heute-leuchten: rgba(20, 18, 14, 0.25);
-  --kal-heute-schatten: rgba(40, 30, 10, 0.12);
-  --kal-heute-text: #f6f1e6;
-  --kal-termin-glas: rgba(40, 32, 18, 0.08);
-  --kal-termin-rand: rgba(255, 250, 238, 0.8);
-  --kal-termin-leuchten: rgba(40, 32, 18, 0.08);
-  --kal-termin-ring: #4a4437;
-  --kal-vorschau-hintergrund: rgba(239, 233, 219, 0.95);
-
-  --sudoku-linie-duenn-farbe: #d2c9b5;
-  --sudoku-linie-dick-farbe: #3d382d;
-  --sudoku-verwandt: #e6dfce;
-  --sudoku-gleich: #d6cdb9;
-  --sudoku-ausgewaehlt: #bfb59f;
-  --sudoku-eingabe-farbe: #4c4639;
-  --sudoku-effekt-schein: rgba(40, 32, 18, 0.10);
-  --sudoku-effekt-schein-stark: rgba(40, 32, 18, 0.2);
-
-  --zettel-creme: #f7f2e6;
-  --zettel-grau: #dcd8cf;
-  --zettel-sand: #e6d6b5;
-  --zettel-salbei: #cdd8c6;
-  --zettel-taube: #cbd4de;
-  --zettel-schatten: 0 6px 16px rgba(40, 30, 10, 0.16);
-  --pw-raster: rgba(40, 32, 18, 0.16);
-  --pw-linie: rgba(20, 18, 14, 0.55);
-  --pw-linie-aktiv: #14120e;
 }
 
 
@@ -510,7 +380,7 @@ html {
   background: var(--farbe-hintergrund);
 }
 
-/* Der Grund: tiefes Schwarz (bzw. altes Fotopapier) mit dem Schein der
+/* Der Grund: tiefes Schwarz mit dem Schein der
    Straßenlaterne von oben. background-attachment: fixed – das Licht
    bleibt beim Scrollen an seinem Platz. */
 body {
@@ -676,8 +546,8 @@ textarea:focus {
 
 /* ==========================================================================
    3. NAVIGATIONSLEISTE
-   Links NTB, daneben die Abschnitte in gleichen Abständen, ganz rechts der
-   Dark-Mode-Schalter. Hintergrund wie die Seite, darunter eine feine Linie.
+   Links NTB, daneben die Abschnitte in gleichen Abständen, ganz rechts das
+   Zahnrad (Einstellungen). Hintergrund wie die Seite, darunter eine feine Linie.
    ========================================================================== */
 
 .leiste {
@@ -808,7 +678,7 @@ textarea:focus {
 
 
 /* ==========================================================================
-   5. SYMBOL-BUTTONS (Hamburger, Dark-Mode, Pfeile)
+   5. SYMBOL-BUTTONS (Hamburger, Zahnrad, Pfeile)
    ========================================================================== */
 
 .icon-button {
@@ -846,6 +716,32 @@ textarea:focus {
   height: 2px;
   background: currentColor;
   border-radius: 1px;
+}
+
+/* Zahnrad: öffnet die Einstellungen. Schlicht ohne Rahmen; beim Hovern
+   und auf der Einstellungsseite leuchtet es dezent. */
+.zahnrad {
+  border-color: transparent;
+  color: var(--farbe-text-leise);
+  transition: color var(--dauer) ease, filter var(--dauer) ease;
+}
+
+.zahnrad svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+.zahnrad:hover,
+.zahnrad:focus-visible,
+.zahnrad[aria-current="page"] {
+  color: var(--farbe-text);
+  background: transparent;
+  border-color: transparent;
+  filter: drop-shadow(0 0 5px rgb(var(--licht) / 0.55));
 }
 
 
@@ -1179,7 +1075,7 @@ body::before {
 /* ==========================================================================
    7. SMARTPHONE / SCHMALE FENSTER (unter 1100 px)
    Dann passen die sieben Reiter nicht mehr in eine Zeile: NTB links,
-   Hamburger und Dark-Mode-Schalter rechts, das Menü klappt als schlichtes
+   Hamburger und Zahnrad rechts, das Menü klappt als schlichtes
    Panel aus. Diese Grenze steht auch in app.js (mobilAbfrage).
    ========================================================================== */
 

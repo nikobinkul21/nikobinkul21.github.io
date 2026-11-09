@@ -1,6 +1,6 @@
 /* ==========================================================================
    home.css – die Startseite als Bento-Raster (js/home.js)
-   Ruhig und kompakt: oben rechts ein kleiner Zeitstempel, darunter sechs
+   Ruhig und kompakt: oben rechts ein kleiner Zeitstempel, darunter sieben
    Kacheln in einem lückenlosen Raster, ganz unten die Schnellzugriffe.
    Alles passt ohne Scrollen in die Bildschirmhöhe (dvh): das Raster nimmt
    den übrigen Platz ein, die Zeilen strecken sich. Nur wenn selbst die
@@ -273,15 +273,6 @@
 .bento-kachel:hover::before,
 .bento-kachel:focus-visible::before {
   opacity: 1;
-}
-
-/* Im hellen Design trägt ein weicher Schatten den hellen Schein */
-:root[data-theme="light"] .bento-kachel:hover,
-:root[data-theme="light"] .bento-kachel:focus-visible {
-  box-shadow:
-    0 0 var(--kachel-schein-groesse) rgb(var(--licht) / var(--kachel-schein-staerke)),
-    0 10px 30px rgb(var(--dunkel) / 0.12),
-    inset 0 0 0 1px rgb(var(--licht) / 0.9);
 }
 
 .bento-kachel:focus-visible {

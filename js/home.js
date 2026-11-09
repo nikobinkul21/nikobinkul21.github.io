@@ -1,6 +1,6 @@
 /* ==========================================================================
    home.js – die Startseite als Bento-Raster
-   Sechs rechteckige Kacheln unterschiedlicher Größe füllen ein Raster
+   Sieben rechteckige Kacheln unterschiedlicher Größe füllen ein Raster
    lückenlos (Computer: 4 Spalten × 3 Zeilen, Smartphone: 2 Spalten).
    Wie groß eine Kachel ist, richtet sich nach der Nutzung: Jedes Öffnen
    eines Abschnitts wird lokal gezählt (ältere Aufrufe zählen weniger,
@@ -43,6 +43,7 @@ const STARTSEITE_KONFIG = {
     { id: "prompts", ansicht: "prompts", href: "#prompts", name: "Prompts", symbol: "text" },
     { id: "games", ansicht: "games", href: "#games", name: "Games", symbol: "wuerfel" },
     { id: "pinnwand", ansicht: "pinnwand", href: "#pinnwand", name: "Pinnwand", symbol: "pinnwand" },
+    { id: "projekte", ansicht: "projects", href: "#projects", name: "Projekte/Ideen", symbol: "idee" },
   ],
 
   // Raster: Spalten × Zeilen. Die Summe der Kachelflächen muss die
@@ -56,7 +57,8 @@ const STARTSEITE_KONFIG = {
 
   // Kachelgrößen in Stufen: 2 = 2×2, 1 = breit (2×1) oder hoch (1×2), 0 = 1×1.
   // Gewünschte Stufe je Platz in der Rangfolge (Platz 1 = meistgenutzt).
-  stufenNachRang: [2, 1, 1, 1, 0, 0],
+  // Sieben Kacheln auf 12 Feldern: 4 + 2 + 2 + 1 + 1 + 1 + 1
+  stufenNachRang: [2, 1, 1, 0, 0, 0, 0],
 
   // Zählung der Aufrufe
   zaehlung: {
@@ -276,6 +278,7 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
     text: '<path d="M5 6.5h14M5 11h14M5 15.5h9"/><path d="M17 14v6"/>',
     wuerfel: '<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.1"/><circle cx="15" cy="15" r="1.1"/><circle cx="15" cy="9" r="1.1"/><circle cx="9" cy="15" r="1.1"/>',
     pinnwand: '<rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="13" width="8" height="7" rx="1"/><path d="M11 7.5c4 0 6 1.5 6 5.5"/>',
+    idee: '<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.1V16h5v-.1c0-.8.4-1.5 1.1-2.1A6 6 0 0 0 12 3z"/>',
   };
 
   const el = {};
@@ -403,7 +406,6 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
       clearTimeout(el.stadtTimer);
       el.stadtTimer = setTimeout(zeichneStadt, 200);
     });
-    new MutationObserver(zeichneStadt).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
     K.kacheln.forEach(function (k) {
       const link = document.createElement("a");
@@ -679,8 +681,8 @@ const StartseiteAnsicht = typeof document === "undefined" ? null : (function () 
 
   /**
    * Ein Meer aus unscharfen, warmen Lichtpunkten am unteren Rand – wie eine
-   * Stadt bei Nacht aus der Ferne. Einmal gezeichnet (bei Größen- oder
-   * Designwechsel neu), mit festem Zufall: es sieht immer gleich aus.
+   * Stadt bei Nacht aus der Ferne. Einmal gezeichnet (bei Größenänderung
+   * neu), mit festem Zufall: es sieht immer gleich aus.
    * Farbe, Stärke, Höhe und Anzahl: CSS-Variablen --stadt-… in style.css.
    */
   function zeichneStadt() {
