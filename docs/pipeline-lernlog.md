@@ -118,6 +118,10 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **Pause.** Als Nächstes **4b:** leere Liste, `.append`, alle Meldungen
   aus allen Feeds sammeln. Vorher kurz Slicing/verschachtelte Schleife
   selbst ausprobieren lassen.
+- **2026-11-09:** Aufwärmfrage (Schlagzeilen 3 bis 5 → `[2:5]`) und
+  Schritt 4b gestellt: `alle_meldungen = []`, verschachtelte Schleife,
+  `.append(meldung)`, `print("Gesamt:", len(...))` nach den Schleifen.
+  Übung: erste 5 Titel der Sammelliste. Ergebnis offen.
 - Als Nächstes **Schritt 4:** Liste mit mehreren Feed-Adressen, Schleife
   darüber, alle Meldungen in einer Liste sammeln (`.append`).
   (Hinweis: Claudes Cloud-Umgebung erreicht tagesschau.de nicht; das
