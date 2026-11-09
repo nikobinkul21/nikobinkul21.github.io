@@ -12,7 +12,7 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 1. [x] Python auf dem Mac prüfen/einrichten, erstes „Hallo Welt“
 2. [x] Grundlagen: Variablen, Listen, Schleifen, Funktionen
 3. [x] Einen RSS-Feed abrufen, Schlagzeilen ausgeben
-4. [ ] Mehrere Feeds abrufen, Meldungen in einer Liste sammeln
+4. [x] Mehrere Feeds abrufen, Meldungen in einer Liste sammeln
 5. [ ] Einheitliches Format, als JSON speichern (Format der Website)
 6. [ ] Wichtigste Meldungen auswählen (erst die neuesten, später schlauer)
 7. [ ] Täglich über GitHub Actions ausführen
@@ -123,7 +123,15 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `.append(meldung)`, `print("Gesamt:", len(...))` nach den Schleifen.
   Übung: erste 5 Titel der Sammelliste. Aufwärmfrage: 1. Versuch `[3:6]`
   (um eins verrutscht), nach Tabelle Mensch/Index richtig `[2:5]`.
-  4b-Ergebnis offen.
+  4b gelöst. Übung erste 5 Titel: 1. Versuch `alle_meldungen(5)` →
+  `TypeError: 'list' object is not callable` (runde vs. eckige Klammern
+  erklärt), 2. Versuch `[0:4]` (nur 4), 3. Versuch richtig `[:5]`.
+  **Schritt 4 abgeschlossen.**
+- Offen: Frage „Von welchem Feed kommen die ersten 5?“ (tagesschau, weil
+  erster Feed in der Liste und `append` hinten anhängt) und
+  Interview-Frage „Warum steht `alle_meldungen = []` vor der Schleife?“.
+- Als Nächstes **Schritt 5:** einheitliches Format (Dictionary mit titel,
+  text, link, quelle), JSON-Datei `data/news.json` speichern.
 - Als Nächstes **Schritt 4:** Liste mit mehreren Feed-Adressen, Schleife
   darüber, alle Meldungen in einer Liste sammeln (`.append`).
   (Hinweis: Claudes Cloud-Umgebung erreicht tagesschau.de nicht; das
@@ -155,6 +163,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `.link`; HTTP-Status 200/301/404; Zähler mit `+=`
 - Slicing `liste[:10]` (die ersten 10), Schleife in der Schleife
   (doppelte Einrückung)
+- Leere Liste `[]` + `.append(x)` zum Sammeln; runde Klammern = aufrufen,
+  eckige = aus Liste holen; `TypeError: ... not callable`; Slicing-Anzahl
+  = hinten − vorne
 
 ## Offene Punkte / Notizen
 
