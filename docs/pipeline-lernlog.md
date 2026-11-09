@@ -121,7 +121,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **2026-11-09:** Aufwärmfrage (Schlagzeilen 3 bis 5 → `[2:5]`) und
   Schritt 4b gestellt: `alle_meldungen = []`, verschachtelte Schleife,
   `.append(meldung)`, `print("Gesamt:", len(...))` nach den Schleifen.
-  Übung: erste 5 Titel der Sammelliste. Ergebnis offen.
+  Übung: erste 5 Titel der Sammelliste. Aufwärmfrage: 1. Versuch `[3:6]`
+  (um eins verrutscht), nach Tabelle Mensch/Index richtig `[2:5]`.
+  4b-Ergebnis offen.
 - Als Nächstes **Schritt 4:** Liste mit mehreren Feed-Adressen, Schleife
   darüber, alle Meldungen in einer Liste sammeln (`.append`).
   (Hinweis: Claudes Cloud-Umgebung erreicht tagesschau.de nicht; das
