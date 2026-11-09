@@ -130,9 +130,16 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Frage „Von welchem Feed kommen die ersten 5?“ richtig: tagesschau, weil
   erster Feed in der Liste (`append` hängt hinten an). Folge für Schritt 6
   notiert: Reihenfolge = Feed-Reihenfolge, nicht Aktualität → sortieren.
-- Offen: Interview-Frage „Warum steht `alle_meldungen = []` vor der Schleife?“.
-- Als Nächstes **Schritt 5:** einheitliches Format (Dictionary mit titel,
-  text, link, quelle), JSON-Datei `data/news.json` speichern.
+- Interview-Frage „Warum `alle_meldungen = []` vor der Schleife?“: Kern
+  richtig (Korb würde bei jedem Durchlauf geleert). Korrigiert: Übrig
+  bliebe der **letzte** Feed, nicht der erste.
+- **Schritt 5a gestellt:** Dictionary in `pipeline/dictionary.py`
+  (`{"titel": ..., "link": ..., "quelle": ...}`, Zugriff mit
+  `meldung["titel"]`). Übung: Schlüssel `"text"` ergänzen und ausgeben.
+  Ergebnis offen.
+- Plan Schritt 5: Dictionary → je Meldung ein Dictionary mit titel, text,
+  link, quelle, datum → `json` → `data/news.json`. Die News-Ansicht der
+  Website gibt es noch nicht; das Format legen wir in Schritt 5 fest.
 - Als Nächstes **Schritt 4:** Liste mit mehreren Feed-Adressen, Schleife
   darüber, alle Meldungen in einer Liste sammeln (`.append`).
   (Hinweis: Claudes Cloud-Umgebung erreicht tagesschau.de nicht; das
