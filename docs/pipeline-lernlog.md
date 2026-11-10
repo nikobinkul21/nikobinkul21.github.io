@@ -194,8 +194,17 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Interview-Frage gestellt: „Warum ist es bei einem automatisch laufenden
   Skript wichtig, Fehlerfälle abzufangen, und wie testet man einen Fall,
   der gerade nicht vorkommt?“ Antwort offen.
-- Verbesserungsidee: bei 0 Meldungen die alte Datei **nicht**
-  überschreiben (Speichern in `else`). Später: Spiegel-`#ref=rss`
+- Interview-Frage beantwortet (Ausfälle ohne Zuschauer, Seite nicht leer;
+  Fall mit nicht existierendem Wert herbeiführen). Ergänzt: Schaden
+  verhindern + laut melden; „Fehlerfall simulieren“.
+- Selbst umgesetzt: Speichern nur `if len(neueste) != 0:`, sonst
+  „Nicht gespeichert“. 1. Versuch Tippfehler `neuste` (→ `NameError`),
+  2. Versuch richtig. Einrückung noch unordentlich (7 Leerzeichen,
+  Zeilenumbrüche in Klammern) → **beim nächsten Mal aufräumen (4er-Stufen)
+  und mit `XXX` testen.**
+- **Pause.** Nächstes Mal: Wiederholung (u. a. `"w"`/`utf-8` erneut
+  abfragen, `if`, `sorted`), Aufräumen + Test, dann Schritt 7.
+- Weitere Ideen: Später: Spiegel-`#ref=rss`
   entfernen, „schlauere“ Auswahl.
 - Als Nächstes **Schritt 7:** Dateien mit Git committen/pushen,
   `requirements.txt`, Workflow `.github/workflows/news.yml` (täglich).
