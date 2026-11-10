@@ -163,8 +163,14 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Python-Datei, sondern die Daten werden umgewandelt; JSON ist ein
   Format, kein Übersetzer. Ergänzt: Struktur (Schlüssel) statt Fließtext,
   Programme können Felder zuverlässig auslesen.
-- **Pause.** Nächstes Mal: kurze Wiederholung (Dictionary, JSON), dann
-  Schritt 6.
+- **Pause.**
+- **2026-11-10:** Mini-Wiederholung (Dictionary, `KeyError`/`.get`,
+  `"w"`/`encoding`) und **Schritt 6a** gestellt: `import time`,
+  `"datum": time.strftime("%Y-%m-%d %H:%M", meldung.published_parsed)`.
+  Frage: Warum Jahr zuerst? Ergebnis offen.
+- Plan 6b: `if` für fehlendes Datum; 6c: sortieren mit
+  `sorted(..., key=nach_datum, reverse=True)` (eigene Funktion statt
+  lambda), dann `[:20]`.
 - Als Nächstes **Schritt 6:** Datum mitspeichern, nach Datum sortieren,
   die neuesten N auswählen. Offen: News-Ansicht der Website (Claude darf
   das Frontend bauen, wenn der Nutzer das möchte).
