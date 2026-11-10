@@ -182,9 +182,11 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   graue Inline-Vorschläge, Auto-Klammern) auf Wunsch abschaltbar erklärt.
 - **Schritt 6c (Teil 1) gestellt:** `if`/`else` an Mini-Beispiel
   `pipeline/wenn.py` (`anzahl > 50`), Vergleichsoperatoren. Übung:
-  `elif` für „genau 0“ selbst ergänzen. Ergebnis offen.
-- Plan Teil 2: in `news.py` Meldungen ohne `published_parsed` mit `if`
-  überspringen (`continue`).
+  `elif` für „genau 0“ selbst ergänzen. Richtig gelöst (`elif anzahl == 0`
+  an der richtigen Stelle).
+- **Teil 2 gestellt:** in `news.py` `if "published_parsed" not in meldung:
+  continue`. Experiment: Schlüssel absichtlich falsch schreiben → Gesamt 0.
+  Übung: selbst eine Warnung bei 0 Meldungen ergänzen. Ergebnis offen.
 - Als Nächstes **Schritt 6:** Datum mitspeichern, nach Datum sortieren,
   die neuesten N auswählen. Offen: News-Ansicht der Website (Claude darf
   das Frontend bauen, wenn der Nutzer das möchte).
@@ -236,6 +238,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Platzhalter, UTC; Datumsformat Jahr zuerst zum Sortieren (ISO 8601)
 - `sorted(liste, key=funktion, reverse=True)`; Funktion als Wert übergeben
   (ohne Klammern) vs. aufrufen (mit Klammern)
+- `if`/`elif`/`else`, Bedingungen `True`/`False`, Vergleiche `> < >= == !=`,
+  `==` (vergleichen) vs. `=` (zuweisen)
 
 ## Offene Punkte / Notizen
 
