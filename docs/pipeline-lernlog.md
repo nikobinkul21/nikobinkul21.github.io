@@ -167,7 +167,10 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **2026-11-10:** Mini-Wiederholung (Dictionary, `KeyError`/`.get`,
   `"w"`/`encoding`) und **Schritt 6a** gestellt: `import time`,
   `"datum": time.strftime("%Y-%m-%d %H:%M", meldung.published_parsed)`.
-  Frage: Warum Jahr zuerst? Ergebnis offen.
+  Frage: Warum Jahr zuerst? Ergebnis offen. Wiederholung: 1 richtig,
+  2 richtig (`.get`, Name `KeyError` ergänzt), 3 nicht gewusst (`"w"` =
+  schreiben/überschreiben, `utf-8` = Umlaute) → nochmals erklärt,
+  **beim nächsten Mal wieder abfragen.**
 - Plan 6b: `if` für fehlendes Datum; 6c: sortieren mit
   `sorted(..., key=nach_datum, reverse=True)` (eigene Funktion statt
   lambda), dann `[:20]`.
