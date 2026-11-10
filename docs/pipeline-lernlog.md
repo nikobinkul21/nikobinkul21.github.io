@@ -167,7 +167,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **2026-11-10:** Mini-Wiederholung (Dictionary, `KeyError`/`.get`,
   `"w"`/`encoding`) und **Schritt 6a** gestellt: `import time`,
   `"datum": time.strftime("%Y-%m-%d %H:%M", meldung.published_parsed)`.
-  Frage: Warum Jahr zuerst? Ergebnis offen. Wiederholung: 1 richtig,
+  Frage „Warum Jahr zuerst?“ richtig (Sortieren); erklärt: Text wird
+  Zeichen für Zeichen von links verglichen. 6a-Ausgabe offen. Wiederholung: 1 richtig,
   2 richtig (`.get`, Name `KeyError` ergänzt), 3 nicht gewusst (`"w"` =
   schreiben/überschreiben, `utf-8` = Umlaute) → nochmals erklärt,
   **beim nächsten Mal wieder abfragen.**
