@@ -14,7 +14,7 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 3. [x] Einen RSS-Feed abrufen, Schlagzeilen ausgeben
 4. [x] Mehrere Feeds abrufen, Meldungen in einer Liste sammeln
 5. [x] Einheitliches Format, als JSON speichern (Format der Website)
-6. [ ] Wichtigste Meldungen auswählen (erst die neuesten, später schlauer)
+6. [x] Wichtigste Meldungen auswählen: einfache Version (die 20 neuesten) fertig; „schlauer“ später
 7. [ ] Täglich über GitHub Actions ausführen
 
 ## Stand
@@ -186,7 +186,19 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   an der richtigen Stelle).
 - **Teil 2 gestellt:** in `news.py` `if "published_parsed" not in meldung:
   continue`. Experiment: Schlüssel absichtlich falsch schreiben → Gesamt 0.
-  Übung: selbst eine Warnung bei 0 Meldungen ergänzen. Ergebnis offen.
+  Übung: selbst eine Warnung bei 0 Meldungen ergänzen. 1. Versuch
+  `len(neueste=0)` (`=` statt `==`, Vergleich in der Klammer) →
+  `TypeError`; 2. Versuch richtig `if len(neueste) == 0:`. Beide Tests
+  erfolgreich (XXX → Warnung + Gesamt 0; normal → 70, sortiert).
+  **Schritt 6 (einfache Version) abgeschlossen.**
+- Interview-Frage gestellt: „Warum ist es bei einem automatisch laufenden
+  Skript wichtig, Fehlerfälle abzufangen, und wie testet man einen Fall,
+  der gerade nicht vorkommt?“ Antwort offen.
+- Verbesserungsidee: bei 0 Meldungen die alte Datei **nicht**
+  überschreiben (Speichern in `else`). Später: Spiegel-`#ref=rss`
+  entfernen, „schlauere“ Auswahl.
+- Als Nächstes **Schritt 7:** Dateien mit Git committen/pushen,
+  `requirements.txt`, Workflow `.github/workflows/news.yml` (täglich).
 - Als Nächstes **Schritt 6:** Datum mitspeichern, nach Datum sortieren,
   die neuesten N auswählen. Offen: News-Ansicht der Website (Claude darf
   das Frontend bauen, wenn der Nutzer das möchte).
@@ -240,6 +252,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   (ohne Klammern) vs. aufrufen (mit Klammern)
 - `if`/`elif`/`else`, Bedingungen `True`/`False`, Vergleiche `> < >= == !=`,
   `==` (vergleichen) vs. `=` (zuweisen)
+- `in` / `not in` für Schlüssel im Dictionary, `continue` überspringt den
+  Rest der Runde; Fehlerfall absichtlich herbeiführen zum Testen
 
 ## Offene Punkte / Notizen
 
