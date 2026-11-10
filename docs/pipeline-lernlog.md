@@ -180,8 +180,11 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Spiegel gemischt, JSON mit 20 Meldungen. Frage richtig beantwortet
   (Verweis auf Funktion statt Aufruf). VS-Code-Helfer (Vorschläge,
   graue Inline-Vorschläge, Auto-Klammern) auf Wunsch abschaltbar erklärt.
-- Plan 6c: `if` für Meldungen ohne Datum (Robustheit für den täglichen
-  Lauf).
+- **Schritt 6c (Teil 1) gestellt:** `if`/`else` an Mini-Beispiel
+  `pipeline/wenn.py` (`anzahl > 50`), Vergleichsoperatoren. Übung:
+  `elif` für „genau 0“ selbst ergänzen. Ergebnis offen.
+- Plan Teil 2: in `news.py` Meldungen ohne `published_parsed` mit `if`
+  überspringen (`continue`).
 - Als Nächstes **Schritt 6:** Datum mitspeichern, nach Datum sortieren,
   die neuesten N auswählen. Offen: News-Ansicht der Website (Claude darf
   das Frontend bauen, wenn der Nutzer das möchte).
