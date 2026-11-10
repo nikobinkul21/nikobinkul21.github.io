@@ -168,13 +168,17 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `"w"`/`encoding`) und **Schritt 6a** gestellt: `import time`,
   `"datum": time.strftime("%Y-%m-%d %H:%M", meldung.published_parsed)`.
   Frage „Warum Jahr zuerst?“ richtig (Sortieren); erklärt: Text wird
-  Zeichen für Zeichen von links verglichen. 6a-Ausgabe offen. Wiederholung: 1 richtig,
+  Zeichen für Zeichen von links verglichen (ISO 8601). 6a läuft (Datum in
+  Ausgabe und JSON). Wiederholung: 1 richtig,
   2 richtig (`.get`, Name `KeyError` ergänzt), 3 nicht gewusst (`"w"` =
   schreiben/überschreiben, `utf-8` = Umlaute) → nochmals erklärt,
   **beim nächsten Mal wieder abfragen.**
-- Plan 6b: `if` für fehlendes Datum; 6c: sortieren mit
-  `sorted(..., key=nach_datum, reverse=True)` (eigene Funktion statt
-  lambda), dann `[:20]`.
+- **Schritt 6b gestellt:** Funktion `nach_datum(eintrag)` (oben),
+  `alle_meldungen = sorted(alle_meldungen, key=nach_datum, reverse=True)`,
+  `neueste = alle_meldungen[:20]`, `json.dump(neueste, ...)`. Frage: Warum
+  `key=nach_datum` ohne Klammern? Ergebnis offen.
+- Plan 6c: `if` für Meldungen ohne Datum (Robustheit für den täglichen
+  Lauf).
 - Als Nächstes **Schritt 6:** Datum mitspeichern, nach Datum sortieren,
   die neuesten N auswählen. Offen: News-Ansicht der Website (Claude darf
   das Frontend bauen, wenn der Nutzer das möchte).
@@ -222,6 +226,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - JSON als gemeinsames Datenformat; `import json`, `with open(pfad, "w",
   encoding="utf-8") as datei:`, `json.dump(..., ensure_ascii=False,
   indent=2)`; relativer Pfad hängt vom Ordner des Terminals ab
+- `import time`, `time.strftime("%Y-%m-%d %H:%M", meldung.published_parsed)`,
+  Platzhalter, UTC; Datumsformat Jahr zuerst zum Sortieren (ISO 8601)
 
 ## Offene Punkte / Notizen
 
