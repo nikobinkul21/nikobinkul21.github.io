@@ -176,7 +176,10 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **Schritt 6b gestellt:** Funktion `nach_datum(eintrag)` (oben),
   `alle_meldungen = sorted(alle_meldungen, key=nach_datum, reverse=True)`,
   `neueste = alle_meldungen[:20]`, `json.dump(neueste, ...)`. Frage: Warum
-  `key=nach_datum` ohne Klammern? Ergebnis offen.
+  `key=nach_datum` ohne Klammern? Läuft: neueste zuerst, tagesschau und
+  Spiegel gemischt, JSON mit 20 Meldungen. Frage richtig beantwortet
+  (Verweis auf Funktion statt Aufruf). VS-Code-Helfer (Vorschläge,
+  graue Inline-Vorschläge, Auto-Klammern) auf Wunsch abschaltbar erklärt.
 - Plan 6c: `if` für Meldungen ohne Datum (Robustheit für den täglichen
   Lauf).
 - Als Nächstes **Schritt 6:** Datum mitspeichern, nach Datum sortieren,
@@ -228,6 +231,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   indent=2)`; relativer Pfad hängt vom Ordner des Terminals ab
 - `import time`, `time.strftime("%Y-%m-%d %H:%M", meldung.published_parsed)`,
   Platzhalter, UTC; Datumsformat Jahr zuerst zum Sortieren (ISO 8601)
+- `sorted(liste, key=funktion, reverse=True)`; Funktion als Wert übergeben
+  (ohne Klammern) vs. aufrufen (mit Klammern)
 
 ## Offene Punkte / Notizen
 
