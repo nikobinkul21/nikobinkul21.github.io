@@ -254,7 +254,11 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   richtig: `2026-11-13T21:19:32+00:00`. **5e abgeschlossen.**
 - **Schritt 5f gestellt:** `ergebnis = {"aktualisiert": time.strftime(...,
   time.gmtime()), "meldungen": neueste}`, `json.dump(ergebnis, ...)`,
-  `[:15]`. Ergebnis offen.
+  `[:15]`. Läuft: `news.json` hat jetzt das Website-Format
+  (`aktualisiert` + `meldungen`). Kontrollfrage (15 Meldungen) richtig.
+  **Datei erfüllt jetzt `docs/news-format.md`.**
+- Nächstes: Commit + Push → echte Meldungen auf der Website; danach
+  HTML-Prüfung (`"<" in text`), atomisches Speichern (Claude), 7b/7c.
 - Plan (alt): 5f Objekt `{"aktualisiert": ..., "meldungen": neueste}`
   mit `time.gmtime()`; `[:15]`; HTML-Reste prüfen; atomisches Speichern
   (Datei erst unter anderem Namen, dann umbenennen) übernimmt Claude.
@@ -320,6 +324,8 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - Git: Commit (Speicherpunkt), Push, Pull/Merge, `pull.rebase false`,
   Merge-Konflikt mit Markern `<<<<<<< ======= >>>>>>>`, Current vs.
   Incoming; Schnittstelle/Vertrag (`docs/news-format.md`)
+- ISO-8601 mit Zeitzone (`%Y-%m-%dT%H:%M:%S+00:00`), `time.gmtime()`,
+  Liste als Wert in einem Dictionary (Umschlag)
 
 ## Offene Punkte / Notizen
 
