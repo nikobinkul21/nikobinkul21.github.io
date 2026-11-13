@@ -2,7 +2,7 @@
    projects.css – Abschnitt "Projekte/Ideen" (js/projects.js)
    Links eine schmale Seitenleiste mit der Liste, rechts das ausgewählte
    Projekt. Smartphone: entweder die Liste oder das Projekt in voller Breite.
-   Farben, Schriften und Leuchten aus css/style.css.
+   Farben und Schriften aus css/style.css.
    ========================================================================== */
 
 #view-projects {
@@ -135,7 +135,7 @@ textarea.pj-eingabe {
   background: var(--farbe-flaeche);
 }
 
-/* Ausgewählt: heller, mit leuchtender Linie links */
+/* Ausgewählt: heller, mit roter Linie links */
 .pj-eintrag[aria-current="true"] {
   color: var(--farbe-text);
   background: var(--farbe-flaeche);
@@ -149,7 +149,6 @@ textarea.pj-eingabe {
   bottom: 10px;
   width: 2px;
   background: var(--farbe-akzent);
-  box-shadow: 0 0 8px rgb(var(--licht) / 0.6);
 }
 
 .pj-eintrag-titel {
@@ -160,10 +159,6 @@ textarea.pj-eingabe {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.pj-eintrag[aria-current="true"] .pj-eintrag-titel {
-  text-shadow: var(--leuchten-leise);
 }
 
 .pj-eintrag-idee {
@@ -216,7 +211,7 @@ textarea.pj-eingabe {
 
 .pj-titel:hover,
 .pj-idee:hover {
-  background: rgb(var(--licht) / 0.04);
+  background: var(--farbe-flaeche);
 }
 
 .pj-eingabe--titel {
@@ -328,7 +323,6 @@ textarea.pj-eingabe--idee {
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: var(--mono-sperrung);
-  text-shadow: var(--leuchten-leise);
 }
 
 .pj-doku-platzhalter,

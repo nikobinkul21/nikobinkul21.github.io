@@ -33,7 +33,7 @@ const ANSICHTEN = {
 };
 
 // Alte Adressen, die es nicht mehr als eigenen Abschnitt gibt → neues Ziel.
-// "Customising" ist als Bereich "Darstellung" in die Einstellungen gewandert.
+// "Customising" gibt es nicht mehr – die Adresse führt zu den Einstellungen.
 const WEITERLEITUNGEN = {
   customising: "einstellungen",
   settings: "einstellungen",        // #settings öffnet ebenfalls die Einstellungen
@@ -126,9 +126,6 @@ function zeigeAnsicht(name, unterseite, fokusSetzen) {
       link.removeAttribute("aria-current");
     }
   });
-
-  // Öffnen eines Abschnitts zählen (Kachelgrößen der Startseite, js/home.js)
-  if (!warSchonOffen) StartseiteAnsicht.merkeAufruf(name);
 
   // Tool beim ersten Öffnen starten
   const tool = ANSICHTEN[name];
@@ -248,9 +245,11 @@ mobilAbfrage.addEventListener("change", function () {
    ========================================================================== */
 
 // Gespeicherte Daten entfernter Funktionen aufräumen (einmalig, danach ohne
-// Wirkung): ein früherer Bereich und die frühere Wahl hell/dunkel
+// Wirkung): ein früherer Bereich, die frühere Wahl hell/dunkel und die
+// früheren Nutzungsdaten der Startseite (Kachelgrößen nach Nutzung)
 try {
   localStorage.removeItem("ntb-media");
+  localStorage.removeItem("ntb-startseite");
   localStorage.removeItem("hub-theme");
 } catch (fehler) {
   // localStorage gesperrt – dann gibt es auch nichts aufzuräumen

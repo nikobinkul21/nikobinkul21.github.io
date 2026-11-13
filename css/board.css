@@ -2,7 +2,7 @@
    board.css – die Pinnwand (js/board.js)
    Unendliche Fläche mit Punktraster, Zettel, geschwungene Verbindungen,
    Menü am ausgewählten Zettel und Zoomleiste. Farben der Zettel und des
-   Rasters: css/style.css (--zettel-…, --pw-…), Schriften und Leuchten wie
+   Rasters: css/style.css (--zettel-…, --pw-…), Schriften wie
    auf der übrigen Seite.
    ========================================================================== */
 
@@ -115,9 +115,9 @@ html:has(#view-pinnwand:not([hidden])) body {
 .pw-zettel[data-farbe="salbei"] { background: var(--zettel-salbei); }
 .pw-zettel[data-farbe="taube"] { background: var(--zettel-taube); }
 
-/* Ausgewählt: helle, leuchtende Kante */
+/* Ausgewählt: rote Kante */
 .pw-zettel.ist-ausgewaehlt {
-  box-shadow: var(--zettel-schatten), 0 0 0 2px var(--farbe-akzent), 0 0 18px rgb(var(--licht) / 0.35);
+  box-shadow: var(--zettel-schatten), 0 0 0 2px var(--farbe-akzent);
 }
 
 .pw-zettel:focus-visible {
@@ -126,7 +126,7 @@ html:has(#view-pinnwand:not([hidden])) body {
 
 /* Ziel beim Verbinden */
 .pw-zettel.ist-ziel {
-  box-shadow: var(--zettel-schatten), 0 0 0 2px var(--farbe-akzent), 0 0 26px rgb(var(--licht) / 0.5);
+  box-shadow: var(--zettel-schatten), 0 0 0 2px var(--farbe-akzent);
 }
 
 .pw-inhalt {
@@ -194,7 +194,6 @@ html:has(#view-pinnwand:not([hidden])) body {
   border-radius: 50%;
   background: var(--farbe-hintergrund);
   border: 2px solid var(--farbe-text);
-  box-shadow: 0 0 8px rgb(var(--licht) / 0.5);
   cursor: crosshair;
   opacity: 0;
   pointer-events: none;
@@ -280,7 +279,6 @@ html:has(#view-pinnwand:not([hidden])) body {
 .pw-linie.ist-ausgewaehlt .pw-linie-pfad {
   stroke: var(--pw-linie-aktiv);
   stroke-width: 2.4px;
-  filter: drop-shadow(0 0 4px rgb(var(--licht) / 0.6));
 }
 
 .pw-pfeilspitze {
@@ -369,7 +367,6 @@ html:has(#view-pinnwand:not([hidden])) body {
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--farbe-text-leise);
-  text-shadow: var(--leuchten-leise);
   pointer-events: none;
 }
 
@@ -397,7 +394,7 @@ html:has(#view-pinnwand:not([hidden])) body {
   left: 0;
   top: 0;
   border: 1px dashed var(--farbe-text);
-  background: rgb(var(--licht) / 0.06);
+  background: var(--pw-auswahl-flaeche);
   pointer-events: none;
 }
 
@@ -429,7 +426,7 @@ html:has(#view-pinnwand:not([hidden])) body {
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 1px solid rgb(var(--dunkel) / 0.35);
+  border: 1px solid var(--pw-farbknopf-rand);
   border-radius: 50%;
   background: var(--zettel-creme);
   cursor: pointer;
@@ -514,7 +511,6 @@ html:has(#view-pinnwand:not([hidden])) body {
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-align: center;
-  text-shadow: var(--leuchten-leise);
 }
 
 /* Beschriftung einer Verbindung bearbeiten */

@@ -1,21 +1,19 @@
 /* ==========================================================================
    style.css – Grundlage für ganz NTB
 
-   Stil: ein Schwarz-Weiß-Film spät in der Nacht, mit einem Hauch Sepia.
-   Kein reines Weiß, kein reines Schwarz: warmes, cremiges Off-White auf
-   sehr tiefem, minimal warmem Schwarz. Überschriften und Titel haben einen
-   weichen Lichthof wie Text auf einer Röhre oder Leinwand – der Text selbst
-   bleibt gestochen scharf. Die Ränder dunkeln ruhig ab (Vignette).
-   Nichts bewegt sich von selbst.
+   Stil: schlicht und ruhig. Warmes, fast schwarzes Dunkelgrau als Grundton,
+   cremefarbene Schrift und ein gedämpftes Rot als einzige Akzentfarbe –
+   sparsam eingesetzt. Keine Effekte: kein Leuchten, keine Verläufe, keine
+   Schatten auf Karten.
 
    HIER ÄNDERST DU DAS AUSSEHEN DER GANZEN SEITE:
      0. Schriften (Dateien im Ordner fonts/)
-     1. Design-Variablen: Farben, Schriften, Leuchten, Abstände, Vignette,
-        Bewegung – die Seite hat nur dieses eine, dunkle Design
-     1b. Bereichsfarben: Termine, Prioritäten, Kalender, Sudoku-Gitter …
+     1. Design-Variablen: Farben, Schriften, Abstände, Rundungen, Bewegung
+     1b. Bereichsfarben: Termine, Prioritäten, Kalender, Sudoku-Gitter,
+         Pinnwand
    Die Bereichs-Stylesheets (home.css, todo.css, …) benutzen nur diese
-   Variablen. Eigene Farben behalten nur die Spiele – leicht entsättigt
-   über --spiel-saettigung (Abschnitt 6d).
+   Variablen. Eigene Farben behalten nur die Pixel-Spiele, die Prioritäten
+   unter "Zu erledigen" und die Zettel der Pinnwand.
    ========================================================================== */
 
 
@@ -110,94 +108,45 @@
 
 /* ==========================================================================
    1. DESIGN-VARIABLEN
-   Sehr tiefes, minimal warmes Schwarz, Off-White mit einem Hauch Sepia,
-   Grautöne mit derselben Wärme. color-scheme: dark sorgt dafür, dass auch
-   Formularelemente und Scrollleisten dunkel sind.
+   Warmes, fast schwarzes Dunkelgrau als Grundton, cremefarbene Schrift und
+   EIN gedämpftes Rot als Akzent – sparsam für Buttons, Links, aktive
+   Navigation, Fokusrahmen und Hover-Zustände.
+   Kontraste (WCAG): Text 13,9 : 1, Nebentext 6,3 : 1 auf dem Grund;
+   Rot als Fläche/Linie 4,2 : 1 (≥ 3 : 1 für Bedienelemente), Rot als
+   Schrift (--farbe-akzent-text) 5,1 : 1, dunkle Schrift auf Rot 4,8 : 1.
+   color-scheme: dark – auch Formularelemente und Scrollleisten sind dunkel.
    ========================================================================== */
 
 :root {
-  /* ---- Farben ---- */
-  --farbe-hintergrund: #0a0a09;      /* tiefes, minimal warmes Schwarz */
-  --farbe-flaeche: #12110f;          /* Kacheln, Karten, Dialoge */
-  --farbe-flaeche-leise: #1b1a17;    /* Hover, Umschalter */
-  --farbe-flaeche-hell: #25231f;     /* hellste Fläche */
-  --farbe-text: #e8e3d5;             /* warmes, cremiges Off-White */
-  --farbe-text-leise: #a39d8f;       /* Nebentext: 7,3 : 1 auf dem Grund */
-  --farbe-rand: #2d2b26;             /* feine Linien */
-  --farbe-rand-stark: #6f6a5f;       /* Eingabefelder, Knöpfe: ≥ 3 : 1 auf Flächen */
+  /* ---- Grundfarben ---- */
+  --farbe-hintergrund: #1f1e1d;      /* warmes, sehr dunkles Grau */
+  --farbe-flaeche: #2a2927;          /* Karten, Menüs, Dialoge */
+  --farbe-flaeche-leise: #312f2d;    /* Flächen beim Hovern, Umschalter */
+  --farbe-flaeche-hell: #383633;     /* hellste Fläche */
+  --farbe-text: #ece9e2;             /* warmes Creme */
+  --farbe-text-leise: #a39f96;       /* Nebentext: gedämpftes Warmgrau */
+  --farbe-rand: #3a3835;             /* feine Linien */
+  --farbe-rand-stark: #7a756c;       /* Eingabefelder, Knöpfe: ≥ 3 : 1 auf Flächen */
 
-  /* Keine Akzentfarbe: "Akzent" ist das hellste Off-White */
-  --farbe-akzent: #e8e3d5;
-  --farbe-akzent-hover: #f3efe4;
-  --farbe-akzent-leise: #27251f;     /* zarte Tönung, z. B. Markierungen */
-  --farbe-auf-akzent: #0a0a09;       /* Text auf Akzent-Flächen */
-  --farbe-fokus: #e8e3d5;            /* Tastaturfokus */
+  /* ---- Akzent: gedämpftes Rot ---- */
+  --farbe-akzent: #d9574d;           /* Buttons, Linien, Ringe, aktive Markierungen */
+  --farbe-akzent-hover: #e46a60;     /* etwas heller beim Hovern */
+  --farbe-akzent-text: #e46a60;      /* Rot als Schrift (Links): hell genug für AA */
+  --farbe-akzent-leise: #3a2725;     /* zarte rote Tönung, z. B. Markierungen */
+  --farbe-akzent-linie: rgba(228, 106, 96, 0.45);   /* Unterstreichung von Links */
+  --farbe-auf-akzent: #161514;       /* Schrift auf roten Flächen */
+  --farbe-fokus: var(--farbe-akzent);/* Tastaturfokus */
 
-  /* Rückmeldungen – ebenfalls nur warme Grautöne */
-  --farbe-erfolg: #d4cebf;
-  --farbe-gefahr: #f3efe4;
-  --farbe-gefahr-leise: #2b2924;
+  /* ---- Rückmeldungen ---- */
+  --farbe-erfolg: #b7c9a8;           /* gedämpftes Grün, nur für "geschafft" */
+  --farbe-gefahr: var(--farbe-akzent-text);
+  --farbe-gefahr-leise: var(--farbe-akzent-leise);
 
-  --farbe-schleier: rgba(6, 6, 5, 0.72);   /* Abdunklung hinter Dialogen */
-
-  /* ---- Licht (als "R G B", Stärke über den Alpha-Wert) ---- */
-  --licht: 232 227 213;              /* Off-White für Leuchten und Scheinwerfer */
-  --dunkel: 10 10 9;                 /* Schwarz für die Vignette */
-  /* Schein von oben, als stünde irgendwo eine Straßenlaterne */
-  --laterne-staerke: 0.06;
-  --laterne-form: 90% 60% at 50% -12%;
-
-  /* ---- Leuchten: Lichthof um Überschriften, Titel, Datum, Uhrzeit ----
-     Mehrere Schichten: innen eng und hell, außen breit und schwach. */
-  --leuchten:
-    0 0 1px rgb(var(--licht) / 0.55),
-    0 0 4px rgb(var(--licht) / 0.32),
-    0 0 11px rgb(var(--licht) / 0.18),
-    0 0 26px rgb(var(--licht) / 0.10),
-    0 0 52px rgb(var(--licht) / 0.05);
-  /* Stärker: Kacheltitel im Scheinwerfer (Hover) */
-  --leuchten-stark:
-    0 0 1px rgb(var(--licht) / 0.8),
-    0 0 5px rgb(var(--licht) / 0.5),
-    0 0 14px rgb(var(--licht) / 0.32),
-    0 0 32px rgb(var(--licht) / 0.18),
-    0 0 64px rgb(var(--licht) / 0.09);
-  /* Schwach: kleine Angaben (Navigation, Uhrzeit) */
-  --leuchten-leise:
-    0 0 1px rgb(var(--licht) / 0.4),
-    0 0 6px rgb(var(--licht) / 0.16),
-    0 0 16px rgb(var(--licht) / 0.06);
-  /* Länglicher Lichtschein hinter größeren Textblöcken */
-  --lichtschein: radial-gradient(ellipse 50% 50% at 50% 55%, rgb(var(--licht) / 0.07), rgb(var(--licht) / 0.025) 45%, transparent 72%);
-  --lichtschein-breite: 140%;        /* so viel breiter als der Text */
-  --lichtschein-hoehe: 260%;
-
-  /* ---- Kacheln ---- */
-  --kachel-kante: 232 227 213;       /* feine, warme Kante */
-  --kachel-kante-staerke: 0.13;
-  --kachel-licht-staerke: 0.09;      /* Hover: Fläche wird so viel heller */
-  --kachel-schein-staerke: 0.18;     /* Hover: weicher Schein an der Kante */
-  --kachel-schein-groesse: 30px;
-  --kachel-hover-dauer: 700ms;       /* langsam, wie ein Scheinwerfer */
-
-  /* Glow (Prompts-Kacheln) – zeigt auf dasselbe Licht */
-  --glow-farbe: var(--licht);
-  --glow-schatten-farbe: var(--dunkel);
-
-  /* ---- Vignette: die Ränder dunkeln ruhig ab ---- */
-  --vignette-staerke: 0.6;
-  --vignette-ebene: 900;             /* z-index (über der Seite, unter Dialogen) */
-
-  /* ---- Stadt bei Nacht (Startseite, unterer Rand) ---- */
-  --stadt-farbe: 236 214 170;        /* warme, ferne Lichter */
-  --stadt-deckkraft: 0.42;           /* Gesamtstärke – kaum sichtbar */
-  --stadt-hoehe: 30vh;
-  --stadt-unschaerfe: 1.2;           /* Weichzeichnung der Lichter in Pixeln */
-  --stadt-punkte: 420;               /* Anzahl der Lichtpunkte */
+  --farbe-schleier: rgba(15, 14, 13, 0.7);   /* Abdunklung hinter Dialogen */
 
   /* ---- Schatten: NUR für schwebende Elemente (Menüs, Dialoge) ---- */
   --schatten: none;
-  --schatten-schwebend: 0 18px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgb(var(--licht) / 0.06);
+  --schatten-schwebend: 0 12px 32px rgba(0, 0, 0, 0.45);
 
   /* ---- Linien ---- */
   --linie-breite: 1px;
@@ -216,13 +165,13 @@
   --schrift-groesse: 1rem;           /* Grundschrift: 16 px */
   --zeilenhoehe: 1.6;
   --zeilen-max: 68ch;
-  --titel-groesse-1: 2.9rem;         /* h1: Serif */
-  --titel-groesse-2: 1.55rem;        /* h2: Serif */
+  --titel-groesse-1: 2.6rem;         /* h1: Serif */
+  --titel-groesse-2: 1.5rem;         /* h2: Serif */
   --titel-gewicht: 500;
-  --mono-groesse: 0.82rem;           /* Monospace-Labels */
-  --mono-sperrung: 0.2em;            /* weiter Buchstabenabstand */
+  --mono-groesse: 0.8rem;            /* Monospace-Labels */
+  --mono-sperrung: 0.16em;           /* Buchstabenabstand der Labels */
   --klein-groesse: 0.72rem;          /* Archivo Narrow */
-  --klein-sperrung: 0.14em;
+  --klein-sperrung: 0.12em;
   --reiter-sperrung: var(--mono-sperrung);
   --titel-sperrung: var(--mono-sperrung);
   --display-sperrung: 0.01em;
@@ -233,78 +182,71 @@
   --abstand-m: 16px;
   --abstand-l: 24px;
   --abstand-xl: 48px;
-  --karte-innen: 28px;
+  --karte-innen: 24px;
 
-  /* ---- Rundungen: klar und kantig ---- */
-  --radius-s: 2px;
-  --radius-m: 4px;
+  /* ---- Rundungen ---- */
+  --radius-s: 6px;                   /* Buttons, Eingabefelder */
+  --radius-m: 12px;                  /* Karten, Menüs, Dialoge */
   --radius-pille: 999px;
 
   /* ---- Bedienelemente ---- */
   --knopf-hoehe: 40px;
 
-  /* ---- Glas-Flächen (Kalender, Spiele): Farbe, Rand, Glanz – ohne Unschärfe ---- */
-  --glas-hintergrund: rgb(var(--licht) / 0.05);
-  --glas-rand: rgb(var(--licht) / 0.14);
-  --glas-reflex: rgb(var(--licht) / 0.22);
-  --glas-glanz: rgb(var(--licht) / 0.04);
-  --glas-schatten: 0 4px 16px rgba(0, 0, 0, 0.6);
-  --glas-fallback: rgba(27, 26, 23, 0.95);
+  /* ---- Glas-Flächen (Kalender, Spiele): nur Tönung, keine Unschärfe ---- */
+  --glas-hintergrund: rgba(236, 233, 226, 0.05);
+  --glas-rand: var(--farbe-rand);
+  --glas-schatten: var(--schatten-schwebend);
+  --glas-fallback: var(--farbe-flaeche);
 
   /* ---- Logo "NTB" ---- */
   --logo-schrift: "NTB Logo", Impact, "Arial Black", sans-serif;
   --logo-groesse: 1.75rem;
   --logo-groesse-mobil: 1.6rem;
-  --logo-farbe: #0a0a09;             /* Buchstaben */
-  --logo-kontur-farbe: #e8e3d5;      /* Kontur außen */
+  --logo-farbe: var(--farbe-hintergrund);   /* Buchstaben */
+  --logo-kontur-farbe: var(--farbe-text);   /* Kontur außen */
   --logo-kontur-staerke: 1px;
-  --logo-schatten: 0 0 10px rgb(var(--licht) / 0.2);
+  --logo-schatten: none;
 
   /* ---- Größen ---- */
   --leiste-hoehe: 64px;
   --leiste-max-breite: 1280px;
   --inhalt-max-breite: 1100px;
 
-  /* ---- Bewegung: ruhig und weich ---- */
-  --dauer: 220ms;
-  --kurve-weich: cubic-bezier(0.25, 0.1, 0.25, 1);
+  /* ---- Bewegung: kurz und ruhig ---- */
+  --dauer: 150ms;
+  --anheben: -2px;                   /* Karten heben sich beim Hovern so weit an */
 
-  /* ---- Seitenwechsel (js/seitenwechsel.js): Schnitt ins Schwarze ---- */
-  --uebergang-abblende-dauer: 220ms;
-  --uebergang-schwarz-dauer: 60ms;
-  --uebergang-aufblende-dauer: 260ms;
-  --uebergang-schwarz: #0a0a09;      /* Farbe der Blende */
-  --uebergang-ruhig-dauer: 160ms;
-
-  /* ---- Spiele: eigene Farben, leicht entsättigt (Abschnitt 6d) ---- */
-  --spiel-saettigung: 0.72;
+  /* ---- Seitenwechsel (js/seitenwechsel.js): kurze Überblendung ---- */
+  --uebergang-dauer: 200ms;          /* aus- und einblenden zusammen */
 
   color-scheme: dark;
 }
 
+
 /* ==========================================================================
    1b. BEREICHSFARBEN
-   Termine, Kalender und Sudoku-Gitter in warmen Grautönen – unterschieden
-   nur über Helligkeit. Die Prioritäten unter "Zu erledigen" behalten ihre
-   Farbskala, leicht entsättigt.
+   Termine, Kalender und Sudoku-Gitter in warmen Grautönen; Rot nur als
+   Akzent (heute, aktuelle Uhrzeit, Auswahl). Eigene Farbigkeit behalten:
+   die Prioritäten unter "Zu erledigen" und die Zettel der Pinnwand (hier)
+   sowie die Pixel-Spiele (in ihren eigenen Stylesheets).
    ========================================================================== */
 
 :root {
   /* Arten von Einträgen (Stundenplan, Kalender-Vorschau) */
-  --farbe-termin: #8d877a;           /* Rand / Strich: mittleres warmes Grau */
-  --farbe-termin-flaeche: #1c1a17;
-  --farbe-termin-text: #e2ddcf;
-  --farbe-vorlesung: #e8e3d5;        /* Vorlesungen: hell leuchtend */
-  --farbe-vorlesung-flaeche: #28261f;
-  --farbe-vorlesung-text: #f3efe4;
+  --farbe-termin: #a39f96;           /* Rand / Strich: warmes Grau */
+  --farbe-termin-flaeche: #2f2d2b;
+  --farbe-termin-text: #ece9e2;
+  --farbe-vorlesung: #ece9e2;        /* Vorlesungen: Creme */
+  --farbe-vorlesung-flaeche: #363431;
+  --farbe-vorlesung-text: #ece9e2;
 
   /* Stundenplan-Raster */
-  --sp-linie: rgb(var(--licht) / 0.07);
-  --sp-heute-hintergrund: rgb(var(--licht) / 0.04);
-  --sp-heute-akzent: var(--farbe-akzent);
-  --sp-jetzt-farbe: #e8e3d5;
+  --sp-linie: rgba(236, 233, 226, 0.07);
+  --sp-heute-hintergrund: rgba(236, 233, 226, 0.03);
+  --sp-heute-akzent: var(--farbe-akzent-text);
+  --sp-jetzt-farbe: var(--farbe-akzent);   /* Linie der aktuellen Uhrzeit */
 
-  /* Zu erledigen: Prioritäten (Skala von Rot nach Grün, entsättigt) */
+  /* Zu erledigen: Prioritäten (eigene Farbskala von Rot nach Grün) */
   --todo-ueberfaellig: #e0857d;
   --todo-sehr-wichtig: #e39087;
   --todo-wichtig: #dfa778;
@@ -313,43 +255,34 @@
   --todo-locker: #7db38d;
   --todo-erledigt: #7db38d;
   --todo-offen: #e39087;
-  --todo-ueberfaellig-hintergrund: #2a1f1d;
+  --todo-ueberfaellig-hintergrund: #3a2725;
 
-  /* Kalender-Markierungen */
-  --kal-vergangen-text: #6f6a5f;              /* vergangene Tage: gedimmt */
-  --kal-vergangen-hintergrund: rgb(var(--licht) / 0.02);
-  --kal-heute-glas: rgb(var(--licht) / 0.20); /* heute: hell leuchtendes Glas */
-  --kal-heute-glanz: rgb(var(--licht) / 0.12);
-  --kal-heute-rand: rgb(var(--licht) / 0.55);
-  --kal-heute-reflex: rgb(var(--licht) / 0.4);
-  --kal-heute-leuchten: rgb(var(--licht) / 0.35);
-  --kal-heute-schatten: rgba(0, 0, 0, 0.5);
-  --kal-heute-text: #f3efe4;
-  --kal-termin-glas: rgb(var(--licht) / 0.08); /* Tage mit Termin: zartes Glas */
-  --kal-termin-rand: rgb(var(--licht) / 0.3);
-  --kal-termin-leuchten: rgb(var(--licht) / 0.14);
-  --kal-termin-ring: #bdb7a8;
-  --kal-vorschau-hintergrund: rgba(18, 17, 15, 0.95);
+  /* Kalender: vergangene Tage gedämpft grau, heute mit rotem Ring */
+  --kal-vergangen-text: #958f86;            /* gedämpft, aber noch AA (4,5:1 auf der Fläche) */
+  --kal-vergangen-hintergrund: transparent;
+  --kal-heute-rand: var(--farbe-akzent);
+  --kal-heute-text: var(--farbe-text);
+  --kal-termin-glas: rgba(236, 233, 226, 0.1);  /* Tage mit Termin: zarte Tönung */
+  --kal-vorschau-hintergrund: var(--farbe-flaeche);
 
   /* Sudoku-Gitter (freies Spiel) */
-  --sudoku-linie-duenn-farbe: #2f2d28;
-  --sudoku-linie-dick-farbe: #9b9588;
+  --sudoku-linie-duenn-farbe: #3a3835;
+  --sudoku-linie-dick-farbe: #8a857c;
   --sudoku-feld: var(--farbe-flaeche);
-  --sudoku-verwandt: #181714;                 /* gleiche Zeile, Spalte, Block */
-  --sudoku-gleich: #2c2a25;                   /* Felder mit derselben Zahl */
-  --sudoku-ausgewaehlt: #3e3b34;              /* das gewählte Feld */
+  --sudoku-verwandt: #2f2e2b;                 /* gleiche Zeile, Spalte, Block */
+  --sudoku-gleich: #3a3633;                   /* Felder mit derselben Zahl */
+  --sudoku-ausgewaehlt: #4a302d;              /* das gewählte Feld: rote Tönung */
   --sudoku-vorgabe-farbe: var(--farbe-text);
-  --sudoku-eingabe-farbe: #b4ae9f;            /* eigene Zahlen: etwas gedämpfter */
+  --sudoku-eingabe-farbe: var(--farbe-akzent-text);
   --sudoku-fehler-farbe: var(--farbe-gefahr);
   --sudoku-fehler-hintergrund: var(--farbe-gefahr-leise);
   --sudoku-erfolg-farbe: var(--farbe-erfolg);
   --sudoku-fertig-haken-farbe: var(--farbe-erfolg);
   --sudoku-effekt-farbe: var(--farbe-akzent);
-  --sudoku-effekt-schein: rgb(var(--licht) / 0.14);
-  --sudoku-effekt-schein-stark: rgb(var(--licht) / 0.26);
+  --sudoku-effekt-schein: rgba(217, 87, 77, 0.16);
+  --sudoku-effekt-schein-stark: rgba(217, 87, 77, 0.28);
 
-  /* Pinnwand: Zettelfarben (Off-White, Hellgrau, drei gedämpfte Töne) und
-     Schrift darauf – etwas gedämpft, damit sie auf dem Schwarz nicht blenden. */
+  /* Pinnwand: Zettelfarben (eigene Farbigkeit) und Fläche */
   --zettel-creme: #ddd7c7;
   --zettel-grau: #b9b5ab;
   --zettel-sand: #cdb995;
@@ -357,10 +290,12 @@
   --zettel-taube: #a6b2bf;
   --zettel-text: #16140f;
   --zettel-text-leise: #3f3a30;
-  --zettel-schatten: 0 6px 18px rgba(0, 0, 0, 0.45);
-  --pw-raster: rgb(var(--licht) / 0.13);       /* Punktraster der Fläche */
-  --pw-linie: rgb(var(--licht) / 0.55);        /* Verbindungen */
-  --pw-linie-aktiv: #f3efe4;
+  --zettel-schatten: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --pw-raster: rgba(236, 233, 226, 0.12);     /* Punktraster der Fläche */
+  --pw-linie: rgba(236, 233, 226, 0.55);      /* Verbindungen */
+  --pw-linie-aktiv: var(--farbe-akzent);
+  --pw-auswahl-flaeche: rgba(236, 233, 226, 0.06);  /* Auswahlrahmen beim Aufziehen */
+  --pw-farbknopf-rand: rgba(0, 0, 0, 0.35);         /* Rand der Farbknöpfe im Menü */
 }
 
 
@@ -380,9 +315,7 @@ html {
   background: var(--farbe-hintergrund);
 }
 
-/* Der Grund: tiefes Schwarz mit dem Schein der
-   Straßenlaterne von oben. background-attachment: fixed – das Licht
-   bleibt beim Scrollen an seinem Platz. */
+/* Der Grund: einfarbiges, warmes Dunkelgrau */
 body {
   margin: 0;
   min-height: 100vh;
@@ -392,15 +325,12 @@ body {
   font-weight: 400;
   line-height: var(--zeilenhoehe);
   color: var(--farbe-text);
-  background:
-    radial-gradient(ellipse var(--laterne-form), rgb(var(--licht) / var(--laterne-staerke)), transparent 70%)
-    fixed,
-    var(--farbe-hintergrund);
+  background: var(--farbe-hintergrund);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Überschriften: Old-Style-Serif mit weichem Lichthof */
+/* Überschriften: Old-Style-Serif */
 h1,
 h2 {
   font-family: var(--schrift-serif);
@@ -410,7 +340,6 @@ h2 {
 }
 
 h1 {
-  position: relative;
   margin: 0 0 var(--abstand-l);
   font-size: var(--titel-groesse-1);
   line-height: 1.05;
@@ -420,35 +349,6 @@ h2 {
   margin: 0 0 var(--abstand-s);
   font-size: var(--titel-groesse-2);
   line-height: 1.25;
-}
-
-/* Leuchten: Lichthof aus gestaffelten Schatten – nur das Licht drumherum
-   ist weich, der Text bleibt scharf. Nur für Überschriften, Titel,
-   Zeitstempel und aktive Navigation – nie für Fließtext. */
-h1,
-h2,
-.leuchtet {
-  text-shadow: var(--leuchten);
-}
-
-/* Lichtschein hinter größeren Textblöcken: breit und länglich, als fiele
-   Licht durch den Text auf den Hintergrund */
-h1::before,
-.lichtschein::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: -1;
-  width: var(--lichtschein-breite);
-  height: var(--lichtschein-hoehe);
-  transform: translate(-50%, -50%);
-  background: var(--lichtschein);
-  pointer-events: none;
-}
-
-h1 {
-  isolation: isolate;
 }
 
 /* Monospace-Labels: wie eine Einblendung auf einem alten Bildschirm */
@@ -482,15 +382,16 @@ textarea {
 }
 
 /* Links: hell, fein unterstrichen */
+/* Links: in Rot (die Variante für Schrift, AA auf dem Grund) */
 a {
-  color: var(--farbe-text);
-  text-decoration-color: var(--farbe-rand-stark);
+  color: var(--farbe-akzent-text);
+  text-decoration-color: var(--farbe-akzent-linie);
   text-underline-offset: 3px;
-  transition: text-decoration-color var(--dauer) ease;
+  transition: color var(--dauer) ease, text-decoration-color var(--dauer) ease;
 }
 
 a:hover {
-  color: var(--farbe-text);
+  color: var(--farbe-akzent-text);
   text-decoration-color: currentColor;
 }
 
@@ -614,10 +515,9 @@ textarea:focus {
   color: var(--farbe-text);
 }
 
-/* Aktiver Reiter (app.js setzt aria-current="page"): leuchtet */
+/* Aktiver Reiter (app.js setzt aria-current="page"): Creme mit rotem Strich */
 .reiter[aria-current="page"]:not(.marke) {
   color: var(--farbe-text);
-  text-shadow: var(--leuchten);
 }
 
 /* Die feine Markierung unter dem aktiven Reiter */
@@ -627,9 +527,9 @@ textarea:focus {
   left: 12px;
   right: 12px;
   bottom: 2px;
-  height: 1px;
+  height: 2px;
+  border-radius: 1px;
   background: var(--farbe-akzent);
-  box-shadow: 0 0 8px rgb(var(--licht) / 0.6);
 }
 
 /*
@@ -719,11 +619,11 @@ textarea:focus {
 }
 
 /* Zahnrad: öffnet die Einstellungen. Schlicht ohne Rahmen; beim Hovern
-   und auf der Einstellungsseite leuchtet es dezent. */
+   rot, auf der Einstellungsseite Creme. */
 .zahnrad {
   border-color: transparent;
   color: var(--farbe-text-leise);
-  transition: color var(--dauer) ease, filter var(--dauer) ease;
+  transition: color var(--dauer) ease;
 }
 
 .zahnrad svg {
@@ -735,13 +635,15 @@ textarea:focus {
   stroke-linejoin: round;
 }
 
-.zahnrad:hover,
-.zahnrad:focus-visible,
 .zahnrad[aria-current="page"] {
   color: var(--farbe-text);
+}
+
+.zahnrad:hover,
+.zahnrad:focus-visible {
+  color: var(--farbe-akzent-text);
   background: transparent;
   border-color: transparent;
-  filter: drop-shadow(0 0 5px rgb(var(--licht) / 0.55));
 }
 
 
@@ -780,7 +682,7 @@ textarea:focus {
   display: block;
   color: inherit;
   text-decoration: none;
-  transition: border-color var(--dauer) ease, background-color var(--dauer) ease;
+  transition: border-color var(--dauer) ease, background-color var(--dauer) ease, transform var(--dauer) ease;
 }
 
 .link-karte h2 {
@@ -790,8 +692,9 @@ textarea:focus {
 .link-karte:hover,
 .link-karte:focus-visible {
   color: inherit;
-  border-color: var(--farbe-rand-stark);
+  border-color: var(--farbe-akzent);
   background: var(--farbe-flaeche-leise);
+  transform: translateY(var(--anheben));
 }
 
 .link-karte p {
@@ -851,12 +754,12 @@ textarea:focus {
   border: 1px solid var(--farbe-rand-stark);
   border-radius: var(--radius-s);
   cursor: pointer;
-  transition: background-color var(--dauer) ease, border-color var(--dauer) ease, box-shadow var(--dauer) ease;
+  transition: background-color var(--dauer) ease, border-color var(--dauer) ease, color var(--dauer) ease;
 }
 
 .knopf:hover {
   background: var(--farbe-flaeche-leise);
-  border-color: var(--farbe-text-leise);
+  border-color: var(--farbe-akzent);
 }
 
 /* Hauptaktion: in der Akzentfarbe */
@@ -869,7 +772,6 @@ textarea:focus {
 .knopf--haupt:hover {
   background: var(--farbe-akzent-hover);
   border-color: var(--farbe-akzent-hover);
-  box-shadow: 0 0 18px rgb(var(--licht) / 0.25);
 }
 
 /* Einstellungen */
@@ -941,22 +843,6 @@ textarea:focus {
   cursor: pointer;
 }
 
-/* Ein Häkchen mit Beschriftung daneben */
-.einstellungen-feld--haken {
-  margin-bottom: var(--abstand-s);
-  cursor: pointer;
-}
-
-.einstellungen-feld.einstellungen-feld--haken input {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  padding: 0;
-  accent-color: var(--farbe-akzent);
-  cursor: pointer;
-}
-
 /* Textfeld in einer Einstellung (z. B. Datenbank-Zugang) */
 .einstellungen-feld--text {
   margin-bottom: var(--abstand-s);
@@ -1023,52 +909,6 @@ dialog {
 
 dialog::backdrop {
   background: var(--farbe-schleier);
-}
-
-
-/* ==========================================================================
-   6c. SEITENWECHSEL (js/seitenwechsel.js)
-   Ein Schnitt wie im Film: Eine schwarze Blende über der ganzen Seite
-   blendet auf, der Abschnitt wechselt im Schwarz, die Blende verschwindet.
-   Dauer: Abschnitt 1, --uebergang-…
-   ========================================================================== */
-
-.seitenwechsel-blende {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;                    /* über allem, auch über der Leiste */
-  background: var(--uebergang-schwarz);
-  opacity: 0;
-  cursor: progress;                 /* fängt während des Schnitts alle Klicks ab */
-  will-change: opacity;
-}
-
-
-/* ==========================================================================
-   6d. VIGNETTE, SPIELE
-   Vignette: Die Ränder dunkeln weich ab. Eine feste, unbewegte Fläche über
-   der ganzen Seite, die keine Klicks abfängt.
-   ========================================================================== */
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: var(--vignette-ebene);
-  background: radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgb(var(--dunkel) / var(--vignette-staerke)) 100%);
-  pointer-events: none;
-}
-
-
-/* Spiele behalten ihre Farben, leicht entsättigt. Der Filter sitzt nur
-   auf Elementen, deren Kinder nicht am Bildschirm festhängen (filter würde
-   position: fixed darin verschieben) – das Sudoku-Abenteuer ist auf dem
-   Handy selbst bildschirmfüllend fixiert, dort passt es. */
-.spiel-bereich,
-.fx-ebene,
-.dl-canvas,
-.dl-auswahl {
-  filter: saturate(var(--spiel-saettigung));
 }
 
 
@@ -1177,18 +1017,5 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   .nav-panel {
     transform: none !important;
-  }
-}
-
-/* Kontrast erhöhen (Systemeinstellung): keine Vignette, kein Leuchten */
-@media (prefers-contrast: more) {
-  body::before {
-    display: none;
-  }
-
-  h1,
-  h2,
-  .leuchtet {
-    text-shadow: none;
   }
 }
