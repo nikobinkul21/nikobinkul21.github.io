@@ -208,7 +208,18 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `key=nach_datum` ohne Klammern) + Aufräumen der Speicher-Einrückung und
   `XXX`-Test. Wiederholung: 1 (`"w"`/`utf-8`) jetzt richtig ✓,
   2 (`=`/`==`) richtig, 3 (`key=nach_datum` ohne Klammern) vergessen →
-  nochmals erklärt, **nächstes Mal wieder abfragen**. Tests offen.
+  nochmals erklärt, **nächstes Mal wieder abfragen**. Einrückung
+  aufgeräumt, beide Tests bestanden (XXX → nicht gespeichert, alte Datei
+  bleibt; normal → gespeichert).
+- **Schritt 7a gestellt:** Commit + Push aus VS Code (Quellcodeverwaltung)
+  auf `main` des lokalen Klons: `pipeline/`-Dateien und `data/news.json`.
+  Ggf. `git config --global user.name/user.email` nötig. Prüfen auf
+  github.com. Ergebnis offen.
+- Plan 7b: `requirements.txt` (feedparser); 7c:
+  `.github/workflows/news.yml` (cron täglich, Python einrichten, Skript
+  ausführen, `data/news.json` committen; `permissions: contents: write`).
+  Hinweis: Lernlog/CLAUDE.md liegen auf Branch `claude/jolly-darwin-qzl0v5`,
+  später per Pull Request nach `main`.
 - Weitere Ideen: Später: Spiegel-`#ref=rss`
   entfernen, „schlauere“ Auswahl.
 - Als Nächstes **Schritt 7:** Dateien mit Git committen/pushen,
