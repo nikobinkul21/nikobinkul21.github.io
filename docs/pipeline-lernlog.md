@@ -233,7 +233,19 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - 7a-Push des Nutzers ist (Stand Prüfung) **nicht** auf GitHub
   angekommen; „data ist da“ = vermutlich die Beispieldatei. Lokaler Klon
   ist hinter dem Remote → Pull/Sync nötig, mögliche Konfliktdatei
-  `data/news.json`. Diagnose beim Nutzer offen.
+  `data/news.json`. VS Code zeigt „Sync Changes 1“ (Commit lokal, nicht
+  gepusht). Anleitung gegeben: `git config --global pull.rebase false`,
+  Sync, bei Konflikt „Accept All Incoming“ (Beispieldatei). Ergebnis offen.
+- **Entscheidung:** Nutzer wählt **A**: Pipeline an `docs/news-format.md`
+  anpassen (statt Website umbauen). Begründung: Website-Format kann mehr
+  (`aktualisiert` + Warnung bei alten Daten, Zeitzone, `region`,
+  `anzahlQuellen`), Umbau klein, praxisnah (Schnittstelle einhalten).
+- **Schritt 5e gestellt:** Schlüssel umbenennen (`text` →
+  `zusammenfassung`, `link` → `url`, `datum` → `veroeffentlicht`), Datum
+  als `"%Y-%m-%dT%H:%M:%S+00:00"`; alle Stellen selbst finden (⌘F).
+- Plan danach: 5f Objekt `{"aktualisiert": ..., "meldungen": neueste}`
+  mit `time.gmtime()`; `[:15]`; HTML-Reste prüfen; atomisches Speichern
+  (Datei erst unter anderem Namen, dann umbenennen) übernimmt Claude.
 - Weitere Ideen: Später: Spiegel-`#ref=rss`
   entfernen, „schlauere“ Auswahl.
 - Als Nächstes **Schritt 7:** Dateien mit Git committen/pushen,
