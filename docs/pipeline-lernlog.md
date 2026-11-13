@@ -248,7 +248,14 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **Schritt 5e gestellt:** Schlüssel umbenennen (`text` →
   `zusammenfassung`, `link` → `url`, `datum` → `veroeffentlicht`), Datum
   als `"%Y-%m-%dT%H:%M:%S+00:00"`; alle Stellen selbst finden (⌘F).
-- Plan danach: 5f Objekt `{"aktualisiert": ..., "meldungen": neueste}`
+- 5e: Nutzer brauchte konkrete Vorher/Nachher-Anleitung (3 Stellen:
+  Dictionary, `nach_datum`, Kontrollausgabe). Erst altes Datumsmuster
+  (kein Fehler, falsches Format → „welcher Code lief wirklich?“), dann
+  richtig: `2026-11-13T21:19:32+00:00`. **5e abgeschlossen.**
+- **Schritt 5f gestellt:** `ergebnis = {"aktualisiert": time.strftime(...,
+  time.gmtime()), "meldungen": neueste}`, `json.dump(ergebnis, ...)`,
+  `[:15]`. Ergebnis offen.
+- Plan (alt): 5f Objekt `{"aktualisiert": ..., "meldungen": neueste}`
   mit `time.gmtime()`; `[:15]`; HTML-Reste prüfen; atomisches Speichern
   (Datei erst unter anderem Namen, dann umbenennen) übernimmt Claude.
 - Weitere Ideen: Später: Spiegel-`#ref=rss`
