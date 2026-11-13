@@ -1,23 +1,27 @@
 /* ==========================================================================
    home.css – die Startseite (js/home.js)
    Schlicht und ruhig: oben links klein Datum und Uhrzeit, darunter die
-   Zeile "Als Nächstes", darunter ein Raster aus gleich großen Karten,
-   ganz unten die Schnellzugriffe als Textlinks.
-   Alles passt ohne Scrollen in die Bildschirmhöhe (dvh): das Raster nimmt
-   den übrigen Platz ein, die Reihen strecken sich. Nur wenn selbst die
-   Mindesthöhe der Karten nicht passt (sehr kleine Bildschirme), wird
-   gescrollt.
-   Raster: Flexbox mit Umbruch – so steht die letzte, unvollständige Reihe
-   mittig. Computer 4 Spalten, Tablet 3, Smartphone 2.
+   Zeile "Als Nächstes". In der Mitte zwei Spalten: links der News-Feed
+   (css/news.css, etwa 55 %), rechts die Karten (etwa 45 %). Ganz unten
+   die Schnellzugriffe als Textlinks.
+   Computer (ab 1024 px): Alles passt ohne Scrollen in die Bildschirmhöhe
+   (dvh) – die Mitte nimmt den übrigen Platz ein, die Kartenreihen strecken
+   sich, der Feed scrollt in sich. Nur wenn selbst die Mindesthöhe der
+   Karten nicht passt (sehr niedrige Fenster), scrollt die Seite.
+   Tablet: Karten oben (4 Spalten), Feed darunter. Smartphone: Karten in
+   2 Spalten, Feed darunter. Dort scrollt die Seite.
+   Karten: gleich groß; bei ungerader Anzahl ist die letzte doppelt breit.
    Farben und Schriften: css/style.css.
    ========================================================================== */
 
 #view-home {
   --zeit-groesse: 0.78rem;
-  --raster-spalten: 4;
-  --raster-abstand: 16px;
-  --karte-min-hoehe: 104px;
-  --karte-symbol: 28px;
+  --raster-spalten: 2;
+  --raster-abstand: 14px;
+  --spalten-abstand: 44px;                     /* ruhiger Abstand zwischen Feed und Karten */
+  --karte-min-hoehe: 88px;
+  --karte-innen: 18px;
+  --karte-symbol: 26px;
   --karte-titel-groesse: 0.86rem;
 }
 
@@ -25,18 +29,42 @@
    das Raster. --home-rand gilt oben und unten (fließt in die Höhe ein). */
 .hauptbereich:has(> #view-home:not([hidden])) {
   --home-rand: var(--abstand-l);
+  max-width: var(--leiste-max-breite);         /* zwei Spalten brauchen etwas mehr Breite */
   padding-top: var(--home-rand);
   padding-bottom: var(--home-rand);
 }
 
-/* Füllt genau die sichtbare Höhe: Bildschirm minus Navigationsleiste
-   (mit Linie) minus Rand oben und unten */
 .home {
+  --home-hoehe: calc(100vh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
   display: flex;
   flex-direction: column;
   gap: var(--abstand-l);
-  min-height: calc(100vh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
-  min-height: calc(100dvh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
+}
+
+@supports (height: 100dvh) {
+  .home {
+    --home-hoehe: calc(100dvh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
+  }
+}
+
+/* Die Mitte: links der News-Feed, rechts die Karten */
+.home-mitte {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--spalten-abstand);
+}
+
+/* Computer: genau die sichtbare Höhe (Bildschirm minus Navigationsleiste
+   mit Linie minus Rand oben und unten) – die Seite scrollt nicht, nur der
+   Feed in sich. Die Karten behalten ihre Mindesthöhe. */
+@media (min-width: 1024px) {
+  .home {
+    height: var(--home-hoehe);
+    min-height: calc(4 * var(--karte-min-hoehe) + 240px);
+  }
 }
 
 
@@ -161,27 +189,23 @@
 
 
 /* ==========================================================================
-   RASTER: gleich große Karten, letzte Reihe mittig
+   RASTER: gleich große Karten; bei ungerader Anzahl ist die letzte doppelt breit
    ========================================================================== */
 
 .home-raster {
-  flex: 1 1 auto;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-content: stretch;                      /* Reihen strecken sich auf die freie Höhe */
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--raster-spalten), minmax(0, 1fr));
+  grid-auto-rows: minmax(var(--karte-min-hoehe), 1fr);   /* Reihen strecken sich auf die freie Höhe */
   gap: var(--raster-abstand);
 }
 
 .home-karte {
-  /* feste Breite je Spalte – so bleiben auch die Karten der letzten Reihe gleich groß */
-  flex: 0 0 calc((100% - (var(--raster-spalten) - 1) * var(--raster-abstand)) / var(--raster-spalten));
   min-width: 0;
-  min-height: var(--karte-min-hoehe);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: var(--abstand-m);
+  gap: var(--abstand-s);
   padding: var(--karte-innen);
   color: var(--farbe-text);
   text-decoration: none;
@@ -192,6 +216,10 @@
     border-color var(--dauer) ease,
     background-color var(--dauer) ease,
     transform var(--dauer) ease;
+}
+
+.home-karte:last-child:nth-child(odd) {
+  grid-column: span 2;
 }
 
 .home-karte:hover,
@@ -208,6 +236,7 @@
 }
 
 .home-karte-symbol {
+  flex: none;
   width: var(--karte-symbol);
   height: var(--karte-symbol);
   fill: none;
@@ -279,14 +308,24 @@
 
 
 /* ==========================================================================
-   TABLET: 3 Spalten
+   TABLET UND SMARTPHONE: Karten oben, Feed darunter – die Seite scrollt
    ========================================================================== */
 
 @media (max-width: 1023px) {
   #view-home {
-    --raster-spalten: 3;
-    --raster-abstand: 14px;
-    --karte-min-hoehe: 96px;
+    --raster-spalten: 4;
+    --karte-min-hoehe: 108px;
+  }
+
+  .home-mitte {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: var(--abstand-xl);
+  }
+
+  .home-raster {
+    order: -1;                                 /* Karten vor dem Feed */
+    grid-auto-rows: var(--karte-min-hoehe);
   }
 }
 
@@ -300,7 +339,7 @@
     --zeit-groesse: 0.7rem;
     --raster-spalten: 2;
     --raster-abstand: 10px;
-    --karte-min-hoehe: 76px;
+    --karte-min-hoehe: 96px;
     --karte-symbol: 24px;
     --karte-titel-groesse: 0.74rem;
     --karte-innen: 16px;
@@ -314,6 +353,10 @@
     gap: var(--abstand-m);
   }
 
+  .home-mitte {
+    gap: var(--abstand-l);
+  }
+
   .home-anstehend {
     letter-spacing: 0.1em;
   }
@@ -324,10 +367,6 @@
 
   .home-an-art-kurz {
     display: inline;
-  }
-
-  .home-karte {
-    gap: var(--abstand-s);
   }
 
   /* Schnellzugriffe: gleich breite, gut antippbare Felder */

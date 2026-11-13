@@ -2,10 +2,11 @@
    home.js – die Startseite
    Schlicht und ruhig: oben links klein Datum und Uhrzeit, darunter die
    Zeile "Als Nächstes" (laufende oder nächste Vorlesung bzw. nächster
-   Termin – Daten aus EventsStore.naechstesVorkommen), darunter ein Raster
-   aus gleich großen Karten für alle Abschnitte, unten die Schnellzugriffe.
-   Die Startseite passt ohne Scrollen auf den Bildschirm.
-   Aussehen: css/home.css, Farben: css/style.css.
+   Termin – Daten aus EventsStore.naechstesVorkommen). Darunter zwei
+   Spalten: links der News-Feed (js/news.js), rechts ein Raster aus gleich
+   großen Karten für alle Abschnitte. Ganz unten die Schnellzugriffe.
+   Auf dem Computer passt die Startseite ohne Scrollen auf den Bildschirm.
+   Aussehen: css/home.css und css/news.css, Farben: css/style.css.
    ========================================================================== */
 
 const STARTSEITE_KONFIG = {
@@ -71,7 +72,10 @@ const StartseiteAnsicht = (function () {
           '<p class="home-zeit"><time></time></p>' +
           '<a class="home-anstehend" href="#schedule"></a>' +
         "</div>" +
-        '<nav class="home-raster" aria-label="Bereiche"></nav>' +
+        '<div class="home-mitte">' +
+          '<section class="news home-news"></section>' +
+          '<nav class="home-raster" aria-label="Bereiche"></nav>' +
+        "</div>" +
         '<nav class="home-links" aria-label="Schnellzugriffe"><ul class="home-links-liste"></ul></nav>' +
       "</div>";
 
@@ -96,6 +100,7 @@ const StartseiteAnsicht = (function () {
     });
 
     baueSchnellzugriffe(container.querySelector(".home-links-liste"));
+    NewsFeed.init(container.querySelector(".home-news"));
 
     // Zurück im Tab: sofort aktualisieren (Zeitgeber laufen im Hintergrund oft verzögert)
     document.addEventListener("visibilitychange", function () {
@@ -138,6 +143,7 @@ const StartseiteAnsicht = (function () {
   /** Wird von app.js bei JEDEM Öffnen der Startseite aufgerufen. */
   function zeige() {
     takt();
+    NewsFeed.zeige();               // lädt die News neu, wenn der letzte Abruf länger her ist
     return null;
   }
 

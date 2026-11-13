@@ -1,0 +1,454 @@
+/* ==========================================================================
+   news.css – der News-Feed auf der Startseite (js/news.js)
+   Eine ruhige Spalte ohne eigene Fläche: Kopfzeile ("NEWS" und Stand),
+   Filterleiste, hervorgehobene Topmeldung, darunter die übrigen Meldungen
+   als Liste mit feinen Linien.
+   Computer: Der Feed scrollt in sich (.news-rolle), unten blendet er weich
+   aus. Tablet und Smartphone: Der Feed ist so lang wie sein Inhalt, die
+   Seite scrollt (Umschaltung in css/home.css, gleiche Grenze: 1024 px).
+   Farben und Schriften: css/style.css.
+   ========================================================================== */
+
+.news {
+  --news-zeilen-max: 62ch;                 /* angenehme Zeilenlänge der Fließtexte */
+  --news-top-groesse: clamp(1.7rem, 2.3vw, 2.15rem);
+  --news-titel-groesse: 1.3rem;
+  --news-text-groesse: 0.95rem;
+  --news-klein-groesse: 0.72rem;
+  --news-nummer-breite: 2.4rem;
+  --news-ausblenden: 44px;                 /* Höhe des weichen Ausblendens unten */
+  --news-klapp-dauer: 220ms;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+
+/* ==========================================================================
+   KOPFZEILE: links "NEWS", rechts der Stand
+   ========================================================================== */
+
+.news-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--abstand-m);
+}
+
+.news-titel,
+.news-stand {
+  margin: 0;
+  font-family: var(--schrift-mono);
+  font-size: var(--news-klein-groesse);
+  font-weight: 400;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: var(--mono-sperrung);
+}
+
+.news-titel {
+  color: var(--farbe-text);
+}
+
+.news-stand {
+  color: var(--farbe-text-leise);
+  text-align: right;
+}
+
+.news-stand time,
+.news-veraltet {
+  white-space: nowrap;
+}
+
+/* "nicht aktuell": dezent, mit kleinem Punkt davor */
+.news-veraltet::before {
+  content: "·";
+  margin: 0 0.7em;
+}
+
+
+/* ==========================================================================
+   FILTER NACH REGION: schmale Leiste, aktiver Filter mit rotem Unterstrich
+   ========================================================================== */
+
+.news-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--abstand-m);
+  margin-top: var(--abstand-s);
+  border-bottom: var(--linie);
+}
+
+.news-filter-knopf {
+  position: relative;
+  min-height: 36px;
+  padding: 0 2px;
+  font-family: var(--schrift-klein);
+  font-size: var(--klein-groesse);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--klein-sperrung);
+  color: var(--farbe-text-leise);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: color var(--dauer) ease;
+}
+
+.news-filter-knopf:hover {
+  color: var(--farbe-text);
+}
+
+.news-filter-knopf[aria-pressed="true"] {
+  color: var(--farbe-text);
+}
+
+/* Der rote Strich liegt genau auf der Linie der Leiste */
+.news-filter-knopf[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--farbe-akzent);
+}
+
+.news-filter-knopf:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: -2px;
+}
+
+
+/* ==========================================================================
+   DER BEREICH MIT DEN MELDUNGEN
+   Etwas Luft links und rechts, damit der Fokusrahmen nicht abgeschnitten wird.
+   ========================================================================== */
+
+.news-rolle {
+  position: relative;                      /* Bezug für versteckte Screenreader-Texte – sie scrollen mit */
+  min-height: 0;
+  margin: 0 -6px;
+  padding: 0 6px;
+}
+
+
+/* ==========================================================================
+   TOPMELDUNG
+   ========================================================================== */
+
+.news-top {
+  display: block;
+  padding: var(--abstand-l) 0;
+  color: var(--farbe-text);
+  text-decoration: none;
+  border-radius: var(--radius-s);
+}
+
+.news-top-ueber,
+.news-top-unter,
+.news-eintrag-unter {
+  max-width: none;                         /* die allgemeine Zeilenlänge für Absätze gilt hier nicht */
+  margin: 0;
+  font-family: var(--schrift-mono);
+  font-size: var(--news-klein-groesse);
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--farbe-text-leise);
+}
+
+/* Eine Angabe bricht nicht in sich um */
+.news-top-ueber span,
+.news-top-unter span,
+.news-eintrag-unter span {
+  display: inline-block;
+}
+
+/* Trennpunkte zwischen den Angaben */
+.news-top-ueber span + span::before,
+.news-top-unter span + span::before,
+.news-eintrag-unter span + span::before {
+  content: "·";
+  margin: 0 0.6em;
+}
+
+.news-top-titel {
+  max-width: 26em;
+  margin: var(--abstand-s) 0 0;
+  font-family: var(--schrift-serif);
+  font-size: var(--news-top-groesse);
+  font-weight: var(--titel-gewicht);
+  line-height: 1.12;
+  letter-spacing: 0;
+  text-wrap: balance;
+  color: var(--farbe-text);
+  transition: color var(--dauer) ease;
+}
+
+.news-top-text {
+  max-width: var(--news-zeilen-max);
+  margin: var(--abstand-s) 0 0;
+  font-family: var(--schrift-text);
+  font-size: var(--news-text-groesse);
+  line-height: 1.6;
+  color: var(--farbe-text);
+}
+
+.news-top-unter {
+  margin-top: var(--abstand-m);
+}
+
+
+/* ==========================================================================
+   LISTE DER ÜBRIGEN MELDUNGEN
+   ========================================================================== */
+
+.news-liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--linie);
+}
+
+.news-liste li {
+  border-bottom: var(--linie);
+}
+
+.news-eintrag {
+  display: flex;
+  align-items: baseline;
+  gap: var(--abstand-s);
+  padding: 14px 0;
+  color: var(--farbe-text);
+  text-decoration: none;
+  border-radius: var(--radius-s);
+}
+
+.news-nummer {
+  flex: none;
+  width: var(--news-nummer-breite);
+  font-family: var(--schrift-mono);
+  font-size: var(--news-klein-groesse);
+  letter-spacing: 0.1em;
+  color: var(--farbe-text-leise);
+}
+
+.news-eintrag-inhalt {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.news-eintrag-titel {
+  margin: 0;
+  font-family: var(--schrift-serif);
+  font-size: var(--news-titel-groesse);
+  font-weight: var(--titel-gewicht);
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--farbe-text);
+  transition: color var(--dauer) ease;
+}
+
+.news-eintrag-unter {
+  margin-top: 6px;
+}
+
+/* Die Zusammenfassung: zugeklappt (Zeilenhöhe 0), klappt weich auf */
+.news-klappe {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--news-klapp-dauer) ease,
+    opacity var(--news-klapp-dauer) ease;
+}
+
+.news-eintrag-text {
+  min-height: 0;
+  overflow: hidden;
+  max-width: var(--news-zeilen-max);
+  margin: 0;
+  font-family: var(--schrift-text);
+  font-size: var(--news-text-groesse);
+  line-height: 1.6;
+  color: var(--farbe-text);
+}
+
+/* Innenabstand nur im aufgeklappten Zustand sichtbar: er liegt im Text selbst */
+.news-eintrag-text::before {
+  content: "";
+  display: block;
+  height: 6px;
+}
+
+.news-eintrag:focus-visible .news-klappe,
+.news-eintrag.ist-offen .news-klappe {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+
+/* ==========================================================================
+   HOVER UND FOKUS: Schlagzeile rot, kleiner Pfeil (öffnet in neuem Tab)
+   ========================================================================== */
+
+.news-pfeil {
+  font-family: var(--schrift-text);
+  font-size: 0.7em;
+  opacity: 0;
+  transition: opacity var(--dauer) ease;
+}
+
+.news-top:focus-visible .news-top-titel,
+.news-eintrag:focus-visible .news-eintrag-titel,
+.news-eintrag.ist-offen .news-eintrag-titel {
+  color: var(--farbe-akzent-text);
+}
+
+.news-top:focus-visible .news-pfeil,
+.news-eintrag:focus-visible .news-pfeil,
+.news-eintrag.ist-offen .news-pfeil {
+  opacity: 1;
+}
+
+/* Nur mit Maus – auf Touch-Geräten bliebe der Hover sonst "kleben" */
+@media (hover: hover) {
+  .news-top:hover .news-top-titel,
+  .news-eintrag:hover .news-eintrag-titel {
+    color: var(--farbe-akzent-text);
+  }
+
+  .news-top:hover .news-pfeil,
+  .news-eintrag:hover .news-pfeil {
+    opacity: 1;
+  }
+
+  .news-eintrag:hover .news-klappe {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+.news-top:focus-visible,
+.news-eintrag:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 2px;
+}
+
+
+/* ==========================================================================
+   ZUSTÄNDE: Laden, Fehler, keine Treffer
+   ========================================================================== */
+
+.news-platzhalter {
+  padding-top: var(--abstand-l);
+}
+
+.news-platzhalter-zeile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: var(--linie);
+}
+
+.news-platzhalter-balken {
+  height: 12px;
+  width: 78%;
+  background: var(--farbe-flaeche);
+  border-radius: var(--radius-s);
+}
+
+.news-platzhalter-balken.ist-kurz {
+  width: 34%;
+  height: 8px;
+}
+
+.news-platzhalter-zeile:first-of-type .news-platzhalter-balken:not(.ist-kurz) {
+  height: 22px;
+  width: 90%;
+}
+
+.news-hinweis {
+  max-width: var(--news-zeilen-max);
+  margin: 0;
+  padding: var(--abstand-l) 0;
+  font-size: var(--news-text-groesse);
+  line-height: 1.6;
+  color: var(--farbe-text);
+}
+
+.news-hinweis-zusatz {
+  display: block;
+  margin-top: var(--abstand-xs);
+  color: var(--farbe-text-leise);
+}
+
+
+/* ==========================================================================
+   COMPUTER: Der Feed scrollt in sich, unten weiches Ausblenden
+   ========================================================================== */
+
+@media (min-width: 1024px) {
+  .news-rolle {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: var(--news-ausblenden);  /* die letzte Meldung bleibt ganz lesbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--farbe-rand) transparent;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--news-ausblenden)), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - var(--news-ausblenden)), transparent);
+  }
+}
+
+
+/* ==========================================================================
+   SMARTPHONE
+   ========================================================================== */
+
+@media (max-width: 699px) {
+  .news {
+    --news-top-groesse: 1.7rem;
+    --news-titel-groesse: 1.2rem;
+    --news-nummer-breite: 2rem;
+  }
+
+  /* Filter in einer Zeile; passen nicht alle, lässt sich die Leiste wischen */
+  .news-filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .news-filter::-webkit-scrollbar {
+    display: none;
+  }
+
+  .news-filter-knopf {
+    flex: none;
+    min-height: 44px;                       /* gut antippbar */
+  }
+
+  .news-filter-knopf[aria-pressed="true"]::after {
+    bottom: 0;
+  }
+
+  .news-top {
+    padding: var(--abstand-m) 0 var(--abstand-l);
+  }
+}
+
+
+/* ==========================================================================
+   BEWEGUNG REDUZIEREN: kein Ausklappen mit Bewegung, nur Ein- und Ausblenden
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .news-klappe {
+    transition: opacity var(--news-klapp-dauer) ease;
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "aktualisiert": "2026-11-13T09:45:00+01:00",
+  "meldungen": [
+    {
+      "titel": "Beispiel: Klimagipfel einigt sich auf gemeinsamen Fahrplan",
+      "zusammenfassung": "Dies ist eine ausgedachte Beispielmeldung. Nach langen Verhandlungen haben sich die Delegationen auf einen Fahrplan geeinigt. Die Details sollen in den kommenden Wochen ausgearbeitet werden.",
+      "url": "https://example.com/beispiel/klimagipfel",
+      "quelle": "Beispiel-Agentur",
+      "region": "Welt",
+      "veroeffentlicht": "2026-11-13T07:40:00+01:00",
+      "anzahlQuellen": 7
+    },
+    {
+      "titel": "Beispiel: Bundestag berät über neues Bildungspaket",
+      "zusammenfassung": "Ausgedachte Beispielmeldung: Das Paket soll Hochschulen und Schulen zusätzliche Mittel für die digitale Ausstattung bringen.",
+      "url": "https://example.com/beispiel/bildungspaket",
+      "quelle": "Beispiel-Zeitung",
+      "region": "Deutschland",
+      "veroeffentlicht": "2026-11-13T08:55:00+01:00",
+      "anzahlQuellen": 4
+    },
+    {
+      "titel": "Beispiel: Notenbank lässt den Leitzins unverändert",
+      "zusammenfassung": "Ausgedachte Beispielmeldung: Die Währungshüter warten weitere Konjunkturdaten ab, bevor sie über den nächsten Schritt entscheiden.",
+      "url": "https://example.com/beispiel/leitzins",
+      "quelle": "Beispiel-Wirtschaftsblatt",
+      "region": "Wirtschaft",
+      "veroeffentlicht": "2026-11-12T16:10:00+01:00"
+    },
+    {
+      "titel": "Beispiel: Forschende stellen sparsameren Speicherchip vor",
+      "zusammenfassung": "Ausgedachte Beispielmeldung: Der Prototyp soll deutlich weniger Energie benötigen als heutige Bausteine. Bis zur Serienreife dauert es noch Jahre.",
+      "url": "https://example.com/beispiel/speicherchip",
+      "quelle": "Beispiel-Technikmagazin",
+      "region": "Technik",
+      "anzahlQuellen": 2
+    },
+    {
+      "titel": "Beispiel: EU-Staaten einigen sich auf einheitliche Ladestecker-Regeln",
+      "zusammenfassung": "Ausgedachte Beispielmeldung: Die neuen Vorgaben sollen das Laden von Elektroautos über Ländergrenzen hinweg vereinfachen.",
+      "url": "https://example.com/beispiel/ladestecker",
+      "quelle": "Beispiel-Europadienst",
+      "region": "Europa",
+      "veroeffentlicht": "2026-11-12T11:30:00+01:00",
+      "anzahlQuellen": 3
+    },
+    {
+      "titel": "Beispiel: Stadtbibliothek verlängert ihre Öffnungszeiten",
+      "zusammenfassung": "Ausgedachte Beispielmeldung ohne optionale Felder: Ab Dezember sind die Lesesäle auch am Sonntag geöffnet.",
+      "url": "https://example.com/beispiel/bibliothek",
+      "quelle": "Beispiel-Lokalblatt"
+    },
+    {
+      "titel": "Beispiel: Start-up baut Übersetzungshilfe für Vorlesungen",
+      "zusammenfassung": "Ausgedachte Beispielmeldung: Die Software soll Vorlesungen live untertiteln und in mehrere Sprachen übertragen.",
+      "url": "https://example.com/beispiel/uebersetzung",
+      "quelle": "Beispiel-Technikmagazin",
+      "region": "Technik",
+      "veroeffentlicht": "2026-11-10T14:00:00+01:00"
+    }
+  ]
+}

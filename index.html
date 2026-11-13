@@ -7,6 +7,7 @@
   <title>NTB</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/news.css">
   <link rel="stylesheet" href="css/calendar.css">
   <link rel="stylesheet" href="css/schedule.css">
   <link rel="stylesheet" href="css/sudoku.css">
@@ -84,7 +85,7 @@
            der Startseite nur der kleine Zeitstempel, die Überschrift gilt
            für Screenreader -->
       <h1 id="titel-home" class="nur-screenreader" tabindex="-1">Willkommen bei NTB</h1>
-      <!-- home.js füllt diesen Container: Zeitstempel, Bento-Kacheln und Schnellzugriffe -->
+      <!-- home.js füllt diesen Container: Zeitstempel, News-Feed, Karten und Schnellzugriffe -->
       <div id="home-root"></div>
     </section>
 
@@ -205,6 +206,7 @@
   <!-- Einstellungen: braucht die Stores aller Bereiche (für die Sicherung) -->
   <script src="js/settings.js"></script>
   <!-- Startseite: liest aus allen Stores, deshalb zuletzt vor app.js -->
+  <script src="js/news.js"></script>
   <script src="js/home.js"></script>
   <!-- Prompts: erst der Baum mit allen Kacheln und Texten, dann die Ansicht -->
   <script src="js/prompts-data.js"></script>
