@@ -257,8 +257,20 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `[:15]`. Läuft: `news.json` hat jetzt das Website-Format
   (`aktualisiert` + `meldungen`). Kontrollfrage (15 Meldungen) richtig.
   **Datei erfüllt jetzt `docs/news-format.md`.**
-- Nächstes: Commit + Push → echte Meldungen auf der Website; danach
-  HTML-Prüfung (`"<" in text`), atomisches Speichern (Claude), 7b/7c.
+- Commit + Push → **echte Meldungen erscheinen auf der Website.** 🎉
+- Atomisches Speichern entfällt: in GitHub Actions wird die Datei per
+  Commit ersetzt, die Website sieht nie eine halbe Datei. HTML-Prüfung
+  (`"<" in text`) als spätere kleine Übung vormerken.
+- **Schritt 7b gestellt:** `pipeline/requirements.txt` mit
+  `feedparser==6.0.12`, Konzept „Zutatenliste für einen leeren Computer“.
+  Ergebnis offen.
+- Plan 7c: Workflow `.github/workflows/news.yml` **über die GitHub-
+  Weboberfläche** anlegen (VS Code-Anmeldung hat evtl. keine
+  `workflow`-Berechtigung). Inhalt: `schedule` (cron) +
+  `workflow_dispatch`, `permissions: contents: write`, checkout,
+  setup-python, `pip install -r pipeline/requirements.txt`,
+  `python pipeline/news.py`, `data/news.json` committen/pushen.
+  Danach lokal immer erst **Sync**, weil der Bot täglich committet.
 - Plan (alt): 5f Objekt `{"aktualisiert": ..., "meldungen": neueste}`
   mit `time.gmtime()`; `[:15]`; HTML-Reste prüfen; atomisches Speichern
   (Datei erst unter anderem Namen, dann umbenennen) übernimmt Claude.
