@@ -1,11 +1,8 @@
 /* ==========================================================================
    settings.js – Einstellungen
-   - Darstellung: Startseite – Kachelgrößen nach Nutzung an/aus,
-     Nutzungsdaten zurücksetzen (früher eigener Abschnitt "Customising" –
-     #customising leitet hierher weiter, siehe js/app.js)
-   - Sicherung ALLER Daten der Seite (Filme/Serien, Termine, Zu erledigen, Abenteuer, Klettern-Rekord,
-     Worträtsel)
-     als eine JSON-Datei – Export und Import
+   - Sicherung ALLER Daten der Seite (Termine, Zu erledigen, Pinnwand,
+     Projekte/Ideen, Abenteuer, Klettern-Rekord, Worträtsel) als eine
+     JSON-Datei – Export und Import
    - Sudoku-Abenteuer: Tempo der Kampfanimationen (Würfel und Schadensaufbau)
    - Zu erledigen: Verbindung zur Oracle-Datenbank (js/todo-db.js)
 
@@ -14,13 +11,17 @@
      format:      "ntb-sicherung",
      version:     1,
      erstellt:    "2026-10-10T14:03:00.000Z",
-     filmeSerien: { … }    ← Daten aus MediaStore  (js/media-store.js)
      termine:     { … }    ← Daten aus EventsStore (js/events-store.js)
      zuErledigen: { … }    ← Aufgaben aus TodoStore (js/todo-store.js)
+     pinnwand:    { … } oder null ← Zettel, Verbindungen, Ansicht (js/board-store.js)
+     projekte:    { … } oder null ← Projekte/Ideen (js/projects-store.js)
      sudokuAbenteuer: { … } oder null ← Spielstand aus SudokuRPG (js/sudoku-rpg.js)
      klettern:    { … } oder null ← Rekord des Kletterspiels (js/climb/speicher.js)
      woerter:     { … } oder null ← Worträtsel: laufendes Wort, Streaks, Statistik (js/words/speicher.js)
    }
+   Ältere Sicherungen können zusätzlich Daten eines früheren Bereichs
+   enthalten (Schlüssel "filmeSerien" oder eine Datei nur mit "kategorien");
+   diese werden beim Import ignoriert.
    Neue Bereiche mit eigenen Daten? Hier in exportieren() und importieren()
    ergänzen – die Stores selbst bleiben für die Speicherung zuständig.
    ========================================================================== */
@@ -38,28 +39,11 @@ const EinstellungenAnsicht = (function () {
    */
   function init(container) {
     container.innerHTML =
-      // Darstellung (früher "Customising"): Startseite (Werte in js/home.js)
-      '<section class="karte einstellungen-block" aria-labelledby="darstellung-titel">' +
-        '<h2 id="darstellung-titel">Darstellung</h2>' +
-        "<p>Hell oder dunkel stellst du mit dem Schalter oben rechts ein.</p>" +
-        '<h3 class="einstellungen-unter">Startseite</h3>' +
-        '<label class="einstellungen-feld einstellungen-feld--haken">' +
-          '<input type="checkbox" class="einstellungen-nutzung">' +
-          "<span>Kachelgrößen nach Nutzung</span>" +
-        "</label>" +
-        "<p>Die Abschnitte, die du am häufigsten öffnest, bekommen die größeren Kacheln. " +
-          "Gezählt wird nur in diesem Browser; Aufrufe älter als 30 Tage zählen nicht mehr. " +
-          "Ausgeschaltet gilt die feste Startanordnung.</p>" +
-        '<div class="einstellungen-knoepfe">' +
-          '<button type="button" class="knopf knopf--gefahr" data-aktion="nutzung-zuruecksetzen">Nutzungsdaten zurücksetzen</button>' +
-        "</div>" +
-        '<p class="einstellungen-hinweis einstellungen-hinweis--nutzung" role="status"></p>' +
-      "</section>" +
       '<section class="karte einstellungen-block" aria-labelledby="sicherung-titel">' +
         '<h2 id="sicherung-titel">Daten sichern</h2>' +
         "<p>Deine Daten liegen nur in diesem Browser. Mit einer Sicherung kannst du sie " +
           "auf einem anderen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. " +
-          "Die Datei enthält <strong>Filme/Serien</strong>, <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong> den Spielstand des <strong>Sudoku-Abenteuers</strong>, den Rekord im <strong>Klettern</strong> und Streaks und Statistik des <strong>Worträtsels</strong>.</p>" +
+          "Die Datei enthält <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong>, die <strong>Pinnwand</strong>, <strong>Projekte/Ideen</strong>, den Spielstand des <strong>Sudoku-Abenteuers</strong>, den Rekord im <strong>Klettern</strong> und Streaks und Statistik des <strong>Worträtsels</strong>.</p>" +
         '<div class="einstellungen-knoepfe">' +
           '<button type="button" class="knopf" data-aktion="exportieren">Daten exportieren</button>' +
           '<button type="button" class="knopf" data-aktion="importieren">Daten importieren</button>' +
@@ -125,17 +109,6 @@ const EinstellungenAnsicht = (function () {
         "Gespeichert: " + SudokuKampf.wuerfelEinstellung().name;
     });
 
-    // Startseite: Kachelgrößen nach Nutzung
-    const nutzung = container.querySelector(".einstellungen-nutzung");
-    const nutzungHinweis = container.querySelector(".einstellungen-hinweis--nutzung");
-    nutzung.checked = StartseiteAnsicht.nachNutzung();
-    nutzung.addEventListener("change", function () {
-      StartseiteAnsicht.setzeNachNutzung(nutzung.checked);
-      nutzungHinweis.textContent = nutzung.checked
-        ? "Gespeichert: Kachelgrößen nach Nutzung."
-        : "Gespeichert: feste Startanordnung.";
-    });
-
     el.datei = container.querySelector(".einstellungen-datei");
     el.hinweis = container.querySelector(".einstellungen-hinweis");
     el.dbStatus = container.querySelector(".einstellungen-db-status");
@@ -153,11 +126,6 @@ const EinstellungenAnsicht = (function () {
       if (knopf.dataset.aktion === "abenteuer-loeschen") fortschritteLoeschen(container);
       if (knopf.dataset.aktion === "db-trennen") datenbankTrennen();
       if (knopf.dataset.aktion === "db-uebertragen") datenbankUebertragen(knopf);
-      if (knopf.dataset.aktion === "nutzung-zuruecksetzen") {
-        StartseiteAnsicht.nutzungZuruecksetzen();
-        container.querySelector(".einstellungen-hinweis--nutzung").textContent =
-          "Nutzungsdaten gelöscht – die Startseite zeigt wieder die Startanordnung.";
-      }
     });
     el.datei.addEventListener("change", importieren);
   }
@@ -264,9 +232,10 @@ const EinstellungenAnsicht = (function () {
       format: FORMAT,
       version: VERSION,
       erstellt: new Date().toISOString(),
-      filmeSerien: MediaStore.alsObjekt(),
       termine: EventsStore.alsObjekt(),
       zuErledigen: TodoStore.alsObjekt(),
+      pinnwand: BoardStore.alsObjekt(),
+      projekte: ProjekteStore.alsObjekt(),
       sudokuAbenteuer: SudokuRPG.alsObjekt(),
       klettern: KletterSpeicher.alsObjekt(),
       woerter: WoerterSpeicher.alsObjekt(),
@@ -289,9 +258,10 @@ const EinstellungenAnsicht = (function () {
 
   /**
    * Prüft den Inhalt einer Datei, OHNE etwas zu speichern.
-   * Versteht auch ältere Dateien, die nur Filme/Serien enthalten
-   * (Export aus der Zeit vor den Einstellungen).
-   * @returns {{ok: true, media, termine|null, frage} | {ok: false, fehler}}
+   * Ältere Dateien eines früheren Bereichs (ohne "format", nur
+   * "kategorien") enthalten nichts mehr, was eingespielt werden kann.
+   * Der Schlüssel "filmeSerien" in vollständigen Sicherungen wird ignoriert.
+   * @returns {{ok: true, termine, …, frage} | {ok: false, fehler}}
    */
   function pruefe(text) {
     let roh;
@@ -301,15 +271,9 @@ const EinstellungenAnsicht = (function () {
       return { ok: false, fehler: "Die Datei enthält kein gültiges JSON." };
     }
 
-    // Ältere Filme/Serien-Sicherung
+    // Sehr alte Sicherung eines früheren Bereichs: nichts mehr einzuspielen
     if (roh && roh.kategorien && !roh.format) {
-      const media = MediaStore.pruefeDaten(roh);
-      if (!media.ok) return { ok: false, fehler: media.fehler };
-      return {
-        ok: true, media: media, termine: null,
-        frage: "Das ist eine ältere Sicherung, die nur Filme/Serien enthält (" + media.anzahl + " Einträge).\n" +
-          "Deine Filme/Serien werden dadurch ERSETZT, deine Termine bleiben unverändert. Fortfahren?",
-      };
+      return { ok: false, fehler: "Diese ältere Sicherung enthält nur Daten eines Bereichs, den es nicht mehr gibt – es gibt nichts einzuspielen." };
     }
 
     if (!roh || roh.format !== FORMAT) {
@@ -318,8 +282,6 @@ const EinstellungenAnsicht = (function () {
     if (roh.version !== VERSION) {
       return { ok: false, fehler: "Unbekannte Version der Sicherung (" + roh.version + ")." };
     }
-    const media = MediaStore.pruefeDaten(roh.filmeSerien);
-    if (!media.ok) return { ok: false, fehler: "Filme/Serien: " + media.fehler };
     const termine = EventsStore.pruefeDaten(roh.termine);
     if (!termine.ok) return { ok: false, fehler: termine.fehler };
 
@@ -372,6 +334,37 @@ const EinstellungenAnsicht = (function () {
       }
     }
 
+    // Projekte/Ideen: in älteren Sicherungen fehlen sie → bleiben dann unverändert
+    let projekte = { vorhanden: false };
+    let projekteText = "• Projekte/Ideen: nicht enthalten (bleiben unverändert)\n";
+    if ("projekte" in roh) {
+      if (roh.projekte === null) {
+        projekte = { vorhanden: true, daten: null };
+        projekteText = "• Projekte/Ideen: keine\n";
+      } else {
+        const geprueft = ProjekteStore.pruefeDaten(roh.projekte);
+        if (!geprueft.ok) return { ok: false, fehler: "Projekte/Ideen: " + geprueft.fehler };
+        projekte = { vorhanden: true, daten: geprueft.daten };
+        projekteText = "• " + geprueft.daten.projekte.length + " Projekte/Ideen\n";
+      }
+    }
+
+    // Pinnwand: in älteren Sicherungen fehlt sie → bleibt dann unverändert
+    let pinnwand = { vorhanden: false };
+    let pinnwandText = "• Pinnwand: nicht enthalten (bleibt unverändert)\n";
+    if ("pinnwand" in roh) {
+      if (roh.pinnwand === null) {
+        pinnwand = { vorhanden: true, daten: null };
+        pinnwandText = "• Pinnwand: leer\n";
+      } else {
+        const geprueft = BoardStore.pruefeDaten(roh.pinnwand);
+        if (!geprueft.ok) return { ok: false, fehler: "Pinnwand: " + geprueft.fehler };
+        pinnwand = { vorhanden: true, daten: geprueft.daten };
+        pinnwandText = "• Pinnwand: " + geprueft.daten.zettel.length + " Zettel, " +
+          geprueft.daten.verbindungen.length + " Verbindungen\n";
+      }
+    }
+
     // Zu erledigen: in älteren Sicherungen fehlt es → bleibt dann unverändert
     let aufgaben = null;
     let aufgabenText = "• Zu erledigen: nicht enthalten (bleibt unverändert)\n";
@@ -386,11 +379,12 @@ const EinstellungenAnsicht = (function () {
     const erstellt = typeof roh.erstellt === "string" ? new Date(roh.erstellt) : null;
     const vom = erstellt && !isNaN(erstellt) ? " vom " + erstellt.toLocaleString("de-DE") : "";
     return {
-      ok: true, media: media, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben, klettern: klettern, woerter: woerter,
+      ok: true, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben, klettern: klettern, woerter: woerter, pinnwand: pinnwand, projekte: projekte,
       frage: "Sicherung" + vom + ":\n" +
-        "• " + media.anzahl + " Filme/Serien-Einträge\n" +
         "• " + termine.daten.eintraege.length + " Termine/Vorlesungen\n" +
         aufgabenText +
+        pinnwandText +
+        projekteText +
         abenteuerText +
         kletternText +
         woerterText + "\n" +
@@ -414,7 +408,14 @@ const EinstellungenAnsicht = (function () {
         zeigeHinweis("Import abgebrochen.");
         return;
       }
-      MediaStore.ersetzen(pruefung.media.daten);
+      if (pruefung.projekte && pruefung.projekte.vorhanden) {
+        ProjekteStore.ersetzen(pruefung.projekte.daten);
+        ProjekteAnsicht.neuLaden();
+      }
+      if (pruefung.pinnwand && pruefung.pinnwand.vorhanden) {
+        BoardStore.ersetzen(pruefung.pinnwand.daten);
+        PinnwandAnsicht.neuLaden();
+      }
       if (pruefung.abenteuer && pruefung.abenteuer.vorhanden) {
         SudokuRPG.ersetzen(pruefung.abenteuer.daten);
       }

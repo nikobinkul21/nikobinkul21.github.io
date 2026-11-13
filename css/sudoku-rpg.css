@@ -13,24 +13,24 @@
   --kampf-radius: 10px;
 
   /* Kampfplatz: Himmel oben, Wiese unten */
-  --kampf-himmel-oben: #bfe3ff;
-  --kampf-himmel-unten: #e9f7ff;
-  --kampf-wiese: #9bd57a;
-  --kampf-wiese-dunkel: #7cbc5c;
-  --kampf-plattform: rgba(60, 110, 40, 0.35);  /* Schatten unter den Figuren */
+  --kampf-himmel-oben: #1d2a4d;
+  --kampf-himmel-unten: #2c3d63;
+  --kampf-wiese: #2f5d3a;
+  --kampf-wiese-dunkel: #24492d;
+  --kampf-plattform: rgba(0, 0, 0, 0.35);  /* Schatten unter den Figuren */
 
   /* Infokästen und Textbox */
-  --kampf-kasten: #fbfaf3;
+  --kampf-kasten: #e9e7dc;
   --kampf-kasten-rand: #2b2b38;
   --kampf-kasten-text: #2b2b38;
-  --kampf-textbox: #22263a;
+  --kampf-textbox: #12141f;
   --kampf-textbox-text: #f4f4f8;
 
   /* HP-Balken */
   --kampf-hp-voll: #3fbf5f;
   --kampf-hp-mittel: #e9b52f;
   --kampf-hp-knapp: #e0483f;
-  --kampf-hp-leer: #c9c9d1;
+  --kampf-hp-leer: #8d8d98;
 
   /* Würfel, Schaden */
   --kampf-wuerfel: #6c4bd8;
@@ -87,17 +87,6 @@
 
   /* Falsche Zahl im Gitter */
   --sudoku-fehlversuch: #e0483f;
-}
-
-:root[data-theme="dark"] {
-  --kampf-himmel-oben: #1d2a4d;
-  --kampf-himmel-unten: #2c3d63;
-  --kampf-wiese: #2f5d3a;
-  --kampf-wiese-dunkel: #24492d;
-  --kampf-plattform: rgba(0, 0, 0, 0.35);
-  --kampf-kasten: #e9e7dc;
-  --kampf-textbox: #12141f;
-  --kampf-hp-leer: #8d8d98;
 }
 
 
@@ -962,15 +951,13 @@
   gap: 3px;
   font-size: 0.78rem;
   font-weight: 900;
-  color: var(--buch-farbe);
+  color: #e2a76f;
   white-space: nowrap;
 }
 
 .kampf-buchbonus[hidden] { display: none; }
-.kampf-buchbonus svg { width: 14px; height: 14px; fill: var(--buch-farbe); }
+.kampf-buchbonus svg { width: 14px; height: 14px; fill: #e2a76f; }
 .kampf-buchbonus.pulsiert { animation: platz-puls 0.3s ease-out; }
-:root[data-theme="dark"] .kampf-buchbonus { color: #e2a76f; }
-:root[data-theme="dark"] .kampf-buchbonus svg { fill: #e2a76f; }
 
 /* Nur für Screenreader: unsichtbar, wird aber vorgelesen */
 .nur-vorlesen {
@@ -1539,25 +1526,16 @@
    Gelesen werden sie vom Canvas (getComputedStyle) – nur Hex oder rgb(a). */
 .w3d {
   --w3d-farbe: #6c4bd8;
-  --w3d-kante: #241656;
+  --w3d-kante: #120a30;
   --w3d-zahl: #ffffff;
   --w3d-zahl-rand: rgba(24, 14, 60, 0.85);
-  --w3d-schatten: rgba(20, 16, 40, 0.26);
+  --w3d-schatten: rgba(0, 0, 0, 0.5);
 }
 
 .w3d[data-schema="boss"] {
   --w3d-farbe: #c92a2a;
-  --w3d-kante: #4a0c0c;
-  --w3d-zahl-rand: rgba(60, 8, 8, 0.85);
-}
-
-:root[data-theme="dark"] .w3d {
-  --w3d-kante: #120a30;
-  --w3d-schatten: rgba(0, 0, 0, 0.5);
-}
-
-:root[data-theme="dark"] .w3d[data-schema="boss"] {
   --w3d-kante: #2e0606;
+  --w3d-zahl-rand: rgba(60, 8, 8, 0.85);
 }
 
 /* Bei den großen Würfeln stehen die Zahlen auf den 3D-Würfeln selbst –
@@ -2154,9 +2132,8 @@
   z-index: 0;
   pointer-events: none;
   /* Glas-Stil: farbige Tönung, oben ein heller Lichtschein */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 55%),
-    color-mix(in srgb, var(--powerup-farbe) var(--powerup-toenung), transparent);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%),
+    color-mix(in srgb, var(--powerup-farbe) calc(var(--powerup-toenung) + 6%), transparent);
   box-shadow:
     inset 0 0 0 1.5px color-mix(in srgb, var(--powerup-farbe) 70%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
@@ -2187,12 +2164,6 @@
   0%   { opacity: 1; transform: scale(1); filter: brightness(1); }
   35%  { opacity: 1; transform: scale(1.18); filter: brightness(1.8); }
   100% { opacity: 0; transform: scale(1.35); filter: brightness(2); }
-}
-
-:root[data-theme="dark"] .sudoku-powerup {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%),
-    color-mix(in srgb, var(--powerup-farbe) calc(var(--powerup-toenung) + 6%), transparent);
 }
 
 
@@ -3577,18 +3548,15 @@
   font-size: 0.6rem;
   font-weight: 800;
   line-height: 1;
-  color: var(--buch-farbe);
+  color: #e2a76f;
   pointer-events: none;
 }
 
 .sudoku-buch-marke svg {
   width: 9px;
   height: 9px;
-  fill: var(--buch-farbe);
+  fill: #e2a76f;
 }
-
-:root[data-theme="dark"] .sudoku-buch-marke { color: #e2a76f; }
-:root[data-theme="dark"] .sudoku-buch-marke svg { fill: #e2a76f; }
 
 /* Nebenwürfel (Bücher mit mehreren Würfeln): jeder Würfel als Kästchen */
 .wuerfel-mehr,
@@ -3692,10 +3660,6 @@
 
 .kampf-welt-name {
   color: var(--welt-akzent, inherit);
-  filter: brightness(0.8);
-}
-
-:root[data-theme="dark"] .kampf-welt-name {
   filter: none;
 }
 
@@ -3776,9 +3740,6 @@
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   pointer-events: none;
-}
-
-:root[data-theme="dark"] .kampf-hintergrund {
   filter: brightness(0.62) saturate(0.85);
 }
 
@@ -4107,14 +4068,9 @@
 :root {
   --glueck-gold: #f2c230;
   --glueck-gruen: #46b34a;
-  --glueck-text: #2c6e1f;
+  --glueck-text: #a9e36a;
   --teufel-farbe: #8e1a4f;
   --teufel-glut: #d6286e;
-  --teufel-text: #7a0f3f;
-}
-
-:root[data-theme="dark"] {
-  --glueck-text: #a9e36a;
   --teufel-text: #ff8fbd;
 }
 
@@ -4122,10 +4078,9 @@
 
 /* Glücksfeld: Verlauf von Gold nach Grün, goldener Rand, grünes Kleeblatt */
 .sudoku-powerup[data-typ="gluecksfeld"] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%),
-    linear-gradient(135deg, color-mix(in srgb, var(--glueck-gold) 42%, transparent),
-      color-mix(in srgb, var(--glueck-gruen) 38%, transparent));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(135deg, color-mix(in srgb, var(--glueck-gold) 34%, transparent),
+      color-mix(in srgb, var(--glueck-gruen) 34%, transparent));
   box-shadow:
     inset 0 0 0 1.5px color-mix(in srgb, var(--glueck-gold) 85%, transparent),
     inset 0 0 6px color-mix(in srgb, var(--glueck-gruen) 45%, transparent),
@@ -4139,10 +4094,9 @@
 
 /* Teufelsfeld: dunkles Rotviolett, glühender Rand, Hörner in Glutrot */
 .sudoku-powerup[data-typ="teufelsfeld"] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 50%),
-    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--teufel-farbe) 26%, transparent),
-      color-mix(in srgb, var(--teufel-farbe) 52%, transparent));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 50%),
+    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--teufel-farbe) 40%, transparent),
+      color-mix(in srgb, var(--teufel-farbe) 70%, transparent));
   box-shadow:
     inset 0 0 0 1.5px color-mix(in srgb, var(--teufel-farbe) 90%, transparent),
     inset 0 0 7px color-mix(in srgb, var(--teufel-glut) 55%, transparent);
@@ -4153,19 +4107,6 @@
   filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.7));
 }
 
-:root[data-theme="dark"] .sudoku-powerup[data-typ="gluecksfeld"] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%),
-    linear-gradient(135deg, color-mix(in srgb, var(--glueck-gold) 34%, transparent),
-      color-mix(in srgb, var(--glueck-gruen) 34%, transparent));
-}
-
-:root[data-theme="dark"] .sudoku-powerup[data-typ="teufelsfeld"] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 50%),
-    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--teufel-farbe) 40%, transparent),
-      color-mix(in srgb, var(--teufel-farbe) 70%, transparent));
-}
 
 /* ---------- Hinweis des Teufels im Gitter ----------
    Das Hinweisfeld glüht rotviolett, die vorgeschlagene Zahl flackert leicht. */

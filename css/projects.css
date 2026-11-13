@@ -1,0 +1,405 @@
+/* ==========================================================================
+   projects.css – Abschnitt "Projekte/Ideen" (js/projects.js)
+   Links eine schmale Seitenleiste mit der Liste, rechts das ausgewählte
+   Projekt. Smartphone: entweder die Liste oder das Projekt in voller Breite.
+   Farben und Schriften aus css/style.css.
+   ========================================================================== */
+
+#view-projects {
+  --pj-seite-breite: 280px;
+  --pj-titel-groesse: clamp(2.2rem, 4vw, 3.2rem);
+}
+
+.pj {
+  display: grid;
+  grid-template-columns: var(--pj-seite-breite) minmax(0, 1fr);
+  gap: var(--abstand-xl);
+  align-items: start;
+}
+
+
+/* ==========================================================================
+   SEITENLEISTE
+   ========================================================================== */
+
+.pj-seite {
+  position: sticky;
+  top: calc(var(--leiste-hoehe) + var(--abstand-l));
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-m);
+  max-height: calc(100dvh - var(--leiste-hoehe) - 2 * var(--abstand-l));
+  min-height: 0;
+}
+
+.pj-neu {
+  align-self: stretch;
+}
+
+/* Kleines Formular für eine neue Idee */
+.pj-formular {
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-s);
+  padding: var(--abstand-m);
+  background: var(--farbe-flaeche);
+  border: var(--linie);
+  border-radius: var(--radius-m);
+}
+
+.pj-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pj-feld span {
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--farbe-text-leise);
+}
+
+.pj-feld input,
+.pj-feld textarea,
+.pj-eingabe {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--farbe-text);
+  background: var(--farbe-hintergrund);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
+}
+
+.pj-feld textarea,
+textarea.pj-eingabe {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.pj-feld input[aria-invalid="true"] {
+  border-color: var(--farbe-gefahr);
+  border-style: dashed;
+}
+
+.pj-fehler,
+.pj-hinweis {
+  margin: 0;
+  font-family: var(--schrift-klein);
+  font-size: var(--klein-groesse);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--klein-sperrung);
+  color: var(--farbe-gefahr);
+}
+
+.pj-fehler:empty {
+  display: none;
+}
+
+.pj-formular-knoepfe {
+  display: flex;
+  gap: var(--abstand-s);
+}
+
+/* Die Liste: neueste oben, scrollt für sich */
+.pj-liste {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--linie);
+}
+
+.pj-liste li {
+  border-bottom: var(--linie);
+}
+
+.pj-eintrag {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 12px 12px 16px;
+  color: var(--farbe-text-leise);
+  text-decoration: none;
+  transition: background-color var(--dauer) ease, color var(--dauer) ease;
+}
+
+.pj-eintrag:hover {
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+}
+
+/* Ausgewählt: heller, mit roter Linie links */
+.pj-eintrag[aria-current="true"] {
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+}
+
+.pj-eintrag[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: var(--farbe-akzent);
+}
+
+.pj-eintrag-titel {
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pj-eintrag-idee {
+  font-size: 0.82rem;
+  color: var(--farbe-text-leise);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pj-eintrag-idee:empty {
+  display: none;
+}
+
+.pj-liste-leer {
+  display: none;
+}
+
+
+/* ==========================================================================
+   DAS AUSGEWÄHLTE PROJEKT
+   ========================================================================== */
+
+.pj-detail {
+  min-width: 0;
+}
+
+.pj-zurueck {
+  display: none;           /* nur auf dem Smartphone */
+}
+
+.pj-kopf {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--abstand-s);
+}
+
+/* Titel groß in der Serifenschrift, per Klick bearbeitbar */
+.pj-titel {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--pj-titel-groesse);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  cursor: text;
+  border-radius: var(--radius-s);
+}
+
+.pj-titel:hover,
+.pj-idee:hover {
+  background: var(--farbe-flaeche);
+}
+
+.pj-eingabe--titel {
+  flex: 1 1 auto;
+  font-family: var(--schrift-serif);
+  font-size: var(--pj-titel-groesse);
+  font-weight: var(--titel-gewicht);
+  line-height: 1.1;
+  padding: 2px 8px;
+}
+
+.pj-menue-knopf {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-top: 6px;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--farbe-text-leise);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.pj-menue-knopf:hover,
+.pj-menue-knopf[aria-expanded="true"] {
+  color: var(--farbe-text);
+  border-color: var(--farbe-rand-stark);
+}
+
+.pj-menue {
+  position: absolute;
+  right: 0;
+  top: 46px;
+  z-index: 5;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten-schwebend);
+}
+
+.pj-menue-eintrag {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--farbe-text);
+  background: transparent;
+  border: 1px dashed transparent;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.pj-menue-eintrag:hover,
+.pj-menue-eintrag:focus-visible {
+  background: var(--farbe-flaeche-leise);
+  border-color: var(--farbe-rand-stark);
+}
+
+.pj-zeit {
+  margin: var(--abstand-s) 0 var(--abstand-l);
+  font-family: var(--schrift-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: var(--mono-sperrung);
+  color: var(--farbe-text-leise);
+}
+
+/* Die Idee: Fließtext, per Klick bearbeitbar */
+.pj-idee {
+  max-width: var(--zeilen-max);
+  min-height: 2.4em;
+  padding: 4px 6px;
+  margin-left: -6px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: var(--radius-s);
+  cursor: text;
+}
+
+.pj-idee.ist-leer {
+  color: var(--farbe-text-leise);
+  font-style: italic;
+}
+
+textarea.pj-eingabe--idee {
+  max-width: var(--zeilen-max);
+}
+
+/* Platzhalter für die spätere schrittweise Dokumentation */
+.pj-doku {
+  margin-top: var(--abstand-xl);
+  padding-top: var(--abstand-l);
+  border-top: var(--linie);
+}
+
+.pj-doku-titel {
+  margin: 0 0 var(--abstand-s);
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: var(--mono-sperrung);
+}
+
+.pj-doku-platzhalter,
+.pj-leer {
+  margin: 0;
+  font-family: var(--schrift-klein);
+  font-size: var(--klein-groesse);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--klein-sperrung);
+  color: var(--farbe-text-leise);
+}
+
+.pj-leer {
+  padding: var(--abstand-xl) 0;
+  font-family: var(--schrift-mono);
+  font-weight: 400;
+  font-size: var(--mono-groesse);
+  letter-spacing: 0.14em;
+  line-height: 1.8;
+}
+
+
+/* ==========================================================================
+   SMARTPHONE (wie handyAbfrage in js/projects.js)
+   ========================================================================== */
+
+@media (max-width: 699px) {
+  .pj {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .pj-seite {
+    position: static;
+    max-height: none;
+  }
+
+  .pj-liste {
+    overflow: visible;
+  }
+
+  /* Liste ODER Projekt */
+  .pj:not(.zeigt-projekt) .pj-detail,
+  .pj.zeigt-projekt .pj-seite {
+    display: none;
+  }
+
+  .pj-zurueck {
+    display: inline-block;
+    margin-bottom: var(--abstand-m);
+    padding: 6px 0;
+    font-family: var(--schrift-mono);
+    font-size: var(--mono-groesse);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--farbe-text-leise);
+    text-decoration: none;
+  }
+
+  .pj-zurueck:hover {
+    color: var(--farbe-text);
+  }
+
+  .pj-eintrag {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .pj-liste-leer {
+    display: block;
+    padding: var(--abstand-l) 0;
+    font-family: var(--schrift-mono);
+    font-size: var(--mono-groesse);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    line-height: 1.8;
+    color: var(--farbe-text-leise);
+  }
+}

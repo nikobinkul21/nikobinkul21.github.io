@@ -3,7 +3,7 @@
    Kümmert sich um:
      1. Navigation zwischen den Ansichten (über den URL-Hash, z. B. #games)
      2. Das mobile Menü (Hamburger + ausklappendes Panel)
-     3. Den Dark-Mode-Schalter
+   Die Seite hat nur ein (dunkles) Design – es gibt keinen Design-Schalter.
    ========================================================================== */
 
 
@@ -24,17 +24,19 @@ const ANSICHTEN = {
   home: { init: StartseiteAnsicht.init, zeige: StartseiteAnsicht.zeige, root: "home-root" },
   kalender: { init: KalenderAnsicht.init, zeige: KalenderAnsicht.zeige, root: "calendar-root" },
   games: { init: initGames, zeige: zeigeGames, root: "games-root" },
-  media: { init: MediaAnsicht.init, zeige: MediaAnsicht.zeige, root: "media-root" },
+  pinnwand: { init: PinnwandAnsicht.init, zeige: PinnwandAnsicht.zeige, root: "board-root" },
   schedule: { init: StundenplanAnsicht.init, zeige: StundenplanAnsicht.zeige, root: "schedule-root" },
   todo: { init: TodoAnsicht.init, zeige: TodoAnsicht.zeige, root: "todo-root" },
   prompts: { init: PromptsAnsicht.init, zeige: PromptsAnsicht.zeige, root: "prompts-root" },
+  projects: { init: ProjekteAnsicht.init, zeige: ProjekteAnsicht.zeige, root: "projects-root" },
   einstellungen: { init: EinstellungenAnsicht.init, root: "settings-root" },
 };
 
 // Alte Adressen, die es nicht mehr als eigenen Abschnitt gibt → neues Ziel.
-// "Customising" ist als Bereich "Darstellung" in die Einstellungen gewandert.
+// "Customising" gibt es nicht mehr – die Adresse führt zu den Einstellungen.
 const WEITERLEITUNGEN = {
   customising: "einstellungen",
+  settings: "einstellungen",        // #settings öffnet ebenfalls die Einstellungen
 };
 
 /**
@@ -49,7 +51,6 @@ function ansichtAnmelden(name, ansicht) {
 
 const START_ANSICHT = "home";
 const SEITENNAME = "NTB";
-const THEME_SCHLUESSEL = "hub-theme"; // Name des Eintrags im localStorage
 
 // Merkt sich, welche Tools schon gestartet wurden (damit init nur 1x läuft)
 const gestarteteTools = {};
@@ -64,10 +65,8 @@ let aktuelleAnsicht = null;
 
 const navPanel = document.getElementById("nav-panel");
 const menuButton = document.getElementById("menu-button");
-const themeButton = document.getElementById("theme-button");
-const themeSymbol = document.getElementById("theme-symbol");
 // Alle Reiter, die zu einer Ansicht führen – auch der NTB-Link
-const reiterLinks = document.querySelectorAll(".reiter[data-view]");
+const reiterLinks = document.querySelectorAll(".leiste [data-view]");   // auch das Zahnrad
 // Nur die Reiter im ausklappbaren Panel (für den Fokus auf dem Handy)
 const panelLinks = navPanel.querySelectorAll(".reiter-gruppe .reiter");
 
@@ -127,9 +126,6 @@ function zeigeAnsicht(name, unterseite, fokusSetzen) {
       link.removeAttribute("aria-current");
     }
   });
-
-  // Öffnen eines Abschnitts zählen (Kachelgrößen der Startseite, js/home.js)
-  if (!warSchonOffen) StartseiteAnsicht.merkeAufruf(name);
 
   // Tool beim ersten Öffnen starten
   const tool = ANSICHTEN[name];
@@ -245,60 +241,19 @@ mobilAbfrage.addEventListener("change", function () {
 
 
 /* ==========================================================================
-   3. DARK MODE
-   Das Theme wurde schon beim Laden im <head> von index.html gesetzt.
-   Hier geht es nur noch um den Schalter.
-   ========================================================================== */
-
-function aktuellesTheme() {
-  return document.documentElement.getAttribute("data-theme");
-}
-
-/**
- * Setzt das Theme und passt den Schalter an.
- * @param {string} theme – "light" oder "dark"
- */
-function setzeTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-
-  const istDunkel = theme === "dark";
-  // aria-pressed: Screenreader sagen "Dunkles Design, gedrückt/nicht gedrückt"
-  themeButton.setAttribute("aria-pressed", String(istDunkel));
-  // Symbol zeigt, wohin man wechselt: im Dunkeln die Sonne, im Hellen den Mond
-  themeSymbol.textContent = istDunkel ? "☀" : "☾";
-}
-
-// Klick auf den Schalter: Theme umdrehen und Wahl speichern
-themeButton.addEventListener("click", function () {
-  const neuesTheme = aktuellesTheme() === "dark" ? "light" : "dark";
-  setzeTheme(neuesTheme);
-  try {
-    localStorage.setItem(THEME_SCHLUESSEL, neuesTheme);
-  } catch (fehler) {
-    // Speichern nicht möglich (z. B. privater Modus) – Theme gilt dann nur bis zum Neuladen
-  }
-});
-
-// Ändert sich die Systemeinstellung, folgen wir ihr –
-// aber nur, solange der Nutzer noch nichts selbst gewählt hat.
-window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function (event) {
-  let gespeichert = null;
-  try {
-    gespeichert = localStorage.getItem(THEME_SCHLUESSEL);
-  } catch (fehler) {
-    // ignorieren
-  }
-  if (!gespeichert) {
-    setzeTheme(event.matches ? "dark" : "light");
-  }
-});
-
-
-/* ==========================================================================
    START
    ========================================================================== */
 
-setzeTheme(aktuellesTheme());       // Schalter an das bereits gesetzte Theme anpassen
+// Gespeicherte Daten entfernter Funktionen aufräumen (einmalig, danach ohne
+// Wirkung): ein früherer Bereich, die frühere Wahl hell/dunkel und die
+// früheren Nutzungsdaten der Startseite (Kachelgrößen nach Nutzung)
+try {
+  localStorage.removeItem("ntb-media");
+  localStorage.removeItem("ntb-startseite");
+  localStorage.removeItem("hub-theme");
+} catch (fehler) {
+  // localStorage gesperrt – dann gibt es auch nichts aufzuräumen
+}
 // Ansicht aus der URL zeigen (ohne Fokus-Sprung)
 const startZiel = ansichtAusHash();
 zeigeAnsicht(startZiel.name, startZiel.unterseite, false);

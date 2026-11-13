@@ -1,84 +1,82 @@
 /* ==========================================================================
-   home.css – die Startseite als Bento-Raster (js/home.js)
-   Ruhig und kompakt: oben rechts ein kleiner Zeitstempel, darunter sechs
-   Kacheln in einem lückenlosen Raster, ganz unten die Schnellzugriffe.
-   Alles passt ohne Scrollen in die Bildschirmhöhe (dvh): das Raster nimmt
-   den übrigen Platz ein, die Zeilen strecken sich. Nur wenn selbst die
-   Mindesthöhe der Zeilen nicht passt (sehr kleine Bildschirme), wird
-   gescrollt. Hinter allem am unteren Rand ein kaum sichtbares Meer ferner
-   Lichter (Canvas).
-   Größe und Platz jeder Kachel setzt home.js als Variablen:
-     --c-x, --c-y, --c-b, --c-h  (Computer: Spalte, Zeile, Breite, Höhe)
-     --h-x, --h-y, --h-b, --h-h  (Smartphone)
-     --n                          (Platz in der Lesereihenfolge, ab 0)
-   Farben, Leuchten und Schriften: css/style.css.
+   home.css – die Startseite (js/home.js)
+   Schlicht und ruhig: oben links klein Datum und Uhrzeit, darunter die
+   Zeile "Als Nächstes". In der Mitte zwei Spalten: links der News-Feed
+   (css/news.css, etwa 55 %), rechts die Karten (etwa 45 %). Ganz unten
+   die Schnellzugriffe als Textlinks.
+   Computer (ab 1024 px): Alles passt ohne Scrollen in die Bildschirmhöhe
+   (dvh) – die Mitte nimmt den übrigen Platz ein, die Kartenreihen strecken
+   sich, der Feed scrollt in sich. Nur wenn selbst die Mindesthöhe der
+   Karten nicht passt (sehr niedrige Fenster), scrollt die Seite.
+   Tablet: Karten oben (4 Spalten), Feed darunter. Smartphone: Karten in
+   2 Spalten, Feed darunter. Dort scrollt die Seite.
+   Karten: gleich groß; bei ungerader Anzahl ist die letzte doppelt breit.
+   Farben und Schriften: css/style.css.
    ========================================================================== */
 
 #view-home {
-  /* Kopf */
   --zeit-groesse: 0.78rem;
-  /* Raster: Zeilen strecken sich auf die freie Höhe, mindestens --bento-min-zeile */
-  --bento-spalten: 4;
-  --bento-zeilen: 3;
-  --bento-min-zeile: 96px;
-  --bento-abstand: 12px;
-  --bento-innen: 22px;
-  /* Schrift in den Kacheln (Monospace, Großbuchstaben) */
-  --bento-titel-groesse: 0.86rem;
-  --bento-titel-gross: 1.35rem;               /* in der 2×2-Kachel */
-  --bento-symbol: 26px;
-  --bento-symbol-gross: 34px;
-  /* Aufblenden beim Öffnen: Dauer und Versatz je Kachel */
-  --bento-auf-dauer: 1100ms;
-  --bento-auf-versatz: 110ms;
+  --raster-spalten: 2;
+  --raster-abstand: 14px;
+  --spalten-abstand: 44px;                     /* ruhiger Abstand zwischen Feed und Karten */
+  --karte-min-hoehe: 88px;
+  --karte-innen: 18px;
+  --karte-symbol: 26px;
+  --karte-titel-groesse: 0.86rem;
 }
 
 /* Auf der Startseite weniger Rand um den Inhalt – so bleibt mehr Höhe für
-   das Raster. --home-rand gilt oben und unten (unten fließt er in die
-   Höhenrechnung von .home ein). */
+   das Raster. --home-rand gilt oben und unten (fließt in die Höhe ein). */
 .hauptbereich:has(> #view-home:not([hidden])) {
   --home-rand: var(--abstand-l);
+  max-width: var(--leiste-max-breite);         /* zwei Spalten brauchen etwas mehr Breite */
   padding-top: var(--home-rand);
   padding-bottom: var(--home-rand);
 }
 
-
-/* ==========================================================================
-   STADT BEI NACHT: ferne Lichter am unteren Rand (home.js zeichnet sie)
-   ========================================================================== */
-
-.home-stadt {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 0;
-  width: 100%;
-  height: var(--stadt-hoehe);
-  opacity: var(--stadt-deckkraft);
-  pointer-events: none;
-}
-
-/* Der Inhalt liegt über den Lichtern und füllt genau die sichtbare Höhe:
-   Bildschirm minus Navigationsleiste (mit Linie) minus Rand oben und unten */
 .home {
-  position: relative;
-  z-index: 1;
+  --home-hoehe: calc(100vh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
   display: flex;
   flex-direction: column;
-  gap: var(--abstand-m);
-  min-height: calc(100vh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
-  min-height: calc(100dvh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
+  gap: var(--abstand-l);
+}
+
+@supports (height: 100dvh) {
+  .home {
+    --home-hoehe: calc(100dvh - var(--leiste-hoehe) - var(--linie-breite) - 2 * var(--home-rand, var(--abstand-l)));
+  }
+}
+
+/* Die Mitte: links der News-Feed, rechts die Karten */
+.home-mitte {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--spalten-abstand);
+}
+
+/* Computer: genau die sichtbare Höhe (Bildschirm minus Navigationsleiste
+   mit Linie minus Rand oben und unten) – die Seite scrollt nicht, nur der
+   Feed in sich. Die Karten behalten ihre Mindesthöhe. */
+@media (min-width: 1024px) {
+  .home {
+    height: var(--home-hoehe);
+    min-height: calc(4 * var(--karte-min-hoehe) + 240px);
+  }
 }
 
 
 /* ==========================================================================
-   KOPF: kleiner Zeitstempel oben rechts, wie in einem Film
+   KOPF: oben links Datum und Uhrzeit, darunter "Als Nächstes"
    ========================================================================== */
 
 .home-kopf {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--abstand-xs);
 }
 
 .home-zeit {
@@ -90,172 +88,187 @@
   letter-spacing: var(--mono-sperrung);
   color: var(--farbe-text-leise);
   white-space: pre;                            /* die Leerzeichen um den Punkt bleiben */
-  text-shadow: var(--leuchten-leise);
 }
 
-
-/* ==========================================================================
-   RASTER: nimmt den ganzen verbleibenden Platz ein
-   ========================================================================== */
-
-.bento {
-  flex: 1 1 auto;
-  display: grid;
-  grid-template-columns: repeat(var(--bento-spalten), minmax(0, 1fr));
-  grid-template-rows: repeat(var(--bento-zeilen), minmax(var(--bento-min-zeile), 1fr));
-  gap: var(--bento-abstand);
-}
-
-.bento-kachel {
-  grid-column: var(--c-x) / span var(--c-b);
-  grid-row: var(--c-y) / span var(--c-h);
-}
-
-
-/* ==========================================================================
-   KACHEL
-   Sehr dunkle Fläche mit feiner, warmer Kante. Hover und Tastaturfokus:
-   die Kachel wird heller und der Titel leuchtet stärker – als fiele ein
-   Scheinwerfer auf sie. Nichts bewegt sich.
-   ========================================================================== */
-
-.bento-kachel {
-  position: relative;
-  isolation: isolate;
+/* "Als Nächstes": Monospace, Großbuchstaben; der Titel ist heller */
+.home-anstehend {
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-width: 0;
-  padding: var(--bento-innen);
-  overflow: hidden;
-  color: var(--farbe-text);
-  text-decoration: none;
-  background: var(--farbe-flaeche);
-  border: var(--linie-breite) solid rgb(var(--kachel-kante) / var(--kachel-kante-staerke));
-  border-radius: var(--radius-m);
-  box-shadow: 0 0 0 0 rgb(var(--licht) / 0);
-  transition:
-    box-shadow var(--kachel-hover-dauer) var(--kurve-weich),
-    border-color var(--kachel-hover-dauer) var(--kurve-weich);
-}
-
-/* Das Scheinwerferlicht: von vorn, in der Mitte am hellsten */
-.bento-kachel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: radial-gradient(ellipse 85% 75% at 50% 45%,
-    rgb(var(--licht) / var(--kachel-licht-staerke)),
-    rgb(var(--licht) / calc(var(--kachel-licht-staerke) * 0.35)));
-  opacity: 0;
-  transition: opacity var(--kachel-hover-dauer) var(--kurve-weich);
-}
-
-.bento-kachel:hover,
-.bento-kachel:focus-visible {
-  color: var(--farbe-text);
-  border-color: rgb(var(--kachel-kante) / calc(var(--kachel-kante-staerke) * 3));
-  box-shadow:
-    0 0 var(--kachel-schein-groesse) rgb(var(--licht) / var(--kachel-schein-staerke)),
-    inset 0 0 0 1px rgb(var(--licht) / calc(var(--kachel-schein-staerke) * 0.6));
-}
-
-.bento-kachel:hover::before,
-.bento-kachel:focus-visible::before {
-  opacity: 1;
-}
-
-/* Im hellen Design trägt ein weicher Schatten den hellen Schein */
-:root[data-theme="light"] .bento-kachel:hover,
-:root[data-theme="light"] .bento-kachel:focus-visible {
-  box-shadow:
-    0 0 var(--kachel-schein-groesse) rgb(var(--licht) / var(--kachel-schein-staerke)),
-    0 10px 30px rgb(var(--dunkel) / 0.12),
-    inset 0 0 0 1px rgb(var(--licht) / 0.9);
-}
-
-.bento-kachel:focus-visible {
-  outline: 2px solid var(--farbe-fokus);
-  outline-offset: 3px;
-}
-
-/* Kleine Nummer oben rechts in der Ecke */
-.bento-nummer {
-  position: absolute;
-  top: calc(var(--bento-innen) - 4px);
-  right: calc(var(--bento-innen) - 2px);
+  gap: 2px;
   font-family: var(--schrift-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
+  font-size: var(--zeit-groesse);
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: var(--mono-sperrung);
+  color: var(--farbe-text-leise);
+  text-decoration: none;
+  border-radius: var(--radius-s);
+}
+
+.home-anstehend:hover .home-an-titel,
+.home-anstehend:focus-visible .home-an-titel {
+  color: var(--farbe-akzent-text);
+}
+
+/* Eine Zeile: nur der Titel wird gekürzt, Raum und Zeit bleiben sichtbar */
+.home-an-zeile {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.home-an-zeile > * {
+  flex: none;
+}
+
+.home-an-titel {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--farbe-text);
+  transition: color var(--dauer) ease;
+}
+
+/* Trennpunkte zwischen den Angaben */
+.home-an-titel::before,
+.home-an-raum::before,
+.home-an-wann::before {
+  content: "·";
+  margin: 0 0.7em;
   color: var(--farbe-text-leise);
 }
 
-.bento-symbol {
-  width: var(--bento-symbol);
-  height: var(--bento-symbol);
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.85;
-  filter: drop-shadow(0 0 3px rgb(var(--licht) / 0.25));
+.home-an-titel::before {
+  /* steht vor dem Text, wird aber nicht mit abgeschnitten */
+  display: inline-block;
 }
 
-/* Kacheltitel: Monospace, Großbuchstaben, weit gesperrt, mit Lichthof */
-.bento-titel {
-  font-family: var(--schrift-mono);
-  font-size: var(--bento-titel-groesse);
-  line-height: 1.35;
-  text-transform: uppercase;
-  letter-spacing: var(--mono-sperrung);
-  overflow-wrap: anywhere;
-  text-shadow: var(--leuchten-leise);
-  transition: text-shadow var(--kachel-hover-dauer) var(--kurve-weich);
+/* Etikett: Vorlesung (gefüllt) oder Termin (nur Rahmen) */
+.home-an-art {
+  margin-right: 0.8em;
+  padding: 1px 5px;
+  font-family: var(--schrift-klein);
+  font-size: 0.85em;
+  font-weight: 700;
+  letter-spacing: var(--klein-sperrung);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
 }
 
-.bento-kachel:hover .bento-titel,
-.bento-kachel:focus-visible .bento-titel {
-  text-shadow: var(--leuchten-stark);
+.home-an-art.ist-vorlesung {
+  color: var(--farbe-auf-akzent);
+  background: var(--farbe-text-leise);
+  border-color: var(--farbe-text-leise);
 }
 
-/* Die große Kachel: Titel größer */
-.bento-kachel[data-groesse-c="2x2"] .bento-symbol {
-  width: var(--bento-symbol-gross);
-  height: var(--bento-symbol-gross);
+.home-an-art-kurz {
+  display: none;
 }
 
-.bento-kachel[data-groesse-c="2x2"] .bento-titel {
-  font-size: var(--bento-titel-gross);
-  text-shadow: var(--leuchten);
+.home-an-status {
+  color: var(--farbe-text-leise);
+}
+
+/* Darunter klein: was nach dem laufenden Eintrag kommt */
+.home-an-danach {
+  font-size: 0.86em;
+}
+
+.home-an-danach .home-an-titel {
+  color: var(--farbe-text-leise);
+}
+
+/* Nichts in den nächsten Tagen: dezent */
+.home-anstehend.ist-leer {
+  opacity: 0.8;
 }
 
 
 /* ==========================================================================
-   AUFBLENDEN: Die Kacheln erscheinen nacheinander langsam aus dem Dunkel
-   (home.js setzt die Klasse bei jedem Öffnen neu)
+   RASTER: gleich große Karten; bei ungerader Anzahl ist die letzte doppelt breit
    ========================================================================== */
 
-.bento.blendet-auf .bento-kachel {
-  animation: aus-dem-dunkel var(--bento-auf-dauer) var(--kurve-weich) backwards;   /* danach bleibt nichts hängen */
-  animation-delay: calc(var(--n, 0) * var(--bento-auf-versatz));
+.home-raster {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--raster-spalten), minmax(0, 1fr));
+  grid-auto-rows: minmax(var(--karte-min-hoehe), 1fr);   /* Reihen strecken sich auf die freie Höhe */
+  gap: var(--raster-abstand);
 }
 
-@keyframes aus-dem-dunkel {
-  from { opacity: 0; filter: brightness(0.15); }
-  60%  { opacity: 1; }
-  to   { opacity: 1; filter: brightness(1); }
+.home-karte {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--abstand-s);
+  padding: var(--karte-innen);
+  color: var(--farbe-text);
+  text-decoration: none;
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-m);
+  transition:
+    border-color var(--dauer) ease,
+    background-color var(--dauer) ease,
+    transform var(--dauer) ease;
+}
+
+.home-karte:last-child:nth-child(odd) {
+  grid-column: span 2;
+}
+
+.home-karte:hover,
+.home-karte:focus-visible {
+  color: var(--farbe-text);                    /* Titel bleibt cremefarben – rot sind nur Linie und Symbol */
+  border-color: var(--farbe-akzent);
+  background: var(--farbe-flaeche-leise);
+  transform: translateY(var(--anheben));
+}
+
+/* Fokus: der rote Rand plus der übliche Fokusrahmen (style.css) */
+.home-karte:focus-visible {
+  outline-offset: 3px;
+}
+
+.home-karte-symbol {
+  flex: none;
+  width: var(--karte-symbol);
+  height: var(--karte-symbol);
+  fill: none;
+  stroke: var(--farbe-text-leise);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke var(--dauer) ease;
+}
+
+.home-karte:hover .home-karte-symbol,
+.home-karte:focus-visible .home-karte-symbol {
+  stroke: var(--farbe-akzent);
+}
+
+.home-karte-titel {
+  font-family: var(--schrift-mono);
+  font-size: var(--karte-titel-groesse);
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  overflow-wrap: anywhere;
 }
 
 
 /* ==========================================================================
-   SCHNELLZUGRIFFE: schlanke Fußzeile, Kleingedrucktes in Archivo Narrow
+   SCHNELLZUGRIFFE: Textlinks, beim Überfahren rot
    ========================================================================== */
 
 .home-links {
   border-top: var(--linie);
-  padding-top: var(--abstand-m);
+  padding-top: var(--abstand-s);
 }
 
 .home-links-liste {
@@ -281,67 +294,82 @@
   letter-spacing: var(--klein-sperrung);
   color: var(--farbe-text-leise);
   text-decoration: none;
-  transition: color var(--kachel-hover-dauer) var(--kurve-weich), text-shadow var(--kachel-hover-dauer) var(--kurve-weich);
+  transition: color var(--dauer) ease;
 }
 
 .home-link:hover,
 .home-link:focus-visible {
-  color: var(--farbe-text);
-  text-shadow: var(--leuchten-leise);
+  color: var(--farbe-akzent-text);
 }
 
 .home-link-pfeil {
   font-size: 0.85em;
-  opacity: 0.6;
 }
 
 
 /* ==========================================================================
-   SMARTPHONE: 2 Spalten (Grenze wie STARTSEITE_KONFIG.computerAb in home.js)
+   TABLET UND SMARTPHONE: Karten oben, Feed darunter – die Seite scrollt
+   ========================================================================== */
+
+@media (max-width: 1023px) {
+  #view-home {
+    --raster-spalten: 4;
+    --karte-min-hoehe: 108px;
+  }
+
+  .home-mitte {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: var(--abstand-xl);
+  }
+
+  .home-raster {
+    order: -1;                                 /* Karten vor dem Feed */
+    grid-auto-rows: var(--karte-min-hoehe);
+  }
+}
+
+
+/* ==========================================================================
+   SMARTPHONE: 2 Spalten
    ========================================================================== */
 
 @media (max-width: 699px) {
   #view-home {
     --zeit-groesse: 0.7rem;
-    --bento-spalten: 2;
-    --bento-zeilen: 6;
-    --bento-min-zeile: 72px;
-    --bento-abstand: 10px;
-    --bento-innen: 16px;
-    --bento-titel-groesse: 0.74rem;
-    --bento-titel-gross: 1.05rem;
-    --bento-symbol: 22px;
-    --bento-symbol-gross: 28px;
+    --raster-spalten: 2;
+    --raster-abstand: 10px;
+    --karte-min-hoehe: 96px;
+    --karte-symbol: 24px;
+    --karte-titel-groesse: 0.74rem;
+    --karte-innen: 16px;
   }
 
   .hauptbereich:has(> #view-home:not([hidden])) {
     --home-rand: var(--abstand-m);
   }
 
-  .bento-kachel {
-    grid-column: var(--h-x) / span var(--h-b);
-    grid-row: var(--h-y) / span var(--h-h);
+  .home {
+    gap: var(--abstand-m);
   }
 
-  /* Die große Kachel nach dem Smartphone-Raster */
-  .bento-kachel[data-groesse-c="2x2"]:not([data-groesse-h="2x2"]) .bento-titel {
-    font-size: var(--bento-titel-groesse);
-    text-shadow: var(--leuchten-leise);
+  .home-mitte {
+    gap: var(--abstand-l);
   }
 
-  .bento-kachel[data-groesse-h="2x2"] .bento-titel {
-    font-size: var(--bento-titel-gross);
-    text-shadow: var(--leuchten);
+  .home-anstehend {
+    letter-spacing: 0.1em;
   }
 
-  /* Schnellzugriffe: gut antippbare Leiste in gleich breiten Feldern */
-  .home-links {
-    padding-top: 0;
-    border: var(--linie);
-    border-radius: var(--radius-m);
-    background: var(--farbe-flaeche);
+  .home-an-art-lang {
+    display: none;
   }
 
+  .home-an-art-kurz {
+    display: inline;
+  }
+
+  /* Schnellzugriffe: gleich breite, gut antippbare Felder */
   .home-links-liste {
     flex-wrap: nowrap;
     gap: 0;
@@ -352,14 +380,9 @@
     min-width: 0;
   }
 
-  .home-links-liste li + li {
-    border-left: var(--linie);
-  }
-
   .home-link {
     justify-content: center;
     width: 100%;
-    min-height: 52px;
     padding: 0 4px;
     letter-spacing: 0.08em;
   }
@@ -367,18 +390,12 @@
 
 
 /* ==========================================================================
-   BEWEGUNG REDUZIEREN: kein Aufblenden
+   BEWEGUNG REDUZIEREN: Karten heben sich nicht an
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-  .bento.blendet-auf .bento-kachel {
-    animation: none;
-  }
-
-  .bento-kachel,
-  .bento-kachel::before,
-  .bento-titel,
-  .home-link {
-    transition-duration: 120ms;
+  .home-karte:hover,
+  .home-karte:focus-visible {
+    transform: none;
   }
 }
