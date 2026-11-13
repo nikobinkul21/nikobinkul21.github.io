@@ -1,62 +1,110 @@
 {
-  "aktualisiert": "2026-11-13T09:45:00+01:00",
+  "aktualisiert": "2026-11-13T21:30:40+00:00",
   "meldungen": [
     {
-      "titel": "Beispiel: Klimagipfel einigt sich auf gemeinsamen Fahrplan",
-      "zusammenfassung": "Dies ist eine ausgedachte Beispielmeldung. Nach langen Verhandlungen haben sich die Delegationen auf einen Fahrplan geeinigt. Die Details sollen in den kommenden Wochen ausgearbeitet werden.",
-      "url": "https://example.com/beispiel/klimagipfel",
-      "quelle": "Beispiel-Agentur",
-      "region": "Welt",
-      "veroeffentlicht": "2026-11-13T07:40:00+01:00",
-      "anzahlQuellen": 7
+      "titel": "US-Flusskreuzfahrtschiff kentert nach Zusammenprall in New Orleans",
+      "zusammenfassung": "Das Flusskreuzfahrtschiff \"American Heritage\" ist im Hafen der US-Stadt New Orleans gekentert. Zuvor war es von einem Tanker gerammt worden. An Bord des Schiffes befanden sich mehr als 130 Menschen.",
+      "url": "https://www.tagesschau.de/ausland/kreuzfahrtschiff-unfall-new-orleans-100.html",
+      "quelle": "tagesschau",
+      "veroeffentlicht": "2026-11-13T21:19:32+00:00"
     },
     {
-      "titel": "Beispiel: Bundestag berät über neues Bildungspaket",
-      "zusammenfassung": "Ausgedachte Beispielmeldung: Das Paket soll Hochschulen und Schulen zusätzliche Mittel für die digitale Ausstattung bringen.",
-      "url": "https://example.com/beispiel/bildungspaket",
-      "quelle": "Beispiel-Zeitung",
-      "region": "Deutschland",
-      "veroeffentlicht": "2026-11-13T08:55:00+01:00",
-      "anzahlQuellen": 4
+      "titel": "New Orleans: Tanker kollidiert mit Raddampfer",
+      "zusammenfassung": "Nahe dem Hafen der US-Stadt New Orleans ist ein Tanker mit einem Schaufelradschiff zusammengestoßen. An Bord des Ausflugsschiffes befanden sich zum Zeitpunkt des Aufpralls mehr als 129 Menschen. Es läuft eine Rettungsaktion.",
+      "url": "https://www.spiegel.de/panorama/new-orleans-tanker-kollidiert-mit-raddampfer-a-7844e9e3-d317-4187-89dd-ab7505518264#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T20:40:00+00:00"
     },
     {
-      "titel": "Beispiel: Notenbank lässt den Leitzins unverändert",
-      "zusammenfassung": "Ausgedachte Beispielmeldung: Die Währungshüter warten weitere Konjunkturdaten ab, bevor sie über den nächsten Schritt entscheiden.",
-      "url": "https://example.com/beispiel/leitzins",
-      "quelle": "Beispiel-Wirtschaftsblatt",
-      "region": "Wirtschaft",
-      "veroeffentlicht": "2026-11-12T16:10:00+01:00"
+      "titel": "Was über den Ausfall von Microsoft-Diensten bekannt ist",
+      "zusammenfassung": "Eine stundenlange Großstörung hat weltweit Dienste des US-Softwarekonzerns Microsoft lahmgelegt, unter anderem das E-Mail-Programm Outlook. Wen es getroffen hat und welche Hintergründe vermutet werden - ein Überblick.",
+      "url": "https://www.tagesschau.de/wirtschaft/unternehmen/faq-ausfall-microsoft-dienste-weltweit-100.html",
+      "quelle": "tagesschau",
+      "veroeffentlicht": "2026-11-13T20:22:33+00:00"
     },
     {
-      "titel": "Beispiel: Forschende stellen sparsameren Speicherchip vor",
-      "zusammenfassung": "Ausgedachte Beispielmeldung: Der Prototyp soll deutlich weniger Energie benötigen als heutige Bausteine. Bis zur Serienreife dauert es noch Jahre.",
-      "url": "https://example.com/beispiel/speicherchip",
-      "quelle": "Beispiel-Technikmagazin",
-      "region": "Technik",
-      "anzahlQuellen": 2
+      "titel": "IT-Störungen: Microsoft sieht \"deutliche Verbesserung\" der Lage",
+      "zusammenfassung": "Nach den weltweiten IT-Störungen scheint sich die Lage vor allem in Nordamerika und Europa zu entspannen. Das US-Technologieunternehmen Microsoft spricht von zum Teil \"umfassenden Verbesserungen\".",
+      "url": "https://www.tagesschau.de/wirtschaft/unternehmen/microsoft-outlook-stoerung-100.html",
+      "quelle": "tagesschau",
+      "veroeffentlicht": "2026-11-13T20:21:45+00:00"
     },
     {
-      "titel": "Beispiel: EU-Staaten einigen sich auf einheitliche Ladestecker-Regeln",
-      "zusammenfassung": "Ausgedachte Beispielmeldung: Die neuen Vorgaben sollen das Laden von Elektroautos über Ländergrenzen hinweg vereinfachen.",
-      "url": "https://example.com/beispiel/ladestecker",
-      "quelle": "Beispiel-Europadienst",
-      "region": "Europa",
-      "veroeffentlicht": "2026-11-12T11:30:00+01:00",
-      "anzahlQuellen": 3
+      "titel": "Norwegen, Schweden und Estland sperren russische Sportler aus",
+      "zusammenfassung": "Das IOC und mehrere Dachverbände wollen Athletinnen und Athleten aus Russland wieder bei internationalen Wettkämpfen zulassen. Nun wehren sich immer mehr Länder mit verschärften Einreisebestimmungen.",
+      "url": "https://www.spiegel.de/sport/norwegen-schweden-und-estland-sperren-russische-sportler-aus-a-cbad5051-c510-4df1-a4d9-88b099d8a5a2#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T19:53:00+00:00"
     },
     {
-      "titel": "Beispiel: Stadtbibliothek verlängert ihre Öffnungszeiten",
-      "zusammenfassung": "Ausgedachte Beispielmeldung ohne optionale Felder: Ab Dezember sind die Lesesäle auch am Sonntag geöffnet.",
-      "url": "https://example.com/beispiel/bibliothek",
-      "quelle": "Beispiel-Lokalblatt"
+      "titel": "Sylvie Meis über »Die Friesenjunkies«: »Alle Genitalien waren abgeklebt und auch beim Masturbieren bewegt sich nur meine Schulter«",
+      "zusammenfassung": "Moderatorin Sylvie Meis stieß spontan zum Cast der Serie »Die Friesenjunkies«. Hier erklärt sie, warum ihr die Sexszenen leichter fielen als jene mit Drogen.",
+      "url": "https://www.spiegel.de/kultur/sylvie-meis-ueber-die-friesenjunkies-alle-genitalien-waren-abgeklebt-und-auch-beim-masturbieren-bewegt-sich-nur-meine-schulter-a-91f7a1e9-6dff-4b19-93b4-c63728e52596#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T19:16:00+00:00"
     },
     {
-      "titel": "Beispiel: Start-up baut Übersetzungshilfe für Vorlesungen",
-      "zusammenfassung": "Ausgedachte Beispielmeldung: Die Software soll Vorlesungen live untertiteln und in mehrere Sprachen übertragen.",
-      "url": "https://example.com/beispiel/uebersetzung",
-      "quelle": "Beispiel-Technikmagazin",
-      "region": "Technik",
-      "veroeffentlicht": "2026-11-10T14:00:00+01:00"
+      "titel": "Nations League: Deutschland gegen Serbien im Liveticker",
+      "zusammenfassung": "So dominant wie gegen Serbien war die DFB-Elf noch nie unter Jürgen Klopp. Für die Tabellensituation braucht es in Hälfte zwei noch mehr Treffer. Verfolgen Sie die Partie live.",
+      "url": "https://www.spiegel.de/sport/fussball/nations-league-deutschland-gegen-serbien-im-liveticker-a-326c5e73-0078-4453-a674-74f4b8a81771#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T19:15:00+00:00"
+    },
+    {
+      "titel": "Nvidia-Skandal: US-Handelsminister Lutnick wegen Chip-Exporten unter Druck",
+      "zusammenfassung": "US-Handelsminister Lutnick steht in der Kritik. Sein Ministerium soll Warnungen vor der in den Nvidia-Skandal verwickelten Firma Megaspeed ignoriert haben. Kabinettskollege Bessent warf ihm Versäumnisse vor.",
+      "url": "https://www.tagesschau.de/ausland/usa-nvidia-finanzminister-handelminister-100.html",
+      "quelle": "tagesschau",
+      "veroeffentlicht": "2026-11-13T19:06:39+00:00"
+    },
+    {
+      "titel": "EU einigt sich auf europäisches Team für Ukraine-Verhandlungen",
+      "zusammenfassung": "Lange wurde diskutiert, wer Europa bei Gesprächen mit Russland über ein Ende des Kriegs gegen die Ukraine vertreten soll. Nun gibt es eine Einigung: Das Team bilden Vertreter der EU-Institutionen und aus fünf Ländern - darunter auch Deutschland.",
+      "url": "https://www.tagesschau.de/ausland/eu-vertreter-ukraine-gespraeche-100.html",
+      "quelle": "tagesschau",
+      "veroeffentlicht": "2026-11-13T18:44:23+00:00"
+    },
+    {
+      "titel": "Krieg in der Ukraine: Europäer einigen sich auf Verhandlungsteam für Gespräche mit Russland",
+      "zusammenfassung": "Deutschland, Frankreich, Großbritannien, Italien und Polen sollen gemeinsam mit den EU-Institutionen die Europäer bei Ukrainegesprächen mit Russland vertreten. Darauf haben sich die Staats- und Regierungschefs der EU-Staaten verständigt.",
+      "url": "https://www.spiegel.de/ausland/krieg-in-der-ukraine-europaeer-einigen-sich-auf-verhandlungsteam-fuer-gespraeche-mit-russland-a-33f42a19-3d6f-4708-8372-a55f8583040a#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T18:02:00+00:00"
+    },
+    {
+      "titel": "Marktbericht: DAX schwächelt nach Allzeithoch",
+      "zusammenfassung": "Nach seinem Allzeithoch vom Donnerstag ist der Deutsche Aktienindex heute auf der Stelle getreten - allerdings auf hohem Niveau. Im Wochenvergleich gewinnt das Börsenbarometer mehr als vier Prozent.",
+      "url": "https://www.tagesschau.de/wirtschaft/finanzen/marktberichte/marktbericht-dax-dow-nvidia-geldanlage-100.html",
+      "quelle": "tagesschau",
+      "veroeffentlicht": "2026-11-13T17:57:57+00:00"
+    },
+    {
+      "titel": "Aachen: Mann auf offener Straße erschossen – Polizei fahndet nach Tatverdächtigen",
+      "zusammenfassung": "Im Aachener Ostviertel ist am Nachmittag ein 41-jähriger Mann getötet worden. Schon in der Nacht zuvor waren in der Umgebung Schüsse gefallen.",
+      "url": "https://www.spiegel.de/panorama/aachen-mann-auf-offener-strasse-erschossen-polizei-fahndet-nach-tatverdaechtigen-a-c1053e61-94a3-4ae2-b754-ce053334a6cb#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T17:53:00+00:00"
+    },
+    {
+      "titel": "Ukraine-Krieg: Experte schätzt 500.000 bis 600.000 Kriegstote auf russischer Seite",
+      "zusammenfassung": "Hacker haben viele Millionen Datensätze der russischen Behörde Rosstat erbeutet, darunter die geheime Todesstatistik. Der Russlandexperte Janis Kluge erklärt, warum das Leck so bedeutungsvoll ist – und was noch darin stecken könnte.",
+      "url": "https://www.spiegel.de/ausland/ukraine-krieg-experte-schaetzt-500-000-bis-600-000-kriegstote-auf-russischer-seite-a-39dc975f-4db8-420b-9fdf-046130291bb9#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T17:51:00+00:00"
+    },
+    {
+      "titel": "Russland: Menschenrechtsanwältin Marija Bonzler zu langer Haft verurteilt",
+      "zusammenfassung": "Sie verteidigte politische Gefangene, dann wurde sie selbst verhaftet: Die russische Anwältin Marija Bonzler ist wegen angeblichen Hochverrats zu zwölf Jahren Haft verurteilt worden. Ihr Gesundheitszustand ist offenbar schlecht.",
+      "url": "https://www.spiegel.de/ausland/russland-menschenrechtsanwaeltin-marija-bonzler-zu-langer-haft-verurteilt-a-017f2720-c5f2-440d-b700-8dffbc71a0d3#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T17:27:00+00:00"
+    },
+    {
+      "titel": "Greta Thunberg und das virale Video: »Sie lacht nicht über die Klimabewegung, sondern über die Protestform«",
+      "zusammenfassung": "Ein Clip, in dem Klima-Ikone Greta Thunberg über die Fridays-for-Future-Bewegung lacht, geht viral. Hier erklärt Filmemacher Hubertus Koch, in welchem Kontext das Video entstand – und worauf sich ihre Reaktion bezog.",
+      "url": "https://www.spiegel.de/kultur/greta-thunberg-und-das-virale-video-sie-lacht-nicht-ueber-die-klimabewegung-sondern-ueber-die-protestform-a-32f2efaf-b281-46fa-9472-2e0e42408700#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T17:23:00+00:00"
     }
   ]
 }

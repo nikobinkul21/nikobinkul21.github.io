@@ -3,7 +3,7 @@ import json
 import time
 
 def nach_datum(eintrag):
-    return eintrag["datum"]
+    return eintrag["veroeffentlicht"]
 
 feeds = [
     {"name": "tagesschau", "url": "https://www.tagesschau.de/infoservices/alle-meldungen-100~rss2.xml"},
@@ -19,16 +19,16 @@ for feed in feeds:
             continue
         eintrag = {
             "titel": meldung.title,
-            "text": meldung.get("summary", ""),
-            "link": meldung.link,
+            "zusammenfassung": meldung.get("summary", ""),
+            "url": meldung.link,
             "quelle": feed["name"],
-            "datum": time.strftime("%Y-%m-%d %H:%M", meldung.published_parsed),
+            "veroeffentlicht": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", meldung.published_parsed),
                    
         }
         alle_meldungen.append(eintrag)
 alle_meldungen = sorted(alle_meldungen,
                  key=nach_datum, reverse=True)
-neueste = alle_meldungen[:20]
+neueste = alle_meldungen[:15]
 
 if len(neueste) == 0:
     print("WARNUNG: Keine Meldungen gefunden!")
@@ -36,14 +36,17 @@ if len(neueste) == 0:
 print("Gesamt:", len(alle_meldungen))
 
 for eintrag in neueste[:10]:
-    print(eintrag["datum"],eintrag["quelle"], 
+    print(eintrag["veroeffentlicht"],eintrag["quelle"], 
 "|", eintrag["titel"])
     
 
 if len(neueste) != 0:
+    ergebnis = {
+        "aktualisiert": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),"meldungen": neueste,
+    }
     with open("data/news.json", "w",
 encoding="utf-8") as datei:
-        json.dump(neueste, datei,
+        json.dump(ergebnis, datei,
 ensure_ascii=False, indent=2)
     print ("Gespeichert!")
 else:
