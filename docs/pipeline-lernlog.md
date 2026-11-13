@@ -235,7 +235,12 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   ist hinter dem Remote → Pull/Sync nötig, mögliche Konfliktdatei
   `data/news.json`. VS Code zeigt „Sync Changes 1“ (Commit lokal, nicht
   gepusht). Anleitung gegeben: `git config --global pull.rebase false`,
-  Sync, bei Konflikt „Accept All Incoming“ (Beispieldatei). Ergebnis offen.
+  Sync, bei Konflikt „Accept All Incoming“ (Beispieldatei). Merge-Konflikt
+  trat auf; erst Warnung „stage with merge conflicts?“ (Befehl galt nicht
+  für die aktive Datei) → Konfliktmarker erklärt, dann gelöst.
+  **Push erfolgreich:** Commit „Nachrichten-Pipeline: …“ + Merge-Commit
+  auf `claude/personal-web-dashboard-ubxre0`, `pipeline/` auf GitHub,
+  `data/news.json` = gültige Beispieldatei. **Schritt 7a abgeschlossen.**
 - **Entscheidung:** Nutzer wählt **A**: Pipeline an `docs/news-format.md`
   anpassen (statt Website umbauen). Begründung: Website-Format kann mehr
   (`aktualisiert` + Warnung bei alten Daten, Zeitzone, `region`,
@@ -305,6 +310,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `==` (vergleichen) vs. `=` (zuweisen)
 - `in` / `not in` für Schlüssel im Dictionary, `continue` überspringt den
   Rest der Runde; Fehlerfall absichtlich herbeiführen zum Testen
+- Git: Commit (Speicherpunkt), Push, Pull/Merge, `pull.rebase false`,
+  Merge-Konflikt mit Markern `<<<<<<< ======= >>>>>>>`, Current vs.
+  Incoming; Schnittstelle/Vertrag (`docs/news-format.md`)
 
 ## Offene Punkte / Notizen
 
