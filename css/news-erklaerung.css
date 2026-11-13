@@ -141,14 +141,18 @@
 
 .ne-weg {
   position: relative;
+  isolation: isolate;                      /* eigene Ebenen: Pfad unten (0), Stationen darüber (1) */
 }
 
+/* Ein Teilstück des Pfads: kleines SVG zwischen zwei Stationen.
+   Lage und Größe setzt js/news-erklaerung.js (legePfad). */
 .ne-pfad {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+  z-index: 0;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
   pointer-events: none;
 }
 
@@ -160,16 +164,17 @@
   stroke-linecap: round;
 }
 
-/* Der gezeichnete Teil: gestrichelt in der Akzentfarbe (js beschneidet ihn von oben her) */
+/* Der gezeichnete Teil in der Akzentfarbe. Das Strichmuster setzt
+   js/news-erklaerung.js – es bestimmt, wie weit der Pfad gezeichnet ist. */
 .ne-pfad-strich {
   stroke: var(--farbe-akzent);
   stroke-width: 2;
-  stroke-dasharray: 9 10;
   stroke-linecap: round;
 }
 
 .ne-stationen {
-  position: relative;                      /* liegt über dem Pfad */
+  position: relative;
+  z-index: 1;                              /* liegt sicher über dem Pfad */
   margin: 0;
   padding: 0;
   list-style: none;
@@ -213,13 +218,11 @@
   justify-content: center;
   width: var(--ne-marke);
   height: var(--ne-marke);
-  background: var(--farbe-hintergrund);    /* deckt das Ende des Pfads ab */
+  background: var(--farbe-hintergrund);    /* deckend – nichts scheint durch den Kreis */
   border: 1px solid var(--farbe-rand);
   border-radius: 50%;
-  transform: scale(0.94);
-  transition:
-    border-color var(--ne-dauer) ease,
-    transform var(--ne-dauer) ease;
+  /* Nur Farben ändern sich – der Kreis wird nie verschoben oder skaliert */
+  transition: border-color var(--ne-dauer) ease;
 }
 
 /* Noch nicht erreicht: nur das Symbol, gedämpft */
@@ -274,7 +277,6 @@
 /* Erreicht: erst das Symbol, dann die Überschrift, dann der Text */
 .ne-station.ist-da .ne-marke {
   border-color: var(--farbe-akzent);
-  transform: none;
 }
 
 .ne-station.ist-da .ne-marke-symbol {

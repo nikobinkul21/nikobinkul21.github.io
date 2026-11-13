@@ -27,8 +27,12 @@
      darunter) ein kleines Editor-Fenster mit einem Ausschnitt aus einer
      Datei zeigen – Feld "ausschnitt" in der Konfiguration. Die Zeilen
      stehen wörtlich dort, die Hervorhebung macht faerbeZeile().
-   - Einblenden: IntersectionObserver. Pfad: eine sparsame Berechnung pro
-     Bild (requestAnimationFrame), die nur läuft, solange sich etwas bewegt.
+   - Einblenden: IntersectionObserver.
+   - Pfad: Zwischen je zwei Stationen liegt ein eigenes kleines SVG. Es
+     beginnt unter dem Text der einen Station und endet knapp über dem
+     Kreis der nächsten – der Pfad läuft nie durch einen Kreis. Gezeichnet
+     wird nur über das Strichmuster (stroke-dasharray) des Teilstücks, das
+     gerade im Bild ist; beim Scrollen wird nichts ausgemessen.
    - "Bewegung reduzieren": Pfad und alle Stationen sind sofort sichtbar.
 
    Aussehen: css/news-erklaerung.css.
@@ -138,8 +142,13 @@ const NEWS_ERKLAERUNG_KONFIG = {
   schwung: { anteil: 0.1, max: 110 },
   // Abstand des Pfadanfangs zum Text darüber (px)
   luft: 28,
-  // Nachziehen des Pfads: Anteil des restlichen Wegs pro Bild (1 = sofort)
-  nachziehen: 0.2,
+  // Abstand des Pfadendes zum Kreis der nächsten Station (px)
+  kreisAbstand: 12,
+  // Strichmuster des gezeichneten Pfads: Länge eines Strichs und der Lücke (px)
+  strich: { lang: 9, luecke: 10 },
+  // So viele Stützpunkte merkt sich jedes Teilstück, um aus einer Höhe die
+  // Länge des Pfads bis dorthin zu bestimmen
+  stuetzpunkte: 16,
 };
 
 
@@ -170,9 +179,10 @@ const NewsErklaerung = (function () {
 
   const el = {};
   let stationen = [];            // [{ abschnitt, marke, inhalt }] in Reihenfolge
-  let wegHoehe = 0;
-  let zielY = 0;                 // bis zu dieser Höhe soll der Pfad gezeichnet sein
-  let istY = 0;                  // bis hierhin ist er gerade gezeichnet (zieht nach)
+  let stuecke = [];              // die Teilstücke des Pfads, eines je Übergang (siehe baueWegBild)
+  let wegOben = 0;               // Oberkante des Wegs auf der Seite (px ab Seitenanfang)
+  let seitenHoehe = 0;           // Höhe der ganzen Seite – gemerkt, damit beim Scrollen nichts gemessen wird
+  let tiefsteLinie = -Infinity;  // so weit unten war die Zeichenlinie schon (Gezeichnetes bleibt)
   let bildGeplant = false;       // wartet schon eine Berechnung auf das nächste Bild?
   let beobachter = null;         // IntersectionObserver für das Erscheinen der Stationen
   let abruf = 0;                 // laufende Nummer der Vorschau-Abrufe
@@ -301,28 +311,28 @@ const NewsErklaerung = (function () {
   }
 
   /**
-   * Das Bild hinter den Stationen: zweimal derselbe Pfad.
+   * Die Teilstücke des Pfads: zwischen je zwei Stationen ein eigenes
+   * kleines SVG mit zweimal derselben Kurve.
    * - .ne-pfad-spur:   die ganze Strecke, blass – zeigt, wohin es geht
-   * - .ne-pfad-strich: gestrichelt in der Akzentfarbe, aber beschnitten auf
-   *   ein Rechteck, das von oben bis zur gezeichneten Höhe reicht. Weil der
-   *   Pfad nur abwärts läuft, wächst er so Stück für Stück (siehe rechne()).
+   * - .ne-pfad-strich: der gezeichnete Teil in der Akzentfarbe. Wie weit er
+   *   reicht, bestimmt allein sein Strichmuster (siehe zeichneStueck()).
+   * Die SVGs stehen im Dokument VOR der Liste der Stationen und liegen
+   * unter ihr (z-index in css/news-erklaerung.css).
    */
   function baueWegBild() {
-    el.bild = svgTeil("svg", { "aria-hidden": "true", focusable: "false" });
-    el.bild.setAttribute("class", "ne-pfad");
-    const ausschnitt = svgTeil("clipPath", { id: "ne-pfad-ausschnitt", clipPathUnits: "userSpaceOnUse" });
-    el.ausschnitt = svgTeil("rect", { x: -20, y: 0, width: 0, height: 0 });
-    ausschnitt.appendChild(el.ausschnitt);
-    const defs = svgTeil("defs");
-    defs.appendChild(ausschnitt);
-    el.spur = svgTeil("path", { fill: "none" });
-    el.spur.setAttribute("class", "ne-pfad-spur");
-    el.strich = svgTeil("path", { fill: "none", "clip-path": "url(#ne-pfad-ausschnitt)" });
-    el.strich.setAttribute("class", "ne-pfad-strich");
-    el.bild.appendChild(defs);
-    el.bild.appendChild(el.spur);
-    el.bild.appendChild(el.strich);
-    el.weg.appendChild(el.bild);
+    stuecke = [];
+    for (let i = 0; i < K.stationen.length - 1; i++) {
+      const bild = svgTeil("svg", { "aria-hidden": "true", focusable: "false" });
+      bild.setAttribute("class", "ne-pfad");
+      const spur = svgTeil("path", { fill: "none" });
+      spur.setAttribute("class", "ne-pfad-spur");
+      const strich = svgTeil("path", { fill: "none", visibility: "hidden" });
+      strich.setAttribute("class", "ne-pfad-strich");
+      bild.appendChild(spur);
+      bild.appendChild(strich);
+      el.weg.appendChild(bild);
+      stuecke.push({ bild: bild, spur: spur, strich: strich, form: "", oben: 0, unten: 0, laenge: 0, hoehen: [], gezeichnet: -1 });
+    }
   }
 
   /* ---------- Code-Ausschnitt im Editor-Fenster ---------- */
@@ -422,8 +432,8 @@ const NewsErklaerung = (function () {
     const ruhig = ruhigAbfrage.matches;
     el.seite.classList.toggle("ist-ruhig", ruhig);
     el.seite.classList.remove("hat-gescrollt");
-    zielY = 0;
-    istY = 0;
+    tiefsteLinie = -Infinity;
+    stuecke.forEach(function (st) { zeichneStueck(st, 0); });
     beobachter.disconnect();
     stationen.forEach(function (s) {
       s.abschnitt.classList.toggle("ist-da", ruhig);     // ohne Bewegung: sofort alles sichtbar
@@ -438,39 +448,105 @@ const NewsErklaerung = (function () {
   /* ---------- Der Pfad ---------- */
 
   /**
-   * Legt den Pfad: von unterhalb des Textes jeder Station in einer sanften
-   * S-Kurve zur Mitte des Symbols der nächsten (abwechselnd nach links und
-   * rechts ausweichend). Wird beim Öffnen und bei jeder Größenänderung aufgerufen.
+   * Legt die Teilstücke: jedes beginnt unter dem Text einer Station und
+   * endet in einer sanften S-Kurve knapp ÜBER dem Kreis der nächsten
+   * (abwechselnd nach links und rechts ausweichend). Hier – und nur hier –
+   * wird ausgemessen: beim Öffnen und bei jeder Größenänderung, nie beim
+   * Scrollen.
    */
   function legePfad() {
     const rahmen = el.weg.getBoundingClientRect();
     if (!rahmen.width || !stationen.length) return;
     const schwung = Math.min(K.schwung.max, rahmen.width * K.schwung.anteil);
-    let d = "";
-    for (let i = 0; i < stationen.length - 1; i++) {
+    // Alle Maße zuerst lesen, dann erst schreiben
+    const formen = stuecke.map(function (st, i) {
       const von = stationen[i].inhalt.getBoundingClientRect();
       const bis = stationen[i + 1].marke.getBoundingClientRect();
-      const x0 = von.left + von.width / 2 - rahmen.left;
       // Steht ein Code-Fenster unter dem Text (Smartphone), beginnt der Pfad erst darunter
       let unten = von.bottom;
       const fenster = stationen[i].fenster && stationen[i].fenster.getBoundingClientRect();
       if (fenster && fenster.left <= von.left + von.width / 2 && fenster.right >= von.left + von.width / 2) {
         unten = Math.max(unten, fenster.bottom);
       }
+      const x0 = von.left + von.width / 2 - rahmen.left;
       const y0 = unten - rahmen.top + K.luft;
       const x1 = bis.left + bis.width / 2 - rahmen.left;
-      const y1 = bis.top + bis.height / 2 - rahmen.top;
-      const drittel = (y1 - y0) / 3;
+      const y1 = bis.top - rahmen.top - K.kreisAbstand;         // endet über dem Kreis
       const seite = (i % 2 === 0 ? 1 : -1) * schwung;
-      d += "M" + x0 + " " + y0 +
-        " C" + (x0 + seite) + " " + (y0 + drittel) + " " + (x1 - seite) + " " + (y1 - drittel) + " " + x1 + " " + y1 + " ";
-    }
-    wegHoehe = rahmen.height;
-    el.bild.setAttribute("viewBox", "0 0 " + rahmen.width + " " + rahmen.height);
-    el.ausschnitt.setAttribute("width", rahmen.width + 40);
-    el.spur.setAttribute("d", d);
-    el.strich.setAttribute("d", d);
+      // Das SVG umschließt nur dieses Teilstück (mit etwas Rand für die Strichenden)
+      const links = Math.floor(Math.min(x0, x1) - schwung - 6);
+      const breite = Math.ceil(Math.max(x0, x1) + schwung + 6) - links;
+      const oben = Math.floor(y0 - 6);
+      const hoehe = Math.ceil(y1 + 6) - oben;
+      const drittel = (y1 - y0) / 3;
+      const r = function (zahl) { return Math.round(zahl * 10) / 10; };
+      const d = y1 - y0 < 24 ? "" :                               // kein Platz: kein Pfad
+        "M" + r(x0 - links) + " " + r(y0 - oben) +
+        " C" + r(x0 + seite - links) + " " + r(y0 + drittel - oben) +
+        " " + r(x1 - seite - links) + " " + r(y1 - drittel - oben) +
+        " " + r(x1 - links) + " " + r(y1 - oben);
+      return { links: links, oben: oben, breite: breite, hoehe: hoehe, d: d };
+    });
+    wegOben = rahmen.top + window.scrollY;
+    seitenHoehe = document.documentElement.scrollHeight;
+
+    stuecke.forEach(function (st, i) {
+      const f = formen[i];
+      const form = [f.links, f.oben, f.breite, f.hoehe, f.d].join("|");
+      if (form === st.form) return;                               // unverändert: nichts anfassen
+      st.form = form;
+      st.bild.style.left = f.links + "px";
+      st.bild.style.top = f.oben + "px";
+      st.bild.style.width = f.breite + "px";
+      st.bild.style.height = f.hoehe + "px";
+      st.bild.setAttribute("viewBox", "0 0 " + f.breite + " " + f.hoehe);
+      st.spur.setAttribute("d", f.d);
+      st.strich.setAttribute("d", f.d);
+      st.laenge = f.d ? st.strich.getTotalLength() : 0;
+      // Stützpunkte: in welcher Höhe (im Weg) liegt der Pfad nach 0/n, 1/n … n/n seiner Länge?
+      st.hoehen = [];
+      for (let k = 0; k <= K.stuetzpunkte && st.laenge; k++) {
+        st.hoehen.push(f.oben + st.strich.getPointAtLength(st.laenge * k / K.stuetzpunkte).y);
+      }
+      st.oben = st.hoehen.length ? st.hoehen[0] : 0;
+      st.unten = st.hoehen.length ? st.hoehen[st.hoehen.length - 1] : 0;
+      st.gezeichnet = -1;                                         // Strichmuster neu setzen
+    });
     planeBild();
+  }
+
+  /** Länge des Teilstücks bis zur Höhe y (der Pfad läuft nur abwärts). */
+  function laengeBis(st, y) {
+    if (y <= st.oben) return 0;
+    if (y >= st.unten) return st.laenge;
+    let k = 1;
+    while (st.hoehen[k] < y) k++;
+    const anteil = (y - st.hoehen[k - 1]) / (st.hoehen[k] - st.hoehen[k - 1] || 1);
+    return st.laenge * (k - 1 + anteil) / K.stuetzpunkte;
+  }
+
+  /**
+   * Zeichnet ein Teilstück bis zur Länge "bis" – nur über das Strichmuster:
+   * so viele Striche, wie hineinpassen (der letzte angeschnitten), danach
+   * eine Lücke über den ganzen Rest. Kein Beschnitt, keine Maske.
+   */
+  function zeichneStueck(st, bis) {
+    bis = Math.round(bis);
+    if (bis === st.gezeichnet) return;                            // nichts Neues: nichts anfassen
+    st.gezeichnet = bis;
+    if (bis <= 0) {
+      st.strich.setAttribute("visibility", "hidden");
+      return;
+    }
+    const takt = K.strich.lang + K.strich.luecke;
+    const ganze = Math.floor(bis / takt);
+    const rest = Math.min(K.strich.lang, bis - ganze * takt);
+    const leer = Math.ceil(st.laenge) + takt;                     // Lücke bis über das Ende hinaus
+    let muster = "";
+    for (let k = 0; k < ganze - (rest ? 0 : 1); k++) muster += K.strich.lang + " " + K.strich.luecke + " ";
+    muster += (rest || K.strich.lang) + " " + leer;
+    st.strich.setAttribute("stroke-dasharray", muster);
+    st.strich.setAttribute("visibility", "visible");
   }
 
   function beimScrollen() {
@@ -489,22 +565,20 @@ const NewsErklaerung = (function () {
   }
 
   /**
-   * Eine Berechnung pro Bild: Wie weit reicht die Zeichenlinie in den Weg
-   * hinein? Bis dorthin wird der Pfad gezeichnet – er zieht weich nach und
-   * bleibt stehen, auch wenn man wieder nach oben scrollt. Die Schleife
-   * endet von selbst, sobald der Pfad sein Ziel erreicht hat.
+   * Höchstens einmal pro Bild: Wie weit reicht die Zeichenlinie in den Weg
+   * hinein? Der Pfad folgt ihr direkt. Gerechnet wird nur mit der
+   * Scrollposition und gemerkten Maßen – nichts wird ausgemessen. Angefasst
+   * wird nur das Teilstück, dessen gezeichnete Länge sich ändert (in der
+   * Regel das eine, das gerade im Bild ist). Einmal Gezeichnetes bleibt
+   * stehen, auch wenn man wieder nach oben scrollt.
    */
   function rechne() {
-    if (!istSichtbar() || !wegHoehe) return;
-    const ganzUnten = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-    const linie = window.innerHeight * K.zeichenLinie - el.weg.getBoundingClientRect().top;
-    const neuesZiel = ruhigAbfrage.matches || ganzUnten ? wegHoehe : Math.max(0, Math.min(wegHoehe, linie));
-    zielY = Math.max(zielY, neuesZiel);
-    const rest = zielY - istY;
-    if (ruhigAbfrage.matches || Math.abs(rest) < 0.5) istY = zielY;
-    else istY += rest * K.nachziehen;
-    el.ausschnitt.setAttribute("height", Math.max(0, istY));
-    if (istY !== zielY) planeBild();
+    if (!istSichtbar()) return;
+    const scroll = window.scrollY, fenster = window.innerHeight;
+    const alles = ruhigAbfrage.matches || scroll + fenster >= seitenHoehe - 2;
+    const linie = alles ? Infinity : scroll + fenster * K.zeichenLinie - wegOben;
+    tiefsteLinie = Math.max(tiefsteLinie, linie);
+    stuecke.forEach(function (st) { zeichneStueck(st, laengeBis(st, tiefsteLinie)); });
   }
 
 
