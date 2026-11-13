@@ -272,7 +272,28 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `github-actions[bot]`, Website zeigt neuen Stand.
   **Schritt 7 abgeschlossen – Fahrplan 1–7 komplett.**
 - Abschluss-Interview-Frage gestellt: „Erklär in drei, vier Sätzen, wie
-  deine Pipeline von RSS-Feed bis Website funktioniert.“ Antwort offen.
+  deine Pipeline von RSS-Feed bis Website funktioniert.“ Nutzer war müde →
+  Musterantwort in Stichpunkten gegeben (siehe unten), **nächstes Mal in
+  eigenen Worten frei erzählen lassen.**
+
+## Musterantwort: Wie funktioniert die Pipeline?
+
+- **Ziel:** täglich die wichtigsten Nachrichten automatisch auf meiner
+  Website zeigen.
+- **Holen:** Python-Skript liest RSS-Feeds (tagesschau, Spiegel) mit dem
+  Paket `feedparser`.
+- **Aufbereiten:** pro Meldung nur Titel, Anreißer, Link, Quelle, Datum
+  in einheitlichem Format (Dictionary); keine ganzen Artikel.
+- **Auswählen:** nach Datum sortieren, die 15 neuesten behalten.
+- **Speichern:** als JSON (`data/news.json`) nach einem festgelegten
+  Format, das die JavaScript-Website erwartet (Schnittstelle).
+- **Absichern:** Meldungen ohne Datum überspringen; bei 0 Meldungen nicht
+  speichern, alte Datei bleibt.
+- **Automatisieren:** GitHub Actions startet jeden Morgen einen
+  Cloud-Rechner, installiert Abhängigkeiten (`requirements.txt`), führt
+  das Skript aus und committet die neue Datei.
+- **Ergebnis:** Website liest die Datei und zeigt die Meldungen mit
+  „Stand“-Uhrzeit.
 
 ## Ideen für danach
 
