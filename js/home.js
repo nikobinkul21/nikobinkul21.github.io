@@ -101,6 +101,8 @@ const StartseiteAnsicht = (function () {
 
     baueSchnellzugriffe(container.querySelector(".home-links-liste"));
     NewsFeed.init(container.querySelector(".home-news"));
+    // Knopf "Wie funktioniert der Feed?" in der Kopfzeile des Feeds (js/news-erklaerung.js)
+    NewsErklaerung.init(container.querySelector(".home-news"));
 
     // Zurück im Tab: sofort aktualisieren (Zeitgeber laufen im Hintergrund oft verzögert)
     document.addEventListener("visibilitychange", function () {

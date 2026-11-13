@@ -1,0 +1,462 @@
+/* ==========================================================================
+   news-erklaerung.css – "Wie funktioniert der Feed?" (js/news-erklaerung.js)
+   Ein unauffälliger Knopf in der Kopfzeile des News-Feeds öffnet einen
+   Dialog. Darin scrollt man durch Stationen, die ein gestrichelter Pfad
+   verbindet: Die Marken (runde Flächen mit Symbol) stehen abwechselnd
+   leicht links und rechts, der Pfad schwingt ruhig von einer zur nächsten.
+   Computer und Tablet: Dialog mittig über der Seite. Smartphone: Vollbild,
+   der Pfad schmaler am linken Rand.
+   Farben, Schriften und Abstände: nur Variablen aus css/style.css.
+   ========================================================================== */
+
+.ne-dialog {
+  --ne-breite: 640px;
+  --ne-marke: 48px;                        /* Durchmesser der runden Marken */
+  --ne-schwung: 30px;                      /* so weit schwingt der Pfad nach rechts */
+  --ne-symbol: 22px;
+  --ne-station-abstand: 56px;              /* Luft zwischen zwei Stationen */
+  --ne-innen: var(--abstand-l);
+  --ne-zeichen-dauer: 600ms;               /* Nachziehen des Pfads */
+  --ne-einblenden-dauer: 500ms;            /* Erscheinen einer Station */
+}
+
+
+/* ==========================================================================
+   AUSLÖSER in der Kopfzeile des Feeds, direkt neben "NEWS"
+   ========================================================================== */
+
+/* Passt nicht alles in eine Zeile (Smartphone), rutscht der Stand darunter */
+.news-kopf:has(.ne-ausloeser) {
+  flex-wrap: wrap;
+  row-gap: var(--abstand-xs);
+}
+
+.ne-ausloeser {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;                      /* bleibt links, der Stand rechts */
+  padding: 2px 4px;
+  font-family: var(--schrift-klein);
+  font-size: var(--klein-groesse);
+  font-weight: 700;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: var(--klein-sperrung);
+  color: var(--farbe-text-leise);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: color var(--dauer) ease;
+}
+
+.ne-ausloeser:hover,
+.ne-ausloeser:focus-visible {
+  color: var(--farbe-akzent-text);
+}
+
+.ne-ausloeser:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: 2px;
+}
+
+.ne-ausloeser-symbol {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* ==========================================================================
+   DIALOG
+   ========================================================================== */
+
+/* Solange die Erklärung offen ist, scrollt die Seite dahinter nicht */
+html.ne-offen {
+  overflow: hidden;
+}
+
+.ne-dialog {
+  width: min(var(--ne-breite), calc(100vw - 2 * var(--abstand-l)));
+  max-width: none;
+  height: min(820px, calc(100vh - 2 * var(--abstand-xl)));
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  color: var(--farbe-text);
+  background: var(--farbe-flaeche);
+  border: var(--linie);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten-schwebend);
+}
+
+/* Nur der geöffnete Dialog wird zur Spalte (geschlossen bleibt er unsichtbar) */
+.ne-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.ne-dialog::backdrop {
+  background: var(--farbe-schleier);
+}
+
+.ne-kopf {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--abstand-m);
+  padding: var(--abstand-m) var(--abstand-m) var(--abstand-m) var(--ne-innen);
+  border-bottom: var(--linie);
+}
+
+.ne-titel {
+  margin: 0;
+  font-family: var(--schrift-serif);
+  font-size: 1.6rem;
+  font-weight: var(--titel-gewicht);
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.ne-schliessen {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--farbe-text-leise);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: color var(--dauer) ease, border-color var(--dauer) ease;
+}
+
+.ne-schliessen:hover,
+.ne-schliessen:focus-visible {
+  color: var(--farbe-akzent-text);
+  border-color: var(--farbe-akzent);
+}
+
+.ne-schliessen:focus-visible,
+.ne-rolle:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: -2px;
+}
+
+.ne-schliessen-symbol {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* Hier scrollt man durch die Stationen */
+.ne-rolle {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--ne-innen) var(--ne-innen) var(--abstand-xl);
+  scrollbar-width: thin;
+  scrollbar-color: var(--farbe-rand-stark) transparent;
+}
+
+.ne-einleitung {
+  max-width: none;
+  margin: 0 0 var(--abstand-xl);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--farbe-text-leise);
+}
+
+
+/* ==========================================================================
+   DER WEG: hinten der Pfad, davor die Stationen
+   ========================================================================== */
+
+.ne-weg {
+  position: relative;
+}
+
+.ne-pfad {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Die ganze Strecke, blass */
+.ne-pfad-spur {
+  stroke: var(--farbe-rand);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 8;
+  stroke-linecap: round;
+}
+
+/* Der gezeichnete Teil: gestrichelt in der Akzentfarbe (sichtbar nur unter der Maske) */
+.ne-pfad-strich {
+  stroke: var(--farbe-akzent);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 7;
+  stroke-linecap: round;
+}
+
+/* Die Maske wächst weich nach, wenn js/news-erklaerung.js sie weiterschiebt */
+.ne-pfad-maske {
+  transition: stroke-dashoffset var(--ne-zeichen-dauer) ease-out;
+}
+
+.ne-stationen {
+  position: relative;                      /* liegt über dem Pfad */
+  display: flex;
+  flex-direction: column;
+  gap: var(--ne-station-abstand);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Links die Marke (in einer Spalte, die Platz zum Schwingen lässt), rechts der Text */
+.ne-station {
+  display: grid;
+  grid-template-columns: calc(var(--ne-marke) + var(--ne-schwung)) minmax(0, 1fr);
+  column-gap: var(--abstand-m);
+  align-items: start;
+}
+
+.ne-marke {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ne-marke);
+  height: var(--ne-marke);
+  background: var(--farbe-hintergrund);    /* deckt den Pfad dahinter ab */
+  border: 1px solid var(--farbe-rand);
+  border-radius: 50%;
+  transition: border-color var(--ne-einblenden-dauer) ease;
+}
+
+/* Jede zweite Marke steht rechts – so entsteht der ruhige Schwung */
+.ne-station:nth-child(even) .ne-marke {
+  justify-self: end;
+}
+
+.ne-marke-symbol {
+  width: var(--ne-symbol);
+  height: var(--ne-symbol);
+  fill: none;
+  stroke: var(--farbe-text-leise);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke var(--ne-einblenden-dauer) ease;
+}
+
+.ne-inhalt {
+  min-width: 0;
+  padding-top: 8px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity var(--ne-einblenden-dauer) ease,
+    transform var(--ne-einblenden-dauer) ease;
+}
+
+/* Erreicht: Text blendet ein, die Marke wird deutlicher */
+.ne-station.ist-da .ne-inhalt {
+  opacity: 1;
+  transform: none;
+}
+
+.ne-station.ist-da .ne-marke {
+  border-color: var(--farbe-akzent);
+}
+
+.ne-station.ist-da .ne-marke-symbol {
+  stroke: var(--farbe-text);
+}
+
+.ne-station-titel {
+  margin: 0;
+  font-family: var(--schrift-serif);
+  font-size: 1.45rem;
+  font-weight: var(--titel-gewicht);
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.ne-station-text {
+  max-width: 46ch;
+  margin: var(--abstand-xs) 0 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--farbe-text);
+  overflow-wrap: break-word;
+}
+
+
+/* ==========================================================================
+   ERGEBNIS: Live-Vorschau und Knopf "Zum Feed"
+   ========================================================================== */
+
+.ne-ergebnis {
+  margin-top: var(--abstand-m);
+}
+
+.ne-vorschau {
+  padding: var(--abstand-m);
+  background: var(--farbe-hintergrund);
+  border: var(--linie);
+  border-radius: var(--radius-m);
+}
+
+.ne-vorschau-stand,
+.ne-vorschau-quelle {
+  font-family: var(--schrift-mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--farbe-text-leise);
+}
+
+.ne-vorschau-stand {
+  max-width: none;
+  margin: 0;
+}
+
+.ne-vorschau-veraltet::before {
+  content: "·";
+  margin: 0 0.6em;
+}
+
+.ne-vorschau-liste {
+  margin: var(--abstand-s) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--linie);
+}
+
+.ne-vorschau-liste li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: var(--linie);
+}
+
+.ne-vorschau-liste li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.ne-vorschau-titel {
+  font-family: var(--schrift-serif);
+  font-size: 1.15rem;
+  font-weight: var(--titel-gewicht);
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+
+.ne-vorschau-hinweis {
+  max-width: none;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--farbe-text-leise);
+}
+
+.ne-vorschau-stand + .ne-vorschau-hinweis {
+  margin-top: var(--abstand-s);
+}
+
+.ne-zum-feed {
+  margin-top: var(--abstand-m);
+}
+
+
+/* ==========================================================================
+   SMARTPHONE: Vollbild, der Pfad schmaler am Rand
+   ========================================================================== */
+
+@media (max-width: 699px) {
+  .ne-dialog {
+    --ne-marke: 40px;
+    --ne-schwung: 10px;
+    --ne-symbol: 20px;
+    --ne-station-abstand: 44px;
+    --ne-innen: var(--abstand-m);
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .ne-station {
+    column-gap: 12px;
+  }
+
+  .ne-titel {
+    font-size: 1.4rem;
+  }
+
+  .ne-station-titel {
+    font-size: 1.3rem;
+  }
+}
+
+/* Bildschirmhöhe ohne die Leisten des Browsers, wo der Browser sie kennt */
+@supports (height: 100dvh) {
+  .ne-dialog {
+    height: min(820px, calc(100dvh - 2 * var(--abstand-xl)));
+  }
+
+  @media (max-width: 699px) {
+    .ne-dialog {
+      height: 100dvh;
+    }
+  }
+}
+
+
+/* ==========================================================================
+   BEWEGUNG REDUZIEREN: nichts bewegt sich, alles ist sofort da
+   (.ist-ruhig setzt news-erklaerung.js beim Öffnen)
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .ne-pfad-maske,
+  .ne-marke,
+  .ne-marke-symbol,
+  .ne-inhalt {
+    transition: none;
+  }
+
+  .ne-inhalt {
+    transform: none;
+  }
+}
+
+.ne-dialog.ist-ruhig .ne-pfad-maske,
+.ne-dialog.ist-ruhig .ne-marke,
+.ne-dialog.ist-ruhig .ne-marke-symbol,
+.ne-dialog.ist-ruhig .ne-inhalt {
+  transition: none;
+}
