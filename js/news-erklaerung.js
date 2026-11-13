@@ -23,6 +23,10 @@
      hier neu geparst). Der Feed selbst bleibt unverändert.
    - Texte kommen nur als reiner Text in die Seite (textContent), Symbole
      entstehen als SVG-Elemente – nirgends innerHTML.
+   - Code-Ausschnitte: Eine Station kann rechts neben sich (Smartphone:
+     darunter) ein kleines Editor-Fenster mit einem Ausschnitt aus einer
+     Datei zeigen – Feld "ausschnitt" in der Konfiguration. Die Zeilen
+     stehen wörtlich dort, die Hervorhebung macht faerbeZeile().
    - Einblenden: IntersectionObserver. Pfad: eine sparsame Berechnung pro
      Bild (requestAnimationFrame), die nur läuft, solange sich etwas bewegt.
    - "Bewegung reduzieren": Pfad und alle Stationen sind sofort sichtbar.
@@ -38,6 +42,14 @@ const NEWS_ERKLAERUNG_KONFIG = {
 
   // Die Stationen in Reihenfolge. symbol = Schlüssel in SYMBOLE (weiter unten).
   // Die letzte Station (ergebnis: true) bekommt die Live-Vorschau.
+  //
+  // Optional: ausschnitt – ein Stück echter Code im Editor-Fenster:
+  //   datei:   Name in der Leiste des Fensters, z. B. "pipeline/news.py"
+  //   sprache: Schlüssel in "sprachen" (unten) – bestimmt die Hervorhebung
+  //   zeilen:  Liste aus [Zeilennummer in der Datei, Text der Zeile].
+  //            Die Texte WÖRTLICH aus der Datei übernehmen (samt Einrückung).
+  //            Ausgelassene Teile: [null, "    …"] – ohne Nummer.
+  // Ändert sich die Datei, den Ausschnitt hier von Hand nachziehen.
   stationen: [
     {
       symbol: "rss",
@@ -49,6 +61,22 @@ const NEWS_ERKLAERUNG_KONFIG = {
       symbol: "python",
       titel: "Abholen",
       text: "Ein kleines Python-Skript lädt beide Feeds mit dem Paket feedparser.",
+      ausschnitt: {
+        datei: "pipeline/news.py",
+        sprache: "python",
+        zeilen: [
+          [15, 'for feed in feeds:'],
+          [16, '    daten = feedparser.parse(feed["url"])'],
+          [17, '    for meldung in daten.entries:'],
+          [18, '        if "published_parsed" not in meldung:'],
+          [19, '            continue'],
+          [20, '        eintrag = {'],
+          [21, '            "titel": meldung.title,'],
+          [null, '            …'],
+          [27, '        }'],
+          [28, '        alle_meldungen.append(eintrag)'],
+        ],
+      },
     },
     {
       symbol: "filter",
@@ -81,6 +109,20 @@ const NEWS_ERKLAERUNG_KONFIG = {
       ergebnis: true,
     },
   ],
+
+  // Hervorhebung in den Code-Ausschnitten, je Sprache:
+  //   kommentar: Zeichen, mit dem ein Kommentar bis zum Zeilenende beginnt ("" = keine)
+  //   woerter:   Schlüsselwörter
+  // Texte in Anführungszeichen werden in jeder Sprache erkannt.
+  sprachen: {
+    python: {
+      kommentar: "#",
+      woerter: ["import", "from", "as", "def", "return", "for", "in", "if", "elif", "else", "not", "and", "or",
+        "continue", "break", "with", "while", "True", "False", "None", "print", "len", "sorted"],
+    },
+    json: { kommentar: "", woerter: ["true", "false", "null"] },
+    yaml: { kommentar: "#", woerter: ["true", "false", "null", "on"] },
+  },
 
   // Vorschau in der letzten Station
   vorschauAnzahl: 3,
@@ -223,9 +265,15 @@ const NewsErklaerung = (function () {
       if (s.ergebnis) inhalt.appendChild(baueErgebnis());
       abschnitt.appendChild(marke);
       abschnitt.appendChild(inhalt);
+      let fenster = null;
+      if (s.ausschnitt) {
+        fenster = baueAusschnitt(s.ausschnitt);
+        abschnitt.classList.add("ne-station--mit-ausschnitt");
+        abschnitt.appendChild(fenster);
+      }
       if (i === 0) abschnitt.appendChild(baueScrollHinweis());
       liste.appendChild(abschnitt);
-      return { abschnitt: abschnitt, marke: marke, inhalt: inhalt };
+      return { abschnitt: abschnitt, marke: marke, inhalt: inhalt, fenster: fenster };
     });
     el.weg.appendChild(liste);
     el.seite.appendChild(el.weg);
@@ -275,6 +323,74 @@ const NewsErklaerung = (function () {
     el.bild.appendChild(el.spur);
     el.bild.appendChild(el.strich);
     el.weg.appendChild(el.bild);
+  }
+
+  /* ---------- Code-Ausschnitt im Editor-Fenster ---------- */
+
+  /**
+   * Zerlegt eine Zeile Code in gefärbte Stücke: Kommentar, Text in
+   * Anführungszeichen, Schlüsselwort – alles andere bleibt neutral.
+   * Jedes Stück wird ein <span> mit reinem Text (textContent).
+   * @param {HTMLElement} ziel – hier werden die Stücke angehängt
+   * @param {string} zeile
+   * @param {{kommentar: string, woerter: string[]}} sprache
+   */
+  function faerbeZeile(ziel, zeile, sprache) {
+    // Reihenfolge der Gruppen: 1 = Text in Anführungszeichen, 2 = Wort, 3 = alles andere
+    const muster = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|([A-Za-z_][A-Za-z0-9_]*)|(\s+|.)/g;
+    let neutral = "";
+    function leere() {
+      if (neutral) ziel.appendChild(document.createTextNode(neutral));
+      neutral = "";
+    }
+    let treffer;
+    while ((treffer = muster.exec(zeile)) !== null) {
+      // Kommentar: der Rest der Zeile (ein Kommentarzeichen in Anführungszeichen zählt nicht)
+      if (sprache.kommentar && !treffer[1] && zeile.startsWith(sprache.kommentar, treffer.index)) {
+        leere();
+        ziel.appendChild(neu("span", "ne-code-kommentar", zeile.slice(treffer.index)));
+        return;
+      }
+      if (treffer[1]) {
+        leere();
+        ziel.appendChild(neu("span", "ne-code-text", treffer[1]));
+      } else if (treffer[2] && sprache.woerter.indexOf(treffer[2]) >= 0) {
+        leere();
+        ziel.appendChild(neu("span", "ne-code-wort", treffer[2]));
+      } else {
+        neutral += treffer[0];
+      }
+    }
+    leere();
+  }
+
+  /**
+   * Ein kleines Editor-Fenster: oben eine Leiste mit dem Dateinamen,
+   * darunter der Code mit Zeilennummern. Zu lange Zeilen scrollen im
+   * Fenster waagerecht (auch per Tastatur: das Feld ist fokussierbar).
+   * @param {{datei: string, sprache: string, zeilen: Array}} a – siehe Konfiguration
+   */
+  function baueAusschnitt(a) {
+    const sprache = K.sprachen[a.sprache] || { kommentar: "", woerter: [] };
+    const fenster = neu("figure", "ne-ausschnitt");
+    fenster.appendChild(neu("figcaption", "ne-ausschnitt-leiste", a.datei));
+    const code = neu("pre", "ne-code");
+    code.tabIndex = 0;
+    code.setAttribute("aria-label", "Ausschnitt aus " + a.datei);
+    a.zeilen.forEach(function (z, i) {
+      const zeile = neu("span", "ne-code-zeile");
+      zeile.style.setProperty("--ne-zeile", i);          // Reihenfolge fürs Erscheinen
+      const nummer = neu("span", "ne-code-nummer", z[0] === null ? "" : String(z[0]));
+      nummer.setAttribute("aria-hidden", "true");
+      const inhalt = neu("span", "ne-code-inhalt");
+      if (z[0] === null) inhalt.appendChild(neu("span", "ne-code-luecke", z[1]));
+      else faerbeZeile(inhalt, z[1], sprache);
+      zeile.appendChild(nummer);
+      zeile.appendChild(inhalt);
+      code.appendChild(zeile);
+    });
+    fenster.appendChild(code);
+    return fenster;
   }
 
   /** Dezenter Hinweis unten in der ersten Station; verschwindet nach dem ersten Scrollen. */
@@ -335,7 +451,13 @@ const NewsErklaerung = (function () {
       const von = stationen[i].inhalt.getBoundingClientRect();
       const bis = stationen[i + 1].marke.getBoundingClientRect();
       const x0 = von.left + von.width / 2 - rahmen.left;
-      const y0 = von.bottom - rahmen.top + K.luft;
+      // Steht ein Code-Fenster unter dem Text (Smartphone), beginnt der Pfad erst darunter
+      let unten = von.bottom;
+      const fenster = stationen[i].fenster && stationen[i].fenster.getBoundingClientRect();
+      if (fenster && fenster.left <= von.left + von.width / 2 && fenster.right >= von.left + von.width / 2) {
+        unten = Math.max(unten, fenster.bottom);
+      }
+      const y0 = unten - rahmen.top + K.luft;
       const x1 = bis.left + bis.width / 2 - rahmen.left;
       const y1 = bis.top + bis.height / 2 - rahmen.top;
       const drittel = (y1 - y0) / 3;

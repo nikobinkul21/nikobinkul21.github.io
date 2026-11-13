@@ -7,6 +7,8 @@
    Kurven von jeder Station zum Symbol der nächsten.
    Erreichte Stationen (.ist-da) blenden nacheinander ein: Symbol,
    Überschrift, Text. Noch nicht erreichte zeigen nur ihr Symbol, gedämpft.
+   Stationen mit Code-Ausschnitt zeigen rechts ein kleines Editor-Fenster
+   (unter 1024 px: unter dem Text).
    Smartphone: kleinere Symbole und Schrift, der Pfad schwingt weniger weit.
    Farben, Schriften und Abstände: nur Variablen aus css/style.css.
    ========================================================================== */
@@ -300,6 +302,136 @@
 
 
 /* ==========================================================================
+   CODE-AUSSCHNITT: kleines Editor-Fenster neben einer Station
+   ========================================================================== */
+
+.ne-ausschnitt {
+  --ne-code-groesse: 0.82rem;
+  --ne-zeilen-versatz: 110ms;              /* Abstand zwischen zwei erscheinenden Zeilen */
+  --ne-zeilen-dauer: 380ms;                /* eine Zeile "tippt" sich */
+  width: min(100%, 520px);
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-align: left;
+  background: var(--farbe-flaeche);
+  border: var(--linie);
+  border-radius: var(--radius-m);
+  opacity: 0;
+  transform: translateY(var(--ne-gleiten));
+  transition:
+    opacity var(--ne-dauer) ease,
+    transform var(--ne-dauer) ease;
+}
+
+/* Erscheint nach dem Text */
+.ne-station.ist-da .ne-ausschnitt {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(3 * var(--ne-versatz));
+}
+
+/* Schmale Leiste mit dem Dateinamen */
+.ne-ausschnitt-leiste {
+  padding: 8px var(--abstand-m);
+  font-family: var(--schrift-mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  color: var(--farbe-text-leise);
+  background: var(--farbe-flaeche-leise);
+  border-bottom: var(--linie);
+}
+
+/* Der Code: zu lange Zeilen scrollen hier waagerecht, nicht die Seite */
+.ne-code {
+  margin: 0;
+  padding: 12px 0;
+  overflow-x: auto;
+  font-family: var(--schrift-mono);
+  font-size: var(--ne-code-groesse);
+  line-height: 1.7;
+  letter-spacing: 0;
+  color: var(--farbe-text);
+  tab-size: 4;
+  scrollbar-width: thin;
+  scrollbar-color: var(--farbe-rand-stark) transparent;
+}
+
+.ne-code:focus-visible {
+  outline: 2px solid var(--farbe-fokus);
+  outline-offset: -2px;
+}
+
+.ne-code-zeile {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  padding-right: var(--abstand-m);
+  white-space: pre;
+  /* noch nicht "getippt": von rechts her ganz abgedeckt */
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path var(--ne-zeilen-dauer) linear;
+}
+
+/* Die Zeilen erscheinen nacheinander von links nach rechts – wie getippt */
+.ne-station.ist-da .ne-code-zeile {
+  clip-path: inset(0 0 0 0);
+  transition-delay: calc(3 * var(--ne-versatz) + 500ms + var(--ne-zeile) * var(--ne-zeilen-versatz));
+}
+
+.ne-code-nummer {
+  flex: none;
+  width: 3.2em;
+  padding-right: 1.1em;
+  text-align: right;
+  color: var(--farbe-text-leise);
+  user-select: none;
+}
+
+/* Hervorhebung: Schlüsselwörter, Texte in Anführungszeichen, Kommentare */
+.ne-code-wort {
+  color: var(--farbe-akzent-text);
+}
+
+.ne-code-text {
+  color: var(--farbe-erfolg);
+}
+
+.ne-code-kommentar,
+.ne-code-luecke {
+  color: var(--farbe-text-leise);
+}
+
+.ne-code-kommentar {
+  font-style: italic;
+}
+
+/* Computer: links Symbol, Überschrift und Text, rechts das Fenster */
+@media (min-width: 1024px) {
+  .ne-station--mit-ausschnitt {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+    column-gap: var(--abstand-xl);
+  }
+
+  .ne-station--mit-ausschnitt > .ne-marke,
+  .ne-station--mit-ausschnitt > .ne-inhalt {
+    grid-column: 1;
+  }
+
+  .ne-station--mit-ausschnitt > .ne-ausschnitt {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-self: start;
+  }
+}
+
+
+/* ==========================================================================
    HINWEIS "SCROLLEN": unten in der ersten Station, links neben dem Pfad
    ========================================================================== */
 
@@ -482,6 +614,15 @@
   .ne-vorschau {
     padding: var(--abstand-m);
   }
+
+  .ne-ausschnitt {
+    --ne-code-groesse: 0.76rem;
+  }
+
+  .ne-code-nummer {
+    width: 2.8em;
+    padding-right: 0.9em;
+  }
 }
 
 
@@ -495,6 +636,8 @@
 .ne-seite.ist-ruhig .ne-station-titel,
 .ne-seite.ist-ruhig .ne-station-text,
 .ne-seite.ist-ruhig .ne-ergebnis,
+.ne-seite.ist-ruhig .ne-ausschnitt,
+.ne-seite.ist-ruhig .ne-code-zeile,
 .ne-seite.ist-ruhig .ne-scrollen {
   transition: none;
 }
@@ -509,6 +652,8 @@
   .ne-station-titel,
   .ne-station-text,
   .ne-ergebnis,
+  .ne-ausschnitt,
+  .ne-code-zeile,
   .ne-scrollen {
     transition: none;
   }
