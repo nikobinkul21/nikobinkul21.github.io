@@ -204,6 +204,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   und mit `XXX` testen.**
 - **Pause.** Nächstes Mal: Wiederholung (u. a. `"w"`/`utf-8` erneut
   abfragen, `if`, `sorted`), Aufräumen + Test, dann Schritt 7.
+- **2026-11-13:** Wiederholung gestellt (`"w"`/`utf-8`, `==` vs. `=`,
+  `key=nach_datum` ohne Klammern) + Aufräumen der Speicher-Einrückung und
+  `XXX`-Test. Ergebnis offen.
 - Weitere Ideen: Später: Spiegel-`#ref=rss`
   entfernen, „schlauere“ Auswahl.
 - Als Nächstes **Schritt 7:** Dateien mit Git committen/pushen,
