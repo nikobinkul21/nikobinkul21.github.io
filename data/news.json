@@ -1,16 +1,30 @@
 {
-  "aktualisiert": "2026-11-13T21:30:40+00:00",
+  "aktualisiert": "2026-11-13T21:43:40+00:00",
   "meldungen": [
     {
       "titel": "US-Flusskreuzfahrtschiff kentert nach Zusammenprall in New Orleans",
       "zusammenfassung": "Das Flusskreuzfahrtschiff \"American Heritage\" ist im Hafen der US-Stadt New Orleans gekentert. Zuvor war es von einem Tanker gerammt worden. An Bord des Schiffes befanden sich mehr als 130 Menschen.",
       "url": "https://www.tagesschau.de/ausland/kreuzfahrtschiff-unfall-new-orleans-100.html",
       "quelle": "tagesschau",
-      "veroeffentlicht": "2026-11-13T21:19:32+00:00"
+      "veroeffentlicht": "2026-11-13T21:37:39+00:00"
+    },
+    {
+      "titel": "USA: Luftfahrtaufsicht verhängt landesweiten Flugstopp",
+      "zusammenfassung": "Für alle Flughäfen in den USA gilt derzeit ein Startverbot, dies hat die Luftfahrtaufsicht FAA entschieden. Grund ist offenbar eine Kommunikationsstörung.",
+      "url": "https://www.spiegel.de/panorama/usa-luftfahrtaufsicht-verhaengt-landesweiten-flugstopp-a-b9af612f-04c1-4e44-ab9e-476361bfae5c#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T21:36:00+00:00"
+    },
+    {
+      "titel": "Nations League: Deutschland gegen Serbien im Liveticker",
+      "zusammenfassung": "Das fünfte Spiel unter dem neuen Bundestrainer war wichtig für die Chancen aufs Weiterkommen in der Nations League. In Serbien dominierte Deutschland wie lange nicht. Verfolgen Sie den Nachbericht live.",
+      "url": "https://www.spiegel.de/sport/fussball/nations-league-deutschland-gegen-serbien-im-liveticker-a-326c5e73-0078-4453-a674-74f4b8a81771#ref=rss",
+      "quelle": "Spiegel",
+      "veroeffentlicht": "2026-11-13T21:35:00+00:00"
     },
     {
       "titel": "New Orleans: Tanker kollidiert mit Raddampfer",
-      "zusammenfassung": "Nahe dem Hafen der US-Stadt New Orleans ist ein Tanker mit einem Schaufelradschiff zusammengestoßen. An Bord des Ausflugsschiffes befanden sich zum Zeitpunkt des Aufpralls mehr als 129 Menschen. Es läuft eine Rettungsaktion.",
+      "zusammenfassung": "Nahe dem Hafen der US-Stadt New Orleans ist ein Tanker mit einem Schaufelradschiff zusammengestoßen. An Bord des Ausflugsschiffes befanden sich zum Zeitpunkt des Aufpralls mehr als 130 Menschen. Es läuft eine Rettungsaktion.",
       "url": "https://www.spiegel.de/panorama/new-orleans-tanker-kollidiert-mit-raddampfer-a-7844e9e3-d317-4187-89dd-ab7505518264#ref=rss",
       "quelle": "Spiegel",
       "veroeffentlicht": "2026-11-13T20:40:00+00:00"
@@ -42,13 +56,6 @@
       "url": "https://www.spiegel.de/kultur/sylvie-meis-ueber-die-friesenjunkies-alle-genitalien-waren-abgeklebt-und-auch-beim-masturbieren-bewegt-sich-nur-meine-schulter-a-91f7a1e9-6dff-4b19-93b4-c63728e52596#ref=rss",
       "quelle": "Spiegel",
       "veroeffentlicht": "2026-11-13T19:16:00+00:00"
-    },
-    {
-      "titel": "Nations League: Deutschland gegen Serbien im Liveticker",
-      "zusammenfassung": "So dominant wie gegen Serbien war die DFB-Elf noch nie unter Jürgen Klopp. Für die Tabellensituation braucht es in Hälfte zwei noch mehr Treffer. Verfolgen Sie die Partie live.",
-      "url": "https://www.spiegel.de/sport/fussball/nations-league-deutschland-gegen-serbien-im-liveticker-a-326c5e73-0078-4453-a674-74f4b8a81771#ref=rss",
-      "quelle": "Spiegel",
-      "veroeffentlicht": "2026-11-13T19:15:00+00:00"
     },
     {
       "titel": "Nvidia-Skandal: US-Handelsminister Lutnick wegen Chip-Exporten unter Druck",
@@ -98,13 +105,6 @@
       "url": "https://www.spiegel.de/ausland/russland-menschenrechtsanwaeltin-marija-bonzler-zu-langer-haft-verurteilt-a-017f2720-c5f2-440d-b700-8dffbc71a0d3#ref=rss",
       "quelle": "Spiegel",
       "veroeffentlicht": "2026-11-13T17:27:00+00:00"
-    },
-    {
-      "titel": "Greta Thunberg und das virale Video: »Sie lacht nicht über die Klimabewegung, sondern über die Protestform«",
-      "zusammenfassung": "Ein Clip, in dem Klima-Ikone Greta Thunberg über die Fridays-for-Future-Bewegung lacht, geht viral. Hier erklärt Filmemacher Hubertus Koch, in welchem Kontext das Video entstand – und worauf sich ihre Reaktion bezog.",
-      "url": "https://www.spiegel.de/kultur/greta-thunberg-und-das-virale-video-sie-lacht-nicht-ueber-die-klimabewegung-sondern-ueber-die-protestform-a-32f2efaf-b281-46fa-9472-2e0e42408700#ref=rss",
-      "quelle": "Spiegel",
-      "veroeffentlicht": "2026-11-13T17:23:00+00:00"
     }
   ]
 }
