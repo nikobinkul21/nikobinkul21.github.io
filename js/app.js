@@ -30,6 +30,8 @@ const ANSICHTEN = {
   prompts: { init: PromptsAnsicht.init, zeige: PromptsAnsicht.zeige, root: "prompts-root" },
   projects: { init: ProjekteAnsicht.init, zeige: ProjekteAnsicht.zeige, root: "projects-root" },
   einstellungen: { init: EinstellungenAnsicht.init, root: "settings-root" },
+  // Erklärseite zum News-Feed – ohne Reiter, erreichbar über den Link im Feed
+  "feed-erklaerung": { init: NewsErklaerung.init, zeige: NewsErklaerung.zeige, root: "feed-erklaerung-root" },
 };
 
 // Alte Adressen, die es nicht mehr als eigenen Abschnitt gibt → neues Ziel.
