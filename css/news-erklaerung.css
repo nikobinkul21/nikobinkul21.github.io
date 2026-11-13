@@ -400,7 +400,13 @@
   color: var(--farbe-erfolg);
 }
 
+/* Schlüssel (z. B. in JSON): wie der übrige Code – so heben sich Werte und Satzzeichen ab */
+.ne-code-schluessel {
+  color: var(--farbe-text);
+}
+
 .ne-code-kommentar,
+.ne-code-zeichen,
 .ne-code-luecke {
   color: var(--farbe-text-leise);
 }
@@ -429,6 +435,21 @@
     grid-column: 2;
     grid-row: 1 / span 2;
     justify-self: start;
+  }
+
+  /* Fenster links: Spalten getauscht */
+  .ne-station--ausschnitt-links {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  }
+
+  .ne-station--ausschnitt-links > .ne-marke,
+  .ne-station--ausschnitt-links > .ne-inhalt {
+    grid-column: 2;
+  }
+
+  .ne-station--ausschnitt-links > .ne-ausschnitt {
+    grid-column: 1;
+    justify-self: end;
   }
 }
 

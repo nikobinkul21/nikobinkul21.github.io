@@ -53,7 +53,12 @@ const NEWS_ERKLAERUNG_KONFIG = {
   //   zeilen:  Liste aus [Zeilennummer in der Datei, Text der Zeile].
   //            Die Texte WÖRTLICH aus der Datei übernehmen (samt Einrückung).
   //            Ausgelassene Teile: [null, "    …"] – ohne Nummer.
-  // Ändert sich die Datei, den Ausschnitt hier von Hand nachziehen.
+  //   seite:   "rechts" (Vorgabe) oder "links" – auf welcher Seite der Station
+  //            das Fenster am Computer steht (schmal: immer unter dem Text)
+  //   live:    "news" – der Inhalt kommt live aus data/news.json (dieselbe
+  //            Antwort, die auch die Vorschau der letzten Station füllt);
+  //            "zeilen" ist dann nur der Ersatz, falls die Datei nicht lädt.
+  // Ändert sich die Datei, einen festen Ausschnitt hier von Hand nachziehen.
   stationen: [
     {
       symbol: "rss",
@@ -99,6 +104,28 @@ const NEWS_ERKLAERUNG_KONFIG = {
       titel: "Speichern",
       text: "Das Ergebnis landet als data/news.json im Projekt – in einem festen Format, das die Website versteht. " +
         "Findet das Skript keine Meldungen, bleibt die alte Datei erhalten.",
+      ausschnitt: {
+        datei: "data/news.json",
+        sprache: "json",
+        seite: "links",
+        live: "news",
+        // Ersatz, falls data/news.json nicht geladen werden kann – klar als Beispiel erkennbar
+        zeilen: [
+          [1, '{'],
+          [2, '  "aktualisiert": "2026-01-01T05:17:00+00:00",'],
+          [3, '  "meldungen": ['],
+          [4, '    {'],
+          [5, '      "titel": "Beispielmeldung",'],
+          [6, '      "zusammenfassung": "Dies ist nur ein Beispiel …",'],
+          [7, '      "url": "https://example.com/beispiel",'],
+          [8, '      "quelle": "Beispielquelle",'],
+          [9, '      "veroeffentlicht": "2026-01-01T05:00:00+00:00"'],
+          [10, '    },'],
+          [null, '    …'],
+          [null, '  ]'],
+          [null, '}'],
+        ],
+      },
     },
     {
       symbol: "uhr",
@@ -115,8 +142,11 @@ const NEWS_ERKLAERUNG_KONFIG = {
   ],
 
   // Hervorhebung in den Code-Ausschnitten, je Sprache:
-  //   kommentar: Zeichen, mit dem ein Kommentar bis zum Zeilenende beginnt ("" = keine)
-  //   woerter:   Schlüsselwörter
+  //   kommentar:  Zeichen, mit dem ein Kommentar bis zum Zeilenende beginnt ("" = keine)
+  //   woerter:    Schlüsselwörter
+  //   schluessel: true – ein Text in Anführungszeichen direkt vor einem
+  //               Doppelpunkt ist ein Schlüssel und wird eigens gefärbt
+  //   zeichen:    Klammern und Satzzeichen, die eigens gefärbt werden
   // Texte in Anführungszeichen werden in jeder Sprache erkannt.
   sprachen: {
     python: {
@@ -124,9 +154,13 @@ const NEWS_ERKLAERUNG_KONFIG = {
       woerter: ["import", "from", "as", "def", "return", "for", "in", "if", "elif", "else", "not", "and", "or",
         "continue", "break", "with", "while", "True", "False", "None", "print", "len", "sorted"],
     },
-    json: { kommentar: "", woerter: ["true", "false", "null"] },
+    json: { kommentar: "", woerter: ["true", "false", "null"], schluessel: true, zeichen: "{}[],:" },
     yaml: { kommentar: "#", woerter: ["true", "false", "null", "on"] },
   },
+
+  // Live-Ausschnitt aus data/news.json: Zeilen, die länger wären als so viele
+  // Zeichen, werden im Wert gekürzt und enden auf "…"
+  ausschnittBreite: 56,
 
   // Vorschau in der letzten Station
   vorschauAnzahl: 3,
@@ -275,15 +309,18 @@ const NewsErklaerung = (function () {
       if (s.ergebnis) inhalt.appendChild(baueErgebnis());
       abschnitt.appendChild(marke);
       abschnitt.appendChild(inhalt);
-      let fenster = null;
+      let fenster = null, code = null;
       if (s.ausschnitt) {
-        fenster = baueAusschnitt(s.ausschnitt);
+        const teile = baueAusschnitt(s.ausschnitt);
+        fenster = teile.fenster;
+        code = teile.code;
         abschnitt.classList.add("ne-station--mit-ausschnitt");
+        if (s.ausschnitt.seite === "links") abschnitt.classList.add("ne-station--ausschnitt-links");
         abschnitt.appendChild(fenster);
       }
       if (i === 0) abschnitt.appendChild(baueScrollHinweis());
       liste.appendChild(abschnitt);
-      return { abschnitt: abschnitt, marke: marke, inhalt: inhalt, fenster: fenster };
+      return { abschnitt: abschnitt, marke: marke, inhalt: inhalt, fenster: fenster, code: code, ausschnitt: s.ausschnitt || null };
     });
     el.weg.appendChild(liste);
     el.seite.appendChild(el.weg);
@@ -363,7 +400,12 @@ const NewsErklaerung = (function () {
       }
       if (treffer[1]) {
         leere();
-        ziel.appendChild(neu("span", "ne-code-text", treffer[1]));
+        // Schlüssel: Text in Anführungszeichen direkt vor einem Doppelpunkt
+        const istSchluessel = sprache.schluessel && /^\s*:/.test(zeile.slice(muster.lastIndex));
+        ziel.appendChild(neu("span", istSchluessel ? "ne-code-schluessel" : "ne-code-text", treffer[1]));
+      } else if (sprache.zeichen && treffer[3] && sprache.zeichen.indexOf(treffer[3]) >= 0) {
+        leere();
+        ziel.appendChild(neu("span", "ne-code-zeichen", treffer[3]));
       } else if (treffer[2] && sprache.woerter.indexOf(treffer[2]) >= 0) {
         leere();
         ziel.appendChild(neu("span", "ne-code-wort", treffer[2]));
@@ -379,28 +421,104 @@ const NewsErklaerung = (function () {
    * darunter der Code mit Zeilennummern. Zu lange Zeilen scrollen im
    * Fenster waagerecht (auch per Tastatur: das Feld ist fokussierbar).
    * @param {{datei: string, sprache: string, zeilen: Array}} a – siehe Konfiguration
+   * @returns {{fenster: HTMLElement, code: HTMLElement}}
    */
   function baueAusschnitt(a) {
-    const sprache = K.sprachen[a.sprache] || { kommentar: "", woerter: [] };
     const fenster = neu("figure", "ne-ausschnitt");
     fenster.appendChild(neu("figcaption", "ne-ausschnitt-leiste", a.datei));
     const code = neu("pre", "ne-code");
     code.tabIndex = 0;
     code.setAttribute("aria-label", "Ausschnitt aus " + a.datei);
-    a.zeilen.forEach(function (z, i) {
+    fuelleAusschnitt(code, a.zeilen, a.sprache);
+    fenster.appendChild(code);
+    return { fenster: fenster, code: code };
+  }
+
+  /**
+   * Füllt ein Code-Fenster (neu): eine Zeile je Eintrag, mit Nummer und
+   * Hervorhebung. Auch für Inhalte, die erst später feststehen (live).
+   * @param {HTMLElement} code – das <pre> aus baueAusschnitt
+   * @param {Array} zeilen – [[Nummer oder null, Text], …]
+   * @param {string} spracheName – Schlüssel in K.sprachen
+   */
+  function fuelleAusschnitt(code, zeilen, spracheName) {
+    const sprache = K.sprachen[spracheName] || { kommentar: "", woerter: [] };
+    code.textContent = "";
+    zeilen.forEach(function (z, i) {
       const zeile = neu("span", "ne-code-zeile");
       zeile.style.setProperty("--ne-zeile", i);          // Reihenfolge fürs Erscheinen
       const nummer = neu("span", "ne-code-nummer", z[0] === null ? "" : String(z[0]));
       nummer.setAttribute("aria-hidden", "true");
       const inhalt = neu("span", "ne-code-inhalt");
-      if (z[0] === null) inhalt.appendChild(neu("span", "ne-code-luecke", z[1]));
+      // Auslassung ("…" allein in der Zeile): gedämpft, ohne Hervorhebung
+      if (z[1].trim() === "…") inhalt.appendChild(neu("span", "ne-code-luecke", z[1]));
       else faerbeZeile(inhalt, z[1], sprache);
       zeile.appendChild(nummer);
       zeile.appendChild(inhalt);
       code.appendChild(zeile);
     });
-    fenster.appendChild(code);
-    return fenster;
+  }
+
+  /**
+   * Baut aus data/news.json die Zeilen für das Code-Fenster: "aktualisiert"
+   * und die ERSTE Meldung mit allen Feldern in der Reihenfolge der Datei,
+   * dann "…" für die weiteren Meldungen und die schließenden Klammern –
+   * eingerückt wie die Datei selbst. Lange Werte werden gekürzt ("…").
+   * @param {object} roh – der Inhalt der Datei (JSON.parse)
+   * @param {string} text – der Text der Datei (für die Nummern der letzten Zeilen)
+   * @returns {Array|null} Zeilen wie in der Konfiguration; null, wenn es keine Meldung gibt
+   */
+  function newsZeilen(roh, text) {
+    const erste = roh && Array.isArray(roh.meldungen) ? roh.meldungen[0] : null;
+    if (!erste || typeof erste !== "object" || Array.isArray(erste)) return null;
+    const zeilen = [];
+    let nr = 0;
+    const zeile = function (inhalt) { zeilen.push([++nr, inhalt]); };
+
+    /** "schluessel": wert – passt die Zeile nicht, wird der Wert gekürzt und endet auf "…". */
+    function feld(einzug, schluessel, wert, komma) {
+      const anfang = einzug + JSON.stringify(schluessel) + ": ";
+      let w = JSON.stringify(wert);
+      const platz = K.ausschnittBreite - anfang.length - komma.length;
+      if (w.length > platz) {
+        if (typeof wert === "string") {
+          // im Text kürzen, bis die Zeile passt – die Anführungszeichen bleiben
+          let n = Math.max(1, platz - 3);
+          do {
+            w = JSON.stringify(wert.slice(0, n).trimEnd() + "…");
+            n--;
+          } while (w.length > platz && n > 0);
+        } else {
+          w = w.slice(0, Math.max(1, platz - 1)) + "…";
+        }
+      }
+      zeile(anfang + w + komma);
+    }
+
+    zeile("{");
+    if ("aktualisiert" in roh) feld("  ", "aktualisiert", roh.aktualisiert, ",");
+    zeile('  "meldungen": [');
+    zeile("    {");
+    const felder = Object.keys(erste);
+    felder.forEach(function (name, i) { feld("      ", name, erste[name], i < felder.length - 1 ? "," : ""); });
+    const weitere = roh.meldungen.length > 1;
+    zeile(weitere ? "    }," : "    }");
+    if (weitere) zeilen.push([null, "    …"]);
+    // Nummern der beiden letzten Zeilen: aus der Datei, wenn sie so endet wie erwartet
+    const alle = text.replace(/\s+$/, "").split("\n");
+    const passt = weitere && alle.length > nr + 2 && alle[alle.length - 1].trim() === "}" && alle[alle.length - 2].trim() === "]";
+    zeilen.push([passt ? alle.length - 1 : weitere ? null : ++nr, "  ]"]);
+    zeilen.push([passt ? alle.length : weitere ? null : ++nr, "}"]);
+    return zeilen;
+  }
+
+  /** Füllt alle Fenster mit live: "news" – aus der geladenen Datei oder mit dem Ersatz. */
+  function fuelleLiveAusschnitte(roh, text) {
+    const live = roh ? newsZeilen(roh, text) : null;
+    stationen.forEach(function (s) {
+      if (!s.ausschnitt || s.ausschnitt.live !== "news") return;
+      fuelleAusschnitt(s.code, live || s.ausschnitt.zeilen, s.ausschnitt.sprache);
+    });
   }
 
   /** Dezenter Hinweis unten in der ersten Station; verschwindet nach dem ersten Scrollen. */
@@ -584,7 +702,10 @@ const NewsErklaerung = (function () {
 
   /* ---------- Live-Vorschau ---------- */
 
-  /** Holt data/news.json frisch und prüft sie mit NewsDaten (js/news.js). */
+  /**
+   * Holt data/news.json EINMAL frisch – für die Vorschau der letzten Station
+   * (geprüft mit NewsDaten aus js/news.js) und für die Live-Ausschnitte.
+   */
   function ladeVorschau() {
     const nummer = ++abruf;
     el.vorschau.textContent = "";
@@ -592,16 +713,19 @@ const NewsErklaerung = (function () {
     fetch(NEWS_KONFIG.datei + "?t=" + Date.now(), { cache: "no-store" })
       .then(function (antwort) {
         if (!antwort.ok) throw new Error("HTTP " + antwort.status);
-        return antwort.json();
+        return antwort.text();                  // als Text – für die Zeilennummern im Ausschnitt
       })
-      .then(function (roh) {
+      .then(function (text) {
         if (nummer !== abruf) return;
+        const roh = JSON.parse(text);
         const p = NewsDaten.pruefeDaten(roh);
         if (!p.ok) throw new Error("Format");
+        fuelleLiveAusschnitte(roh, text);
         zeigeVorschau(p);
       })
       .catch(function () {
         if (nummer !== abruf) return;
+        fuelleLiveAusschnitte(null, "");        // fester Beispiel-Ausschnitt
         el.vorschau.textContent = "";
         el.vorschau.appendChild(neu("p", "ne-vorschau-hinweis", K.vorschauFehler));
       });
