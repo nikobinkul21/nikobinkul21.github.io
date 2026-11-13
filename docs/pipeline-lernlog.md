@@ -219,7 +219,21 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   `.github/workflows/news.yml` (cron täglich, Python einrichten, Skript
   ausführen, `data/news.json` committen; `permissions: contents: write`).
   Hinweis: Lernlog/CLAUDE.md liegen auf Branch `claude/jolly-darwin-qzl0v5`,
-  später per Pull Request nach `main`.
+  später per Pull Request in den Standard-Branch.
+- **Wichtig (2026-11-13):** Standard-Branch auf GitHub ist
+  `claude/personal-web-dashboard-ubxre0` (kein `main`). Eine andere
+  Claude-Sitzung hat dort heute die **News-Ansicht** gebaut (`js/news.js`,
+  `css/news.css`) samt **`docs/news-format.md`** und Beispiel-
+  `data/news.json`. Erwartetes Format weicht von unserem ab: Objekt
+  `{"aktualisiert": ISO-Zeit, "meldungen": [...]}`, Felder `titel`,
+  `zusammenfassung`, `url`, `quelle`, optional `region`,
+  `veroeffentlicht` (ISO **mit Zeitzone**), `anzahlQuellen`; nur reiner
+  Text (HTML entfernen), nach Wichtigkeit sortiert, 5–15 empfohlen.
+  → Pipeline muss angepasst werden (Schritt 5 überarbeiten).
+- 7a-Push des Nutzers ist (Stand Prüfung) **nicht** auf GitHub
+  angekommen; „data ist da“ = vermutlich die Beispieldatei. Lokaler Klon
+  ist hinter dem Remote → Pull/Sync nötig, mögliche Konfliktdatei
+  `data/news.json`. Diagnose beim Nutzer offen.
 - Weitere Ideen: Später: Spiegel-`#ref=rss`
   entfernen, „schlauere“ Auswahl.
 - Als Nächstes **Schritt 7:** Dateien mit Git committen/pushen,
