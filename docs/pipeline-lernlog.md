@@ -15,7 +15,7 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 4. [x] Mehrere Feeds abrufen, Meldungen in einer Liste sammeln
 5. [x] Einheitliches Format, als JSON speichern (Format der Website)
 6. [x] Wichtigste Meldungen auswählen: einfache Version (die 20 neuesten) fertig; „schlauer“ später
-7. [ ] Täglich über GitHub Actions ausführen
+7. [x] Täglich über GitHub Actions ausführen
 
 ## Stand
 
@@ -267,7 +267,26 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
 - **Schritt 7c gestellt:** Workflow `.github/workflows/news.yml` über
   github.com anlegen (cron `17 5 * * *` = 6:17 Uhr Winterzeit,
   `workflow_dispatch`, Python 3.12, Git-Schritt von Claude übernommen und
-  erklärt), dann im Tab „Actions“ manuell starten. Ergebnis offen.
+  erklärt), dann im Tab „Actions“ manuell starten. **Erfolgreich:**
+  Workflow angelegt, manueller Lauf grün, Commit „News aktualisiert“ von
+  `github-actions[bot]`, Website zeigt neuen Stand.
+  **Schritt 7 abgeschlossen – Fahrplan 1–7 komplett.**
+- Abschluss-Interview-Frage gestellt: „Erklär in drei, vier Sätzen, wie
+  deine Pipeline von RSS-Feed bis Website funktioniert.“ Antwort offen.
+
+## Ideen für danach
+
+- „Schlauere“ Auswahl (Schritt 6, Teil 2): `region` setzen, Themen
+  zählen, die mehrere Quellen bringen (`anzahlQuellen`).
+- Weitere Feeds ergänzen; Fehler je Feed abfangen (ein kaputter Feed soll
+  die anderen nicht stoppen).
+- HTML-Reste prüfen (`"<" in text`), Spiegel-`#ref=rss` aus URLs
+  entfernen.
+- Übungsdateien in `pipeline/uebungen/` verschieben.
+- Lernlog und CLAUDE.md-Hinweis liegen noch auf Branch
+  `claude/jolly-darwin-qzl0v5` → per Pull Request in den Standard-Branch
+  `claude/personal-web-dashboard-ubxre0` übernehmen (nur auf Wunsch).
+- Wiederholung offen: `key=nach_datum` ohne Klammern.
 - Plan 7c: Workflow `.github/workflows/news.yml` **über die GitHub-
   Weboberfläche** anlegen (VS Code-Anmeldung hat evtl. keine
   `workflow`-Berechtigung). Inhalt: `schedule` (cron) +
@@ -342,6 +361,9 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   Incoming; Schnittstelle/Vertrag (`docs/news-format.md`)
 - ISO-8601 mit Zeitzone (`%Y-%m-%dT%H:%M:%S+00:00`), `time.gmtime()`,
   Liste als Wert in einem Dictionary (Umschlag)
+- `requirements.txt`, Version pinnen, `pip3 install -r`; GitHub Actions:
+  Workflow-YAML, `cron` (UTC), `workflow_dispatch`, `permissions`,
+  Schritte, Bot-Commit; vor eigener Arbeit immer erst Sync
 
 ## Offene Punkte / Notizen
 
