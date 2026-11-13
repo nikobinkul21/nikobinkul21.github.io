@@ -263,7 +263,11 @@ Arbeitsweise: siehe Abschnitt „Nachrichten-Pipeline“ in `CLAUDE.md`.
   (`"<" in text`) als spätere kleine Übung vormerken.
 - **Schritt 7b gestellt:** `pipeline/requirements.txt` mit
   `feedparser==6.0.12`, Konzept „Zutatenliste für einen leeren Computer“.
-  Ergebnis offen.
+  Committet und gepusht; Kontrollfrage richtig beantwortet.
+- **Schritt 7c gestellt:** Workflow `.github/workflows/news.yml` über
+  github.com anlegen (cron `17 5 * * *` = 6:17 Uhr Winterzeit,
+  `workflow_dispatch`, Python 3.12, Git-Schritt von Claude übernommen und
+  erklärt), dann im Tab „Actions“ manuell starten. Ergebnis offen.
 - Plan 7c: Workflow `.github/workflows/news.yml` **über die GitHub-
   Weboberfläche** anlegen (VS Code-Anmeldung hat evtl. keine
   `workflow`-Berechtigung). Inhalt: `schedule` (cron) +
