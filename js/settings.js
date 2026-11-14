@@ -1,7 +1,7 @@
 /* ==========================================================================
    settings.js – Einstellungen
    - Sicherung ALLER Daten der Seite (Termine, Zu erledigen, Pinnwand,
-     Projekte/Ideen, Abenteuer, Klettern-Rekord, Worträtsel) als eine
+     Projekte/Ideen, Abenteuer, Klettern-Rekord, Worträtsel, Schach) als eine
      JSON-Datei – Export und Import
    - Sudoku-Abenteuer: Tempo der Kampfanimationen (Würfel und Schadensaufbau)
    - Zu erledigen: Verbindung zur Oracle-Datenbank (js/todo-db.js)
@@ -18,6 +18,7 @@
      sudokuAbenteuer: { … } oder null ← Spielstand aus SudokuRPG (js/sudoku-rpg.js)
      klettern:    { … } oder null ← Rekord des Kletterspiels (js/climb/speicher.js)
      woerter:     { … } oder null ← Worträtsel: laufendes Wort, Streaks, Statistik (js/words/speicher.js)
+     schach:      { … } oder null ← Schach: Einstellungen, laufende Partie, Statistik (js/chess/speicher.js)
    }
    Ältere Sicherungen können zusätzlich Daten eines früheren Bereichs
    enthalten (Schlüssel "filmeSerien" oder eine Datei nur mit "kategorien");
@@ -43,7 +44,7 @@ const EinstellungenAnsicht = (function () {
         '<h2 id="sicherung-titel">Daten sichern</h2>' +
         "<p>Deine Daten liegen nur in diesem Browser. Mit einer Sicherung kannst du sie " +
           "auf einem anderen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. " +
-          "Die Datei enthält <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong>, die <strong>Pinnwand</strong>, <strong>Projekte/Ideen</strong>, den Spielstand des <strong>Sudoku-Abenteuers</strong>, den Rekord im <strong>Klettern</strong> und Streaks und Statistik des <strong>Worträtsels</strong>.</p>" +
+          "Die Datei enthält <strong>Stundenplan/Termine</strong>, <strong>Zu erledigen</strong>, die <strong>Pinnwand</strong>, <strong>Projekte/Ideen</strong>, den Spielstand des <strong>Sudoku-Abenteuers</strong>, den Rekord im <strong>Klettern</strong>, Streaks und Statistik des <strong>Worträtsels</strong> und Partie und Statistik im <strong>Schach</strong>.</p>" +
         '<div class="einstellungen-knoepfe">' +
           '<button type="button" class="knopf" data-aktion="exportieren">Daten exportieren</button>' +
           '<button type="button" class="knopf" data-aktion="importieren">Daten importieren</button>' +
@@ -239,6 +240,7 @@ const EinstellungenAnsicht = (function () {
       sudokuAbenteuer: SudokuRPG.alsObjekt(),
       klettern: KletterSpeicher.alsObjekt(),
       woerter: WoerterSpeicher.alsObjekt(),
+      schach: SchachSpeicher.alsObjekt(),
     };
     const datei = new Blob([JSON.stringify(sicherung, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
@@ -334,6 +336,22 @@ const EinstellungenAnsicht = (function () {
       }
     }
 
+    // Schach: in älteren Sicherungen fehlt es → bleibt dann unverändert
+    let schachDaten = { vorhanden: false };
+    let schachText = "• Schach: nicht enthalten (bleibt unverändert)\n";
+    if ("schach" in roh) {
+      if (roh.schach === null) {
+        schachDaten = { vorhanden: true, daten: null };
+        schachText = "• Schach: noch nicht gespielt\n";
+      } else {
+        const geprueft = SchachSpeicher.pruefeDaten(roh.schach);
+        if (!geprueft.ok) return { ok: false, fehler: geprueft.fehler };
+        schachDaten = { vorhanden: true, daten: geprueft.daten };
+        const anzahl = geprueft.daten.statistik.length;
+        schachText = "• Schach: " + anzahl + (anzahl === 1 ? " beendete Partie" : " beendete Partien") + "\n";
+      }
+    }
+
     // Projekte/Ideen: in älteren Sicherungen fehlen sie → bleiben dann unverändert
     let projekte = { vorhanden: false };
     let projekteText = "• Projekte/Ideen: nicht enthalten (bleiben unverändert)\n";
@@ -379,7 +397,7 @@ const EinstellungenAnsicht = (function () {
     const erstellt = typeof roh.erstellt === "string" ? new Date(roh.erstellt) : null;
     const vom = erstellt && !isNaN(erstellt) ? " vom " + erstellt.toLocaleString("de-DE") : "";
     return {
-      ok: true, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben, klettern: klettern, woerter: woerter, pinnwand: pinnwand, projekte: projekte,
+      ok: true, termine: termine, abenteuer: abenteuer, aufgaben: aufgaben, klettern: klettern, woerter: woerter, schach: schachDaten, pinnwand: pinnwand, projekte: projekte,
       frage: "Sicherung" + vom + ":\n" +
         "• " + termine.daten.eintraege.length + " Termine/Vorlesungen\n" +
         aufgabenText +
@@ -387,7 +405,8 @@ const EinstellungenAnsicht = (function () {
         projekteText +
         abenteuerText +
         kletternText +
-        woerterText + "\n" +
+        woerterText +
+        schachText + "\n" +
         "ALLE aktuellen Daten werden dadurch ersetzt. Fortfahren?",
     };
   }
@@ -424,6 +443,9 @@ const EinstellungenAnsicht = (function () {
       }
       if (pruefung.woerter && pruefung.woerter.vorhanden) {
         WoerterSpeicher.ersetzen(pruefung.woerter.daten);
+      }
+      if (pruefung.schach && pruefung.schach.vorhanden) {
+        SchachSpeicher.ersetzen(pruefung.schach.daten);
       }
       if (pruefung.termine) {
         EventsStore.ersetzen(pruefung.termine.daten);

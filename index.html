@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/football.css">
   <link rel="stylesheet" href="css/climb.css">
   <link rel="stylesheet" href="css/words.css">
+  <link rel="stylesheet" href="css/chess.css">
   <link rel="stylesheet" href="css/board.css">
   <link rel="stylesheet" href="css/todo.css">
   <link rel="stylesheet" href="css/prompts.css">
@@ -203,6 +204,17 @@
   <script src="js/words/regeln.js"></script>
   <script src="js/words/speicher.js"></script>
   <script src="js/words/darstellung.js"></script>
+  <!-- Schach: Regeln (chess.js) und Spiel; die Engine (Stockfish) lädt erst beim
+       Öffnen des Spiels in einem Web Worker. Lizenzen: js/chess/LIZENZEN.md -->
+  <script src="js/chess/vendor/chess.js"></script>
+  <script src="js/chess/konfig.js"></script>
+  <script src="js/chess/muster.js"></script>
+  <script src="js/chess/speicher.js"></script>
+  <script src="js/chess/engine.js"></script>
+  <script src="js/chess/bot.js"></script>
+  <script src="js/chess/brett.js"></script>
+  <script src="js/chess/claudy.js"></script>
+  <script src="js/chess/spiel.js"></script>
   <script src="js/games.js"></script>
   <!-- Pinnwand: erst die Speicherung, dann die Fläche -->
   <script src="js/board-store.js"></script>

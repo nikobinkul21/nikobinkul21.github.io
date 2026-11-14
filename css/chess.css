@@ -1,0 +1,937 @@
+/* ==========================================================================
+   chess.css – Schach (#games/chess, js/chess/)
+   Links das Brett mit Gegner, Status und Aktionen; rechts Claudy mit seinen
+   Reglern, nach der Partie das Ergebnis, darunter Zugliste, Einstellungen
+   und Statistik. Smartphone und Tablet: alles untereinander, das Brett in
+   voller Breite, Claudy kompakt direkt darunter.
+   Farben: nur Variablen aus css/style.css. Die beiden Feldfarben des Bretts
+   und die Markierungen sind daraus gemischt (color-mix), damit die Figuren
+   auf hellen wie dunklen Feldern gut zu erkennen sind.
+   ========================================================================== */
+
+.schach {
+  /* Brett: so groß wie möglich, ohne dass die Seite am Computer scrollen muss */
+  --sch-brett: clamp(280px, calc(100vh - 345px), 640px);
+  --sch-hell: color-mix(in srgb, var(--farbe-text) 62%, var(--farbe-hintergrund));
+  --sch-dunkel: color-mix(in srgb, var(--farbe-text) 30%, var(--farbe-hintergrund));
+  --sch-letzter: color-mix(in srgb, var(--farbe-akzent) 36%, transparent);     /* letzter Zug */
+  --sch-gewaehlt: color-mix(in srgb, var(--farbe-akzent) 60%, transparent);    /* gewählte Figur */
+  --sch-punkt: color-mix(in srgb, var(--farbe-hintergrund) 50%, transparent);  /* mögliche Züge */
+  /* Einstufung der Züge: vorhandene Farben der Seite */
+  --sch-sehrgut: var(--farbe-erfolg);
+  --sch-gut: var(--farbe-erfolg);
+  --sch-ungenau: var(--todo-bald);
+  --sch-fehler: var(--todo-wichtig);
+  --sch-grob: var(--farbe-akzent-text);
+  --sch-claudy: 64px;
+}
+
+@supports (height: 100dvh) {
+  .schach {
+    --sch-brett: clamp(280px, calc(100dvh - 345px), 640px);
+  }
+}
+
+/* Zwei Spalten, zusammen mittig: links so breit wie das Brett, rechts die Karten */
+.sch-haupt {
+  display: grid;
+  grid-template-columns: minmax(0, var(--sch-brett)) minmax(280px, 380px);
+  justify-content: center;
+  gap: var(--abstand-xl);
+  align-items: start;
+}
+
+.sch-brett-spalte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-s);
+  min-width: 0;
+}
+
+
+/* ==========================================================================
+   HINWEIS: Engine nicht geladen
+   ========================================================================== */
+
+.sch-engine-hinweis {
+  margin-bottom: var(--abstand-m);
+  padding: var(--abstand-m);
+  background: var(--farbe-akzent-leise);
+  border: 1px solid var(--farbe-akzent);
+  border-radius: var(--radius-m);
+}
+
+.sch-engine-hinweis p {
+  margin: var(--abstand-xs) 0 var(--abstand-s);
+}
+
+.sch-schritte {
+  margin: 0;
+  padding-left: 1.4em;
+  font-family: var(--schrift-mono);
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+
+/* ==========================================================================
+   GEGNER UND STATUS
+   ========================================================================== */
+
+.sch-gegner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--abstand-m);
+  margin: 0;
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.sch-gegner-elo {
+  color: var(--farbe-text-leise);
+}
+
+.sch-status {
+  min-height: 1.5em;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+
+/* ==========================================================================
+   BRETT
+   ========================================================================== */
+
+.sch-brett {
+  position: relative;
+  aspect-ratio: 1;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sch-felder {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: 100%;
+  height: 100%;
+  touch-action: none;                        /* Ziehen mit dem Finger statt Scrollen */
+}
+
+.sch-feld {
+  /* Markierungen liegen als Ebenen über der Feldfarbe (siehe unten) */
+  --sch-ebene-ziel: none;
+  --sch-ebene-ton: none;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--farbe-hintergrund);
+  background-color: var(--sch-dunkel);
+  background-image: var(--sch-ebene-ziel), var(--sch-ebene-ton);
+  border: 0;
+  border-radius: 0;
+  cursor: default;
+}
+
+.sch-feld.ist-hell {
+  background-color: var(--sch-hell);
+}
+
+.ist-bedienbar .sch-feld.hat-figur,
+.ist-bedienbar .sch-feld.ist-ziel {
+  cursor: pointer;
+}
+
+/* Letzter Zug und gewählte Figur: getöntes Feld */
+.sch-feld.ist-letzter {
+  --sch-ebene-ton: linear-gradient(var(--sch-letzter), var(--sch-letzter));
+}
+
+.sch-feld.ist-gewaehlt {
+  --sch-ebene-ton: linear-gradient(var(--sch-gewaehlt), var(--sch-gewaehlt));
+}
+
+/* König im Schach: roter Schein um die Figur */
+.sch-feld.ist-schach {
+  --sch-ebene-ton: radial-gradient(circle, var(--farbe-akzent) 0 35%, transparent 72%);
+}
+
+/* Mögliche Züge: ein dezenter Punkt; auf besetzten Feldern ein Ring */
+.sch-feld.ist-ziel {
+  --sch-ebene-ziel: radial-gradient(circle, var(--sch-punkt) 0 15%, transparent 16%);
+}
+
+.sch-feld.ist-ziel.hat-figur {
+  --sch-ebene-ziel: radial-gradient(circle, transparent 0 40%, var(--sch-punkt) 41% 48%, transparent 49%);
+}
+
+.sch-feld.ist-ueber {
+  --sch-ebene-ton: linear-gradient(var(--sch-gewaehlt), var(--sch-gewaehlt));
+}
+
+/* Claudys "Schubs": Ring um die Figur */
+.sch-feld.ist-schubs {
+  box-shadow: inset 0 0 0 4px var(--farbe-akzent);
+}
+
+.sch-feld:focus-visible {
+  outline: 3px solid var(--farbe-fokus);
+  outline-offset: -3px;
+  z-index: 1;
+}
+
+/* Koordinaten am Rand: Zahlen links oben, Buchstaben rechts unten */
+.sch-feld[data-reihe]::before,
+.sch-feld[data-spalte]::after {
+  position: absolute;
+  font-family: var(--schrift-mono);
+  font-size: clamp(0.5rem, 1.6vw, 0.68rem);
+  line-height: 1;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.sch-feld[data-reihe]::before {
+  content: attr(data-reihe);
+  left: 3px;
+  top: 3px;
+}
+
+.sch-feld[data-spalte]::after {
+  content: attr(data-spalte);
+  right: 3px;
+  bottom: 3px;
+}
+
+.sch-feld.ist-dunkel[data-reihe]::before,
+.sch-feld.ist-dunkel[data-spalte]::after {
+  color: var(--farbe-text);
+}
+
+.sch-figur {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.sch-feld.wird-gezogen .sch-figur {
+  opacity: 0.3;
+}
+
+/* Die Figur am Zeiger beim Ziehen (hängt an <body>) */
+.sch-zieh-bild {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Pfeile über dem Brett */
+.sch-pfeile {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.sch-pfeil {
+  opacity: 0.9;
+}
+
+.sch-pfeil line {
+  stroke: var(--farbe-akzent);
+  stroke-width: 0.17;
+  stroke-linecap: round;
+}
+
+.sch-pfeil polygon {
+  fill: var(--farbe-akzent);
+}
+
+.sch-pfeil.ist-neben {
+  opacity: 0.75;
+}
+
+.sch-pfeil.ist-neben line {
+  stroke: var(--farbe-text);
+  stroke-width: 0.11;
+}
+
+.sch-pfeil.ist-neben polygon {
+  fill: var(--farbe-text);
+}
+
+/* Bauernumwandlung: Auswahl mitten auf dem Brett */
+.sch-umwandlung {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--farbe-schleier);
+}
+
+.sch-umwandlung-kasten {
+  display: flex;
+  gap: var(--abstand-s);
+  padding: var(--abstand-s);
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-m);
+  box-shadow: var(--schatten-schwebend);
+}
+
+.sch-umwandlung-knopf {
+  width: clamp(52px, 14vw, 76px);
+  aspect-ratio: 1;
+  padding: 4px;
+  background: var(--sch-hell);
+  border: 2px solid transparent;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: border-color var(--dauer) ease, transform var(--dauer) ease;
+}
+
+.sch-umwandlung-knopf:hover,
+.sch-umwandlung-knopf:focus-visible {
+  border-color: var(--farbe-akzent);
+  transform: translateY(var(--anheben));
+}
+
+.sch-umwandlung-knopf img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+
+/* ==========================================================================
+   AKTIONEN UNTER DEM BRETT
+   ========================================================================== */
+
+.sch-aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-s);
+}
+
+.sch-aktionen .knopf {
+  flex: 1 1 auto;
+  padding: 0 12px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.schach .knopf:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.schach .knopf:disabled:hover {
+  background: var(--farbe-flaeche);
+  border-color: var(--farbe-rand-stark);
+}
+
+.schach .knopf--haupt:disabled:hover {
+  background: var(--farbe-akzent);
+  border-color: var(--farbe-akzent);
+}
+
+
+/* ==========================================================================
+   RECHTE SPALTE: KARTEN
+   ========================================================================== */
+
+.sch-seite {
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-m);
+  min-width: 0;
+}
+
+.sch-karte {
+  padding: var(--abstand-m);
+  background: var(--farbe-flaeche);
+  border: var(--linie);
+  border-radius: var(--radius-m);
+}
+
+.sch-karten-titel {
+  margin: 0;
+  font-family: var(--schrift-mono);
+  font-size: var(--mono-groesse);
+  font-weight: 400;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: var(--mono-sperrung);
+}
+
+.sch-klein {
+  max-width: none;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--farbe-text-leise);
+}
+
+
+/* ==========================================================================
+   CLAUDY
+   ========================================================================== */
+
+.sch-claudy {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--abstand-m);
+  min-height: var(--sch-claudy);
+}
+
+.sch-claudy-figur {
+  flex: none;
+  width: var(--sch-claudy);
+  height: var(--sch-claudy);
+  fill: none;
+  stroke: var(--farbe-text);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sch-claudy-koerper {
+  fill: var(--farbe-flaeche-hell);
+}
+
+.sch-claudy-blatt {
+  stroke: var(--farbe-akzent);
+}
+
+.sch-claudy-blatt path:first-child {
+  fill: var(--farbe-akzent);
+}
+
+.sch-claudy-augen circle {
+  fill: var(--farbe-text);
+  stroke: none;
+}
+
+/* Je Stimmung sind genau ein Augenpaar und ein Mund zu sehen */
+.sch-claudy-augen,
+.sch-claudy-mund {
+  display: none;
+}
+
+.sch-claudy.ist-ruhig .ist-ruhig,
+.sch-claudy.ist-froh .ist-froh,
+.sch-claudy.ist-denkt .ist-denkt,
+.sch-claudy.ist-sorge .ist-sorge {
+  display: inline;
+}
+
+/* Gelegentliches Blinzeln (nur der ruhige Blick) */
+.sch-claudy.ist-ruhig .sch-claudy-augen.ist-ruhig {
+  transform-origin: 32px 34px;
+  animation: sch-blinzeln 5.5s infinite;
+}
+
+@keyframes sch-blinzeln {
+  0%, 94%, 100% { transform: scaleY(1); }
+  97% { transform: scaleY(0.1); }
+}
+
+/* Sprechblase mit kleiner Spitze zur Figur */
+.sch-claudy-blase {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  background: var(--farbe-flaeche-leise);
+  border: var(--linie);
+  border-radius: var(--radius-m);
+  overflow-wrap: break-word;
+}
+
+.sch-claudy-blase::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 16px;
+  width: 10px;
+  height: 10px;
+  background: var(--farbe-flaeche-leise);
+  border-left: var(--linie);
+  border-bottom: var(--linie);
+  transform: rotate(45deg);
+}
+
+.sch-claudy.ist-still .sch-claudy-blase {
+  visibility: hidden;
+}
+
+/* Regler unter Claudy */
+.sch-hilfe {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--abstand-s);
+  margin-top: var(--abstand-m);
+}
+
+.sch-hilfe-wahl,
+.sch-zahl {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sch-hilfe-wahl > span,
+.sch-zahl > span,
+.sch-feldgruppe legend {
+  font-family: var(--schrift-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--farbe-text-leise);
+}
+
+.schach select,
+.schach input[type="number"] {
+  width: 100%;
+  height: var(--knopf-hoehe);
+  padding: 0 10px;
+  font: inherit;
+  color: var(--farbe-text);
+  background: var(--farbe-hintergrund);
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius-s);
+}
+
+.sch-tipp {
+  flex: none;
+  min-width: 96px;
+}
+
+.sch-schalter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-xs) var(--abstand-m);
+  margin-top: var(--abstand-s);
+}
+
+.sch-haken {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.sch-haken input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--farbe-akzent);
+  cursor: pointer;
+}
+
+.sch-besser {
+  width: 100%;
+  margin-top: var(--abstand-s);
+  letter-spacing: 0.06em;
+}
+
+
+/* ==========================================================================
+   NACH DER PARTIE
+   ========================================================================== */
+
+.sch-ende {
+  border-color: var(--farbe-akzent);
+}
+
+.sch-ende-titel {
+  margin: 0;
+  font-family: var(--schrift-serif);
+  font-size: 1.9rem;
+  font-weight: var(--titel-gewicht);
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.sch-ende-text {
+  max-width: none;
+  margin: var(--abstand-xs) 0 0;
+  line-height: 1.5;
+}
+
+.sch-ende-unter {
+  margin: var(--abstand-m) 0 var(--abstand-xs);
+  font-family: var(--schrift-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--farbe-text-leise);
+}
+
+/* Übersicht: eine Zeile je Einstufung, vorn ein farbiger Punkt */
+.sch-uebersicht,
+.sch-teuer {
+  margin: var(--abstand-s) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sch-uebersicht-zeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 0.92rem;
+}
+
+.sch-uebersicht-zeile::before,
+.sch-teuer-knopf::before {
+  content: "";
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--sch-farbe, var(--farbe-text-leise));
+}
+
+.sch-uebersicht-name {
+  flex: 1 1 auto;
+}
+
+.sch-uebersicht-zahl {
+  font-family: var(--schrift-mono);
+}
+
+.schach .ist-sehrgut { --sch-farbe: var(--sch-sehrgut); }
+.schach .ist-gut { --sch-farbe: var(--sch-gut); }
+.schach .ist-ungenau { --sch-farbe: var(--sch-ungenau); }
+.schach .ist-fehler { --sch-farbe: var(--sch-fehler); }
+.schach .ist-grob { --sch-farbe: var(--sch-grob); }
+
+.sch-teuer li + li {
+  margin-top: 4px;
+}
+
+.sch-teuer-knopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  font: inherit;
+  text-align: left;
+  color: var(--farbe-text);
+  background: var(--farbe-hintergrund);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: border-color var(--dauer) ease;
+}
+
+.sch-teuer-knopf:hover,
+.sch-teuer-knopf:focus-visible {
+  border-color: var(--farbe-akzent);
+}
+
+.sch-teuer-zug {
+  flex: 1 1 auto;
+  font-family: var(--schrift-mono);
+}
+
+.sch-teuer-art {
+  font-size: 0.85rem;
+  color: var(--farbe-text-leise);
+}
+
+.sch-ende-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-s);
+  margin-top: var(--abstand-m);
+}
+
+.sch-ende-knoepfe .knopf {
+  flex: 1 1 auto;
+}
+
+
+/* ==========================================================================
+   ZUGLISTE UND BLÄTTERN
+   ========================================================================== */
+
+.sch-zuege-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--abstand-s);
+}
+
+.sch-blaettern {
+  display: flex;
+  gap: 4px;
+}
+
+.sch-blaettern-knopf {
+  width: 36px;
+  height: 32px;
+  padding: 0;
+  font-family: var(--schrift-text);
+  font-size: 0.8rem;
+  letter-spacing: 0;
+}
+
+.sch-zuege {
+  position: relative;
+  max-height: 190px;
+  margin: var(--abstand-s) 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  font-family: var(--schrift-mono);
+  font-size: 0.9rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--farbe-rand-stark) transparent;
+}
+
+.sch-zugpaar {
+  display: grid;
+  grid-template-columns: 2.6em minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+
+.sch-zugnr {
+  color: var(--farbe-text-leise);
+}
+
+.sch-zug {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 6px;
+  font: inherit;
+  text-align: left;
+  color: var(--farbe-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+/* Eigene Züge tragen einen Punkt in der Farbe ihrer Einstufung */
+.sch-zug[title]::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sch-farbe, transparent);
+}
+
+.sch-zug:hover {
+  border-color: var(--farbe-rand-stark);
+}
+
+.sch-zug.ist-aktuell {
+  background: var(--farbe-flaeche-hell);
+  border-color: var(--farbe-akzent);
+}
+
+
+/* ==========================================================================
+   EINSTELLUNGEN UND STATISTIK (aufklappbar)
+   ========================================================================== */
+
+.sch-klappe > summary {
+  cursor: pointer;
+}
+
+.sch-klappe-inhalt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-s);
+  margin-top: var(--abstand-m);
+}
+
+.sch-feldgruppe {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sch-bereich {
+  display: flex;
+  gap: var(--abstand-s);
+  margin: var(--abstand-xs) 0;
+}
+
+.sch-tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.sch-tabelle th,
+.sch-tabelle td {
+  padding: 6px 4px;
+  text-align: right;
+  font-weight: 400;
+  border-bottom: var(--linie);
+}
+
+.sch-tabelle th:first-child {
+  text-align: left;
+}
+
+.sch-tabelle tr:first-child th {
+  font-family: var(--schrift-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--farbe-text-leise);
+}
+
+.sch-tabelle td {
+  font-family: var(--schrift-mono);
+}
+
+.sch-tabelle .ist-null {
+  color: var(--farbe-text-leise);
+}
+
+.sch-tabelle-summe th,
+.sch-tabelle-summe td {
+  border-bottom: 0;
+  font-weight: 600;
+}
+
+/* Verlauf: ein Balken je Partie (Höhe = Fehler), älteste links */
+.sch-verlauf {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 72px;
+  padding-bottom: 1px;
+  border-bottom: var(--linie);
+}
+
+.sch-balken {
+  flex: 1 1 0;
+  max-width: 14px;
+  min-height: 3px;
+  background: var(--farbe-text-leise);
+  border-radius: 2px 2px 0 0;
+}
+
+.sch-balken.ist-sieg {
+  background: var(--farbe-erfolg);
+}
+
+.sch-balken.ist-niederlage {
+  background: var(--farbe-akzent);
+}
+
+
+/* ==========================================================================
+   TABLET UND SMARTPHONE: alles untereinander, Brett in voller Breite
+   ========================================================================== */
+
+@media (max-width: 899px) {
+  .schach {
+    --sch-brett: 600px;
+    --sch-claudy: 48px;
+  }
+
+  /* Eine Spalte. Die beiden Spalten lösen sich auf, damit Claudy direkt
+     unter Brett und Status rücken kann – noch vor den Aktionen. */
+  .sch-haupt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--abstand-s);
+    max-width: var(--sch-brett);
+    margin: 0 auto;
+  }
+
+  .sch-brett-spalte,
+  .sch-seite {
+    display: contents;
+  }
+
+  .sch-gegner { order: 1; }
+  .sch-brett { order: 2; }
+  .sch-status { order: 3; }
+  .sch-claudy-karte { order: 4; }
+  .sch-aktionen { order: 5; }
+  .sch-seite > :not(.sch-claudy-karte) { order: 6; }
+
+  .sch-karte {
+    padding: 12px;
+  }
+
+  .sch-claudy {
+    gap: var(--abstand-s);
+  }
+
+  .sch-claudy-blase {
+    margin-top: 0;
+    padding: 8px 10px;
+    font-size: 0.92rem;
+  }
+
+  .sch-claudy-blase::before {
+    top: 12px;
+  }
+
+  .sch-hilfe {
+    margin-top: var(--abstand-s);
+  }
+
+  .sch-aktionen .knopf {
+    padding: 0 8px;
+    font-size: 0.72rem;
+  }
+}
+
+
+/* ==========================================================================
+   BEWEGUNG REDUZIEREN
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .sch-claudy.ist-ruhig .sch-claudy-augen.ist-ruhig {
+    animation: none;
+  }
+
+  .sch-umwandlung-knopf:hover,
+  .sch-umwandlung-knopf:focus-visible {
+    transform: none;
+  }
+}

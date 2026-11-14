@@ -34,6 +34,12 @@ const SPIELE = [
     beschreibung: "Ein Wort aus fünf Buchstaben in sechs Versuchen – auf Deutsch oder Englisch, mit Streak.",
     init: initWords,
   },
+  {
+    id: "chess",
+    name: "Schach",
+    beschreibung: "Partien gegen einen Bot mit zufälliger, verdeckter Spielstärke – mit Claudy, der Tipps gibt und Fehler erklärt.",
+    init: initSchach,
+  },
 ];
 
 // Merkt sich, welche Spiele schon gestartet wurden (init nur 1x)
