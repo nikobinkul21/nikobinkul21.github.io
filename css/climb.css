@@ -5,7 +5,7 @@
    · Fußzeile. Die Höhe setzt climb/darstellung.js (--kl-hoehe), damit alles
    ohne Scrollen auf den Bildschirm passt. Farben der Oberfläche kommen aus
    den Variablen des Hubs (hell und dunkel, style.css); die Szene hat ihre
-   eigenen Farben je Zone – bewusste Ausnahme wie beim Fußball.
+   eigenen Farben je Zone – bewusste Ausnahme (wie bei den Pixel-Spielen).
    ========================================================================== */
 
 .klettern {
@@ -23,7 +23,7 @@
   outline: none;
 }
 
-/* Der Spielbereich nutzt die volle Breite (wie beim Fußball) */
+/* Der Spielbereich nutzt die volle Breite */
 #spiel-climb {
   width: auto;
 }
