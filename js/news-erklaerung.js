@@ -130,8 +130,11 @@ const NEWS_ERKLAERUNG_KONFIG = {
     {
       symbol: "uhr",
       titel: "Automatisch",
-      text: "GitHub Actions startet jeden Morgen um 05:17 Uhr Weltzeit (in Deutschland 06:17 Uhr, im Sommer 07:17 Uhr) " +
-        "einen Cloud-Rechner. Er führt das Skript aus und legt die neue Datei im Projekt ab.",
+      // Geplant laut .github/workflows/news.yml: täglich 05:17 UTC. GitHub startet
+      // zeitgesteuerte Läufe aber oft deutlich später – deshalb keine feste Uhrzeit.
+      text: "GitHub Actions startet einmal am Tag einen Cloud-Rechner, geplant am frühen Morgen. " +
+        "Er führt das Skript aus und legt die neue Datei im Projekt ab. GitHub kann den Start " +
+        "verschieben, manchmal um einige Stunden – wann die Daten wirklich erzeugt wurden, zeigt der Stand über dem Feed.",
     },
     {
       symbol: "feed",
